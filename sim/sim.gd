@@ -552,6 +552,14 @@ func _collapse(cause: String) -> void:
 
 # --- Inventory and outpost actions ----------------------------------------------------
 
+## Why a queued command (deposit, withdraw, drop, equip, smith) would be refused right now,
+## or "" when it would be accepted. Read-only: the presentation uses it to grey out buttons.
+func check(kind: String, args: Dictionary) -> String:
+	if not QUEUED_COMMANDS.has(kind):
+		return SimVocab.REASON_NOT_IMPLEMENTED
+	return _apply(kind, args, false)
+
+
 ## Validates a queued command and, when `commit` is true, carries it out. Returns the
 ## rejection reason, or "" when the command is (or was) valid.
 func _apply(kind: String, args: Dictionary, commit: bool) -> String:
