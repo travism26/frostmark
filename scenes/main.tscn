@@ -1,0 +1,46 @@
+[gd_scene load_steps=5 format=3 uid="uid://g0sbfclqrd2e"]
+
+[ext_resource type="Script" uid="uid://cdptg7v7ikit1" path="res://scenes/main.gd" id="1_o5qli"]
+
+[sub_resource type="Environment" id="Environment_0wfyh"]
+background_mode = 1
+background_color = Color(0.72, 0.8, 0.88, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.85, 0.9, 1, 1)
+ambient_light_energy = 0.5
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_sugp2"]
+shading_mode = 2
+albedo_color = Color(0.94, 0.96, 1, 1)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_jyhfs"]
+material = SubResource("StandardMaterial3D_sugp2")
+size = Vector2(40, 40)
+
+[node name="Main" type="Node3D"]
+script = ExtResource("1_o5qli")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_0wfyh")
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_jyhfs")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.8660254, -0.38302222, 0.32139382, 0, 0.64278764, 0.76604444, -0.5, -0.66341394, 0.5566704, 0, 0, 0)
+light_color = Color(1, 0.97, 0.92, 1)
+
+[node name="Camera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.57357645, 0.81915206, 0, -0.81915206, 0.57357645, 0, 14, 10)
+current = true
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="Title" type="Label" parent="HUD"]
+offset_left = 24.0
+offset_top = 16.0
+offset_right = 24.0
+offset_bottom = 16.0
+theme_override_font_sizes/font_size = 36
+theme_override_colors/font_color = Color(0.1, 0.14, 0.2, 1)
+text = "Frostmark"
