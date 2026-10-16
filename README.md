@@ -11,6 +11,11 @@ Gathered resources pay for outpost upgrades, which work as a tech tree and push 
 
 - [Game brief](docs/game-brief.md): what the game is and why.
 - [Roadmap](docs/roadmap.md): the five slices, in ship order.
+- [Simulation](docs/simulation.md): the tick, the command and event vocabulary, the state shape, and how the scene glues to it.
+
+## Playing it
+
+Click the ground to walk there. Click the fire, stash, workbench or gate to walk up to it. Q and E, or a middle-mouse drag, rotate the camera; the mouse wheel zooms between fixed limits.
 
 ## Running it locally
 
