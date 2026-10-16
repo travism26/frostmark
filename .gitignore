@@ -1,0 +1,8 @@
+# Godot import cache and local export output
+.godot/
+build/
+
+# Local Claude Code harness settings
+.claude/settings.local.json
+
+.DS_Store

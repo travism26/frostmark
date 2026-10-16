@@ -182,5 +182,5 @@ The decision list leaves these open. They are recorded here so nobody settles th
 2. **"Most valuable" on death.** Is value the trade price, the gear tier, or something the player picks? Do stacks count as one item?
 3. **Running out of warmth.** What happens when warmth hits zero: damage over time, death, or something else?
 4. **Waystones and banking.** Does travelling by waystone bank your loot, or does only the outpost gate do that?
-5. **Web export threading.** Use the single-threaded default, which runs on Pages without headers, or the threaded export plus the service-worker workaround? This should be settled in slice 1.
+5. **Web export threading.** Use the single-threaded default, which runs on Pages without headers, or the threaded export plus the service-worker workaround? This should be settled in slice 1. **Settled in slice 1:** Frostmark ships the single-threaded export, which runs on Pages without headers or a service worker.
 6. **Asset licence hygiene.** Poly Pizza CC-BY models need attribution and Mixamo isn't CC0. Should the game keep a credits file, or use only CC0 assets?

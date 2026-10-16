@@ -1,0 +1,114 @@
+name: CI
+
+# Every PR and every push to main runs the tests and the web export.
+# A push to main also deploys that same export to GitHub Pages.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  GODOT_VERSION: 4.5.1
+  # From https://github.com/godotengine/godot/releases/download/4.5.1-stable/SHA512-SUMS.txt
+  GODOT_LINUX_SHA512: 5bccbed65a94b82c7c319fdb15719ee8113a6e503976cc54e16f1c61fe95f3d74e5e40b8449b5bb89ff7f424574c20af01a4f5ef08b389e4dc338b245185b0b9
+  GODOT_TEMPLATES_SHA512: 8a65c73541184fbcf1a7afedb37c9c15ed0f3babdaafe36ff47ccc515548ac84bc7563ba5b94c253e6085b121ac608b7e03d35dfc0b2c8c690a646a8755b57e5
+
+jobs:
+  build:
+    name: Test and web export
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Cache Godot and web export templates
+        id: godot-cache
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/godot
+            ~/.local/share/godot/export_templates/${{ env.GODOT_VERSION }}.stable
+          key: godot-${{ env.GODOT_VERSION }}-stable-web-${{ runner.os }}-v1
+
+      - name: Install Godot and web export templates
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        run: |
+          release="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+          templates="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          dl="$RUNNER_TEMP/godot-download"
+          mkdir -p "$HOME/godot" "$templates" "$dl"
+          curl -fsSL -o "$dl/godot.zip" "$release/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          curl -fsSL -o "$dl/templates.tpz" "$release/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          echo "$GODOT_LINUX_SHA512  $dl/godot.zip" | sha512sum -c -
+          echo "$GODOT_TEMPLATES_SHA512  $dl/templates.tpz" | sha512sum -c -
+          unzip -q "$dl/godot.zip" -d "$dl"
+          mv "$dl/Godot_v${GODOT_VERSION}-stable_linux.x86_64" "$HOME/godot/godot"
+          # Only the single-threaded web templates are needed, which keeps the cache small.
+          unzip -q -j "$dl/templates.tpz" 'templates/version.txt' 'templates/web_nothreads_*' -d "$templates"
+          rm -rf "$dl"
+
+      - name: Put Godot on the PATH
+        run: |
+          echo "$HOME/godot" >> "$GITHUB_PATH"
+          "$HOME/godot/godot" --version | grep -q "^${GODOT_VERSION}.stable.official"
+
+      - name: Import
+        run: godot --headless --import
+
+      - name: Unit tests
+        run: godot --headless -s tests/run.gd
+
+      - name: Smoke run of the main scene
+        run: |
+          godot --headless --quit-after 30 2>&1 | tee "$RUNNER_TEMP/smoke.log"
+          if grep -E 'SCRIPT ERROR|ERROR:' "$RUNNER_TEMP/smoke.log"; then
+            echo "::error::the main scene logged errors"
+            exit 1
+          fi
+
+      - name: Web export
+        run: |
+          mkdir -p build/web
+          touch build/.gdignore
+          godot --headless --export-release Web build/web/index.html
+          for f in index.html index.js index.wasm index.pck; do test -s "build/web/$f"; done
+          touch build/web/.nojekyll
+
+      - name: Upload the export
+        uses: actions/upload-artifact@v7
+        with:
+          name: frostmark-web
+          path: build/web
+          include-hidden-files: true
+          if-no-files-found: error
+
+      - name: Upload the Pages artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: build/web
+          include-hidden-files: true
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
