@@ -29,7 +29,7 @@ func test_interact_walks_to_the_marker_and_emits_arrival() -> void:
 	assert_eq(arrived[0]["object_id"], "workbench")
 	assert_eq(interacted.size(), 1, "one interaction on arrival")
 	assert_eq(interacted[0]["object_kind"], WorldDef.KIND_WORKBENCH)
-	assert_eq(interacted[0]["action"], "none")
+	assert_eq(interacted[0]["action"], Vocab.ACTION_CRAFT, "the workbench opens crafting")
 	assert_true(sim.player_pos().distance_to(sim.world.object_center("workbench")) < 2.5, "stands beside it")
 	assert_true(sim.world.is_walkable(sim.player_pos()))
 	assert_eq(sim.state["player"]["target_object"], "", "target cleared after arrival")

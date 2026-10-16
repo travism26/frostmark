@@ -15,6 +15,7 @@ const KIND_GATE := "gate"
 const KIND_FIRE := "fire"
 const KIND_STASH := "stash"
 const KIND_WORKBENCH := "workbench"
+const KIND_TREE := "tree"
 
 const REGION_OUTPOST := "outpost"
 const REGION_INNER_RING := "inner_ring"
@@ -25,6 +26,18 @@ var cols := 64
 var rows := 64
 var origin: Array = [-32.0, -32.0]
 var spawn: Array = [0.5, 4.5]
+## Where a player who collapses from the cold wakes: beside the outpost fire.
+var rescue: Array = [0.5, 1.5]
+
+## Gatherable node kinds: the skill they train, the tool they need, what one success yields,
+## how many yields a node holds before it is depleted, the ticks until it regrows, and the
+## experience per success. Placed objects of these kinds get a matching entry in the state.
+const NODE_KINDS := {
+	KIND_TREE: {
+		"skill": "woodcutting", "level": 1, "tool": "axe", "item": "logs",
+		"yield": 4, "respawn_ticks": 90, "xp": 10,
+	},
+}
 
 ## Blocking geometry: {id, kind, min: [x, z], max: [x, z], height}.
 var solids: Array = []
@@ -36,8 +49,9 @@ var regions: Array = []
 var _blocked := PackedByteArray()
 
 
-## The slice-2 world: a walled outpost with one gate opening on its south side, placeholder
-## blocks for the fire, stash and workbench, and flat ground outside the walls.
+## The outpost world: a walled outpost with one gate opening on its south side, placeholder
+## blocks for the fire, stash and workbench, and a stand of trees in the inner ring south
+## of the gate.
 static func outpost() -> WorldDef:
 	var w := WorldDef.new()
 	var half := 10.0
@@ -54,6 +68,7 @@ static func outpost() -> WorldDef:
 		"gate": {
 			"kind": KIND_GATE, "label": "Gate", "blocks": false, "height": 0.1,
 			"min": [-gate_half_width, half - t], "max": [gate_half_width, half],
+			"outward": [0.0, 1.0],
 		},
 		"fire": {
 			"kind": KIND_FIRE, "label": "Fire", "blocks": true, "height": 0.6,
@@ -68,6 +83,14 @@ static func outpost() -> WorldDef:
 			"min": [5.0, -7.0], "max": [7.0, -6.0],
 		},
 	}
+	# Pines, one metre square, between 4 m and 12 m south of the gate.
+	var trees := [[-7.0, 14.0], [-3.0, 17.0], [3.0, 14.0], [6.0, 19.0], [-8.0, 20.0], [1.0, 21.0]]
+	for i in trees.size():
+		var at: Array = trees[i]
+		w.objects["tree_%d" % (i + 1)] = {
+			"kind": KIND_TREE, "label": "Pine", "blocks": true, "height": 3.0,
+			"min": [at[0], at[1]], "max": [at[0] + 1.0, at[1] + 1.0],
+		}
 	w.regions = [
 		{"name": REGION_OUTPOST, "polygon": _rect_polygon([-half, -half], [half, half])},
 		{"name": REGION_INNER_RING, "polygon": _rect_polygon([-24.0, -24.0], [24.0, 24.0])},
@@ -190,6 +213,34 @@ func approach_cells(object_id: String) -> Array[Vector2i]:
 			if is_walkable_cell(c):
 				out.append(c)
 	return out
+
+
+## Ids of every placed object whose kind is a gatherable node, in placement order.
+func node_ids() -> Array[String]:
+	var out: Array[String] = []
+	for id in objects:
+		if NODE_KINDS.has(objects[id]["kind"]):
+			out.append(id)
+	return out
+
+
+## Ids of every placed object of `kind`, in placement order.
+func objects_of_kind(kind: String) -> Array[String]:
+	var out: Array[String] = []
+	for id in objects:
+		if objects[id]["kind"] == kind:
+			out.append(id)
+	return out
+
+
+## Distance from `pos` to the nearest point of the object's footprint (0 when inside it).
+func distance_to_object(object_id: String, pos: Vector2) -> float:
+	var o: Dictionary = objects[object_id]
+	var nearest := Vector2(
+		clampf(pos.x, o["min"][0], o["max"][0]),
+		clampf(pos.y, o["min"][1], o["max"][1])
+	)
+	return nearest.distance_to(pos)
 
 
 func object_center(object_id: String) -> Vector2:
