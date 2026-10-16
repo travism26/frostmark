@@ -1,6 +1,7 @@
-[gd_scene load_steps=5 format=3 uid="uid://g0sbfclqrd2e"]
+[gd_scene load_steps=7 format=3 uid="uid://g0sbfclqrd2e"]
 
-[ext_resource type="Script" uid="uid://cdptg7v7ikit1" path="res://scenes/main.gd" id="1_o5qli"]
+[ext_resource type="Script" uid="uid://dhfqbcujion6t" path="res://scenes/game_root.gd" id="1_root"]
+[ext_resource type="Script" uid="uid://cbfxpkm6jtmsk" path="res://scenes/orbit_camera.gd" id="2_cam"]
 
 [sub_resource type="Environment" id="Environment_0wfyh"]
 background_mode = 1
@@ -9,29 +10,52 @@ ambient_light_source = 2
 ambient_light_color = Color(0.85, 0.9, 1, 1)
 ambient_light_energy = 0.5
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_sugp2"]
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_body"]
 shading_mode = 2
-albedo_color = Color(0.94, 0.96, 1, 1)
+albedo_color = Color(0.2, 0.45, 0.75, 1)
+roughness = 1.0
 
-[sub_resource type="PlaneMesh" id="PlaneMesh_jyhfs"]
-material = SubResource("StandardMaterial3D_sugp2")
-size = Vector2(40, 40)
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_body"]
+material = SubResource("StandardMaterial3D_body")
+radius = 0.35
+height = 1.6
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_nose"]
+shading_mode = 2
+albedo_color = Color(1, 0.85, 0.2, 1)
+roughness = 1.0
+
+[sub_resource type="BoxMesh" id="BoxMesh_nose"]
+material = SubResource("StandardMaterial3D_nose")
+size = Vector3(0.2, 0.2, 0.4)
 
 [node name="Main" type="Node3D"]
-script = ExtResource("1_o5qli")
+script = ExtResource("1_root")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_0wfyh")
 
-[node name="Ground" type="MeshInstance3D" parent="."]
-mesh = SubResource("PlaneMesh_jyhfs")
-
 [node name="Sun" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.8660254, -0.38302222, 0.32139382, 0, 0.64278764, 0.76604444, -0.5, -0.66341394, 0.5566704, 0, 0, 0)
 light_color = Color(1, 0.97, 0.92, 1)
+shadow_enabled = true
 
-[node name="Camera" type="Camera3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0.57357645, 0.81915206, 0, -0.81915206, 0.57357645, 0, 14, 10)
+[node name="World" type="Node3D" parent="."]
+
+[node name="Character" type="Node3D" parent="."]
+
+[node name="Body" type="MeshInstance3D" parent="Character"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+mesh = SubResource("CapsuleMesh_body")
+
+[node name="Nose" type="MeshInstance3D" parent="Character"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, -0.45)
+mesh = SubResource("BoxMesh_nose")
+
+[node name="CameraRig" type="Node3D" parent="."]
+script = ExtResource("2_cam")
+
+[node name="Camera3D" type="Camera3D" parent="CameraRig"]
 current = true
 
 [node name="HUD" type="CanvasLayer" parent="."]
@@ -39,8 +63,30 @@ current = true
 [node name="Title" type="Label" parent="HUD"]
 offset_left = 24.0
 offset_top = 16.0
-offset_right = 24.0
-offset_bottom = 16.0
-theme_override_font_sizes/font_size = 36
+offset_right = 324.0
+offset_bottom = 50.0
+theme_override_font_sizes/font_size = 28
 theme_override_colors/font_color = Color(0.1, 0.14, 0.2, 1)
 text = "Frostmark"
+
+[node name="Status" type="Label" parent="HUD"]
+offset_left = 24.0
+offset_top = 56.0
+offset_right = 624.0
+offset_bottom = 100.0
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.1, 0.14, 0.2, 1)
+text = ""
+
+[node name="Hint" type="Label" parent="HUD"]
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = -48.0
+offset_right = 924.0
+offset_bottom = -16.0
+grow_vertical = 0
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.1, 0.14, 0.2, 1)
+text = "Click the ground to walk. Click a marker to walk to it. Q / E or middle-mouse drag rotates. Mouse wheel zooms."
