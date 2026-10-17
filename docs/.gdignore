@@ -1,0 +1,2 @@
+# Documentation and screenshots are never loaded by the game: keep them out of the import
+# cache and the web export.

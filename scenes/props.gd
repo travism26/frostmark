@@ -30,6 +30,8 @@ const ORE_COLORS := {
 }
 
 static var _snow_materials := {}  # "colour|texture|snow_from" -> ShaderMaterial
+## Fresh snow on the props, before the ring look tints it.
+const COLOR_SNOW_CAP := Color(0.93, 0.96, 1.0)
 
 
 ## A model scaled uniformly to `height` metres, standing on the ground at the origin, with its
@@ -270,6 +272,13 @@ static func _relative_transform(root: Node3D, node: Node3D) -> Transform3D:
 		t = (n as Node3D).transform * t
 		n = n.get_parent()
 	return t
+
+
+## The ring look's palette tint over the snow on every prop (the atmosphere node calls this
+## whenever the tint at the character changes).
+static func apply_tint(tint: Color) -> void:
+	for key in _snow_materials:
+		(_snow_materials[key] as ShaderMaterial).set_shader_parameter("snow_color", COLOR_SNOW_CAP * tint)
 
 
 ## Swaps every surface of every mesh under `root` for a snow-capped copy of its material.

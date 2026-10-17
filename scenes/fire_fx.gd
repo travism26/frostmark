@@ -1,7 +1,9 @@
 ## A campfire's fire: a solid flame cone, tongues of flame and wisps above it, embers that rise and wink out,
-## a thread of smoke leaning with the wind, a glowing core on the logs and a warm light that
-## flickers. CPU particles on additive billboards (Kenney particle textures, CC0), under
-## sixty per fire. Presentation only: GameRoot names it `Flame` and leaves it to burn.
+## a thread of smoke leaning with the wind, a glowing core on the logs, a warm amber pool on
+## the snow out to the edge of the fire's warmth, and a light that flickers. CPU particles on
+## additive billboards (Kenney particle textures, CC0), under sixty per fire. Presentation
+## only: GameRoot names it `Flame`, leaves it to burn, and switches the light with set_lit()
+## so only the nearest few fires cost a dynamic light; the pool always shows.
 class_name FireFx
 extends Node3D
 
@@ -11,15 +13,22 @@ const FLAME_WISP := preload(PARTICLES + "flame_01.png")
 const EMBER := preload(PARTICLES + "star_05.png")
 const SMOKE := preload(PARTICLES + "smoke_01.png")
 const GLOW := preload(PARTICLES + "circle_05.png")
+const POOL := preload(PARTICLES + "light_01.png")
 
 const COLOR_LIGHT := Color(1.0, 0.62, 0.32)
+const COLOR_POOL := Color(1.0, 0.56, 0.22, 0.62)
+## The pool reaches the edge of the fire's warmth (Sim.FIRE_REACH past its footprint), and
+## the light a little past that, so a fire reads from where it starts to help.
+const POOL_PAST_REACH := 0.4
 const WIND := Vector3(0.25, 1.0, 0.08)
 
 var _light: OmniLight3D
 var _core: MeshInstance3D
 var _tongue: Node3D  # the solid flame the camera always sees, under the particles
 var _glow: MeshInstance3D
+var _pool: MeshInstance3D
 var _size := 1.0
+var _pool_size := 1.0
 var _light_energy := 1.6
 var _phase := 0.0
 var _time := 0.0
@@ -82,6 +91,21 @@ func _build(light: bool) -> void:
 	_glow.mesh = glow
 	_glow.position.y = s * 0.3
 	add_child(_glow)
+	# The warm pool on the snow: a soft disc out to the edge of the fire's warmth, the
+	# landmark a fire is from a distance whether or not it carries a light.
+	_pool = MeshInstance3D.new()
+	var reach := s * 0.5 + Sim.FIRE_REACH + POOL_PAST_REACH
+	_pool_size = reach * 2.0
+	var pool := QuadMesh.new()
+	pool.size = Vector2(_pool_size, _pool_size)
+	pool.orientation = PlaneMesh.FACE_Y
+	var pool_m := _billboard(POOL, COLOR_POOL, true)
+	pool_m.billboard_mode = BaseMaterial3D.BILLBOARD_DISABLED
+	pool.material = pool_m
+	_pool.mesh = pool
+	_pool.position.y = 0.04
+	_pool.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(_pool)
 
 	# Tongues of flame: short-lived, shrinking as they rise, white-hot to orange to ember-red.
 	var tongues := _emitter(20, 0.75, s * 0.2, s * 0.62, FLAME_TONGUE, true)
@@ -140,12 +164,23 @@ func _build(light: bool) -> void:
 	if light:
 		_light = OmniLight3D.new()
 		_light.light_color = COLOR_LIGHT
-		_light_energy = 1.2 + s * 0.3
+		_light_energy = 1.6 + s * 0.4
 		_light.light_energy = _light_energy
-		_light.omni_range = 5.0 + s * 1.5
-		_light.omni_attenuation = 1.4
-		_light.position.y = s * 0.6
+		_light.omni_range = reach * 1.6
+		_light.omni_attenuation = 1.2
+		_light.position.y = s * 0.7
 		add_child(_light)
+
+
+## Whether this fire carries a dynamic light this frame. GameRoot keeps the count per view
+## within the renderer's budget; a fire without one still shows its pool and flames.
+func set_lit(lit: bool) -> void:
+	if _light != null and _light.visible != lit:
+		_light.visible = lit
+
+
+func is_lit() -> bool:
+	return _light != null and _light.visible
 
 
 ## The fire breathes: the light and the core pulse a little out of step with every other fire.
@@ -159,6 +194,7 @@ func _process(delta: float) -> void:
 	_tongue.scale = Vector3(1.0 + 0.08 * sin(t * 1.9), 0.8 + 0.35 * flicker, 1.0 + 0.08 * cos(t * 1.3))
 	_tongue.rotation.y = _time * 0.8
 	_glow.scale = Vector3.ONE * (0.9 + 0.25 * flicker)
+	_pool.scale = Vector3.ONE * (0.94 + 0.08 * flicker)
 
 
 static func _emitter(amount: int, lifetime: float, radius: float, size: float, texture: Texture2D, additive: bool) -> CPUParticles3D:

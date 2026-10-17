@@ -48,6 +48,11 @@ const WARMUP_GLYPHS := "ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 01
 ## The sun's shadows reach this many orbit distances from the camera: just past the far edge
 ## of the view at the camera's pitch and lens, and no farther.
 const SHADOW_REACH := 1.6
+## Fires nearest the character carry a dynamic light; the rest keep their pool and flames.
+## GL Compatibility lights every mesh for each light in range, so the count stays small.
+const MAX_FIRE_LIGHTS := 4
+## How far the character walks before the fires are sorted by distance again.
+const LIGHT_RESORT_METRES := 0.5
 
 ## What a rejection reason means to the player.
 const REASON_TEXT := {
@@ -115,6 +120,8 @@ var _ring_gates := {}  # ring gate object id -> {bars, label}
 var _waystones := {}  # waystone object id -> {glow, label}
 var _fires := {}  # field fire id -> its prop
 var _placed_fires: Array = []  # the props of the fires placed in the world: the outpost's, the brazier
+var _light_anchor := Vector3(INF, INF, INF)  # where the character stood when the fire lights were last sorted
+var _light_count := -1  # how many fires there were then
 var _title_screen: Control
 var _guide_panel: Control
 var _waystone_panel: Control
@@ -163,7 +170,7 @@ func _ready() -> void:
 	UiTheme.style_hud_label($HUD/Hint, "hint")
 	_atmosphere = Atmosphere.new()
 	add_child(_atmosphere)
-	_atmosphere.setup($Sun, $WorldEnvironment.environment, _camera_rig, _character)
+	_atmosphere.setup($Sun, $WorldEnvironment.environment, _camera_rig, _character, sim.world)
 	_hud = Hud.new()
 	_hud.command_requested.connect(_on_hud_command)
 	_hud.export_requested.connect(_on_show_code)
@@ -336,7 +343,6 @@ func _show_sim() -> void:
 		_add_field_fire(id)
 	_gear.show_equipment(sim.state["inventory"]["equipment"])
 	_character_view.set_sim(sim)
-	_atmosphere.set_outside(not sim.in_outpost())
 	_audio.sim = sim
 	_audio.set_region(sim.state["player"]["region"])
 	_audio.sync_fires(_world.get_node("fire").position, sim.state["fires"])
@@ -450,7 +456,6 @@ func _apply_events(events: Array[Dictionary]) -> void:
 					_last_event += " Wolves and bandits hunt here."
 				elif e["to"] == WorldDef.REGION_RING_TWO:
 					_last_event += " Trolls and stalkers keep the ruins."
-				_atmosphere.set_outside(e["to"] != WorldDef.REGION_OUTPOST)
 			SimVocab.EV_GATHERED:
 				_last_event = "+%d %s  (+%d %s xp)" % [e["count"], ItemTable.label(e["item"]), e["xp"], e["skill"]]
 			SimVocab.EV_ACTIVITY_STOPPED:
@@ -1052,9 +1057,27 @@ func _remove_field_fire(id: String) -> void:
 		_fires.erase(id)
 
 
-## Fires flicker on their own (each `Flame` is a FireFx, scenes/fire_fx.gd); nothing per frame here.
+## Fires flicker on their own (each `Flame` is a FireFx, scenes/fire_fx.gd). Here only the
+## light budget is kept: the MAX_FIRE_LIGHTS fires nearest the character carry a light. The
+## fires are sorted again only once the character has moved or a fire was lit or went out.
 func _flicker() -> void:
-	pass
+	var here := _character.global_position
+	var count := _placed_fires.size() + _fires.size()
+	if count == _light_count and here.distance_squared_to(_light_anchor) < LIGHT_RESORT_METRES * LIGHT_RESORT_METRES:
+		return
+	_light_anchor = here
+	_light_count = count
+	var fires: Array = []
+	for prop in _placed_fires:
+		fires.append(prop)
+	for id in _fires:
+		fires.append(_fires[id])
+	fires.sort_custom(func(a: Node3D, b: Node3D) -> bool:
+		return a.global_position.distance_squared_to(here) < b.global_position.distance_squared_to(here))
+	for i in fires.size():
+		var flame := (fires[i] as Node3D).get_node_or_null("Flame") as FireFx
+		if flame != null:
+			flame.set_lit(i < MAX_FIRE_LIGHTS)
 
 
 # --- Enemies and loot -----------------------------------------------------------------
