@@ -558,8 +558,8 @@ func _build_save() -> void:
 	var copy := Button.new()
 	copy.text = "Copy to clipboard"
 	copy.pressed.connect(func() -> void:
-		DisplayServer.clipboard_set(_save_text.text)
-		_save_note.text = "Copied.")
+		Clipboard.copy(_save_text.text, func(ok: bool) -> void:
+			_save_note.text = "Copied." if ok else "Your browser would not copy it. Select all, then copy it by hand (Ctrl+C or Cmd+C)."))
 	buttons.add_child(copy)
 	var select := Button.new()
 	select.text = "Select all"

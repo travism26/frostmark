@@ -12,6 +12,12 @@ static func has_save() -> bool:
 	return FileAccess.file_exists(PATH)
 
 
+## False when this browser will not keep `user://` past the page: IndexedDB is blocked (some
+## private browsing) or unavailable. Writes still succeed in memory then, and vanish on reload.
+static func persistent() -> bool:
+	return OS.is_userfs_persistent()
+
+
 static func read() -> String:
 	var f := FileAccess.open(PATH, FileAccess.READ)
 	if f == null:
@@ -21,10 +27,12 @@ static func read() -> String:
 	return text
 
 
+## True only when the code was written in full to storage that outlives the page. A full
+## disk or quota shows up as a failed open or a short write.
 static func write(code: String) -> bool:
 	var f := FileAccess.open(PATH, FileAccess.WRITE)
 	if f == null:
 		return false
-	f.store_string(code)
+	var ok := f.store_string(code) and f.get_error() == OK
 	f.close()
-	return true
+	return ok and persistent()
