@@ -16,6 +16,8 @@ uniform float sparkle_strength = 0.35;
 // How much of the surface the drift colour covers (0 = none; the yard uses it for snow
 // blown into the corners).
 uniform float drift_cover = 0.0;
+// The ring look's palette tint over everything (the atmosphere node sets it).
+uniform vec4 tint : source_color = vec4(1.0);
 
 varying vec3 world_pos;
 
@@ -34,7 +36,7 @@ void fragment() {
 		col = mix(col, drift_color.rgb, drift);
 	}
 	float sparkle = smoothstep(0.94, 0.995, texture(sparkle_tex, p / sparkle_metres).r);
-	ALBEDO = col + sparkle * sparkle_strength;
+	ALBEDO = (col + sparkle * sparkle_strength) * tint.rgb;
 	ROUGHNESS = 0.9;
 	SPECULAR = 0.15;
 }

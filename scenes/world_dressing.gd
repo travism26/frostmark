@@ -26,6 +26,7 @@ const GATEWAY_HEIGHT := 3.2
 
 static var _noise_texture: ImageTexture
 static var _sparkle_texture: ImageTexture
+static var _ground_materials: Array[ShaderMaterial] = []
 
 
 # --- Ground ------------------------------------------------------------------------------
@@ -53,7 +54,15 @@ static func _ground_material(base: Color, shade: Color, sparkle: float, drift_co
 	m.set_shader_parameter("shade_color", shade)
 	m.set_shader_parameter("sparkle_strength", sparkle)
 	m.set_shader_parameter("drift_cover", drift_cover)
+	_ground_materials.append(m)
 	return m
+
+
+## The ring look's palette tint over every ground material (the atmosphere node calls this
+## whenever the tint at the character changes).
+static func apply_tint(tint: Color) -> void:
+	for m in _ground_materials:
+		m.set_shader_parameter("tint", tint)
 
 
 ## One seamless tile of soft fractal noise, generated once (deterministic seed) so the
