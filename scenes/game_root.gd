@@ -571,6 +571,7 @@ func _apply_events(events: Array[Dictionary]) -> void:
 				_last_event = _hit_text(e)
 				if e["attacker"] != SimVocab.PLAYER:
 					_swing(e["attacker"])
+				_flinch(e["target"])
 			SimVocab.EV_MISSED:
 				_last_event = "%s's %s misses. You stepped clear." % [
 					_sentence(_enemy_name(e["attacker"])), CombatTable.action_label(e["action"]).to_lower(),
@@ -1188,8 +1189,19 @@ func _show_cue(e: Dictionary) -> void:
 	cue.visible = true
 	drawn["cue_at"] = int(e["at"])
 	_cues.ring(e["enemy_id"], drawn["root"], COLOR_BY_STYLE.get(e["style"], Color.WHITE), heavy)
+	var figure := (drawn["root"] as Node3D).get_node("Figure") as FigureBody
 	if CombatTable.is_attack(e["action"]):
-		((drawn["root"] as Node3D).get_node("Figure") as FigureBody).strike(e["style"])
+		figure.strike(e["style"])
+	elif CombatTable.is_windup(e["action"]):
+		figure.wind_up(e["style"])
+
+
+## The one the blow landed on recoils: the character, or an enemy whose rig has a flinch.
+func _flinch(target: String) -> void:
+	if target == SimVocab.PLAYER:
+		_character_view.flinch()
+	elif _enemies.has(target):
+		((_enemies[target]["root"] as Node3D).get_node("Figure") as FigureBody).flinch()
 
 
 ## The blow lands (or misses): a brief arc at the enemy's feet, swung toward the character,

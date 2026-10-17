@@ -1,7 +1,8 @@
 ## Builders for the living figures: the enemies of rings one and two as animated CC0 models
-## (KayKit Adventurers for the bandits, witch, stalker and troll, the Quaternius wolf; credited in docs/assets/CREDITS.md) and
-## the hand-held pieces the player and the bandits share (a bow of staves, a club, a frost
-## staff, the KayKit sword, Kenney's axe and pickaxe).
+## (KayKit Adventurers for the bandits and the frost witch, a KayKit Skeleton for the ruin
+## stalker, the Quaternius wolf and yeti; credited in docs/assets/CREDITS.md) and the hand-held
+## pieces the player and the bandits share (a bow of staves, a club, a frost staff, the KayKit
+## sword, Kenney's axe and pickaxe, the Quaternius fishing rod).
 ##
 ## Presentation only. `enemy` returns a FigureBody standing on the ground at its origin with a
 ## `height` metadata for the click volume and labels; the captain carries nodes named
@@ -11,21 +12,38 @@ class_name Figures
 extends RefCounted
 
 const ADVENTURERS := "res://assets/models/kaykit_adventurers/"
+const SKELETONS := "res://assets/models/kaykit_skeletons/"
 const QUATERNIUS := "res://assets/models/quaternius/"
 const SURVIVAL := "res://assets/models/kenney_survival/"
 
 ## Rig heights in model units (measured from the skinned rest pose): a KayKit adventurer's
-## body without its hat, the Quaternius wolf with its armature's scale and turn applied.
+## body without its hat, the Quaternius wolf and yeti with their armatures' scale and turn
+## applied.
 const KAYKIT_HEIGHT := 2.2
 const WOLF_HEIGHT := 2.7
+const YETI_HEIGHT := 2.83
 
 const HUMANOID_CLIPS := {
 	"idle": "Idle", "walk": "Walking_A", "run": "Running_A",
 	"melee": "1H_Melee_Attack_Chop", "ranged": "2H_Ranged_Shoot", "magic": "1H_Melee_Attack_Slice_Horizontal",
-	"death": "Death_A",
+	"flinch": "Hit_A", "death": "Death_A",
+}
+const WITCH_CLIPS := {
+	"idle": "Idle", "walk": "Walking_A", "run": "Running_A",
+	"melee": "1H_Melee_Attack_Chop", "ranged": "Spellcast_Shoot", "magic": "Spellcast_Shoot",
+	"flinch": "Hit_A", "death": "Death_A",
 }
 const WOLF_CLIPS := {
 	"idle": "Idle", "walk": "Walk", "run": "Gallop", "melee": "Attack", "ranged": "Attack", "death": "Death",
+}
+const YETI_CLIPS := {
+	"idle": "CharacterArmature|Idle", "walk": "CharacterArmature|Walk", "run": "CharacterArmature|Run",
+	"melee": "CharacterArmature|Weapon", "flinch": "CharacterArmature|HitReact", "death": "CharacterArmature|Death",
+}
+## The yeti's fur and face repainted in old ice: Quaternius ships it dark and half-metallic.
+const YETI_PAINT := {
+	"Yeti_Main": Color("#dfe8f3"), "Yeti_Secondary": Color("#5b86b0"), "Eye_White": Color("#f2f5ff"),
+	"Eye_Black": Color("#101420"), "Yeti_Teeth": Color("#efe6cf"), "Tongue": Color("#7a2f4a"),
 }
 
 const COLOR_STRING := Color(0.92, 0.9, 0.82)
@@ -33,23 +51,25 @@ const COLOR_GRIP := Color(0.25, 0.17, 0.11)
 const COLOR_ARCHER := Color(0.55, 0.16, 0.14)  # the rogue redrawn in bandit red
 const COLOR_CAPTAIN_CAPE := Color(0.62, 0.08, 0.08)
 const COLOR_WOLF := Color(1.45, 1.5, 1.6)  # the grey coat lifted towards snow
-const COLOR_WITCH := Color(0.40, 0.48, 0.70)  # the rogue in a rimed blue-violet
-const COLOR_TROLL := Color(0.62, 0.74, 0.82)  # the barbarian gone pale as old ice
-const COLOR_STALKER := Color(0.22, 0.24, 0.28)  # the rogue in ruin-shadow grey
+const COLOR_WITCH := Color("#6670b3")  # the mage in a rimed blue-violet
 const COLOR_BONE := Color(0.86, 0.82, 0.72)
+const COLOR_IRON := Color(0.30, 0.32, 0.36)
 const ROGUE_SPARES := ["Knife", "Knife_Offhand", "1H_Crossbow", "2H_Crossbow", "Throwable"]
+const MAGE_SPARES := ["Spellbook", "Spellbook_open", "1H_Wand", "2H_Staff"]
 
 
-## An enemy of `kind`: a 1 m wolf, a hooded archer with a bow, a frost witch (the rogue in
-## blue-violet with a staff), a ruin stalker (the rogue in shadow grey with a bone bow), an ice
-## troll (the barbarian, pale and huge, with an ice club) or the armoured captain with a
-## sabre, a war bow and a rime staff (one shown at a time, by his stance).
+## An enemy of `kind`: a 1 m wolf that lunges with its bite, a hooded archer with a bow, a
+## frost witch (the wide-hatted mage in blue-violet with a staff), a ruin stalker (a bare
+## skeleton with a bone bow), an ice troll (the yeti, 3.1 m of pale fur with an ice club) or
+## the armoured captain with a sabre, a war bow and a rime staff (one shown at a time, by his
+## stance).
 static func enemy(kind: String) -> FigureBody:
 	match kind:
 		"wolf":
 			var wolf := FigureBody.new()
 			wolf.setup(QUATERNIUS + "wolf.glb", WOLF_HEIGHT, 1.0, WOLF_CLIPS)
 			wolf.run_speed = 2.0
+			wolf.lunge = 0.8
 			wolf.tint(COLOR_WOLF)
 			return wolf
 		"bandit_captain":
@@ -64,23 +84,26 @@ static func enemy(kind: String) -> FigureBody:
 			staff_hand.add_child(staff(Props.COLOR_DARK_WOOD, 1.7))
 			return captain
 		"frost_witch":
-			var witch := humanoid("rogue_hooded.glb", 1.8, ROGUE_SPARES)
+			var witch := humanoid("mage.glb", 1.8, MAGE_SPARES, WITCH_CLIPS)
 			witch.recolour(COLOR_WITCH)
+			witch.impact = 0.4
 			witch.mount("handslot_r", "staff").add_child(staff(Props.COLOR_WOOD, 1.5))
 			return witch
 		"ruin_stalker":
-			var stalker := humanoid("rogue_hooded.glb", 1.85, ROGUE_SPARES)
-			stalker.recolour(COLOR_STALKER)
+			var stalker := humanoid("skeleton_minion.glb", 1.8, [], HUMANOID_CLIPS, SKELETONS)
+			stalker.impact = 0.3
 			stalker.mount("handslot_l", "bow").add_child(bow(COLOR_BONE, 1.2))
 			return stalker
 		"ice_troll":
-			var troll := humanoid("barbarian.glb", 1.8 * 1.6, ["Barbarian_Hat", "Barbarian_Cape"])
-			troll.recolour(COLOR_TROLL)
+			var troll := FigureBody.new()
+			troll.setup(QUATERNIUS + "yeti.glb", YETI_HEIGHT, 3.1, YETI_CLIPS)
+			troll.paint(YETI_PAINT)
 			troll.run_speed = 2.5
-			var club_hand := troll.mount("handslot_r", "club")
+			troll.impact = 0.5
+			troll.raise = 0.25
 			var ice_club := club(Props.COLOR_ICE)
-			ice_club.scale = Vector3.ONE * 1.6
-			club_hand.add_child(ice_club)
+			ice_club.scale = Vector3.ONE * 2.2
+			troll.mount("Middle1.R", "club").add_child(ice_club)
 			return troll
 		_:
 			var archer := humanoid("rogue_hooded.glb", 1.8, ROGUE_SPARES)
@@ -89,11 +112,12 @@ static func enemy(kind: String) -> FigureBody:
 			return archer
 
 
-## A KayKit adventurer `file` scaled to `height` metres, facing -Z, with the attached parts
-## named in `hidden` (spare weapons, shields) put away.
-static func humanoid(file: String, height: float, hidden: Array) -> FigureBody:
+## A KayKit character `file` (an adventurer unless `folder` says otherwise) scaled to `height`
+## metres, facing -Z, with the attached parts named in `hidden` (spare weapons, shields) put
+## away.
+static func humanoid(file: String, height: float, hidden: Array, clips := HUMANOID_CLIPS, folder := ADVENTURERS) -> FigureBody:
 	var figure := FigureBody.new()
-	figure.setup(ADVENTURERS + file, KAYKIT_HEIGHT, height, HUMANOID_CLIPS)
+	figure.setup(folder + file, KAYKIT_HEIGHT, height, clips)
 	figure.hide_parts(hidden)
 	return figure
 
@@ -167,6 +191,21 @@ static func sword(colour: Color, length: float, model_scale: float) -> Node3D:
 	FigureBody.tint_meshes(blade, colour)
 	blade.scale = Vector3.ONE * (length / (1.78 * model_scale))
 	return blade
+
+
+## The Quaternius fishing rod standing `length` metres tall, its grip on the origin, its wood
+## in `colour` and its fittings in dark iron.
+static func rod(colour: Color, length := 1.4) -> Node3D:
+	var model: Node3D = (load(QUATERNIUS + "fishing_rod.glb") as PackedScene).instantiate()
+	var bounds := Props._bounds(model)
+	model.scale = Vector3.ONE * (length / maxf(bounds.size.y, 0.001))
+	for node in model.find_children("*", "MeshInstance3D", true, false):
+		var mi := node as MeshInstance3D
+		for i in mi.mesh.get_surface_count():
+			var src := mi.get_active_material(i)
+			var metal := src != null and String(src.resource_name).begins_with("Metal")
+			mi.set_surface_override_material(i, Props.flat(COLOR_IRON if metal else colour))
+	return model
 
 
 ## Kenney's axe or pickaxe standing `height` metres tall on its origin, tinted `colour`.

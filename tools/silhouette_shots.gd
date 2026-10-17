@@ -6,6 +6,7 @@
 ##
 ## The spec is {"spot": [x, z], "options": [{...}]}, each option:
 ##   name, path (res:// glb), height (m), clips {idle, walk, run, melee, ranged, magic, death},
+##   or just enemy (a kind for Figures.enemy, rendering the shipped build),
 ##   strike (melee | ranged | magic), peak (0..1 of the strike clip, default 0.45),
 ##   recolour (#hex, redraws in shades), tint (#hex, multiplies), hide [part names],
 ##   club_bone / bow_slot / staff_slot (where to hang a weapon), face (radians the figure turns
@@ -76,7 +77,7 @@ func _run() -> void:
 		var style: String = option.get("strike", "melee")
 		figure.strike(style)
 		var player: AnimationPlayer = figure._player
-		var clip: String = option["clips"].get(style, option["clips"].get("melee", ""))
+		var clip: String = figure.clips.get(style, figure.clips.get("melee", ""))
 		if player != null and player.has_animation(clip):
 			player.seek(player.get_animation(clip).length * float(option.get("peak", 0.45)), true)
 		await process_frame
@@ -93,6 +94,8 @@ func _run() -> void:
 
 
 func _build(option: Dictionary) -> FigureBody:
+	if option.has("enemy"):  # a shipped build out of the figure factory, for the after shots
+		return Figures.enemy(option["enemy"])
 	var figure := FigureBody.new()
 	var path: String = option["path"]
 	var clips: Dictionary = option["clips"]
@@ -102,7 +105,10 @@ func _build(option: Dictionary) -> FigureBody:
 	figure.setup(path, model_height, float(option["height"]), clips, bool(option.get("faces_plus_z", true)))
 	figure.hide_parts(option.get("hide", []))
 	if option.has("paint"):
-		_paint(figure, option["paint"])
+		var colours := {}
+		for key in option["paint"]:
+			colours[key] = Color.html(option["paint"][key])
+		figure.paint(colours)
 	if option.has("recolour"):
 		figure.recolour(Color.html(option["recolour"]))
 	if option.has("tint"):
@@ -147,32 +153,6 @@ func _build(option: Dictionary) -> FigureBody:
 			club.rotation = Vector3(rot[0], rot[1], rot[2])
 			attach.add_child(club)
 	return figure
-
-
-## Repaints a model's StandardMaterial3Ds flat: every surface goes matte, and a material whose
-## name is a key of `colours` takes that colour (Quaternius monsters ship dark, half-metallic
-## base colours that read as shadow under the dusk sun).
-static func _paint(figure: FigureBody, colours: Dictionary) -> void:
-	var done := {}
-	for node in figure.find_children("*", "MeshInstance3D", true, false):
-		var mi := node as MeshInstance3D
-		if mi.mesh == null:
-			continue
-		for i in mi.mesh.get_surface_count():
-			var src := mi.get_active_material(i) as StandardMaterial3D
-			if src == null:
-				continue
-			if not done.has(src):
-				var m := src.duplicate() as StandardMaterial3D
-				m.metallic = 0.0
-				m.roughness = 1.0
-				m.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
-				var key := String(src.resource_name)
-				for name in colours:
-					if key.begins_with(name):
-						m.albedo_color = Color.html(colours[name])
-				done[src] = m
-			mi.set_surface_override_material(i, done[src])
 
 
 ## The rig's height in model units: the merged AABB of its meshes in the rest pose.
