@@ -807,8 +807,8 @@ func _build_world(world: WorldDef) -> void:
 	var ground := MeshInstance3D.new()
 	ground.name = "Ground"
 	var plane := PlaneMesh.new()
-	plane.size = Vector2(width, depth)
-	plane.material = _flat_material(COLOR_GROUND)
+	plane.size = Vector2(width, depth) * 2.5  # snow runs on past the cliffs; only the world is clickable
+	plane.material = WorldDressing.snowfield_material()
 	ground.mesh = plane
 	ground.position = centre
 	_world.add_child(ground)
@@ -1238,10 +1238,12 @@ func _add_floor(polygon: Array, colour: Color) -> void:
 	floor_mesh.name = "OutpostFloor"
 	var plane := PlaneMesh.new()
 	plane.size = hi - lo
-	plane.material = _flat_material(colour)
+	plane.material = WorldDressing.yard_material()
 	floor_mesh.mesh = plane
 	floor_mesh.position = Vector3((lo.x + hi.x) * 0.5, 0.01, (lo.y + hi.y) * 0.5)
 	_world.add_child(floor_mesh)
+	# Stones trodden in from the gate on the south wall to the fire in the middle.
+	_world.add_child(WorldDressing.path_stones(Vector2((lo.x + hi.x) * 0.5, hi.y - 0.8), Vector2((lo.x + hi.x) * 0.5, (lo.y + hi.y) * 0.5 + 1.6)))
 
 
 func _add_block(id: String, min_xz: Array, max_xz: Array, height: float, colour: Color) -> MeshInstance3D:
