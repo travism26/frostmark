@@ -1,4 +1,4 @@
-## The in-game HUD: warmth and health gauges, the seven-skill panel, the pack and equipment,
+## The in-game HUD: warmth and health gauges, the eight-skill panel, the pack and equipment,
 ## the stash, workbench and upgrades panels, the field-fire button, the save-code panel, the
 ## button that opens the sound panel and the banner for big moments.
 ##
@@ -11,7 +11,7 @@ signal export_requested
 signal help_requested
 signal sound_requested
 
-## The skills panel lists all seven, gathering, crafting, combat.
+## The skills panel lists all eight, gathering, crafting, combat.
 const READOUT_SKILLS: Array[String] = SkillTable.NAMES
 
 const PANEL_NONE := ""

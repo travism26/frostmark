@@ -65,6 +65,15 @@ func _build_weapon(holder: Node3D, item: String) -> void:
 			stave.rotation.x = a * 0.6
 		_part(bow, Props.box(Vector3(0.015, 1.1, 0.015), COLOR_STRING), Vector3(0, 0, 0.02))
 		return
+	if style == CombatTable.STYLE_MAGIC:
+		# A staff held upright in the right hand: a shaft in the tier's material, a frost crystal on top.
+		var staff := Node3D.new()
+		staff.position = Vector3(0.45, 0.95, -0.15)
+		holder.add_child(staff)
+		_part(staff, Props.box(Vector3(0.06, 1.5, 0.06), colour), Vector3.ZERO)
+		var tip := _part(staff, Props.box(Vector3(0.16, 0.16, 0.16), Props.COLOR_FROST), Vector3(0, 0.82, 0))
+		tip.rotation = Vector3(0.6, 0.8, 0.0)
+		return
 	var hand := Node3D.new()
 	hand.position = Vector3(0.45, 0.85, -0.1)
 	hand.rotation.x = -0.5
