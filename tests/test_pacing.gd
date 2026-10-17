@@ -151,8 +151,10 @@ func test_ring_two_to_a_steel_kit_takes_an_evening() -> void:
 	var start := int(sim.state["tick"])
 	log_lines = []
 	assert_eq(sim.state["player"]["region"], WorldDef.REGION_RING_TWO, "starts just through the gate")
-	# 6. Home first, to bank the captain's iron, then fish and bronze bars for the furnace.
+	# 6. Home first, to bank the captain's iron and clear out the gear it outgrew, then fish
+	# and bronze bars for the furnace.
 	_home()
+	_discard(["wooden_pickaxe", "wooden_bow", "wolf_pelt"])
 	_kit(["fishing_rod", "bronze_pickaxe"])
 	_head_out()
 	_gather(["fishing_hole"], "raw_fish", 10)
@@ -438,6 +440,17 @@ func _withdraw(kind: String, count := -1) -> void:
 			_step()
 			left -= n
 	assert_true(H.pack_count(sim, kind) >= count, "withdrew %d %s" % [count, kind])
+
+
+## Takes everything of each kind in `kinds` out of the stash and drops it, to free the slots.
+func _discard(kinds: Array) -> void:
+	for kind in kinds:
+		_withdraw(kind)
+		var pack: Array = sim.state["inventory"]["pack"]
+		for i in pack.size():
+			if pack[i] != null and pack[i]["item"] == kind:
+				assert_true(sim.command(Vocab.DROP, {"index": i})["ok"], "drop %s" % kind)
+				_step()
 
 
 ## Deposits every pack slot whose item is in `kinds`, keeping `keep` of them in the pack.
