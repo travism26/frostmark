@@ -245,6 +245,26 @@ func test_a_version_3_snapshot_migrates() -> void:
 	assert_true(sim.command(Vocab.LIGHT_FIRE)["ok"], "can light a field fire")
 
 
+func test_a_version_4_snapshot_migrates_with_the_guide_off() -> void:
+	# What slice 5 could snapshot: a played character with no guide in its state.
+	var sim := SimScript.new()
+	H.walk_to(sim, H.OUTSIDE)
+	var v4 := sim.snapshot()
+	v4.erase("guide")
+	v4["version"] = 4
+	var migrated: Dictionary = SaveCode.migrate(v4, 5)
+	assert_eq(migrated["version"], 5)
+	assert_eq(migrated["guide"], {"on": false, "step": 4, "tips": {}}, "already played: no first-outing hints")
+	var loaded := SimScript.new()
+	assert_true(loaded.command(Vocab.IMPORT_SAVE, {"code": SaveCode.encode(v4)})["ok"])
+	assert_eq(loaded.state["version"], Sim.STATE_VERSION)
+	assert_false(loaded.hints_on())
+	assert_eq(loaded.hint(), "")
+	assert_eq(loaded.state["player"]["pos"], sim.state["player"]["pos"], "everything else as it was")
+	var events := H.run(loaded, 5)
+	assert_eq(H.of_kind(events, Vocab.EV_TIP).size() + H.of_kind(events, Vocab.EV_HINT).size(), 0)
+
+
 func test_a_full_version_2_stash_gets_no_kit() -> void:
 	var full: Array = []
 	for i in 8:
