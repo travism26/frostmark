@@ -1,5 +1,6 @@
 ## The waystone prompt: shown while the player stands by a waystone, with a button that starts
-## travel home and a line saying how the channel is going or why it cannot start. Bottom centre.
+## travel home and a line saying how the channel is going or why it cannot start. Bottom centre,
+## above the status lines.
 ##
 ## Glue only. Whether travel would start is the simulation's answer (`Sim.travel_check`); the
 ## button emits `travel_requested` and GameRoot sends the `travel` command.
@@ -30,7 +31,7 @@ func _ready() -> void:
 	_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	_panel.offset_left = -WIDTH * 0.5
 	_panel.offset_right = WIDTH * 0.5
-	_panel.offset_bottom = -24
+	_panel.offset_bottom = -124  # clear of the status and controls lines along the bottom
 	add_child(_panel)
 	var box := VBoxContainer.new()
 	_panel.add_child(box)
