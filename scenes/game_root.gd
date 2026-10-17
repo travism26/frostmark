@@ -1052,16 +1052,9 @@ func _remove_field_fire(id: String) -> void:
 		_fires.erase(id)
 
 
-## Flames lick: every fire's flame stretches and settles a little out of step with the others.
+## Fires flicker on their own (each `Flame` is a FireFx, scenes/fire_fx.gd); nothing per frame here.
 func _flicker() -> void:
-	var i := 0
-	for prop in _placed_fires + _fires.values():
-		if prop == null:
-			continue
-		var flame := (prop as Node3D).get_node_or_null("Flame") as Node3D
-		if flame != null:
-			flame.scale = Vector3(1.0, 1.0 + 0.15 * sin(_clock * 9.0 + i * 1.7), 1.0)
-		i += 1
+	pass
 
 
 # --- Enemies and loot -----------------------------------------------------------------
