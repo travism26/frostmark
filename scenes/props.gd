@@ -65,16 +65,17 @@ static func pine(kind: String) -> Node3D:
 ## rock alone as `Spent` (the ore has been dug out).
 static func ore_rock(kind: String, size: float) -> Node3D:
 	var root := Node3D.new()
-	root.add_child(model(NATURE + "rock_largeB.glb", size * 0.5, 0.55, Color(0.62, 0.72, 0.9)))
+	# Only the flattest tops hold snow, so the rock still reads against the snowfield.
+	root.add_child(model(NATURE + "rock_largeB.glb", size * 0.5, 0.9, Color(0.55, 0.62, 0.78)))
 	var ore := Node3D.new()
 	ore.name = "Full"
 	var colour: Color = ORE_COLORS.get(kind, Color.MAGENTA)
-	var spots := [Vector3(-0.35, 0.45, 0.1), Vector3(0.25, 0.55, -0.2), Vector3(0.05, 0.35, 0.45), Vector3(0.4, 0.3, 0.3)]
+	var spots := [Vector3(-0.3, 0.85, 0.1), Vector3(0.25, 0.95, -0.25), Vector3(0.05, 0.8, 0.45), Vector3(0.45, 0.7, 0.3)]
 	for i in spots.size():
 		var glint := MeshInstance3D.new()
 		var mesh := BoxMesh.new()
-		mesh.size = Vector3(0.22, 0.22, 0.22) * (size / 2.0)
-		mesh.material = flat(colour, 0.25)
+		mesh.size = Vector3(0.34, 0.34, 0.34) * (size / 2.0)
+		mesh.material = flat(colour, 0.6)
 		glint.mesh = mesh
 		glint.position = spots[i] * (size / 2.0)
 		glint.rotation = Vector3(0.6 * i, 0.9 * i, 0.4)

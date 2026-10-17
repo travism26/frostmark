@@ -26,6 +26,10 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	var turn := 0.0
+	# Typing in a text field (a save code full of q and e) must not spin the camera.
+	if get_viewport().gui_get_focus_owner() is TextEdit:
+		_update()
+		return
 	if Input.is_key_pressed(KEY_Q):
 		turn += 1.0
 	if Input.is_key_pressed(KEY_E):

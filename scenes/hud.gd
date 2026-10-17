@@ -221,6 +221,7 @@ func _add_craft_row(id: String) -> void:
 	craft.text = "Craft"
 	craft.pressed.connect(func() -> void: command_requested.emit(SimVocab.SMITH, {"recipe": id}))
 	row.add_child(craft)
+	row.add_child(_gap(14))  # clear of the scrollbar
 	_craft_list.add_child(row)
 	_craft_rows[id] = {"text": text, "button": craft}
 
@@ -270,6 +271,7 @@ func _add_upgrade_row(id: String) -> void:
 	build.custom_minimum_size = Vector2(70, 0)
 	build.pressed.connect(func() -> void: command_requested.emit(SimVocab.BUILD, {"upgrade": id}))
 	row.add_child(build)
+	row.add_child(_gap(14))  # clear of the scrollbar
 	_upgrade_list.add_child(row)
 	_upgrade_list.add_child(HSeparator.new())
 	_upgrade_rows[id] = {"text": text, "button": build}
@@ -576,6 +578,13 @@ func _close_button() -> Button:
 	b.text = "x"
 	b.pressed.connect(close_panels)
 	return b
+
+
+static func _gap(width: float) -> Control:
+	var c := Control.new()
+	c.custom_minimum_size = Vector2(width, 0)
+	c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return c
 
 
 static func _panel_box() -> PanelContainer:

@@ -13,7 +13,7 @@ extends Node3D
 const CHARACTER_TURN_SPEED := 12.0  # radians per second, for the facing marker
 const RAY_LENGTH := 500.0
 
-const COLOR_GROUND := Color(0.90, 0.93, 0.98)
+const COLOR_GROUND := Color(0.84, 0.88, 0.95)
 const COLOR_OUTPOST_FLOOR := Color(0.60, 0.56, 0.50)
 const OCCLUDER_ALPHA := 0.25
 const COLOR_BY_SOLID := {
