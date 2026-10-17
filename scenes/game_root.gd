@@ -127,6 +127,9 @@ func _process(delta: float) -> void:
 		sim.step()
 		_expire_cues()
 		_apply_events(sim.drain_events())
+		# Some enemy changes carry no event (healing on reaching home), so redraw them all.
+		for id in _enemies:
+			_sync_enemy(id)
 	_animate(delta)
 
 
@@ -327,17 +330,12 @@ func _apply_events(events: Array[Dictionary]) -> void:
 				_show_cue(e)
 			SimVocab.EV_HIT:
 				_last_event = _hit_text(e)
-				if e["target"] != SimVocab.PLAYER:
-					_sync_enemy(e["target"])
 			SimVocab.EV_MISSED:
 				_last_event = "%s's %s misses. You stepped clear." % [
 					_sentence(_enemy_name(e["attacker"])), CombatTable.action_label(e["action"]).to_lower(),
 				]
 			SimVocab.EV_ENEMY_DIED:
-				_sync_enemy(e["enemy_id"])
 				_last_event = "%s falls." % _sentence(_enemy_name(e["enemy_id"]))
-			SimVocab.EV_ENEMY_DISENGAGED, SimVocab.EV_ENEMY_RESPAWNED:
-				_sync_enemy(e["enemy_id"])
 			SimVocab.EV_LOOT_DROPPED:
 				_add_loot(e["loot_id"])
 			SimVocab.EV_PICKED_UP:
