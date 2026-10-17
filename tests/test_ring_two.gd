@@ -95,6 +95,21 @@ func test_a_barred_gate_is_not_walked_through() -> void:
 	assert_eq(H.of_kind(events, Vocab.EV_RING_TWO_REACHED).size(), 0)
 
 
+func test_the_captain_stays_down_once_his_gate_is_open() -> void:
+	var sim := SimScript.new()
+	H.patch(sim, {"upgrades": UPGRADES_TO_THE_WINCH.duplicate()})
+	H.place(sim, [0.5, 55.5])
+	H.arm(sim, "iron_sword")
+	H.patch_enemy(sim, "captain", {"health": 1})
+	sim.command(Vocab.ATTACK, {"enemy_id": "captain"})
+	H.run(sim, 4)
+	assert_true(sim.ring_gate_open("ring_two_gate"))
+	H.place(sim, [0.5, 4.5])
+	var events := H.run(sim, int(CombatTable.ENEMIES["bandit_captain"]["respawn_ticks"]) * 2)
+	assert_eq(H.where(events, Vocab.EV_ENEMY_RESPAWNED, "enemy_id", "captain").size(), 0, "the way home stays clear")
+	assert_eq(sim.state["enemies"]["captain"]["mode"], Sim.MODE_DEAD)
+
+
 func test_the_brazier_past_the_gate_warms() -> void:
 	var sim := _gate_open()
 	H.place(sim, PAST_THE_GATE)

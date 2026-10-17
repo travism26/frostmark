@@ -101,11 +101,11 @@ const ACTIONS := {
 	"draw_sabre": {"label": "Draws his sabre", "damage": 0, "stance": true},
 	"frost_bolt": {"label": "Frost bolt", "damage": 4},
 	"ice_lance": {"label": "Ice lance", "damage": 9, "heavy": true},
-	"smash": {"label": "Smash", "damage": 10},
+	"smash": {"label": "Smash", "damage": 8},
 	"wind_up": {"label": "Winds up", "damage": 0, "stance": true, "windup": true},
 	"crush": {"label": "Crush", "damage": 26, "heavy": true},
-	"dart": {"label": "Dart", "damage": 5},
-	"barbed_volley": {"label": "Barbed volley", "damage": 14, "heavy": true},
+	"dart": {"label": "Dart", "damage": 4},
+	"barbed_volley": {"label": "Barbed volley", "damage": 10, "heavy": true},
 }
 
 ## Enemy kinds. `weapon` sets the style and reach. `speed` is metres per tick (the player walks
@@ -120,7 +120,8 @@ const ACTIONS := {
 ## A kind with `stances` fights with more than one weapon: `stances[i]` is the weapon it holds
 ## for `actions[i]`, so its style and reach follow its place in the cycle. `boss_loot` is a
 ## list of which exactly one always drops. A `boss` is a ring's guardian: its first death is
-## recorded for good (it opens that ring's gate with the matching upgrade).
+## recorded for good (it opens that ring's gate with the matching upgrade), and once that gate
+## stands open it no longer comes back.
 const ENEMIES := {
 	"wolf": {
 		"label": "Wolf", "health": 15, "weapon": "fangs", "speed": 2.5, "sight": 6.0,
@@ -164,14 +165,14 @@ const ENEMIES := {
 	"ice_troll": {
 		"label": "Ice troll", "health": 90, "weapon": "troll_club", "speed": 1.5, "sight": 6.0,
 		"actions": ["smash", ACTION_REST, "wind_up", "crush", ACTION_REST, ACTION_REST],
-		"loot": [{"item": "troll_hide", "count": 1}], "rare_percent": 15, "respawn_ticks": 200,
+		"loot": [{"item": "troll_hide", "count": 1}], "rare_percent": 15, "respawn_ticks": 400,
 	},
 	# Two darts, a breath, then a barbed volley; it backs away from anyone who closes in.
 	"ruin_stalker": {
 		"label": "Ruin stalker", "health": 35, "weapon": "stalker_bow", "speed": 1.5, "sight": 10.0,
 		"kite": 4.0, "actions": ["dart", "dart", ACTION_REST, "barbed_volley", ACTION_REST, ACTION_REST],
 		"loot": [{"item": "arrows", "count": 12}, {"item": "coal", "count": 1}], "rare_percent": 10,
-		"respawn_ticks": 150,
+		"respawn_ticks": 300,
 	},
 }
 ## The rare drop in both rings: one piece of iron gear. Iron is found, never smithed.

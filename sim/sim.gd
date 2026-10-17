@@ -608,6 +608,15 @@ func ring_gate_open(object_id: String) -> bool:
 	return (state["bosses_defeated"] as Array).has(gate["guardian"]) and (state["upgrades"] as Array).has(gate["upgrade"])
 
 
+## Whether `enemy_id` is the guardian of a ring gate that stands open. Such a guardian, once
+## dead, stays down: the outpost holds the gate now, so the way home is not barred again.
+func _guards_an_open_gate(enemy_id: String) -> bool:
+	for id in _open_ring_gates():
+		if world.objects[id]["guardian"] == enemy_id:
+			return true
+	return false
+
+
 func _open_ring_gates() -> Array[String]:
 	var out: Array[String] = []
 	for id in world.objects_of_kind(WorldDef.KIND_RING_GATE):
@@ -996,7 +1005,7 @@ func _step_enemy(id: String) -> void:
 	var tick := int(state["tick"])
 	match e["mode"]:
 		MODE_DEAD:
-			if tick >= int(e["respawn_tick"]):
+			if tick >= int(e["respawn_tick"]) and not _guards_an_open_gate(id):
 				state["enemies"][id] = _fresh_enemy(id)
 				_emit({"kind": SimVocab.EV_ENEMY_RESPAWNED, "enemy_id": id, "pos": _xz(_home(id))})
 		MODE_IDLE:

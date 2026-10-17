@@ -79,15 +79,15 @@ const RECIPES := {
 	# Steel: iron ore from both rings and coal from ring two, once the blast furnace is built.
 	"steel_bar": {
 		"label": "Steel bar", "inputs": {"iron_ore": 1, "coal": 2}, "output": {"item": "steel_bar", "count": 1},
-		"skill": SkillTable.SMITHING, "level": 4, "upgrade": "blast_furnace", "xp": 20, "tier": ItemTable.TIER_STEEL,
+		"skill": SkillTable.SMITHING, "level": 4, "upgrade": "blast_furnace", "xp": 25, "tier": ItemTable.TIER_STEEL,
 	},
 	"steel_axe": {
 		"label": "Steel axe", "inputs": {"steel_bar": 1, "logs": 2}, "output": {"item": "steel_axe", "count": 1},
-		"skill": SkillTable.SMITHING, "level": 5, "upgrade": "blast_furnace", "xp": 30, "tier": ItemTable.TIER_STEEL,
+		"skill": SkillTable.SMITHING, "level": 4, "upgrade": "blast_furnace", "xp": 30, "tier": ItemTable.TIER_STEEL,
 	},
 	"steel_pickaxe": {
 		"label": "Steel pickaxe", "inputs": {"steel_bar": 1, "logs": 2}, "output": {"item": "steel_pickaxe", "count": 1},
-		"skill": SkillTable.SMITHING, "level": 5, "upgrade": "blast_furnace", "xp": 30, "tier": ItemTable.TIER_STEEL,
+		"skill": SkillTable.SMITHING, "level": 4, "upgrade": "blast_furnace", "xp": 30, "tier": ItemTable.TIER_STEEL,
 	},
 	"steel_sword": {
 		"label": "Steel sword", "inputs": {"steel_bar": 2, "logs": 1}, "output": {"item": "steel_sword", "count": 1},
@@ -99,7 +99,7 @@ const RECIPES := {
 	},
 	"steel_armour": {
 		"label": "Steel armour", "inputs": {"steel_bar": 3, "troll_hide": 1}, "output": {"item": "steel_armour", "count": 1},
-		"skill": SkillTable.SMITHING, "level": 6, "upgrade": "blast_furnace", "xp": 80, "tier": ItemTable.TIER_STEEL,
+		"skill": SkillTable.SMITHING, "level": 5, "upgrade": "blast_furnace", "xp": 80, "tier": ItemTable.TIER_STEEL,
 	},
 }
 
