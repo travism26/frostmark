@@ -83,11 +83,11 @@ const ACTIONS := {
 	"lunge": {"label": "Lunge", "damage": 7, "heavy": true},
 	"shot": {"label": "Shot", "damage": 4},
 	"aimed_shot": {"label": "Aimed shot", "damage": 9, "heavy": true},
-	"slash": {"label": "Slash", "damage": 7},
-	"cleave": {"label": "Cleave", "damage": 15, "heavy": true},
+	"slash": {"label": "Slash", "damage": 8},
+	"cleave": {"label": "Cleave", "damage": 17, "heavy": true},
 	"draw_bow": {"label": "Draws his bow", "damage": 0, "stance": true},
-	"loose": {"label": "Loose", "damage": 6},
-	"volley": {"label": "Volley", "damage": 14, "heavy": true},
+	"loose": {"label": "Loose", "damage": 7},
+	"volley": {"label": "Volley", "damage": 16, "heavy": true},
 	"draw_sabre": {"label": "Draws his sabre", "damage": 0, "stance": true},
 }
 
@@ -115,7 +115,7 @@ const ENEMIES := {
 	# Sabre for two blows, then he draws his bow for two shots, then back: the second blow of
 	# each stance is the heavy one, and each change of stance is announced a tick ahead.
 	"bandit_captain": {
-		"label": "Bandit captain", "health": 150, "weapon": "captain_sabre", "speed": 2.0, "sight": 7.0,
+		"label": "Bandit captain", "health": 240, "weapon": "captain_sabre", "speed": 2.0, "sight": 7.0,
 		"actions": [
 			"slash", ACTION_REST, "cleave", ACTION_REST, "draw_bow",
 			"loose", ACTION_REST, "volley", ACTION_REST, "draw_sabre",

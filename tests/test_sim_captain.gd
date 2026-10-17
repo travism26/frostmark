@@ -79,13 +79,10 @@ func test_the_captain_drops_iron_gear() -> void:
 
 ## Builds the gate upgrade from a stocked stash, with everything it requires already built.
 func _build_gate_upgrade(sim: Sim) -> Array[Dictionary]:
-	var slots: Array = []
-	slots.resize(12)
+	var slots := Inventory.empty_slots(12)
 	var cost: Dictionary = UpgradeTable.get_upgrade("ring_two_gate")["cost"]
-	var i := 0
 	for kind in cost:
-		slots[i] = {"item": kind, "count": cost[kind]}
-		i += 1
+		Inventory.add(slots, kind, int(cost[kind]))
 	var snap := sim.snapshot()
 	snap["stash"] = {"capacity": 12, "slots": slots}
 	snap["upgrades"] = ["stash_shelves", "forge", "armoury"]

@@ -29,7 +29,7 @@ const UPGRADES := {
 		"effects": {"recipes": ["bronze_armour"]}, "locked": "",
 	},
 	"ring_two_gate": {
-		"label": "Ring-two gate winch", "cost": {"logs": 10, "iron_ore": 5, "bronze_bar": 3, "wolf_pelt": 2},
+		"label": "Ring-two gate winch", "cost": {"logs": 12, "iron_ore": 8, "bronze_bar": 3, "wolf_pelt": 3},
 		"requires": ["armoury"], "effects": {"ring_gate": "ring_two_gate"}, "locked": "",
 	},
 	"waystone": {
