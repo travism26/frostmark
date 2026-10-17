@@ -16,6 +16,11 @@ const SUN_AZIMUTH := -PI * 0.25
 ## each layer stops emitting and its flakes fall out on their own.
 const SNOW_LAYERS := 7
 const SNOW_PER_LAYER := 100
+## The layers only the blizzard reaches (density above 5/7) are thicker, with bigger flakes.
+const BLIZZARD_FROM_LAYER := 5
+const BLIZZARD_PER_LAYER := 180
+const FLAKE_SIZE := 0.09
+const BLIZZARD_FLAKE_SIZE := 0.13
 ## Reduced motion keeps this share of the snow.
 const REDUCED_SNOW := 0.5
 ## How far upwind of the camera the snow starts, in metres at full wind, so the drift
@@ -210,7 +215,8 @@ func _apply(look: Dictionary) -> void:
 func _make_snow(index: int) -> CPUParticles3D:
 	var p := CPUParticles3D.new()
 	p.name = "Snow%d" % index
-	p.amount = SNOW_PER_LAYER
+	var blizzard := index >= BLIZZARD_FROM_LAYER
+	p.amount = BLIZZARD_PER_LAYER if blizzard else SNOW_PER_LAYER
 	p.lifetime = 7.0
 	p.preprocess = 7.0
 	p.randomness = 0.3
@@ -224,7 +230,7 @@ func _make_snow(index: int) -> CPUParticles3D:
 	p.initial_velocity_max = 2.4
 	p.gravity = Vector3(0, -0.3, 0)
 	var quad := QuadMesh.new()
-	quad.size = Vector2(0.09, 0.09)
+	quad.size = Vector2.ONE * (BLIZZARD_FLAKE_SIZE if blizzard else FLAKE_SIZE)
 	quad.material = _flake_material
 	p.mesh = quad
 	return p
