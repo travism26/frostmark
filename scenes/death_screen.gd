@@ -70,7 +70,8 @@ func _ready() -> void:
 	var wake := Button.new()
 	wake.text = "Wake by the fire"
 	wake.theme_type_variation = "DangerButton"
-	wake.icon = UiTheme.icon("flame", 16)
+	wake.icon = IconTable.texture(IconTable.UI_FIRE)
+	wake.add_theme_constant_override("icon_max_width", 16)
 	wake.custom_minimum_size = Vector2(0, 46)
 	wake.pressed.connect(func() -> void: dismissed.emit())
 	column.add_child(wake)

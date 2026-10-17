@@ -1,19 +1,20 @@
-## Frostmark's one look for every screen: frosted dark-slate panels with an ice-blue edge,
-## Cinzel headings, Inter body text, an ember accent for warmth and fire and a cold red for
-## health and danger. Everything is built in code from the CC0 Kenney border art and the
-## two OFL fonts under assets/, so there is no .tres to keep in step.
+## Frostmark's one look for every screen: rounded frosted timber-and-iron frames with a soft
+## inner glow, Cinzel headings, Inter body text and buttons, white glyphs on tinted round
+## badges (IconTable), an ember accent for warmth and fire and a cold red for health and
+## danger. Everything is built in code from the icon table and the two OFL fonts under
+## assets/, so there is no .tres to keep in step.
 ##
 ## `theme()` returns the one cached Theme; each root Control sets it in `_ready`. The rest
 ## are small helpers for widgets the Theme cannot express on its own: framed panels in a
-## colour key, headings and body labels, icons scaled to a size, and the three labels that
-## live in main.tscn (`style_hud_label`).
+## colour key, headings and body labels, badges, Kenney icons scaled to a size, and the
+## status label that lives in main.tscn (`style_hud_label`).
 class_name UiTheme
 extends RefCounted
 
 # --- Palette --------------------------------------------------------------------------
 
 ## Panel fill: frosted slate that still lets a little of the snow through.
-const SLATE := Color(0.07, 0.10, 0.15, 0.88)
+const SLATE := Color(0.07, 0.10, 0.15, 0.90)
 ## Insets: slot cells, gauge tracks, text fields.
 const SLATE_DEEP := Color(0.035, 0.055, 0.09, 0.92)
 ## Raised surfaces: buttons and header strips.
@@ -30,13 +31,16 @@ const EMBER_DEEP := Color(0.78, 0.36, 0.10)
 const BLOOD := Color(0.85, 0.22, 0.25)
 const BLOOD_DEEP := Color(0.45, 0.10, 0.13)
 const XP := Color(0.45, 0.82, 0.74)
+## The frame's timber band and iron line.
+const TIMBER := Color(0.30, 0.19, 0.11)
+const TIMBER_LIGHT := Color(0.42, 0.28, 0.16)
+const IRON := Color(0.46, 0.50, 0.56)
+const IRON_DARK := Color(0.22, 0.25, 0.30)
+const STONE := Color(0.36, 0.38, 0.42)
 
 const FONT_CINZEL := "res://assets/fonts/Cinzel[wght].ttf"
 const FONT_INTER := "res://assets/fonts/Inter[opsz,wght].ttf"
-const FRAME_ART := "res://assets/ui/kenney_fantasy_ui_borders/panel-border-014.png"
 const ICON_DIR := "res://assets/ui/kenney_game_icons/"
-## The frame art is 48 px with its corner detail inside 12 px.
-const FRAME_MARGIN := 12
 
 ## Panel colour keys for `panel_style(kind)`.
 const PANEL_SLATE := "panel"
@@ -44,6 +48,17 @@ const PANEL_DANGER := "danger"
 const PANEL_ICE := "ice"
 const PANEL_EMBER := "ember"
 
+## The frame styles the UI board offered. `frame_style` picks the one in use; the board
+## script switches it to render the options.
+const FRAME_TIMBER := "timber"  # timber band, iron line, ice glow
+const FRAME_FROST := "frost"  # a thin iron rim on frosted glass
+const FRAME_STONE := "stone"  # a bevelled stone band with an ember glow
+const FRAME_STYLES: Array[String] = [FRAME_TIMBER, FRAME_FROST, FRAME_STONE]
+## The frame texture is this big, with its band and glow inside the 9-slice margin.
+const FRAME_PX := 72
+const FRAME_MARGIN := 24
+
+static var frame_style := FRAME_TIMBER
 static var _theme: Theme
 static var _fonts := {}  # "cinzel:700:2" -> FontVariation
 static var _frames := {}  # kind -> StyleBoxTexture
@@ -57,6 +72,14 @@ static func theme() -> Theme:
 	if _theme == null:
 		_theme = _build()
 	return _theme
+
+
+## Switches the frame style and drops every cached style so the next `theme()` rebuilds.
+## Board-only: controls already on screen keep the theme they were given.
+static func set_frame_style(style: String) -> void:
+	frame_style = style
+	_theme = null
+	_frames = {}
 
 
 static func _build() -> Theme:
@@ -73,9 +96,9 @@ static func _build() -> Theme:
 	t.set_type_variation("Muted", "Label")
 	t.set_color("font_color", "Muted", TEXT_DIM)
 	t.set_font_size("font_size", "Muted", 13)
-	t.set_type_variation("OnBar", "Label")  # text printed over a gauge
-	t.set_font("font", "OnBar", font_inter(600))
-	t.set_font_size("font_size", "OnBar", 12)
+	t.set_type_variation("OnBar", "Label")  # text printed over a gauge or an orb
+	t.set_font("font", "OnBar", font_inter(700))
+	t.set_font_size("font_size", "OnBar", 13)
 	t.set_color("font_color", "OnBar", TEXT)
 	t.set_color("font_outline_color", "OnBar", Color(INK, 0.9))
 	t.set_constant("outline_size", "OnBar", 4)
@@ -85,12 +108,7 @@ static func _build() -> Theme:
 	t.set_color("font_color", "Banner", TEXT)
 	t.set_color("font_outline_color", "Banner", Color(INK, 0.85))
 	t.set_constant("outline_size", "Banner", 4)
-	t.set_stylebox("normal", "Banner", _flat(Color(INK, 0.62), Color(ICE, 0.35), 1, 8, Vector2(18, 8)))
-	t.set_type_variation("LevelBadge", "Label")
-	t.set_font("font", "LevelBadge", font_cinzel(800, 0))
-	t.set_font_size("font_size", "LevelBadge", 12)
-	t.set_color("font_color", "LevelBadge", INK)
-	t.set_stylebox("normal", "LevelBadge", _flat(ICE, Color(1, 1, 1, 0.5), 1, 9, Vector2(6, 0)))
+	t.set_stylebox("normal", "Banner", _flat(Color(INK, 0.62), Color(ICE, 0.35), 1, 10, Vector2(18, 8)))
 	t.set_type_variation("CountBadge", "Label")
 	t.set_font("font", "CountBadge", font_inter(700))
 	t.set_font_size("font_size", "CountBadge", 11)
@@ -100,10 +118,11 @@ static func _build() -> Theme:
 	t.set_font("font", "Flash", font_cinzel(700, 1))
 	t.set_font_size("font_size", "Flash", 14)
 	t.set_color("font_color", "Flash", ICE)
-	t.set_stylebox("normal", "Flash", _flat(Color(INK, 0.7), Color(ICE, 0.5), 1, 6, Vector2(12, 4)))
+	t.set_stylebox("normal", "Flash", _flat(Color(INK, 0.7), Color(ICE, 0.5), 1, 8, Vector2(12, 4)))
 
-	# Buttons: Cinzel labels, four clear states, disabled visibly dimmer.
-	t.set_font("font", "Button", font_cinzel(600, 1))
+	# Buttons: Inter labels (Cinzel is a capitals face and shouts on a button), four clear
+	# states, disabled dimmer but still opaque so it never reads as a ghost over the world.
+	t.set_font("font", "Button", font_inter(600))
 	t.set_font_size("font_size", "Button", 14)
 	t.set_color("font_color", "Button", TEXT)
 	t.set_color("font_hover_color", "Button", Color(1, 1, 1))
@@ -118,86 +137,100 @@ static func _build() -> Theme:
 	t.set_color("icon_focus_color", "Button", TEXT)
 	t.set_color("icon_disabled_color", "Button", TEXT_DISABLED)
 	t.set_constant("h_separation", "Button", 7)
-	t.set_stylebox("normal", "Button", _flat(SLATE_RAISED, Color(ICE, 0.55), 1, 5, Vector2(14, 7)))
-	t.set_stylebox("hover", "Button", _glow(_flat(Color(0.19, 0.28, 0.40, 0.98), Color(ICE, 0.95), 1, 5, Vector2(14, 7)), Color(ICE, 0.35), 4))
-	t.set_stylebox("pressed", "Button", _flat(Color(0.06, 0.10, 0.16, 0.98), ICE, 1, 5, Vector2(14, 7)))
-	t.set_stylebox("hover_pressed", "Button", _flat(Color(0.06, 0.10, 0.16, 0.98), ICE, 1, 5, Vector2(14, 7)))
-	t.set_stylebox("disabled", "Button", _flat(Color(0.07, 0.09, 0.13, 0.55), Color(ICE_DIM, 0.22), 1, 5, Vector2(14, 7)))
+	t.set_stylebox("normal", "Button", _flat(SLATE_RAISED, Color(IRON, 0.8), 1, 7, Vector2(14, 7)))
+	t.set_stylebox("hover", "Button", _glow(_flat(Color(0.19, 0.28, 0.40, 0.98), Color(ICE, 0.95), 1, 7, Vector2(14, 7)), Color(ICE, 0.35), 4))
+	t.set_stylebox("pressed", "Button", _flat(Color(0.06, 0.10, 0.16, 0.98), ICE, 1, 7, Vector2(14, 7)))
+	t.set_stylebox("hover_pressed", "Button", _flat(Color(0.06, 0.10, 0.16, 0.98), ICE, 1, 7, Vector2(14, 7)))
+	t.set_stylebox("disabled", "Button", _flat(Color(0.09, 0.12, 0.17, 0.96), Color(IRON_DARK, 0.9), 1, 7, Vector2(14, 7)))
 	t.set_stylebox("focus", "Button", StyleBoxEmpty.new())
 
 	t.set_type_variation("PrimaryButton", "Button")
-	t.set_font_size("font_size", "PrimaryButton", 17)
-	t.set_stylebox("normal", "PrimaryButton", _flat(Color(0.17, 0.32, 0.48, 0.98), Color(ICE, 0.85), 1, 6, Vector2(20, 10)))
-	t.set_stylebox("hover", "PrimaryButton", _glow(_flat(Color(0.24, 0.42, 0.62, 1.0), Color(1, 1, 1, 0.9), 1, 6, Vector2(20, 10)), Color(ICE, 0.45), 6))
-	t.set_stylebox("pressed", "PrimaryButton", _flat(Color(0.10, 0.20, 0.32, 1.0), ICE, 1, 6, Vector2(20, 10)))
-	t.set_stylebox("hover_pressed", "PrimaryButton", _flat(Color(0.10, 0.20, 0.32, 1.0), ICE, 1, 6, Vector2(20, 10)))
-	t.set_stylebox("disabled", "PrimaryButton", _flat(Color(0.07, 0.09, 0.13, 0.55), Color(ICE_DIM, 0.22), 1, 6, Vector2(20, 10)))
+	t.set_font_size("font_size", "PrimaryButton", 16)
+	t.set_stylebox("normal", "PrimaryButton", _flat(Color(0.17, 0.32, 0.48, 0.98), Color(ICE, 0.85), 1, 8, Vector2(20, 10)))
+	t.set_stylebox("hover", "PrimaryButton", _glow(_flat(Color(0.24, 0.42, 0.62, 1.0), Color(1, 1, 1, 0.9), 1, 8, Vector2(20, 10)), Color(ICE, 0.45), 6))
+	t.set_stylebox("pressed", "PrimaryButton", _flat(Color(0.10, 0.20, 0.32, 1.0), ICE, 1, 8, Vector2(20, 10)))
+	t.set_stylebox("hover_pressed", "PrimaryButton", _flat(Color(0.10, 0.20, 0.32, 1.0), ICE, 1, 8, Vector2(20, 10)))
+	t.set_stylebox("disabled", "PrimaryButton", _flat(Color(0.09, 0.12, 0.17, 0.96), Color(IRON_DARK, 0.9), 1, 8, Vector2(20, 10)))
 
 	t.set_type_variation("DangerButton", "Button")
-	t.set_font_size("font_size", "DangerButton", 17)
-	t.set_stylebox("normal", "DangerButton", _flat(Color(0.36, 0.11, 0.14, 0.98), Color(1.0, 0.55, 0.5, 0.8), 1, 6, Vector2(20, 10)))
-	t.set_stylebox("hover", "DangerButton", _glow(_flat(Color(0.50, 0.16, 0.20, 1.0), Color(1.0, 0.75, 0.7), 1, 6, Vector2(20, 10)), Color(1.0, 0.4, 0.4, 0.4), 6))
-	t.set_stylebox("pressed", "DangerButton", _flat(Color(0.22, 0.07, 0.09, 1.0), Color(1.0, 0.6, 0.55), 1, 6, Vector2(20, 10)))
-	t.set_stylebox("hover_pressed", "DangerButton", _flat(Color(0.22, 0.07, 0.09, 1.0), Color(1.0, 0.6, 0.55), 1, 6, Vector2(20, 10)))
+	t.set_font_size("font_size", "DangerButton", 16)
+	t.set_stylebox("normal", "DangerButton", _flat(Color(0.36, 0.11, 0.14, 0.98), Color(1.0, 0.55, 0.5, 0.8), 1, 8, Vector2(20, 10)))
+	t.set_stylebox("hover", "DangerButton", _glow(_flat(Color(0.50, 0.16, 0.20, 1.0), Color(1.0, 0.75, 0.7), 1, 8, Vector2(20, 10)), Color(1.0, 0.4, 0.4, 0.4), 6))
+	t.set_stylebox("pressed", "DangerButton", _flat(Color(0.22, 0.07, 0.09, 1.0), Color(1.0, 0.6, 0.55), 1, 8, Vector2(20, 10)))
+	t.set_stylebox("hover_pressed", "DangerButton", _flat(Color(0.22, 0.07, 0.09, 1.0), Color(1.0, 0.6, 0.55), 1, 8, Vector2(20, 10)))
 	t.set_color("font_pressed_color", "DangerButton", Color(1.0, 0.7, 0.65))
 	t.set_color("font_hover_pressed_color", "DangerButton", Color(1.0, 0.7, 0.65))
 
-	# The Light fire button: its flame glows ember while a fire can be lit.
+	# The Light fire button: ember-rimmed, and still solid while a fire cannot be lit.
 	t.set_type_variation("FireButton", "Button")
-	t.set_color("icon_normal_color", "FireButton", EMBER)
-	t.set_color("icon_hover_color", "FireButton", Color(1.0, 0.78, 0.4))
-	t.set_color("icon_pressed_color", "FireButton", Color(1.0, 0.5, 0.15))
-	t.set_color("icon_hover_pressed_color", "FireButton", Color(1.0, 0.5, 0.15))
-	t.set_color("icon_focus_color", "FireButton", EMBER)
-	t.set_color("icon_disabled_color", "FireButton", Color(0.55, 0.42, 0.32, 0.5))
+	t.set_stylebox("normal", "FireButton", _flat(Color(0.20, 0.12, 0.07, 0.97), Color(EMBER, 0.85), 1, 7, Vector2(12, 7)))
+	t.set_stylebox("hover", "FireButton", _glow(_flat(Color(0.30, 0.17, 0.09, 1.0), Color(1.0, 0.78, 0.4), 1, 7, Vector2(12, 7)), Color(EMBER, 0.4), 5))
+	t.set_stylebox("pressed", "FireButton", _flat(Color(0.12, 0.07, 0.04, 1.0), EMBER, 1, 7, Vector2(12, 7)))
+	t.set_stylebox("hover_pressed", "FireButton", _flat(Color(0.12, 0.07, 0.04, 1.0), EMBER, 1, 7, Vector2(12, 7)))
+	t.set_stylebox("disabled", "FireButton", _flat(Color(0.12, 0.10, 0.09, 0.96), Color(0.45, 0.32, 0.22), 1, 7, Vector2(12, 7)))
+	t.set_color("font_disabled_color", "FireButton", Color(0.70, 0.62, 0.55))
 
-	# Inventory cells: a dark inset with a light border, a glow on hover.
+	# Inventory cells: a dark inset with an iron border, a glow on hover.
 	t.set_type_variation("SlotButton", "Button")
 	t.set_font("font", "SlotButton", font_inter(500))
 	t.set_font_size("font_size", "SlotButton", 12)
 	t.set_color("font_disabled_color", "SlotButton", TEXT_DIM)
-	t.set_stylebox("normal", "SlotButton", _flat(SLATE_DEEP, Color(ICE, 0.38), 1, 4, Vector2(4, 4)))
-	t.set_stylebox("hover", "SlotButton", _glow(_flat(Color(0.09, 0.14, 0.21, 0.96), Color(ICE, 0.95), 1, 4, Vector2(4, 4)), Color(ICE, 0.4), 4))
-	t.set_stylebox("pressed", "SlotButton", _flat(Color(0.16, 0.26, 0.38, 0.98), ICE, 1, 4, Vector2(4, 4)))
-	t.set_stylebox("hover_pressed", "SlotButton", _flat(Color(0.16, 0.26, 0.38, 0.98), ICE, 1, 4, Vector2(4, 4)))
-	t.set_stylebox("disabled", "SlotButton", _flat(Color(0.035, 0.055, 0.09, 0.6), Color(ICE, 0.18), 1, 4, Vector2(4, 4)))
+	t.set_stylebox("normal", "SlotButton", _flat(SLATE_DEEP, Color(IRON, 0.55), 1, 8, Vector2(3, 3)))
+	t.set_stylebox("hover", "SlotButton", _glow(_flat(Color(0.09, 0.14, 0.21, 0.96), Color(ICE, 0.95), 1, 8, Vector2(3, 3)), Color(ICE, 0.4), 4))
+	t.set_stylebox("pressed", "SlotButton", _flat(Color(0.16, 0.26, 0.38, 0.98), ICE, 1, 8, Vector2(3, 3)))
+	t.set_stylebox("hover_pressed", "SlotButton", _flat(Color(0.16, 0.26, 0.38, 0.98), ICE, 1, 8, Vector2(3, 3)))
+	t.set_stylebox("disabled", "SlotButton", _flat(Color(0.035, 0.055, 0.09, 0.6), Color(IRON, 0.25), 1, 8, Vector2(3, 3)))
+
+	# The side panel's tabs: icon only, the open one lit from beneath.
+	t.set_type_variation("TabButton", "Button")
+	t.set_stylebox("normal", "TabButton", _flat(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 8, Vector2(6, 6)))
+	t.set_stylebox("hover", "TabButton", _flat(Color(ICE, 0.10), Color(0, 0, 0, 0), 0, 8, Vector2(6, 6)))
+	var lit := _flat(Color(ICE, 0.16), Color(0, 0, 0, 0), 0, 8, Vector2(6, 6))
+	lit.border_width_bottom = 2
+	lit.border_color = ICE
+	t.set_stylebox("pressed", "TabButton", lit)
+	t.set_stylebox("hover_pressed", "TabButton", lit)
+
+	# A setting's choice (90 / 100 / 125): a small toggle, lit when chosen.
+	t.set_type_variation("ChoiceButton", "Button")
+	t.set_font_size("font_size", "ChoiceButton", 13)
+	t.set_stylebox("normal", "ChoiceButton", _flat(SLATE_DEEP, Color(IRON, 0.6), 1, 6, Vector2(10, 4)))
+	t.set_stylebox("hover", "ChoiceButton", _flat(Color(0.09, 0.14, 0.21, 0.96), Color(ICE, 0.9), 1, 6, Vector2(10, 4)))
+	t.set_stylebox("pressed", "ChoiceButton", _flat(Color(0.17, 0.32, 0.48, 0.98), ICE, 1, 6, Vector2(10, 4)))
+	t.set_stylebox("hover_pressed", "ChoiceButton", _flat(Color(0.17, 0.32, 0.48, 0.98), ICE, 1, 6, Vector2(10, 4)))
 
 	# The close cross in a panel's header bar.
 	t.set_type_variation("CloseButton", "Button")
-	t.set_stylebox("normal", "CloseButton", _flat(Color(0, 0, 0, 0), Color(ICE, 0.3), 1, 4, Vector2(5, 5)))
-	t.set_stylebox("hover", "CloseButton", _flat(Color(0.55, 0.16, 0.2, 0.9), Color(1.0, 0.6, 0.55), 1, 4, Vector2(5, 5)))
-	t.set_stylebox("pressed", "CloseButton", _flat(Color(0.35, 0.08, 0.1, 0.95), Color(1.0, 0.6, 0.55), 1, 4, Vector2(5, 5)))
-	t.set_stylebox("hover_pressed", "CloseButton", _flat(Color(0.35, 0.08, 0.1, 0.95), Color(1.0, 0.6, 0.55), 1, 4, Vector2(5, 5)))
+	t.set_stylebox("normal", "CloseButton", _flat(Color(0, 0, 0, 0), Color(IRON, 0.5), 1, 6, Vector2(5, 5)))
+	t.set_stylebox("hover", "CloseButton", _flat(Color(0.55, 0.16, 0.2, 0.9), Color(1.0, 0.6, 0.55), 1, 6, Vector2(5, 5)))
+	t.set_stylebox("pressed", "CloseButton", _flat(Color(0.35, 0.08, 0.1, 0.95), Color(1.0, 0.6, 0.55), 1, 6, Vector2(5, 5)))
+	t.set_stylebox("hover_pressed", "CloseButton", _flat(Color(0.35, 0.08, 0.1, 0.95), Color(1.0, 0.6, 0.55), 1, 6, Vector2(5, 5)))
 	t.set_color("icon_normal_color", "CloseButton", TEXT_DIM)
 	t.set_color("icon_hover_color", "CloseButton", Color(1, 1, 1))
 
 	# Panels: the framed slate by default, a flat tinted strip for header bars.
 	t.set_stylebox("panel", "PanelContainer", panel_style(PANEL_SLATE))
 	t.set_type_variation("HeaderBar", "PanelContainer")
-	var header := _flat(Color(ICE, 0.10), Color(ICE, 0.45), 0, 4, Vector2(10, 6))
+	var header := _flat(Color(ICE, 0.08), Color(IRON, 0.7), 0, 6, Vector2(10, 6))
 	header.border_width_bottom = 1
 	t.set_stylebox("panel", "HeaderBar", header)
 	t.set_type_variation("Inset", "PanelContainer")
-	t.set_stylebox("panel", "Inset", _flat(SLATE_DEEP, Color(ICE, 0.22), 1, 5, Vector2(10, 8)))
+	t.set_stylebox("panel", "Inset", _flat(SLATE_DEEP, Color(IRON, 0.4), 1, 8, Vector2(10, 8)))
+	t.set_type_variation("Plain", "PanelContainer")
+	t.set_stylebox("panel", "Plain", StyleBoxEmpty.new())
 
 	# Gauges: a dark rounded track, a rounded fill with a highlight along its top edge.
 	t.set_stylebox("background", "ProgressBar", _track(6))
 	t.set_stylebox("fill", "ProgressBar", _fill(ICE, 6))
-	t.set_type_variation("WarmthBar", "ProgressBar")
-	t.set_stylebox("background", "WarmthBar", _track(7))
-	t.set_stylebox("fill", "WarmthBar", _fill(EMBER, 7))
-	t.set_type_variation("HealthBar", "ProgressBar")
-	t.set_stylebox("background", "HealthBar", _track(7))
-	t.set_stylebox("fill", "HealthBar", _fill(BLOOD, 7))
 	t.set_type_variation("XpBar", "ProgressBar")
 	t.set_stylebox("background", "XpBar", _track(3))
 	t.set_stylebox("fill", "XpBar", _fill(XP, 3))
 
 	# Text fields (the save code).
-	var field := _flat(SLATE_DEEP, Color(ICE, 0.35), 1, 5, Vector2(8, 6))
+	var field := _flat(SLATE_DEEP, Color(IRON, 0.5), 1, 7, Vector2(8, 6))
 	t.set_stylebox("normal", "TextEdit", field)
 	t.set_stylebox("read_only", "TextEdit", field)
-	t.set_stylebox("focus", "TextEdit", _glow(_flat(SLATE_DEEP, Color(ICE, 0.9), 1, 5, Vector2(8, 6)), Color(ICE, 0.3), 3))
+	t.set_stylebox("focus", "TextEdit", _glow(_flat(SLATE_DEEP, Color(ICE, 0.9), 1, 7, Vector2(8, 6)), Color(ICE, 0.3), 3))
 	t.set_font_size("font_size", "TextEdit", 13)
 	t.set_color("font_color", "TextEdit", TEXT)
 	t.set_color("font_readonly_color", "TextEdit", Color(0.78, 0.86, 0.96))
@@ -218,21 +251,21 @@ static func _build() -> Theme:
 	t.set_stylebox("grabber_pressed", "HScrollBar", _flat(ICE, Color(0, 0, 0, 0), 0, 4, Vector2(2, 2)))
 	t.set_stylebox("panel", "ScrollContainer", StyleBoxEmpty.new())
 	var rule := StyleBoxLine.new()
-	rule.color = Color(ICE, 0.22)
+	rule.color = Color(IRON, 0.45)
 	rule.thickness = 1
 	rule.grow_begin = 0
 	rule.grow_end = 0
 	t.set_stylebox("separator", "HSeparator", rule)
 	t.set_constant("separation", "HSeparator", 10)
 	var vrule := StyleBoxLine.new()
-	vrule.color = Color(ICE, 0.22)
+	vrule.color = Color(IRON, 0.45)
 	vrule.thickness = 1
 	vrule.vertical = true
 	t.set_stylebox("separator", "VSeparator", vrule)
-	t.set_stylebox("panel", "TooltipPanel", _flat(Color(0.04, 0.06, 0.10, 0.96), Color(ICE, 0.6), 1, 5, Vector2(10, 6)))
+	t.set_stylebox("panel", "TooltipPanel", _glow(_flat(Color(0.05, 0.07, 0.11, 0.97), Color(IRON, 0.9), 1, 9, Vector2(12, 9)), Color(INK, 0.5), 6))
 	t.set_color("font_color", "TooltipLabel", TEXT)
 	t.set_font_size("font_size", "TooltipLabel", 13)
-	# Check boxes and sliders (the help and sound panels).
+	# Check boxes and sliders (the help panel and the Settings tab).
 	t.set_font_size("font_size", "CheckBox", 14)
 	t.set_color("font_color", "CheckBox", TEXT)
 	t.set_color("font_hover_color", "CheckBox", Color(1, 1, 1))
@@ -242,6 +275,12 @@ static func _build() -> Theme:
 	t.set_constant("h_separation", "CheckBox", 8)
 	for state in ["normal", "hover", "pressed", "hover_pressed", "focus", "disabled"]:
 		t.set_stylebox(state, "CheckBox", _flat(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 0, Vector2(4, 4)))
+	var unchecked := _check_icon(false)
+	var checked := _check_icon(true)
+	for name in ["unchecked", "radio_unchecked", "unchecked_disabled", "radio_unchecked_disabled"]:
+		t.set_icon(name, "CheckBox", unchecked)
+	for name in ["checked", "radio_checked", "checked_disabled", "radio_checked_disabled"]:
+		t.set_icon(name, "CheckBox", checked)
 	t.set_stylebox("slider", "HSlider", _track(4))
 	t.set_stylebox("grabber_area", "HSlider", _fill(ICE_DIM, 4))
 	t.set_stylebox("grabber_area_highlight", "HSlider", _fill(ICE, 4))
@@ -262,7 +301,7 @@ static func font_cinzel(weight: int, spacing: int = 1) -> FontVariation:
 	return _font("cinzel", FONT_CINZEL, weight, spacing)
 
 
-## Inter at a weight (100-900), for body text and numbers.
+## Inter at a weight (100-900), for body text, buttons and numbers.
 static func font_inter(weight: int) -> FontVariation:
 	return _font("inter", FONT_INTER, weight, 0)
 
@@ -314,24 +353,32 @@ static func muted(text: String, size: int = 13) -> Label:
 	return l
 
 
+## A body label that wraps at `width` pixels.
+static func wrapped(text: String, width: float, size: int = 14, colour: Color = TEXT) -> Label:
+	var l := body(text, size, colour)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.custom_minimum_size = Vector2(width, 0)
+	return l
+
+
 ## A framed, frosted panel in a colour key: PANEL_SLATE, PANEL_DANGER, PANEL_ICE or
-## PANEL_EMBER. The Kenney border art is composed over the fill at build time.
+## PANEL_EMBER. The frame is drawn in code in the current `frame_style`.
 static func panel_style(kind: String = PANEL_SLATE) -> StyleBoxTexture:
 	if not _frames.has(kind):
 		var fill := SLATE
-		var edge := Color(ICE, 0.92)
+		var glow := ICE
 		match kind:
 			PANEL_DANGER:
-				fill = Color(0.13, 0.05, 0.07, 0.90)
-				edge = Color(1.0, 0.5, 0.45, 0.92)
+				fill = Color(0.13, 0.05, 0.07, 0.92)
+				glow = Color(1.0, 0.5, 0.45)
 			PANEL_ICE:
-				fill = Color(0.05, 0.09, 0.15, 0.90)
-				edge = Color(0.78, 0.90, 1.0, 0.95)
+				fill = Color(0.05, 0.09, 0.15, 0.92)
+				glow = Color(0.78, 0.90, 1.0)
 			PANEL_EMBER:
-				fill = Color(0.12, 0.08, 0.06, 0.90)
-				edge = Color(EMBER, 0.92)
+				fill = Color(0.12, 0.08, 0.06, 0.92)
+				glow = EMBER
 		var sb := StyleBoxTexture.new()
-		sb.texture = _framed_texture(fill, edge)
+		sb.texture = ImageTexture.create_from_image(_frame_image(frame_style, fill, glow))
 		sb.texture_margin_left = FRAME_MARGIN
 		sb.texture_margin_top = FRAME_MARGIN
 		sb.texture_margin_right = FRAME_MARGIN
@@ -340,7 +387,6 @@ static func panel_style(kind: String = PANEL_SLATE) -> StyleBoxTexture:
 		sb.content_margin_right = 16
 		sb.content_margin_top = 14
 		sb.content_margin_bottom = 14
-		sb.modulate_color = Color(1, 1, 1)
 		_frames[kind] = sb
 	return _frames[kind]
 
@@ -369,60 +415,51 @@ static func header(title: String, on_close: Callable = Callable()) -> PanelConta
 	return bar
 
 
-## A body label that wraps at `width` pixels.
-static func wrapped(text: String, width: float, size: int = 14, colour: Color = TEXT) -> Label:
-	var l := body(text, size, colour)
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.custom_minimum_size = Vector2(width, 0)
-	return l
+## A round tinted badge with an icon-table glyph on it, `px` wide. The glyph is white and
+## fills about two thirds of the badge, so every badge reads as one family.
+static func badge(key: String, px: int = 28, tint: Variant = null) -> Control:
+	var colour: Color = tint if tint != null else IconTable.tint(key)
+	var b := PanelContainer.new()
+	b.custom_minimum_size = Vector2(px, px)
+	b.add_theme_stylebox_override("panel", badge_style(colour, px))
+	b.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var pic := TextureRect.new()
+	pic.texture = IconTable.texture(key)
+	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	pic.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.add_child(pic)
+	return b
 
 
-## A round coloured badge with one letter in it, for skills the icon pack has no glyph for.
-static func letter_badge(letter: String, colour: Color, px: int = 22) -> Label:
-	var l := Label.new()
-	l.text = letter
-	l.theme_type_variation = "LevelBadge"
-	l.custom_minimum_size = Vector2(px, px)
-	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	l.add_theme_font_size_override("font_size", int(px * 0.55))
-	l.add_theme_stylebox_override("normal", _flat(colour, Color(1, 1, 1, 0.55), 1, px / 2, Vector2(0, 0)))
-	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	return l
+## The round badge behind a glyph: the tint with a lighter rim and a dark shadow beneath.
+static func badge_style(colour: Color, px: int) -> StyleBoxFlat:
+	var inset := maxi(3, px / 6)
+	var s := _flat(colour, Color(colour.lightened(0.35), 0.9), 1, px / 2, Vector2(inset, inset))
+	s.shadow_color = Color(INK, 0.45)
+	s.shadow_size = 2
+	s.shadow_offset = Vector2(0, 1)
+	return s
 
 
-## A Kenney game icon (white, 2x) scaled down to `px` for a button or badge.
+## A Kenney game icon (white, 2x) scaled down to `px` for a button.
 static func icon(name: String, px: int = 16) -> Texture2D:
 	var key := "%s:%d" % [name, px]
 	if not _icons.has(key):
-		var img: Image
-		if name == "flame":
-			img = _flame_image(px * 2)
-		else:
-			var tex: Texture2D = load(ICON_DIR + name + ".png")
-			img = tex.get_image()
-			img.convert(Image.FORMAT_RGBA8)
+		var tex: Texture2D = load(ICON_DIR + name + ".png")
+		var img := tex.get_image()
+		img.convert(Image.FORMAT_RGBA8)
 		img.resize(px, px, Image.INTERPOLATE_LANCZOS)
 		_icons[key] = ImageTexture.create_from_image(img)
 	return _icons[key]
 
 
-## Restyles one of the three labels main.tscn keeps under the HUD layer. Roles: "title"
-## (Cinzel with a soft ice glow), "status" and "hint" (Inter with a dark outline so they
-## read over snow). GameRoot calls this once per label.
+## Restyles the status label main.tscn keeps under the HUD layer: Inter with a dark outline
+## so it reads over snow. GameRoot calls this once.
 static func style_hud_label(label: Label, role: String) -> void:
 	label.theme = theme()
 	match role:
-		"title":
-			label.add_theme_font_override("font", font_cinzel(700, 3))
-			label.add_theme_font_size_override("font_size", 26)
-			label.add_theme_color_override("font_color", TEXT)
-			label.add_theme_color_override("font_outline_color", Color(INK, 0.85))
-			label.add_theme_constant_override("outline_size", 5)
-			label.add_theme_color_override("font_shadow_color", Color(ICE, 0.45))
-			label.add_theme_constant_override("shadow_outline_size", 10)
-			label.add_theme_constant_override("shadow_offset_x", 0)
-			label.add_theme_constant_override("shadow_offset_y", 0)
 		"status":
 			label.add_theme_font_override("font", font_inter(600))
 			label.add_theme_font_size_override("font_size", 15)
@@ -462,8 +499,7 @@ static func _glow(s: StyleBoxFlat, colour: Color, size: int) -> StyleBoxFlat:
 
 ## A gauge's inner track.
 static func _track(radius: int) -> StyleBoxFlat:
-	var s := _flat(SLATE_DEEP, Color(ICE, 0.28), 1, radius, Vector2(1, 1))
-	return s
+	return _flat(SLATE_DEEP, Color(IRON, 0.5), 1, radius, Vector2(1, 1))
 
 
 ## A gauge's fill, with a lighter line along the top as a highlight.
@@ -477,98 +513,95 @@ static func _fill(colour: Color, radius: int) -> StyleBoxFlat:
 	return s
 
 
-## The border art composed over a fill: border pixels take the edge colour, pixels inside
-## the frame take the fill, the seam between the two lines a thinner fill, and pixels
-## outside the frame stay clear so the corners keep their notches.
-static func _framed_texture(fill: Color, edge: Color) -> ImageTexture:
-	var art: Texture2D = load(FRAME_ART)
-	var src := art.get_image()
-	src.convert(Image.FORMAT_RGBA8)
-	var w := src.get_width()
-	var h := src.get_height()
-	var cls := PackedByteArray()  # 0 gap, 1 line, 2 outside, 3 inside
-	cls.resize(w * h)
-	for y in h:
-		for x in w:
-			cls[y * w + x] = 1 if src.get_pixel(x, y).a > 0.5 else 0
-	for x in w:
-		_flood(cls, w, h, x, 0, 2)
-		_flood(cls, w, h, x, h - 1, 2)
-	for y in h:
-		_flood(cls, w, h, 0, y, 2)
-		_flood(cls, w, h, w - 1, y, 2)
-	_flood(cls, w, h, w / 2, h / 2, 3)
-	var out := Image.create(w, h, false, Image.FORMAT_RGBA8)
-	var seam := Color(fill, fill.a * 0.6)
-	for y in h:
-		for x in w:
-			match cls[y * w + x]:
-				1:
-					out.set_pixel(x, y, Color(edge, edge.a * src.get_pixel(x, y).a))
-				2:
-					out.set_pixel(x, y, Color(0, 0, 0, 0))
-				3:
-					out.set_pixel(x, y, fill)
-				_:
-					out.set_pixel(x, y, seam)
-	return ImageTexture.create_from_image(out)
+## A check box's square: an iron-rimmed well, filled with ice when checked.
+static func _check_icon(on: bool) -> Texture2D:
+	var n := 18
+	var img := Image.create(n, n, false, Image.FORMAT_RGBA8)
+	for y in n:
+		for x in n:
+			var edge := x == 0 or y == 0 or x == n - 1 or y == n - 1
+			var corner := (x == 0 or x == n - 1) and (y == 0 or y == n - 1)
+			var c := Color(0, 0, 0, 0)
+			if corner:
+				c = Color(0, 0, 0, 0)
+			elif edge:
+				c = IRON
+			elif on and x >= 4 and x < n - 4 and y >= 4 and y < n - 4:
+				c = ICE
+			else:
+				c = SLATE_DEEP
+			img.set_pixel(x, y, c)
+	return ImageTexture.create_from_image(img)
 
 
-static func _flood(cls: PackedByteArray, w: int, h: int, sx: int, sy: int, mark: int) -> void:
-	if cls[sy * w + sx] != 0:
-		return
-	var stack := PackedInt32Array([sy * w + sx])
-	cls[sy * w + sx] = mark
-	while not stack.is_empty():
-		var i := stack[stack.size() - 1]
-		stack.resize(stack.size() - 1)
-		var x := i % w
-		var y := i / w
-		for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
-			var nx: int = x + d.x
-			var ny: int = y + d.y
-			if nx < 0 or ny < 0 or nx >= w or ny >= h:
+# --- The frame --------------------------------------------------------------------------
+
+## The 9-slice frame art for a style, drawn from a signed distance to a rounded box: a band
+## along the edge (timber, a thin iron rim or bevelled stone), an iron line inside it where
+## the style has one, and the frosted fill with a soft glow fading inward from the band.
+static func _frame_image(style: String, fill: Color, glow: Color) -> Image:
+	var n := FRAME_PX
+	var img := Image.create(n, n, false, Image.FORMAT_RGBA8)
+	var radius := 12.0
+	var band := 6.0
+	var line := 2.0
+	var glow_len := 14.0
+	var glow_strength := 0.34
+	var band_colour := TIMBER
+	var band_edge := TIMBER_LIGHT
+	match style:
+		FRAME_FROST:
+			radius = 14.0
+			band = 2.5
+			line = 0.0
+			glow_len = 16.0
+			glow_strength = 0.30
+			band_colour = IRON
+			band_edge = IRON.lightened(0.3)
+		FRAME_STONE:
+			radius = 9.0
+			band = 6.0
+			line = 0.0
+			glow_len = 12.0
+			glow_strength = 0.28
+			band_colour = STONE
+			band_edge = STONE.lightened(0.25)
+			glow = EMBER
+	var half := n * 0.5
+	for y in n:
+		for x in n:
+			var p := Vector2(x + 0.5 - half, y + 0.5 - half)
+			var q := Vector2(absf(p.x), absf(p.y)) - Vector2(half - radius, half - radius)
+			var d := Vector2(maxf(q.x, 0.0), maxf(q.y, 0.0)).length() + minf(maxf(q.x, q.y), 0.0) - radius
+			var coverage := clampf(0.5 - d, 0.0, 1.0)  # antialiased outer edge
+			if coverage <= 0.0:
+				img.set_pixel(x, y, Color(0, 0, 0, 0))
 				continue
-			var j := ny * w + nx
-			if cls[j] == 0:
-				cls[j] = mark
-				stack.append(j)
-
-
-## A small white flame glyph, drawn in code because the icon pack has none. Supersampled
-## so its edge is smooth at button size.
-static func _flame_image(size: int) -> Image:
-	var img := Image.create(size, size, false, Image.FORMAT_RGBA8)
-	var ss := 3
-	for y in size:
-		for x in size:
-			var hits := 0
-			for sy in ss:
-				for sx in ss:
-					var u := (x + (sx + 0.5) / ss) / size
-					var v := (y + (sy + 0.5) / ss) / size
-					if _in_flame(u, v):
-						hits += 1
-			var a := float(hits) / float(ss * ss)
-			img.set_pixel(x, y, Color(1, 1, 1, a))
+			var depth := -d  # pixels inside the outer edge
+			var c: Color
+			if depth < band:
+				# The band: lighter toward its outer edge (frost) or along its grain (timber),
+				# and bevelled on stone, lit from the top left.
+				var t := clampf(depth / band, 0.0, 1.0)
+				c = band_edge.lerp(band_colour, t)
+				if style == FRAME_TIMBER:
+					c = c.darkened(0.08 * (0.5 + 0.5 * sin((x + y) * 1.7)))
+				elif style == FRAME_STONE:
+					var light := clampf(0.5 - (p.x + p.y) / n, 0.0, 1.0)
+					c = c.lerp(band_edge, light * 0.45)
+				c.a = 1.0
+			elif depth < band + line:
+				c = IRON
+			else:
+				var inside := depth - band - line
+				var g := exp(-inside / glow_len) * glow_strength
+				c = fill.lerp(Color(glow, fill.a), g)
+				c.a = fill.a + (1.0 - fill.a) * g * 0.5
+			if style == FRAME_TIMBER and depth < band + 1.0:
+				# Iron rivets in the corners of the band.
+				var corner := Vector2(absf(p.x), absf(p.y)) - Vector2(half - radius * 0.9, half - radius * 0.9)
+				if corner.length() < 2.6:
+					c = IRON.lightened(0.2)
+			c.a *= coverage
+			img.set_pixel(x, y, c)
 	return img
-
-
-## The flame in unit space: a round base with a tip that leans right, hollowed by a
-## smaller flame so it reads as fire rather than a drop.
-static func _in_flame(u: float, v: float) -> bool:
-	var outer := _tongue(u, v, 0.5, 0.70, 0.27, 0.05, 0.17)
-	var inner := _tongue(u, v, 0.5, 0.76, 0.12, 0.44, -0.06)
-	return outer and not inner
-
-
-## A circle of radius r at (cx, cy) with a tapered tongue rising from it to `top`.
-static func _tongue(u: float, v: float, cx: float, cy: float, r: float, top: float, lean: float) -> bool:
-	if Vector2(u - cx, v - cy).length() <= r:
-		return true
-	if v < top or v > cy:
-		return false
-	var t := (v - top) / (cy - top)  # 0 at the tip, 1 at the circle's centre line
-	var half := r * pow(t, 0.75)
-	var centre := cx + lean * (1.0 - t) * (1.0 - t)
-	return absf(u - centre) <= half

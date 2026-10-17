@@ -1,7 +1,8 @@
 ## Presentation glue for Frostmark. Owns one Sim, ticks it on a fixed accumulator, turns
 ## ground clicks into `move_to`, marker, field-fire and loot clicks into `interact` (the
 ## outpost gate into `cross_gate`) and enemy clicks into `attack`, and plays the simulation's
-## events back as motion, telegraph cues, sound, HUD, banners and the death screen. The
+## events back as motion, telegraph rings and swing arcs on the ground, sound, HUD, banners
+## and the death screen. The
 ## world is built from the Sim's WorldDef (props from scenes/props.gd) so the
 ## drawing and the walkability grid can never disagree. It starts on the title screen and
 ## writes the browser save whenever the simulation reports a save point, nudging the player
@@ -28,12 +29,11 @@ const COLOR_BY_ENEMY := {
 	"bandit_captain": Color(0.30, 0.10, 0.12), "frost_witch": Color(0.40, 0.48, 0.66),
 	"ice_troll": Color(0.58, 0.70, 0.78), "ruin_stalker": Color(0.24, 0.26, 0.30),
 }
-## Telegraph cues are coloured by the style of the blow coming, so the counter reads at a glance.
-const COLOR_BY_STYLE := {
-	CombatTable.STYLE_MELEE: Color(0.95, 0.35, 0.2),
-	CombatTable.STYLE_RANGED: Color(0.2, 0.55, 1.0),
-	CombatTable.STYLE_MAGIC: Color(0.75, 0.4, 1.0),
-}
+## Telegraph cues take the style's colour from the icon table, so the ring on the ground, the
+## name over the enemy and the style badge in the panel always agree.
+const COLOR_BY_STYLE := IconTable.STYLE_COLOURS
+## World labels show only under the mouse; the hover ray is cast when the mouse has moved.
+const HOVER_RAY_LENGTH := 500.0
 const COLOR_LOOT := Color(0.85, 0.68, 0.2)
 const CUE_FONT := 72
 const CUE_FONT_HEAVY := 120
@@ -94,7 +94,7 @@ const SaveNotice := preload("res://scenes/save_notice.gd")
 const CharacterGear := preload("res://scenes/character_gear.gd")
 const Atmosphere := preload("res://scenes/atmosphere.gd")
 const AudioDirector := preload("res://scenes/audio_director.gd")
-const SoundPanel := preload("res://scenes/sound_panel.gd")
+const CombatCues := preload("res://scenes/combat_cues.gd")
 const WaystonePanel := preload("res://scenes/waystone_panel.gd")
 
 var sim: Sim
@@ -131,7 +131,10 @@ var _gear: Node3D
 var _character_view: CharacterView
 var _atmosphere: Node
 var _audio: Node
-var _sound_panel: Control
+var _cues: CombatCues
+var _ui_settings: UiSettings
+var _hover_point: Variant = null  # mouse position whose world label to show, or null
+var _hovered_label: Label3D
 var _clock := 0.0  # seconds of play, for flicker
 ## Enemy id -> {root, body, label, cue, cue_at, segment, length}: its drawing, its telegraph
 ## cue (shown until the tick `cue_at` resolves) and the polyline it walked last tick.
@@ -145,14 +148,12 @@ var _fire_layer := Node3D.new()
 @onready var _character: Node3D = $Character
 @onready var _camera_rig: Node3D = $CameraRig
 @onready var _camera: Camera3D = $CameraRig/Camera3D
-@onready var _title: Label = $HUD/Title
 @onready var _status: Label = $HUD/Status
 @onready var _sun: DirectionalLight3D = $Sun
 
 
 func _ready() -> void:
 	sim = Sim.new()
-	_title.text = "Frostmark v%s" % ProjectSettings.get_setting("application/config/version")
 	_build_world(sim.world)
 	add_child(_enemy_layer)
 	add_child(_loot_layer)
@@ -162,9 +163,9 @@ func _ready() -> void:
 	_character_view = CharacterView.new()
 	_character.add_child(_character_view)
 	_character.add_child(_gear)
-	UiTheme.style_hud_label($HUD/Title, "title")
 	UiTheme.style_hud_label($HUD/Status, "status")
-	UiTheme.style_hud_label($HUD/Hint, "hint")
+	_cues = CombatCues.new()
+	add_child(_cues)
 	_atmosphere = Atmosphere.new()
 	add_child(_atmosphere)
 	_atmosphere.setup($Sun, $WorldEnvironment.environment, _camera_rig, _character, sim.world)
@@ -184,16 +185,16 @@ func _ready() -> void:
 	_waystone_panel = WaystonePanel.new()
 	_waystone_panel.travel_requested.connect(func(id: String) -> void: _on_hud_command(SimVocab.TRAVEL, {"object_id": id}))
 	_hud.add_child(_waystone_panel)
-	_hud.sound_requested.connect(func() -> void: _sound_panel.open(_audio.settings))
 	_audio = AudioDirector.new()
 	add_child(_audio)
 	var sound_layer := Node3D.new()
 	add_child(sound_layer)
 	_audio.setup(_camera, sound_layer)
-	_sound_panel = SoundPanel.new()
-	_sound_panel.changed.connect(_audio.change_settings)
-	$HUD.add_child(_sound_panel)
-	_sound_panel.visible = false
+	_hud.sound_changed.connect(_audio.change_settings)
+	_hud.ui_changed.connect(_on_ui_settings)
+	_ui_settings = UiSettings.load_from()
+	_ui_settings.apply(get_window())
+	_hud.set_settings(_audio.settings, _ui_settings)
 	_title_screen = TitleScreen.new()
 	_title_screen.help_requested.connect(func() -> void: _help_panel.open(false))
 	_title_screen.new_character.connect(_on_new_character)
@@ -245,6 +246,9 @@ func _process(delta: float) -> void:
 
 func _physics_process(_delta: float) -> void:
 	_fade_occluders()
+	if _hover_point != null and _playing:
+		_hover_label(_hover_point)
+		_hover_point = null
 	if _pending_click == null or not _playing or _help_panel.visible:
 		return
 	var screen: Vector2 = _pending_click
@@ -273,6 +277,33 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		_pending_click = event.position
 		get_viewport().set_input_as_handled()
+	elif event is InputEventMouseMotion:
+		_hover_point = event.position
+
+
+## Shows the label of whatever world thing is under the mouse and hides the last one, so the
+## screen carries no labels until the player asks. Enemies in a fight keep theirs regardless.
+func _hover_label(screen: Vector2) -> void:
+	var from := _camera.project_ray_origin(screen)
+	var to := from + _camera.project_ray_normal(screen) * HOVER_RAY_LENGTH
+	var hit := get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(from, to))
+	var label: Label3D = null
+	if not hit.is_empty() and (hit["collider"] as Object).has_meta("hover_label"):
+		label = hit["collider"].get_meta("hover_label")
+	if label == _hovered_label:
+		return
+	if _hovered_label != null and is_instance_valid(_hovered_label) and not _hovered_label.get_meta("pinned", false):
+		_hovered_label.visible = false
+	_hovered_label = label
+	if label != null:
+		label.visible = true
+
+
+## The HUD's Settings tab changed the interface: apply it now and keep it for next time.
+func _on_ui_settings(settings: UiSettings) -> void:
+	_ui_settings = settings
+	settings.apply(get_window())
+	settings.save_to()
 
 
 # --- Title screen and saves -----------------------------------------------------------
@@ -536,10 +567,14 @@ func _apply_events(events: Array[Dictionary]) -> void:
 				_show_cue(e)
 			SimVocab.EV_HIT:
 				_last_event = _hit_text(e)
+				if e["attacker"] != SimVocab.PLAYER:
+					_swing(e["attacker"])
 			SimVocab.EV_MISSED:
 				_last_event = "%s's %s misses. You stepped clear." % [
 					_sentence(_enemy_name(e["attacker"])), CombatTable.action_label(e["action"]).to_lower(),
 				]
+				if e["attacker"] != SimVocab.PLAYER:
+					_swing(e["attacker"])
 			SimVocab.EV_ENEMY_DIED:
 				_last_event = "%s falls." % _sentence(_enemy_name(e["enemy_id"]))
 				if e["enemy_kind"] == "bandit_captain" and not sim.ring_gate_open("ring_two_gate"):
@@ -893,7 +928,9 @@ func _build_world(world: WorldDef) -> void:
 			gate_body.set_meta("object_id", id)
 			var gate_label := _label3d(o["label"], 64)
 			gate_label.position = Vector3(0, WorldDressing.GATEWAY_HEIGHT + 0.9, 0)
+			gate_label.visible = false
 			gate.add_child(gate_label)
+			gate_body.set_meta("hover_label", gate_label)
 			continue
 		prop.name = str(id)
 		_place_prop(prop, o["min"], o["max"])
@@ -908,7 +945,9 @@ func _build_world(world: WorldDef) -> void:
 		if label_text != "":
 			var label := _label3d(label_text, 48 if sim.is_node(id) else 64)
 			label.position = Vector3(0, o["height"] + 0.8, 0)
+			label.visible = false
 			prop.add_child(label)
+			body.set_meta("hover_label", label)
 			if kind == WorldDef.KIND_RING_GATE:
 				_ring_gates[id] = {"bars": prop.get_node("Bars"), "label": label}
 			elif kind == WorldDef.KIND_WAYSTONE:
@@ -1085,7 +1124,9 @@ func _build_enemies(world: WorldDef) -> void:
 		click.set_meta("enemy_id", id)
 		var label := _label3d("", 48)
 		label.position = Vector3(0, height + 0.2, 0)
+		label.visible = false
 		root.add_child(label)
+		click.set_meta("hover_label", label)
 		var cue := _label3d("", CUE_FONT)
 		cue.position = Vector3(0, height + 0.9, 0)
 		cue.visible = false
@@ -1112,7 +1153,16 @@ func _sync_enemy(id: String) -> void:
 	else:
 		figure.die()
 	var c := sim.combatant(id)
-	(drawn["label"] as Label3D).text = "%s  %d / %d" % [CombatTable.enemy(e["kind"])["label"], c["health"], c["health_max"]]
+	var label := drawn["label"] as Label3D
+	label.text = "%s  %d / %d" % [CombatTable.enemy(e["kind"])["label"], c["health"], c["health_max"]]
+	# An enemy in a fight keeps its name and health up; the rest show theirs under the mouse.
+	var fighting: bool = alive and e["mode"] == Sim.MODE_ENGAGED
+	label.set_meta("pinned", fighting)
+	if fighting:
+		label.visible = true
+	elif label != _hovered_label:
+		label.visible = false
+	_cues.follow(id, root)
 	var weapons: Dictionary = drawn["weapons"]
 	if weapons.size() > 1:
 		for w in weapons:
@@ -1121,6 +1171,7 @@ func _sync_enemy(id: String) -> void:
 	var announced := CombatTable.is_attack(str(next.get("action", ""))) or CombatTable.is_stance(str(next.get("action", "")))
 	if not alive or e["mode"] != Sim.MODE_ENGAGED or not announced:
 		(drawn["cue"] as Label3D).visible = false
+		_cues.clear_ring(id)
 
 
 ## Shows the blow an enemy has telegraphed for the next tick over its head, coloured by its
@@ -1134,8 +1185,20 @@ func _show_cue(e: Dictionary) -> void:
 	cue.modulate = COLOR_BY_STYLE.get(e["style"], Color.WHITE)
 	cue.visible = true
 	drawn["cue_at"] = int(e["at"])
+	_cues.ring(e["enemy_id"], drawn["root"], COLOR_BY_STYLE.get(e["style"], Color.WHITE), heavy)
 	if CombatTable.is_attack(e["action"]):
 		((drawn["root"] as Node3D).get_node("Figure") as FigureBody).strike(e["style"])
+
+
+## The blow lands (or misses): a brief arc at the enemy's feet, swung toward the character,
+## in the colour of the style it was telegraphed in.
+func _swing(enemy_id: String) -> void:
+	if not _enemies.has(enemy_id):
+		return
+	var root: Node3D = _enemies[enemy_id]["root"]
+	var style := str(sim.combatant(enemy_id).get("style", CombatTable.STYLE_MELEE))
+	_cues.arc(root, _character.global_position, COLOR_BY_STYLE.get(style, Color.WHITE))
+	_cues.clear_ring(enemy_id)
 
 
 func _expire_cues() -> void:
@@ -1143,6 +1206,7 @@ func _expire_cues() -> void:
 	for id in _enemies:
 		if int(_enemies[id]["cue_at"]) <= tick:
 			(_enemies[id]["cue"] as Label3D).visible = false
+			_cues.clear_ring(id)
 
 
 ## "the wolf" for an enemy id, "you" for the player.
@@ -1180,7 +1244,9 @@ func _add_loot(id: String) -> void:
 	var count := int(pile["count"])
 	var label := _label3d(ItemTable.label(pile["item"]) + (" x%d" % count if count > 1 else ""), LOOT_FONT)
 	label.position = Vector3(0, 0.8, 0)
+	label.visible = false
 	root.add_child(label)
+	click.set_meta("hover_label", label)
 	_loot[id] = root
 
 
