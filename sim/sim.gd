@@ -1332,7 +1332,8 @@ func _die(cause: String) -> void:
 	_save_due = "death"
 
 
-## Nothing makes an axe yet, so a death that took the last one would end woodcutting for good.
+## The workbench makes an axe only from logs, which need an axe, so a death that took the last
+## one would end woodcutting for good.
 ## When no axe is worn, carried or stashed, a spare wooden axe waits by the fire: in the tool
 ## slot when it is empty, else in the pack. Returns the item given, or "" when none was needed.
 func _spare_axe() -> String:

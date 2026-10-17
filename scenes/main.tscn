@@ -94,4 +94,4 @@ grow_vertical = 0
 autowrap_mode = 3
 theme_override_font_sizes/font_size = 14
 theme_override_colors/font_color = Color(0.1, 0.14, 0.2, 1)
-text = "Click the ground to walk, a tree to chop it, the gate to cross, the stash or workbench to use it, an enemy to fight it, loot to pick it up. Click a pack item to equip or eat it, right-click to drop it. Counter the cue over an enemy by swapping weapon or stepping away. Q / E or middle-drag rotates, the wheel zooms."
+text = "Click the ground to walk; a tree, rock or fishing hole to gather it (axe, pickaxe, rod); the gate to cross; the stash, workbench or a fire to use it; an enemy to fight it; loot to pick it up. Click a pack item to equip or eat it, or by a fire to cook it; right-click to drop it. Counter the cue over an enemy by swapping weapon or stepping away. Q / E or middle-drag rotates, the wheel zooms."

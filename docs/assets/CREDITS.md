@@ -1,12 +1,13 @@
 # Frostmark credits
 
-Template for the attribution the game and repo must carry. Nothing below is in use yet: **move a line into "In use" only when the asset is actually added to the project**, and keep the licence link. Credit lines are quoted from the author where they specified one; otherwise the line is a suggestion built from the licence and marked *(suggested)*. Source rows and dates are in the category files ([README](README.md)); all checked 2026-10-16.
+The attribution the game and repo carry. **Move a line into "In use" only when the asset is actually added to the project**, and keep the licence link. Credit lines are quoted from the author where they specified one; otherwise the line is a suggestion built from the licence and marked *(suggested)*. Source rows and dates are in the category files ([README](README.md)); all checked 2026-10-16.
 
 ## In use
 
 | Asset | Author | Licence | Credit line | Used for |
 |-------|--------|---------|-------------|----------|
-| _(none yet)_ | | | | |
+| [Nature Kit](https://kenney.nl/assets/nature-kit) (2.1): `tree_pineDefaultA`, `tree_pineTallA_detailed`, `stump_round`, `rock_largeB`, `stone_tallB`, `campfire_logs`, `tent_detailedClosed` | Kenney | [CC0 1.0](http://creativecommons.org/publicdomain/zero/1.0/) | Nature Kit by Kenney (www.kenney.nl), CC0 *(courtesy; not required)* | Pines and frost pines with their stumps, ore rocks, field outcrops, the outpost and field fires, the keeper's tent (`assets/models/kenney_nature/`, licence file alongside) |
+| [Survival Kit](https://kenney.nl/assets/survival-kit) (2.0): `chest`, `workbench-anvil`, `Textures/colormap.png` | Kenney | [CC0 1.0](http://creativecommons.org/publicdomain/zero/1.0/) | Survival Kit by Kenney (www.kenney.nl), CC0 *(courtesy; not required)* | The stash chest and the workbench anvil (`assets/models/kenney_survival/`, licence file alongside) |
 
 ## Credit required if used (CC-BY and similar)
 
