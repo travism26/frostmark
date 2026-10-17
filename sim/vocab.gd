@@ -26,18 +26,20 @@ const CROSS_GATE := "cross_gate"    # {}                       walk through the 
 const EXPORT_SAVE := "export_save"  # {}                       returns {ok, reason, code}
 const IMPORT_SAVE := "import_save"  # {code}                   replaces the state from a save code
 const LIGHT_FIRE := "light_fire"    # {}                       burn logs from the pack into a field fire where you stand
+const SET_HINTS := "set_hints"      # {on: bool}               turn the first-outing guide off (dismiss) or back on
+const NEW_CHARACTER := "new_character"  # {previous: String}   start over; a previous save code turns the guide off
 
-## Every command kind: the spec's fifteen in spec order, then the brief's field fire.
-## `Sim.command()` rejects anything else as `unknown_command`.
+## Every command kind: the spec's fifteen in spec order, then the brief's field fire, then the
+## first-outing guide's two. `Sim.command()` rejects anything else as `unknown_command`.
 const COMMANDS: Array[String] = [
 	MOVE_TO, INTERACT, GATHER, COOK, SMITH, EQUIP, EAT, DROP, DEPOSIT, WITHDRAW,
-	BUILD, ATTACK, CROSS_GATE, EXPORT_SAVE, IMPORT_SAVE, LIGHT_FIRE,
+	BUILD, ATTACK, CROSS_GATE, EXPORT_SAVE, IMPORT_SAVE, LIGHT_FIRE, SET_HINTS, NEW_CHARACTER,
 ]
 
 ## Commands that do something in this slice. The rest answer `not_implemented`.
 const IMPLEMENTED: Array[String] = [
 	MOVE_TO, INTERACT, GATHER, COOK, SMITH, EQUIP, EAT, DROP, DEPOSIT, WITHDRAW, BUILD, ATTACK,
-	CROSS_GATE, EXPORT_SAVE, IMPORT_SAVE, LIGHT_FIRE,
+	CROSS_GATE, EXPORT_SAVE, IMPORT_SAVE, LIGHT_FIRE, SET_HINTS, NEW_CHARACTER,
 ]
 
 # --- Events ---------------------------------------------------------------------
@@ -87,6 +89,10 @@ const EV_FIRE_OUT := "fire_out"                  # {fire_id}
 const EV_BUILT := "built"                        # {upgrade, effects}
 const EV_RING_GATE_OPENED := "ring_gate_opened"  # {object_id}  its guardian is dead and its upgrade built
 const EV_RING_TWO_REACHED := "ring_two_reached"  # {object_id}  walked through the open gate; the first playable's ending
+# The first-outing guide (text in GuideTable)
+const EV_HINT := "hint"                          # {hint}  the guide's current hint step: a GuideTable id, "" once the path is walked
+const EV_TIP := "tip"                            # {tip}   a contextual tip fired: a GuideTable.TIPS id
+const EV_HINTS_SET := "hints_set"                # {on}    the guide was turned off or back on
 
 ## The combatant id of the player in `hit` and `missed` events; enemies use their own ids.
 const PLAYER := "player"

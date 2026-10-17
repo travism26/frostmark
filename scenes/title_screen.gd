@@ -6,6 +6,7 @@ extends Control
 signal new_character
 signal continue_requested
 signal import_requested(code: String)
+signal help_requested
 
 const HOOK := "You keep the fire at Frostmark, the last trading post on the ice, for a caravan three winters late."
 const COLOR_BACKDROP := Color(0.08, 0.11, 0.16, 0.94)
@@ -45,6 +46,7 @@ func _ready() -> void:
 	column.add_child(_continue_button)
 	_new_button = _button("New character", _on_new)
 	column.add_child(_new_button)
+	column.add_child(_button("Controls", func() -> void: help_requested.emit()))
 	column.add_child(_spacer(12))
 
 	column.add_child(_label("Import a save code", 16))

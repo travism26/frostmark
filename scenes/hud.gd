@@ -8,6 +8,7 @@ extends Control
 
 signal command_requested(kind: String, args: Dictionary)
 signal export_requested
+signal help_requested
 
 ## The skills panel lists all seven, gathering, crafting, combat.
 const READOUT_SKILLS: Array[String] = SkillTable.NAMES
@@ -527,6 +528,10 @@ func _build_save() -> void:
 	open.text = "Save code"
 	open.pressed.connect(func() -> void: export_requested.emit())
 	buttons_row.add_child(open)
+	var help := Button.new()
+	help.text = "Help"
+	help.pressed.connect(func() -> void: help_requested.emit())
+	buttons_row.add_child(help)
 	_saved_label = _text("Saved", 14)
 	_saved_label.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	_saved_label.grow_horizontal = Control.GROW_DIRECTION_BEGIN

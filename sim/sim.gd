@@ -21,7 +21,7 @@ const WALK_PER_TICK := WALK_SPEED * TICK_SECONDS
 const SNAP_RADIUS_CELLS := 2
 ## Bumped whenever the state shape changes. `restore()` migrates older snapshots forward
 ## (SaveCode.migrate) and refuses ones it cannot read.
-const STATE_VERSION := 4
+const STATE_VERSION := 5
 
 ## The pack: a fixed number of slots, and a carried weight (pack plus equipment, in kg)
 ## above which walking slows to OVERWEIGHT_SPEED of normal.
@@ -155,6 +155,7 @@ func new_state() -> Dictionary:
 		"bosses_defeated": [],
 		"upgrades": [],
 		"pending": [],
+		"guide": {"on": true, "step": 0, "tips": {}},
 	}
 
 
@@ -218,6 +219,10 @@ func command(kind: String, args: Dictionary = {}) -> Dictionary:
 			return {"ok": true, "reason": "", "code": export_code()}
 		SimVocab.IMPORT_SAVE:
 			return _cmd_import_save(args)
+		SimVocab.SET_HINTS:
+			return _cmd_set_hints(args)
+		SimVocab.NEW_CHARACTER:
+			return _cmd_new_character(args)
 	return _reject(kind, args, SimVocab.REASON_NOT_IMPLEMENTED)
 
 
@@ -293,6 +298,26 @@ func _cmd_import_save(args: Dictionary) -> Dictionary:
 		_emit({"kind": SimVocab.EV_SAVE_REJECTED, "reason": reason})
 		return _reject(SimVocab.IMPORT_SAVE, {}, reason)
 	_emit({"kind": SimVocab.EV_SAVED, "reason": SimVocab.IMPORT_SAVE, "tick": state["tick"]})
+	return {"ok": true, "reason": ""}
+
+
+## Turns the first-outing guide off (the player dismissed it) or back on, where it left off.
+func _cmd_set_hints(args: Dictionary) -> Dictionary:
+	if not (args.get("on") is bool):
+		return _reject(SimVocab.SET_HINTS, args, SimVocab.REASON_BAD_ARGS)
+	state["guide"]["on"] = args["on"]
+	_emit({"kind": SimVocab.EV_HINTS_SET, "on": args["on"]})
+	return {"ok": true, "reason": ""}
+
+
+## Replaces the state with a new character. The guide is for a player's first character
+## only, so it starts off when `previous` holds the save code of a character before this one.
+func _cmd_new_character(args: Dictionary) -> Dictionary:
+	if not (args.get("previous", "") is String):
+		return _reject(SimVocab.NEW_CHARACTER, args, SimVocab.REASON_BAD_ARGS)
+	state = new_state()
+	_save_due = ""
+	state["guide"]["on"] = (args.get("previous", "") as String).strip_edges() == ""
 	return {"ok": true, "reason": ""}
 
 
@@ -440,6 +465,7 @@ func step() -> void:
 	_step_loot()
 	_step_fires()
 	_step_survival()
+	_step_guide()
 	if _save_due != "":
 		_emit({"kind": SimVocab.EV_SAVED, "reason": _save_due, "tick": state["tick"]})
 		_save_due = ""
@@ -1586,6 +1612,57 @@ func drain_events() -> Array[Dictionary]:
 
 func _emit(event: Dictionary) -> void:
 	_events.append(event)
+	_guide_observe(event)
+
+
+# --- The first-outing guide -----------------------------------------------------------
+
+## The current hint step's GuideTable id, or "" when the guide is off or its path is walked.
+func hint() -> String:
+	return GuideTable.step_id(int(state["guide"]["step"])) if hints_on() else ""
+
+
+func hints_on() -> bool:
+	return state["guide"]["on"]
+
+
+## Advances the hint path and fires event-triggered tips. Sees every event as it is emitted,
+## so a rejected command counts the moment it is answered.
+func _guide_observe(event: Dictionary) -> void:
+	var kind: String = event["kind"]
+	if not hints_on() or kind == SimVocab.EV_HINT or kind == SimVocab.EV_TIP:
+		return
+	var guide: Dictionary = state["guide"]
+	var step := int(guide["step"])
+	if step < GuideTable.step_count() and GuideTable.matches(GuideTable.STEPS[step]["trigger"], event):
+		guide["step"] = step + 1
+		_emit({"kind": SimVocab.EV_HINT, "hint": GuideTable.step_id(step + 1)})
+	for id in GuideTable.TIPS:
+		for trigger in GuideTable.TIPS[id].get("triggers", []):
+			if GuideTable.matches(trigger, event):
+				_fire_tip(id)
+				break
+
+
+## Fires condition tips once the tick's rules have run.
+func _step_guide() -> void:
+	if not hints_on():
+		return
+	for id in GuideTable.TIPS:
+		match GuideTable.TIPS[id].get("condition", ""):
+			GuideTable.CONDITION_COLD:
+				if int(state["warmth"]) <= GuideTable.COLD_WARMTH and not in_outpost() and not near_fire():
+					_fire_tip(id)
+
+
+## Emits a tip unless it fired within its cooldown.
+func _fire_tip(id: String) -> void:
+	var tips: Dictionary = state["guide"]["tips"]
+	var tick := int(state["tick"])
+	if tick < int(tips.get(id, 0)):
+		return
+	tips[id] = tick + int(GuideTable.TIPS[id]["cooldown"])
+	_emit({"kind": SimVocab.EV_TIP, "tip": id})
 
 
 # --- Snapshot -------------------------------------------------------------------------
@@ -1700,9 +1777,26 @@ func restore(snap: Dictionary) -> bool:
 			if p is Dictionary and QUEUED_COMMANDS.has(str(p.get("kind", ""))) and p.get("args") is Dictionary:
 				pending.append({"kind": str(p["kind"]), "args": p["args"]})
 	copy["pending"] = pending
+	copy["guide"] = _restored_guide(copy.get("guide"))
 	state = copy
 	_save_due = ""
 	return true
+
+
+## The guide from saved data: off, with its path walked, when unreadable, since a character
+## old enough to have lost it is past its first outing.
+static func _restored_guide(saved: Variant) -> Dictionary:
+	var guide := {"on": false, "step": GuideTable.step_count(), "tips": {}}
+	if not (saved is Dictionary):
+		return guide
+	guide["on"] = saved.get("on") is bool and saved["on"]
+	if _is_number(saved.get("step")):
+		guide["step"] = clampi(int(saved["step"]), 0, GuideTable.step_count())
+	if saved.get("tips") is Dictionary:
+		for id in saved["tips"]:
+			if GuideTable.TIPS.has(str(id)) and _is_number(saved["tips"][id]):
+				guide["tips"][str(id)] = int(saved["tips"][id])
+	return guide
 
 
 ## A slot array of exactly `size` entries from saved data: known items only, counts clamped

@@ -87,6 +87,8 @@ static func migrate(snapshot: Dictionary, target: int) -> Variant:
 				snap = _v2_to_v3(snap)
 			3:
 				snap = _v3_to_v4(snap)
+			4:
+				snap = _v4_to_v5(snap)
 			_:
 				return null
 		version = int(snap["version"])
@@ -156,4 +158,12 @@ static func _v3_to_v4(snap: Dictionary) -> Dictionary:
 	snap["fires"] = {}
 	snap["fire_seq"] = 0
 	snap["bosses_defeated"] = []
+	return snap
+
+
+## Version 4 (slice 5) had no first-outing guide. Every version-4 character has already been
+## played, so version 5 gives it the guide switched off with its four hint steps behind it.
+static func _v4_to_v5(snap: Dictionary) -> Dictionary:
+	snap["version"] = 5
+	snap["guide"] = {"on": false, "step": 4, "tips": {}}
 	return snap
