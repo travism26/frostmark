@@ -15,6 +15,7 @@ Everything that is a rule lives in `sim/`, as RefCounted scripts with no Node, s
 | `sim/skills.gd` (`SkillTable`) | The seven skill names and the one experience curve they share |
 | `sim/inventory.gd` (`Inventory`) | Static helpers over slot arrays: room, stacking, weight, removal |
 | `sim/save_code.gd` (`SaveCode`) | Save-code encoding and decoding, and the forward migrations between state versions |
+| `sim/save_watch.gd` (`SaveWatch`) | When to nudge the player about their save code: the long-play reminder and the warning when browser saves stop holding. Never saved |
 
 ## Tick
 
@@ -270,6 +271,10 @@ A save code is base64 of `FM|<version>|<checksum>|<snapshot JSON>`. The JSON is 
 
 `SaveCode.migrate(snap, target)` applies one step per version. Each step hard-codes the defaults of its own version, so retuning a constant later never changes what an old save migrates into. `1 -> 2` keeps the slice-2 tick and position and adds a new character's inventory, stash, skills, warmth, health and nodes. `2 -> 3` adds the swing timer, an empty healing queue, enemies (empty, so every enemy loads at home and idle) and ground loot, and puts the slice-4 starter kit (a wooden bow, 30 arrows, 5 cooked fish) into empty stash slots so a slice-3 character can fight too. What does not fit is not added. `3 -> 4` adds no field fires and no fallen guardians and changes nothing else: the stash keeps its capacity, known nodes and enemies keep their state, and the new ring-one nodes, enemies and the captain load full and at home.
 
+Every version ever shipped keeps a real save code in `tests/fixtures/save_v<N>.txt`, and `tests/test_save_fixtures.gd` imports each into the current build. **Each future version bump adds its fixture** (a code exported from the build that introduces the version) along with its migration step; old fixtures are never edited. The test fails when a version has no fixture.
+
+A browser save can fail to hold: storage full, or blocked as in some private browsing (`OS.is_userfs_persistent()` is false, so writes last only until the page closes). The game keeps running and the save code is the fallback. `SaveWatch` counts ticks of play, not wall-clock time, so a paused game does not count down. It falls due every 5400 ticks (45 minutes) since the player last opened or copied their code or dismissed a reminder, and every 1800 ticks (15 minutes) while browser saves are failing. `stored(ok)` records each browser-save write and answers true only on the write that fails after storage was fine, so the warning shows once per failure rather than at every save point.
+
 ## The world as data
 
 `WorldDef.outpost()` builds the first-playable world, rings around the outpost. A `WorldDef` has:
@@ -286,7 +291,7 @@ The presentation draws the same solids and objects (as props, `scenes/props.gd`)
 
 ## How the presentation glues on
 
-`scenes/game_root.gd` owns one `Sim`. It starts on the title screen (`scenes/title_screen.gd`): New character, Continue (when `user://frostmark.save` exists) and Import code. Continue and Import both go through `import_save`, so a bad browser save and a bad pasted code get the same clear message. The HUD (`scenes/hud.gd`) draws the warmth and health gauges, the seven-skill panel with levels and xp bars, the pack and equipment, the current style and arrow count, the stash, workbench and upgrades panels, the field-fire button and the save-code panel, and turns button presses into commands: a pack click equips gear, eats food, or by a fire cooks raw food. The death screen (`scenes/death_screen.gd`) lists exactly what was kept and lost. `scenes/save_store.gd` reads and writes the browser save.
+`scenes/game_root.gd` owns one `Sim`. It starts on the title screen (`scenes/title_screen.gd`): New character, Continue (when `user://frostmark.save` exists) and Import code. Continue and Import both go through `import_save`, so a bad browser save and a bad pasted code get the same clear message. The HUD (`scenes/hud.gd`) draws the warmth and health gauges, the seven-skill panel with levels and xp bars, the pack and equipment, the current style and arrow count, the stash, workbench and upgrades panels, the field-fire button and the save-code panel, and turns button presses into commands: a pack click equips gear, eats food, or by a fire cooks raw food. The death screen (`scenes/death_screen.gd`) lists exactly what was kept and lost. `scenes/save_store.gd` reads and writes the browser save, and counts a write as failed when it is short or storage does not outlive the page. The save notice (`scenes/save_notice.gd`) shows the long-play reminder or the not-saving warning with Copy save code, Show code and Dismiss; the title screen also says when the browser will not keep saves. Copying goes through `scenes/clipboard.gd`: in the browser, `navigator.clipboard.writeText` from the click, and the player is told whether it worked.
 
 - `_process` adds frame time to an accumulator and calls `step()` for each whole tick, then `drain_events()`.
 - Each `moved` and `enemy_moved` event's `path` is replayed over the following tick by elapsed fraction, so the character and the enemies glide between tick positions and turn at corners instead of cutting them.

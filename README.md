@@ -23,7 +23,7 @@ Gathered resources pay for outpost upgrades, which work as a tech tree and push 
 
 Click the ground to walk and anything else to use it. Click a pack item to equip or eat it (or, by a fire, to cook it), and right-click to drop it. Q and E, or a middle-mouse drag, rotate the camera; the mouse wheel zooms. If you die you wake by the fire, keeping your three most valuable things; your stash, skills and upgrades are untouched.
 
-Progress is saved in the browser at the gate, after every stash, workbench or upgrade action, and on death, so Continue on the title screen picks up where you left off. **Save code** shows your character as a text code; paste it into Import code on the title screen in any browser to carry it over.
+Progress is saved in the browser at the gate, after every stash, workbench or upgrade action, and on death, so Continue on the title screen picks up where you left off. **Save code** shows your character as a text code; paste it into Import code on the title screen in any browser to carry it over. After 45 minutes of play the game reminds you to copy it. If the browser cannot keep saves (storage full, or blocked as in some private browsing), the game says so and keeps running: the save code is then your save.
 
 ## Running it locally
 

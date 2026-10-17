@@ -4,7 +4,8 @@
 ## events back as motion, telegraph cues, HUD, banners, the death screen and the ring-two
 ## ending. The world is built from the Sim's WorldDef (props from scenes/props.gd) so the
 ## drawing and the walkability grid can never disagree. It starts on the title screen and
-## writes the browser save whenever the simulation reports a save point.
+## writes the browser save whenever the simulation reports a save point, nudging the player
+## to keep their save code after a long stretch of play or when the browser stops keeping saves.
 ##
 ## Nothing here decides a rule: every position the character or an enemy is drawn at comes
 ## from the simulation, interpolated along the polyline it walked in the last tick.
@@ -79,6 +80,7 @@ const TitleScreen := preload("res://scenes/title_screen.gd")
 const Hud := preload("res://scenes/hud.gd")
 const DeathScreen := preload("res://scenes/death_screen.gd")
 const EndingScreen := preload("res://scenes/ending_screen.gd")
+const SaveNotice := preload("res://scenes/save_notice.gd")
 const CharacterGear := preload("res://scenes/character_gear.gd")
 const Atmosphere := preload("res://scenes/atmosphere.gd")
 
@@ -104,6 +106,8 @@ var _title_screen: Control
 var _hud: Control
 var _death_screen: Control
 var _ending_screen: Control
+var _save_notice: Control
+var _save_watch := SaveWatch.new()
 var _gear: Node3D
 var _atmosphere: Node
 var _clock := 0.0  # seconds of play, for flicker
@@ -139,13 +143,20 @@ func _ready() -> void:
 	_atmosphere.setup($Sun, $WorldEnvironment.environment, _camera_rig, _character)
 	_hud = Hud.new()
 	_hud.command_requested.connect(_on_hud_command)
-	_hud.export_requested.connect(func() -> void: _hud.show_code(sim.export_code()))
+	_hud.export_requested.connect(_on_show_code)
 	$HUD.add_child(_hud)
+	_save_notice = SaveNotice.new()
+	_save_notice.copy_requested.connect(_on_copy_code)
+	_save_notice.show_requested.connect(_on_show_code)
+	_save_notice.dismissed.connect(_save_watch.code_seen)
+	$HUD.add_child(_save_notice)
 	_title_screen = TitleScreen.new()
 	_title_screen.new_character.connect(_on_new_character)
 	_title_screen.continue_requested.connect(_on_continue)
 	_title_screen.import_requested.connect(_on_import)
 	$HUD.add_child(_title_screen)
+	if not SaveStore.persistent():
+		_title_screen.show_error("This browser is not keeping saves (storage blocked, as in some private browsing). You can play, but copy your save code to keep your character.")
 	_death_screen = DeathScreen.new()
 	_death_screen.dismissed.connect(_on_death_dismissed)
 	$HUD.add_child(_death_screen)
@@ -175,6 +186,11 @@ func _process(delta: float) -> void:
 		for id in _enemies:
 			_enemies[id]["segment"] = []
 		sim.step()
+		if _save_watch.advance():
+			if _save_watch.storage_ok:
+				_save_notice.show_reminder()
+			else:
+				_save_notice.show_unstored()
 		_expire_cues()
 		_apply_events(sim.drain_events())
 		# Some enemy changes carry no event (healing on reaching home), so redraw them all.
@@ -253,6 +269,7 @@ func _start() -> void:
 	_death_screen.visible = false
 	_ending_screen.visible = false
 	_hud.visible = true
+	_save_notice.visible = false
 	_playing = true
 	_accumulator = 0.0
 	_segment = []
@@ -290,10 +307,29 @@ func _show_sim() -> void:
 
 
 func _save() -> void:
-	if SaveStore.write(sim.export_code()):
+	var ok := SaveStore.write(sim.export_code())
+	if ok:
 		_hud.flash_saved()
 	else:
-		_last_event = "Could not write the browser save."
+		_last_event = "Not saved in this browser. Your save code still holds your character."
+		_refresh_status()
+	if _save_watch.stored(ok):
+		_save_notice.show_unstored()
+
+
+func _on_show_code() -> void:
+	_save_watch.code_seen()
+	_save_notice.visible = false
+	_hud.show_code(sim.export_code())
+
+
+func _on_copy_code() -> void:
+	Clipboard.copy(sim.export_code(), func(ok: bool) -> void:
+		if ok:
+			_save_watch.code_seen()
+			_save_notice.set_note("Copied. Paste it somewhere safe.")
+		else:
+			_save_notice.set_note("Your browser would not copy it. Use Show code and copy it by hand."))
 
 
 func _on_hud_command(kind: String, args: Dictionary) -> void:
