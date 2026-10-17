@@ -43,6 +43,8 @@ const EDGES := {
 const NATURAL_WEAPONS := {
 	"fists": {"label": "Fists", "style": STYLE_MELEE, "power": 2, "speed": 2, "reach": CLOSE_RANGE},
 	"fangs": {"label": "Fangs", "style": STYLE_MELEE, "power": 0, "speed": 1, "reach": CLOSE_RANGE},
+	"captain_sabre": {"label": "Sabre", "style": STYLE_MELEE, "power": 0, "speed": 1, "reach": CLOSE_RANGE},
+	"captain_bow": {"label": "War bow", "style": STYLE_RANGED, "power": 0, "speed": 1, "reach": 8.0},
 }
 const UNARMED := "fists"
 
@@ -68,8 +70,10 @@ const NOTICE_PACK := "pack"
 const NOTICE_HIT := "hit"
 
 ## What an enemy can do on a tick. `move` (close in) and `rest` are not attacks and are not
-## telegraphed; every other action is an attack with a base `damage` before the style edge.
-## `heavy` marks the hits worth countering.
+## telegraphed; every other action with a `damage` is an attack with that base damage before
+## the style edge. `heavy` marks the hits worth countering. A `stance` action is a rest in
+## which the enemy changes weapon (the captain drawing his bow); it is announced a tick ahead
+## like an attack, so the change of style can be read and countered.
 const ACTION_MOVE := "move"
 const ACTION_REST := "rest"
 const ACTIONS := {
@@ -79,6 +83,12 @@ const ACTIONS := {
 	"lunge": {"label": "Lunge", "damage": 7, "heavy": true},
 	"shot": {"label": "Shot", "damage": 4},
 	"aimed_shot": {"label": "Aimed shot", "damage": 9, "heavy": true},
+	"slash": {"label": "Slash", "damage": 8},
+	"cleave": {"label": "Cleave", "damage": 17, "heavy": true},
+	"draw_bow": {"label": "Draws his bow", "damage": 0, "stance": true},
+	"loose": {"label": "Loose", "damage": 7},
+	"volley": {"label": "Volley", "damage": 16, "heavy": true},
+	"draw_sabre": {"label": "Draws his sabre", "damage": 0, "stance": true},
 }
 
 ## Enemy kinds. `weapon` sets the style and reach. `speed` is metres per tick (the player walks
@@ -86,6 +96,11 @@ const ACTIONS := {
 ## an enemy works through while the player is in its reach, one per tick. `loot` always drops;
 ## `rare_percent` is the chance of one piece of RARE_LOOT on top. A dead enemy comes back at
 ## home `respawn_ticks` later.
+##
+## A kind with `stances` fights with more than one weapon: `stances[i]` is the weapon it holds
+## for `actions[i]`, so its style and reach follow its place in the cycle. `boss_loot` is a
+## list of which exactly one always drops. A `boss` is a ring's guardian: its first death is
+## recorded for good (it opens that ring's gate with the matching upgrade).
 const ENEMIES := {
 	"wolf": {
 		"label": "Wolf", "health": 15, "weapon": "fangs", "speed": 2.5, "sight": 6.0,
@@ -97,8 +112,24 @@ const ENEMIES := {
 		"actions": ["shot", ACTION_REST, ACTION_REST, "aimed_shot", ACTION_REST],
 		"loot": [{"item": "arrows", "count": 8}], "rare_percent": 10, "respawn_ticks": 100,
 	},
+	# Sabre for two blows, then he draws his bow for two shots, then back: the second blow of
+	# each stance is the heavy one, and each change of stance is announced a tick ahead.
+	"bandit_captain": {
+		"label": "Bandit captain", "health": 240, "weapon": "captain_sabre", "speed": 2.0, "sight": 7.0,
+		"actions": [
+			"slash", ACTION_REST, "cleave", ACTION_REST, "draw_bow",
+			"loose", ACTION_REST, "volley", ACTION_REST, "draw_sabre",
+		],
+		"stances": [
+			"captain_sabre", "captain_sabre", "captain_sabre", "captain_sabre", "captain_bow",
+			"captain_bow", "captain_bow", "captain_bow", "captain_bow", "captain_sabre",
+		],
+		"loot": [{"item": "arrows", "count": 20}], "boss_loot": ["iron_sword", "iron_bow", "iron_armour"],
+		"rare_percent": 25, "respawn_ticks": 600, "boss": true,
+	},
 }
-const RARE_LOOT: Array[String] = ["iron_sword", "iron_armour"]
+## Ring one's rare drop: one piece of iron gear. Iron is found, never smithed.
+const RARE_LOOT: Array[String] = ["iron_sword", "iron_armour", "iron_bow", "iron_axe", "iron_pickaxe"]
 
 
 static func is_enemy_kind(kind: String) -> bool:
@@ -119,6 +150,19 @@ static func is_heavy(action: String) -> bool:
 
 static func action_damage(action: String) -> int:
 	return int(ACTIONS[action]["damage"]) if ACTIONS.has(action) else 0
+
+
+static func is_stance(action: String) -> bool:
+	return ACTIONS.has(action) and bool(ACTIONS[action].get("stance", false))
+
+
+## The weapon an enemy of `kind` holds for the action at `index` of its cycle.
+static func stance_weapon(kind: String, index: int) -> String:
+	var def: Dictionary = ENEMIES[kind]
+	var stances: Array = def.get("stances", [])
+	if stances.is_empty():
+		return def["weapon"]
+	return stances[posmod(index, stances.size())]
 
 
 static func action_label(action: String) -> String:

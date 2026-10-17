@@ -15,13 +15,15 @@ Gathered resources pay for outpost upgrades, which work as a tech tree and push 
 
 ## Playing it
 
-Start a new character on the title screen. Click the gate to walk out, then click a pine to chop it: logs go into your twelve-slot pack and woodcutting levels up as you cut. Warmth drains while you are outside; when it runs out your health starts to fall, so walk back through the gate in time. Crossing the gate inward banks your whole pack into the stash and saves.
+1. Start a new character, walk out through the gate and chop pines, then walk back in: crossing the gate banks your pack. Craft a pickaxe and a fishing rod from logs at the workbench.
+2. Mine copper and tin beside the outpost, fish the hole north of the walls, and cook the catch at any fire: the outpost's, or one you light from three logs. Warmth drains whenever you are outside.
+3. Build upgrades from your stash with the **Upgrades** button: the forge unlocks bronze bars, tools, a sword and a bow, and the armoury unlocks bronze armour.
+4. Past the red stakes is ring one: wolves, bandit archers, frost pines, iron and an ice hole. Read the cue over an enemy's head and counter it (a blade up close beats a bow, a bow at range beats a blade), eat to heal, and get home before the cold or a blow takes you.
+5. Build the ring-two gate winch, then beat the bandit captain at the far southern gate. He switches between sabre and bow. Walk through the gate he guarded to finish the first playable.
 
-Past the trees, over the line into ring one, two wolves wait to the south-west and a bandit archer to the south-east. Your stash starts with a wooden bow, 30 arrows and 5 cooked fish; withdraw them, then click an enemy to fight it. Combat runs on half-second ticks and you strike automatically while in reach. Every enemy shows its next blow over its head one tick before it lands, so counter it. A club up close beats the archer, and the bow at distance beats a wolf. Swapping weapons takes effect on the next tick, or you can step out of reach. Click cooked fish in your pack to eat it: it costs a tick and heals over the next few. Each shot spends an arrow. Dead enemies drop loot; click a pile to pick it up. If you die you wake by the fire, keeping your three most valuable things and losing the rest; your stash and skills are untouched.
+Click the ground to walk and anything else to use it. Click a pack item to equip or eat it (or, by a fire, to cook it), and right-click to drop it. Q and E, or a middle-mouse drag, rotate the camera; the mouse wheel zooms. If you die you wake by the fire, keeping your three most valuable things; your stash, skills and upgrades are untouched.
 
-Inside the outpost, stand by the fire to warm up. Click the stash to withdraw or deposit, and the workbench to craft a wooden club from four logs. Click a pack item to equip or eat it, right-click to drop it. Q and E, or a middle-mouse drag, rotate the camera; the mouse wheel zooms between fixed limits.
-
-Progress is saved in the browser at the gate, after every stash or workbench action, and on death, so Continue on the title screen picks up where you left off. **Save code** shows your character as a text code; paste it into Import code on the title screen in any browser to carry it over.
+Progress is saved in the browser at the gate, after every stash, workbench or upgrade action, and on death, so Continue on the title screen picks up where you left off. **Save code** shows your character as a text code; paste it into Import code on the title screen in any browser to carry it over.
 
 ## Running it locally
 

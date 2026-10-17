@@ -4,25 +4,32 @@
 ## the simulation.
 extends Node3D
 
-const MIN_DISTANCE := 6.0
-const MAX_DISTANCE := 22.0
-const ZOOM_STEP := 1.5
+const MIN_DISTANCE := 14.0
+const MAX_DISTANCE := 60.0
+const ZOOM_STEP := 3.0
 const PITCH_DEGREES := 55.0
 const KEY_YAW_SPEED := 2.0     # radians per second while Q or E is held
 const DRAG_YAW_SPEED := 0.008  # radians per pixel of middle-mouse drag
+## A narrow lens keeps trees and posts upright at the edges of the view.
+const FOV_DEGREES := 40.0
 
 var yaw := 0.0
-var distance := 14.0
+var distance := 32.0
 
 @onready var camera: Camera3D = $Camera3D
 
 
 func _ready() -> void:
+	camera.fov = FOV_DEGREES
 	_update()
 
 
 func _process(delta: float) -> void:
 	var turn := 0.0
+	# Typing in a text field (a save code full of q and e) must not spin the camera.
+	if get_viewport().gui_get_focus_owner() is TextEdit:
+		_update()
+		return
 	if Input.is_key_pressed(KEY_Q):
 		turn += 1.0
 	if Input.is_key_pressed(KEY_E):

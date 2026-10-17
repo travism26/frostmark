@@ -10,7 +10,8 @@ Everything that is a rule lives in `sim/`, as RefCounted scripts with no Node, s
 | `sim/vocab.gd` (`SimVocab`) | Every command kind, event kind, interaction action and rejection reason as a constant |
 | `sim/items.gd` (`ItemTable`) | Every item kind: label, stack size, weight, value, equipment slot, tool kind, tier, weapon stats, armour defence, food healing |
 | `sim/combat.gd` (`CombatTable`) | Combat as data: the style edge table, natural weapons, enemy kinds and their action cycles, noise radii, the damage arithmetic |
-| `sim/recipes.gd` (`RecipeTable`) | Workbench recipes: inputs, output, required skill and level, required upgrade |
+| `sim/recipes.gd` (`RecipeTable`) | Workbench recipes (inputs, output, required skill and level, required upgrade, metal tier) and the cooking table (raw item, cooked item, level, xp, burn chance) |
+| `sim/upgrades.gd` (`UpgradeTable`) | The outpost tech tree: cost, prerequisites, effects, and whether an upgrade is locked in this version |
 | `sim/skills.gd` (`SkillTable`) | The seven skill names and the one experience curve they share |
 | `sim/inventory.gd` (`Inventory`) | Static helpers over slot arrays: room, stacking, weight, removal |
 | `sim/save_code.gd` (`SaveCode`) | Save-code encoding and decoding, and the forward migrations between state versions |
@@ -19,36 +20,38 @@ Everything that is a rule lives in `sim/`, as RefCounted scripts with no Node, s
 
 `Sim.TICK_SECONDS` is 0.5 s. `step()` advances exactly one tick and is the only place game state changes (`import_save` and `restore()` replace the whole state, which is a load, not a rule). The presentation accumulates frame time and calls `step()` once per tick, then drains events. Nothing in the rules reads wall-clock time, and the random rolls (a gathering attempt, a rare drop) come from a generator kept in the state, so the same commands at the same ticks give the same state.
 
-One tick runs, in order: queued inventory commands (a swap, a meal), the player closing on an attack target, movement (and banking when the walk enters the outpost), the gathering activity, combat (the player's swing, then every enemy in turn), node regrowth, loot decay, then food healing, warmth, health and death. If the tick reached a save point it ends with one `saved` event.
+One tick runs, in order: queued commands (a swap, a meal, a craft, a build, a field fire), the player closing on an attack target, movement (and banking when the walk enters the outpost), the gathering or cooking activity, combat (the player's swing, then every enemy in turn), node regrowth, loot decay, field fires burning out, then food healing, warmth, health and death. If the tick reached a save point it ends with one `saved` event.
 
 Walking consumes `Sim.WALK_PER_TICK` metres of path per tick (4 m/s, so 2 m). A path of 6 m arrives on the third tick. Carrying more than `Sim.CARRY_LIMIT` kg (pack plus equipment) cuts that to `Sim.OVERWEIGHT_SPEED` (60%).
 
 ## Commands
 
-`sim.command(kind, args)` returns `{ok, reason}`. Commands only record intent; the next `step()` acts on it. A rejected command also emits `command_rejected`. The inventory commands (`deposit`, `withdraw`, `drop`, `equip`, `eat`, `smith`) are validated at once, so the return value is meaningful, then queued in `state.pending` and applied, re-validated, at the start of the next tick. `sim.check(kind, args)` answers the same validation without queuing, for greying out buttons.
+`sim.command(kind, args)` returns `{ok, reason}`. Commands only record intent; the next `step()` acts on it. A rejected command also emits `command_rejected`. The commands that change the inventory (`deposit`, `withdraw`, `drop`, `equip`, `eat`, `smith`, `build`, `light_fire`) are validated at once, so the return value is meaningful, then queued in `state.pending` and applied, re-validated, at the start of the next tick. `sim.check(kind, args)` answers the same validation without queuing, for greying out buttons.
 
 | Command | Args | Slice | Does |
 |---------|------|-------|------|
 | `move_to` | `{pos: [x, z]}` | 2 | Walk to a ground point (see snapping below) |
-| `interact` | `{object_id}` | 2 | Walk to an object and start its action (see actions below). A loot pile id walks onto the pile and picks it up |
-| `gather` | `{object_id}` | 3 | `interact` restricted to gatherable nodes: walk there, then gather until the node is spent or the pack is full |
+| `interact` | `{object_id}` | 2 | Walk to an object and start its action (see actions below). A loot pile id walks onto the pile and picks it up; a field fire id walks to its side |
+| `gather` | `{object_id}` | 3 | `interact` restricted to gatherable nodes (trees, rocks, fishing holes): walk there, then gather until the node is spent or the pack is full |
 | `cross_gate` | `{}` | 3 | Walk through the nearest gate to 2.5 m beyond it on the other side |
 | `deposit` | `{index, count?}` | 3 | Pack slot to the stash, as many as fit. Inside the outpost only |
 | `withdraw` | `{index, count?}` | 3 | Stash slot to the pack, as many as fit. Inside the outpost only |
 | `drop` | `{index, count?}` | 3 | Leave items from a pack slot in the snow. They are gone |
 | `equip` | `{index}` or `{unequip: slot}` | 3 | Equip a pack item into its slot, swapping the old one into that pack slot; or unequip into the pack |
-| `smith` | `{recipe}` | 3 | Craft a recipe standing at the workbench inside the outpost |
+| `smith` | `{recipe}` | 3 | Craft a recipe standing at the workbench inside the outpost, from the pack |
+| `cook` | `{index}` | 5 | Standing by any fire, cook that pack slot's raw food, one item every 2 ticks, until that kind runs out, the pack is full or the player walks off |
+| `build` | `{upgrade}` | 5 | Build an outpost upgrade inside the outpost, paying its cost from the stash |
+| `light_fire` | `{}` | 5 | Burn 3 logs from the pack into a field fire where the player stands (not inside the outpost) |
 | `attack` | `{enemy_id}` | 4 | Close to the weapon's reach and strike on every ready tick until the enemy dies, the player walks or interacts elsewhere, or a ranged weapon runs out of arrows |
 | `eat` | `{index}` | 4 | Eat one food item from a pack slot. Lands next tick, costs that tick's step and swing, heals over the food's ticks |
 | `export_save` | `{}` | 3 | Returns `{ok, reason, code}`: the state as a save code. Changes nothing |
 | `import_save` | `{code}` | 3 | Validates, migrates and loads a save code, replacing the state at once. Emits `saved` (reason `import_save`) or `save_rejected` |
-| `cook`, `build` | | later | Reserved: answered with `not_implemented` |
 
-Any other kind is `unknown_command`. Rejection reasons for movement: `bad_args`, `outside_world` (off the grid), `not_walkable` (no free cell within `SNAP_RADIUS_CELLS`), `unreachable` (no route), `unknown_object`. For gathering: `not_gatherable`, `depleted`, `no_tool`, `level_too_low`, `pack_full`. For the inventory: `empty_slot`, `not_equippable`, `pack_full`, `stash_full`, `not_in_outpost`. For crafting: `unknown_recipe`, `not_at_workbench`, `level_too_low`, `upgrade_missing`, `missing_inputs`, `pack_full`. For combat: `unknown_enemy`, `target_dead`, `in_outpost` (nothing is fought from inside), `no_ammo` (a ranged weapon with no arrows in the pack). For eating: `empty_slot`, `not_food`, `already_eating` (one meal a tick). For save codes: `bad_code`, `bad_checksum`, `unsupported_version`, `bad_snapshot`.
+Any other kind is `unknown_command`. Rejection reasons for movement: `bad_args`, `outside_world` (off the grid), `not_walkable` (no free cell within `SNAP_RADIUS_CELLS`), `unreachable` (no route), `unknown_object`. For gathering: `not_gatherable`, `depleted`, `no_tool`, `level_too_low`, `pack_full`. For the inventory: `empty_slot`, `not_equippable`, `pack_full`, `stash_full`, `not_in_outpost`. Gathering also refuses `tool_too_weak` (iron needs a bronze pickaxe or better). For crafting: `unknown_recipe`, `tier_capped` (above bronze), `not_at_workbench`, `level_too_low`, `upgrade_missing`, `missing_inputs`, `pack_full`. For cooking: `bad_args`, `empty_slot`, `not_cookable`, `not_at_fire`, `level_too_low`, `pack_full`. For building: `unknown_upgrade`, `already_built`, `upgrade_locked`, `upgrade_missing` (a prerequisite), `not_in_outpost`, `missing_inputs` (from the stash). For a field fire: `in_outpost`, `missing_inputs`. For combat: `unknown_enemy`, `target_dead`, `in_outpost` (nothing is fought from inside), `no_ammo` (a ranged weapon with no arrows in the pack). For eating: `empty_slot`, `not_food`, `already_eating` (one meal a tick). For save codes: `bad_code`, `bad_checksum`, `unsupported_version`, `bad_snapshot`.
 
 ### Interaction actions
 
-`interacted.action` says what arriving at an object starts: `gather` for a tree (the gathering activity begins at once), `warm` for the fire (warming is by standing near it), `stash` and `craft` for the stash and the workbench (the presentation opens their panels), `pick_up` for a loot pile (`object_kind` is `loot`), `none` for the gate.
+`interacted.action` says what arriving at an object starts: `gather` for a node (the gathering activity begins at once), `warm` for the outpost fire or a field fire (`object_kind` is `campfire`; warming and cooking are by standing near it), `stash` and `craft` for the stash and the workbench (the presentation opens their panels), `pick_up` for a loot pile (`object_kind` is `loot`), `ring_gate` for the gate to ring two (walking through it when it is open), `none` for the outpost gate.
 
 ### How a click becomes a walk
 
@@ -73,7 +76,7 @@ Any other kind is `unknown_command`. Rejection reasons for movement: `bad_args`,
 | `interacted` | `object_id, object_kind, action` | Right after `arrived` at an interact target |
 | `region_changed` | `from, to` | The player's region lookup changed (for example `outpost` to `inner_ring`) |
 | `gathered` | `object_id, skill, item, count, xp` | A gathering attempt succeeded |
-| `activity_stopped` | `activity, object_id, reason` | Gathering or attacking ended: `depleted`, `pack_full`, `no_tool`, `moved`, `target_dead`, `no_ammo` or `died` |
+| `activity_stopped` | `activity, object_id, reason` | Gathering, cooking or attacking ended: `depleted`, `pack_full`, `no_tool`, `moved`, `target_dead`, `no_ammo`, `nothing_left`, `not_at_fire` or `died` |
 | `node_depleted` | `object_id, respawn_tick` | A node gave its last yield |
 | `node_respawned` | `object_id` | A spent node regrew |
 | `levelled` | `skill, level` | A skill reached a new level |
@@ -97,10 +100,14 @@ Any other kind is `unknown_command`. Rejection reasons for movement: `bad_args`,
 | `loot_dropped` | `loot_id, item, count, pos` | A pile landed where an enemy died |
 | `picked_up` | `loot_id, item, count` | Some or all of a pile went into the pack |
 | `loot_gone` | `loot_id` | A pile lay too long and the snow took it |
-| `saved` | `reason, tick` | A save point: `gate`, `deposit`, `withdraw`, `craft`, `death` or `import_save`. The presentation stores `sim.export_code()` |
+| `enemy_stance` | `enemy_id, action, style, at` | An enemy will change weapon on tick `at` (the captain drawing his bow or his sabre), announced a tick ahead like an attack |
+| `cooked` | `item, output, burnt, xp` | One raw item came off the fire; `output` is `""` when it burnt |
+| `fire_lit`, `fire_out` | `fire_id, pos, expires_tick` / `fire_id` | A field fire was lit or burnt out |
+| `built` | `upgrade, effects` | An outpost upgrade was built |
+| `ring_gate_opened` | `object_id` | A ring gate's guardian is dead and its upgrade built |
+| `ring_two_reached` | `object_id` | The player walked through the open gate to ring two: the first playable's ending. They are back beside the outpost fire with the pack banked |
+| `saved` | `reason, tick` | A save point: `gate`, `deposit`, `withdraw`, `craft`, `build`, `death`, `ring_two` or `import_save`. The presentation stores `sim.export_code()` |
 | `save_rejected` | `reason` | An `import_save` failed |
-
-Reserved for a later slice, named in `SimVocab` now: `built`.
 
 ## State shape
 
@@ -108,7 +115,7 @@ Reserved for a later slice, named in `SimVocab` now: `built`.
 
 ```
 {
-  "version": 3,
+  "version": 4,
   "tick": 0,
   "rng": 1,                      # 31-bit generator state for gathering and drop rolls
   "player": {
@@ -117,7 +124,7 @@ Reserved for a later slice, named in `SimVocab` now: `built`.
     "path": [[x, z], ...],       # waypoints still to walk, empty when idle
     "target_object": "",         # object or loot id of a pending interact, "" otherwise
     "region": "outpost",
-    "activity": {},              # {kind: "gather", object_id, progress} or {kind: "attack", object_id}
+    "activity": {},              # {kind: "gather", object_id, progress}, {kind: "cook", item, progress} or {kind: "attack", object_id}
     "ready_tick": 0              # the first tick the player's weapon can swing again
   },
   "warmth": 360,                 # 0..Sim.WARMTH_MAX
@@ -134,7 +141,10 @@ Reserved for a later slice, named in `SimVocab` now: `built`.
               "mode": "idle", "next": {"action": "bite", "at": 12}, "step": 1, "respawn_tick": 0}, ...},
   "loot": {"loot_1": {"item": "arrows", "count": 8, "pos": [x, z], "expires_tick": 640}, ...},
   "loot_seq": 1,                 # the last loot id handed out
-  "upgrades": [],                # built upgrade ids (none buildable yet)
+  "fires": {"campfire_1": {"pos": [x, z], "expires_tick": 820}},  # burning field fires
+  "fire_seq": 1,                 # the last field fire id handed out
+  "bosses_defeated": ["captain"],  # guardians that have fallen at least once, kept for good
+  "upgrades": ["stash_shelves"], # built upgrade ids
   "pending": []                  # queued inventory commands for the next tick
 }
 ```
@@ -145,17 +155,64 @@ Reserved for a later slice, named in `SimVocab` now: `built`.
 
 | Rule | Value |
 |------|-------|
-| Pack | 12 slots; logs stack to 10, gear never stacks |
-| Carry limit | 20 kg (logs 1 kg, axe 2 kg, club 3 kg, bow 2 kg, arrows 0 kg); above it walking is 60% speed |
-| Stash | 8 slots to start; upgrades raise it in a later slice. A new character's stash holds a wooden bow, 30 arrows and 5 cooked fish |
-| Trees | Six pines 4 to 12 m south of the gate. Each yields 4 logs, then regrows 90 ticks (45 s) later |
-| Woodcutting | One attempt takes `max(2, 4 - (level - 1) / 4)` ticks and succeeds with `min(95, 60 + 4 * (level - 1))` percent; 10 xp per log. Needs an axe in the pack or the tool slot |
+| Pack | 12 slots; logs, ore, bars and fish stack to 10, gear never stacks |
+| Carry limit | 30 kg (logs, copper, tin and bars 1 kg, iron ore 2 kg, tools 1 to 3 kg, weapons 2 to 4 kg, armour 4 to 6 kg, arrows 0 kg); above it walking is 60% speed |
+| Stash | 8 slots to start; the shelves and cellar upgrades add 4 each. A new character's stash holds a wooden bow, 30 arrows and 5 cooked fish |
 | Experience curve | Shared by all seven skills: level L needs `50 * L * (L - 1) / 2` total xp (50, 150, 300, 500, ...), capped at 99. Levels never decrease |
-| Warmth | 360 points, draining 1 per tick outside the outpost (three minutes). No drain inside the outpost. Within 3 m of a fire it refills 24 per tick and health refills 2 per tick |
+| Gathering | One attempt takes `max(2, 4 - (level - 1) / 4 - tool)` ticks and succeeds with `min(95, 60 + 4 * (level - 1) + 10 * tool)` percent, where `tool` is the best carried tool's tier rank (wooden 0, bronze 1, iron 2). Needs the node's tool (axe, pickaxe, rod) in the pack or the tool slot |
+| Warmth | 360 points, draining 1 per tick outside the outpost (three minutes), in both rings. No drain inside the outpost. Within 3 m of any fire it refills 24 per tick and health refills 2 per tick |
+| Field fire | 3 logs from the pack, lit where the player stands outside the outpost; warms and cooks like the outpost fire for 120 ticks (a minute), then goes out |
 | Cold | At zero warmth health drains 1 per tick (50 s from full). At zero health the player dies by the death rule below |
-| Recipe | Wooden club: 4 logs at the workbench, smithing level 1, no upgrade, no xp yet |
-| Food | Cooked fish heals 24 over 4 ticks, 6 a tick starting the tick it is eaten. Meals overlap by adding up |
-| Item values | Logs 2, axe 5, cooked fish 6, wolf pelt 8, club 12, bow 20, arrows 1 each, iron sword 80, iron armour 90 |
+| Cooking | One raw item every 2 ticks at any fire. Burn chance is the dish's base at its level, minus 5 per level above: raw fish 40% at cooking 1 (gone by level 9), 10 xp; raw trout needs cooking 3, 50% there, 18 xp. Burnt food is lost and gives no xp |
+| Food | Raw fish heals 4 over 2 ticks, cooked fish 24 over 4, raw trout 6 over 2, cooked trout 40 over 5, starting the tick it is eaten. Meals overlap by adding up |
+| Smithing | At the workbench from the pack. Capped at bronze: a recipe of a higher tier (the iron bar) is refused with `tier_capped`; iron gear only drops |
+
+**Nodes** (each regrows `respawn` ticks after its last yield):
+
+| Node | Where | Skill and level | Tool | Yields | Per node | Respawn | Xp |
+|------|-------|-----------------|------|--------|----------|---------|----|
+| Pine (tier 1) | 6 south of the gate, 4 north of the walls | woodcutting 1 | axe | logs | 4 | 90 | 10 |
+| Copper rock (tier 1) | 3 east of the outpost | mining 1 | pickaxe | copper ore | 4 | 100 | 10 |
+| Tin rock (tier 1) | 3 west of the outpost | mining 1 | pickaxe | tin ore | 4 | 100 | 10 |
+| Fishing hole (tier 1) | 1 north of the outpost | fishing 1 | rod | raw fish | 6 | 80 | 10 |
+| Frost pine (tier 2) | 4 in ring one, west | woodcutting 3 | axe | logs | 6 | 120 | 16 |
+| Iron rock (tier 2) | 3 in ring one, east, by the archer camp | mining 3 | bronze pickaxe or better | iron ore | 3 | 150 | 18 |
+| Ice hole (tier 2) | 1 in ring one, north | fishing 3 | rod | raw trout | 5 | 120 | 16 |
+
+**Workbench recipes** (smithing):
+
+| Recipe | Inputs | Level | Upgrade | Xp |
+|--------|--------|-------|---------|----|
+| Wooden club, axe, pickaxe, fishing rod | 4, 3, 3, 3 logs | 1 | none | 10 |
+| Wooden armour | 8 logs | 2 | none | 20 |
+| Bronze bar | 1 copper ore, 1 tin ore | 1 | Forge | 10 |
+| 25 arrows | 2 logs, 1 bronze bar | 2 | Forge | 10 |
+| Bronze axe, bronze pickaxe | 1 bronze bar, 2 logs | 2 | Forge | 15 |
+| Bronze sword | 2 bronze bars, 1 log | 2 | Forge | 25 |
+| Bronze bow | 2 bronze bars, 3 logs | 2 | Forge | 25 |
+| Bronze armour | 4 bronze bars | 3 | Armoury | 40 |
+| Iron bar | 2 iron ore | refused: above the bronze cap | | |
+
+**Outpost upgrades** (paid from the stash, inside the outpost):
+
+| Upgrade | Cost | Needs | Effect |
+|---------|------|-------|--------|
+| Stash shelves | 8 logs | none | +4 stash slots |
+| Forge | 6 logs, 3 copper ore, 3 tin ore | none | Unlocks bronze bars, arrows, bronze tools and weapons |
+| Stash cellar | 10 logs, 2 bronze bars | Stash shelves | +4 stash slots |
+| Armoury | 6 logs, 2 bronze bars, 3 wolf pelts | Forge | Unlocks bronze armour |
+| Ring-two gate winch | 12 logs, 8 iron ore, 3 bronze bars, 3 wolf pelts | Armoury | Readies the gate to ring two; it opens once the captain has fallen |
+| Ring-one waystone | 10 iron ore, 6 bronze bars, 10 logs | Ring-two gate winch | Listed but locked: waystones wake with ring two |
+
+**Gear tiers** (every weapon, armour and tool has one, and it shows on the character):
+
+| Tier | Melee | Ranged (arrows) | Armour (defence) | Tools | Comes from |
+|------|-------|-----------------|------------------|-------|------------|
+| Wooden | club, power 5 | wooden bow, power 4 | wooden armour, 1 | axe, pickaxe, fishing rod | the workbench, from logs |
+| Bronze | sword, power 7 | bronze bow, power 6 | bronze armour, 2 | axe, pickaxe | the workbench, after the forge |
+| Iron | sword, power 9 | iron bow, power 8 | iron armour, 3 | axe, pickaxe | only as loot in ring one and from the captain |
+
+Item values, which decide what death keeps: logs 2, copper and tin ore 3, iron ore 8, bronze bar 8, raw fish 2, cooked fish 6, raw trout 4, cooked trout 12, wolf pelt 8, arrows 1 each; wooden axe 5, pickaxe and rod 6, club 12, wooden armour 16, wooden bow 20; bronze axe and pickaxe 24, sword 40, bow 44, armour 50; iron axe and pickaxe 60, sword 80, bow 84, armour 90.
 
 ## Combat
 
@@ -163,14 +220,13 @@ Everything that fights is a combatant of one shape, `sim.combatant(id)`: `{id, k
 
 **The style edge.** `CombatTable.EDGES` is keyed by (attacker style, defender style) and gives `{dealt, taken, range}`. With the edge, an attacker deals `dealt` times its damage and takes `taken` times the damage that defender deals back, while the two stand at `range`. At launch the rule is two-way: melee within 1.5 m of a ranged defender has the edge, ranged beyond 1.5 m of a melee defender has the edge, and the same style is neutral. Both edges are dealt 1.5 and taken 0.5. A blow's multiplier is the attacker's `dealt` against the defender times the defender's `taken` against the attacker, so 1.5 with the edge, 0.5 into it and 1.0 neutral. Magic will add rows to the table, not change the arithmetic.
 
-**Damage** is `max(1, round(base * multiplier) - defence)`. The player's base is the weapon's power plus 1 for every 3 levels of the style's skill above 1. An enemy's base is its action's damage. Armour defence comes off every hit (iron armour: 2).
+**Damage** is `max(1, round(base * multiplier) - defence)`. The player's base is the weapon's power plus 1 for every 3 levels of the style's skill above 1. An enemy's base is its action's damage. Armour defence comes off every hit (wooden 1, bronze 2, iron 3).
 
 | Weapon | Style | Power | Swings every | Reach |
 |--------|-------|-------|--------------|-------|
 | Fists (empty slot) | melee | 2 | 2 ticks | 1.5 m |
-| Wooden club | melee | 5 | 2 ticks | 1.5 m |
-| Iron sword | melee | 9 | 2 ticks | 1.5 m |
-| Wooden bow | ranged | 4, one arrow a shot | 2 ticks | 8 m |
+| Wooden club, bronze sword, iron sword | melee | 5, 7, 9 | 2 ticks | 1.5 m |
+| Wooden, bronze, iron bow | ranged | 4, 6, 8, one arrow a shot | 2 ticks | 8 m |
 
 **Attacking.** `attack` sets the activity to `{kind: attack, object_id}`. Each tick the player walks to within 80% of the weapon's reach of the target, re-routing as it moves, then strikes on every tick at or after `ready_tick`; a swing sets `ready_tick` to the tick plus the weapon's speed. A ranged swing spends one arrow from the pack and refuses with `no_ammo` when none are left, which also ends the attack. A hit grants 4 xp per point of damage to the style's skill (`melee` or `ranged`).
 
@@ -182,19 +238,25 @@ Everything that fights is a combatant of one shape, `sim.combatant(id)`: `{id, k
 |------|--------|--------|-------|-------|--------------|-------|-----------|
 | Wolf | 15 | fangs (melee, 1.5 m) | 2.5 m a tick | 6 m | bite 3, rest, lunge 7 (heavy), rest | 1 wolf pelt | 5% |
 | Bandit archer | 20 | wooden bow (ranged, 8 m) | 1.5 m a tick | 9 m | shot 4, rest, rest, aimed shot 9 (heavy), rest | 8 arrows | 10% |
+| Bandit captain | 240 | sabre (melee, 1.5 m) and war bow (ranged, 8 m) by stance | 2 m a tick | 7 m | slash 8, rest, cleave 17 (heavy), rest, draws his bow, loose 7, rest, volley 16 (heavy), rest, draws his sabre | 20 arrows and one piece of iron gear (sword, bow or armour) | 25% |
 
 - An idle enemy notices the player when the player is within its sight radius, within the radius of a noise the player made this tick (a gathering attempt carries 9 m, a blow struck or taken 12 m), or strikes it. When one member of a pack engages, the rest of the pack engages with it.
 - Each tick an engaged enemy first carries out what it declared last tick: a move closes in toward the player, a rest does nothing, an attack lands as `hit` if the player is still in its reach and `missed` if not. Then it declares the next tick: the next action of its cycle while the player is in its reach, else a move. Every attack it declares is telegraphed with an `enemy_telegraphed` event whose `at` is the next tick, so the warning always comes exactly one tick before the blow.
 - Enemies never step into the outpost. While the player is inside, every engaged enemy disengages, walks home deaf to the player, and heals to full on arriving.
-- A dead enemy drops its loot where it fell, plus one rare item (an iron sword or iron armour, evenly) at the kind's rare-drop rate. It comes back at home 100 ticks later.
+- A dead enemy drops its loot where it fell, plus one rare item (an iron sword, armour, bow, axe or pickaxe, evenly) at the kind's rare-drop rate. Wolves and archers come back at home 100 ticks later, the captain 600.
+- **The captain** fights with two weapons. His cycle lists the weapon he holds for each action, so his style and reach follow his place in it: two sabre blows (the second heavy), then he draws his bow (an `enemy_stance` event, a tick ahead, in the ranged colour), two shots (the second heavy), then he draws his sabre again. Against him a sword has the edge up close while he holds the bow, and a bow has it at distance while he holds the sabre. He always drops one piece of iron gear. His first death is recorded in `bosses_defeated` for good, even after he respawns.
 
 **Loot** piles lie for 600 ticks (five minutes) and then the snow takes them. `interact` on a pile walks onto it and picks up as much as fits; the rest stays.
 
-The placed enemies sit just past the trees, over the line into ring one at z = 24: two wolves (`wolf_1`, `wolf_2`, the near pack) south-west of the stand, a pack of three farther west, and one bandit archer to the south-east. The groups sit more than a fight's noise (12 m) apart, so each is fought on its own. Chopping the south-western pine is loud enough for the near pack to hear.
+Ring one's enemies: just past the southern pines, two wolves (`wolf_1`, `wolf_2`, the near pack) south-west, a pack of three farther west and a bandit archer (`archer_1`) south-east; farther out, a two-archer camp by the iron rocks (east), a wolf pair among the frost pines (west), a pack of three by the ice hole (north), two lone archers flanking the road south, and the captain at the ring-two gate. The groups sit more than a fight's noise (12 m) apart, so each is fought on its own. Chopping the south-western pine is loud enough for the near pack to hear.
 
 ## Death
 
-At zero health, from a blow or the cold, the player keeps the three most valuable things they carry or wear and loses everything else for good. A stack is one thing, valued at its whole count (30 arrows are worth 30). On a tie what is worn comes first, then the earlier pack slot. Kept things stay where they were. The player wakes beside the outpost fire with full health and warmth; healing in progress and queued commands are cleared, every engaged enemy disengages, and skills, stash and upgrades are untouched. Nothing makes an axe yet, so if the death took the last axe and none is stashed, a spare wooden axe goes into the tool slot (or the pack when the slot is taken). The tick emits `died` and is a save point with reason `death`.
+At zero health, from a blow or the cold, the player keeps the three most valuable things they carry or wear and loses everything else for good. A stack is one thing, valued at its whole count (30 arrows are worth 30). On a tie what is worn comes first, then the earlier pack slot. Kept things stay where they were. The player wakes beside the outpost fire with full health and warmth; healing in progress and queued commands are cleared, every engaged enemy disengages, and skills, stash and upgrades are untouched. The workbench makes an axe only from logs, and logs need an axe, so if the death took the last axe and none is stashed, a spare wooden axe goes into the tool slot (or the pack when the slot is taken). The tick emits `died` and is a save point with reason `death`.
+
+## The ring-two gate
+
+The gate to ring two (`ring_two_gate`) stands in the cliffs at ring one's far southern edge, barred: it blocks walking like a wall. It is open once its guardian (`captain`) is in `bosses_defeated` and its upgrade (`ring_two_gate`) is built, in either order; whichever comes second emits `ring_gate_opened`, and an open gate never closes. `interact` walks to it from the ring-one side; arriving while it is open emits `ring_two_reached`, puts the player beside the outpost fire with health, skills and gear as they were, banks the pack as crossing the outpost gate does, and is a save point (`ring_two`). The presentation shows the ending screen. Arriving while it is barred does nothing but the `interacted` event.
 
 ## The gate and banking
 
@@ -206,32 +268,35 @@ The simulation never touches the filesystem. It reports save points with `saved`
 
 A save code is base64 of `FM|<version>|<checksum>|<snapshot JSON>`. The JSON is compact with sorted keys. The checksum is the first 16 hex digits of SHA-256 over `<version>|<snapshot JSON>`: it catches typos, truncation and hand edits, and is not meant to stop a determined cheat. Decoding accepts only the canonical base64 of the decoded bytes, so every changed character is caught. It ignores whitespace from wrapped pastes, refuses codes from a newer build, and never raises an engine error.
 
-`SaveCode.migrate(snap, target)` applies one step per version. Each step hard-codes the defaults of its own version, so retuning a constant later never changes what an old save migrates into. `1 -> 2` keeps the slice-2 tick and position and adds a new character's inventory, stash, skills, warmth, health and nodes. `2 -> 3` adds the swing timer, an empty healing queue, enemies (empty, so every enemy loads at home and idle) and ground loot, and puts the slice-4 starter kit (a wooden bow, 30 arrows, 5 cooked fish) into empty stash slots so a slice-3 character can fight too. What does not fit is not added.
+`SaveCode.migrate(snap, target)` applies one step per version. Each step hard-codes the defaults of its own version, so retuning a constant later never changes what an old save migrates into. `1 -> 2` keeps the slice-2 tick and position and adds a new character's inventory, stash, skills, warmth, health and nodes. `2 -> 3` adds the swing timer, an empty healing queue, enemies (empty, so every enemy loads at home and idle) and ground loot, and puts the slice-4 starter kit (a wooden bow, 30 arrows, 5 cooked fish) into empty stash slots so a slice-3 character can fight too. What does not fit is not added. `3 -> 4` adds no field fires and no fallen guardians and changes nothing else: the stash keeps its capacity, known nodes and enemies keep their state, and the new ring-one nodes, enemies and the captain load full and at home.
 
 ## The world as data
 
-`WorldDef.outpost()` builds the slice-2 world. A `WorldDef` has:
+`WorldDef.outpost()` builds the first-playable world, rings around the outpost. A `WorldDef` has:
 
-- A grid of `cols` x `rows` square cells of `cell_size` (64 x 64 cells of 1 m, origin at `[-32, -32]`), rasterised by `bake()` from the solids and blocking objects.
-- `solids`: walls as `{id, kind, min, max, height}` rectangles.
-- `objects`: typed markers by id, `{kind, label, min, max, height, blocks}`. The outpost has `gate` (with an `outward` direction), `fire`, `stash` and `workbench`; the inner ring has `tree_1` to `tree_6`.
-- `enemies`: placements by id, `{kind, home, pack}`. Every placement gets an entry in `state.enemies`; the kind's stats are in `CombatTable`.
-- `NODE_KINDS`: per gatherable kind, the skill, required level, tool, item, yield, regrowth ticks and xp. Every placed object of such a kind gets an entry in `state.nodes`.
-- `regions`: named polygons in precedence order, first match wins: `outpost` (the walled square), `inner_ring` (out to 24 m), `ring_one` (the rest of the grid).
+- A grid of `cols` x `rows` square cells of `cell_size` (128 x 128 cells of 1 m, origin at `[-64, -64]`), rasterised by `bake()` from the solids and blocking objects.
+- `solids`: `{id, kind, min, max, height}` rectangles: the outpost's palisade `wall`s, the `cliff`s that close ring one at 60 m out to the edge of the grid (open only at the ring-two gate), rock `outcrop`s that make the walk out a route, and the keeper's tent (`decor`) in the outpost yard.
+- `objects`: typed markers by id, `{kind, label, min, max, height, blocks}`. The outpost has `gate` (with an `outward` direction), `fire`, `stash` and `workbench`; the inner ring has `tree_1` to `tree_10`, `copper_1` to `copper_3`, `tin_1` to `tin_3` and `fishing_hole`; ring one has `frost_pine_1` to `frost_pine_4`, `iron_1` to `iron_3`, `ice_hole` and `ring_two_gate` (with its `guardian` enemy id and `upgrade` id).
+- `enemies`: placements by id, `{kind, home, pack}`. Every placement gets an entry in `state.enemies`; the kind's stats are in `CombatTable`. None lives in the inner ring.
+- `NODE_KINDS`: per gatherable kind, its tier, the skill and required level, the tool and lowest tool tier, the item, yield, regrowth ticks and xp. Every placed object of such a kind gets an entry in `state.nodes`.
+- `regions`: named polygons in precedence order, first match wins: `outpost` (the walled square), `inner_ring` (out to 24 m), `ring_one` (out to the cliffs at 60 m), `ring_two` (beyond, not reachable in the first playable). Ring one is only reached by walking through the inner ring.
 - `spawn`: where a new state puts the player. `rescue`: where a dead player wakes, beside the fire.
 
-The presentation draws the same solids and objects, so the picture and the walkability grid cannot disagree.
+The presentation draws the same solids and objects (as props, `scenes/props.gd`), so the picture and the walkability grid cannot disagree.
 
 ## How the presentation glues on
 
-`scenes/game_root.gd` owns one `Sim`. It starts on the title screen (`scenes/title_screen.gd`): New character, Continue (when `user://frostmark.save` exists) and Import code. Continue and Import both go through `import_save`, so a bad browser save and a bad pasted code get the same clear message. The HUD (`scenes/hud.gd`) draws the warmth and health gauges, the skills readout (woodcutting, melee and ranged; built from a list so it can show all seven), the pack and equipment, the current style and arrow count, the stash and workbench panels and the save-code panel, and turns button presses into commands: a pack click equips gear or eats food. The death screen (`scenes/death_screen.gd`) lists exactly what was kept and lost. `scenes/save_store.gd` reads and writes the browser save.
+`scenes/game_root.gd` owns one `Sim`. It starts on the title screen (`scenes/title_screen.gd`): New character, Continue (when `user://frostmark.save` exists) and Import code. Continue and Import both go through `import_save`, so a bad browser save and a bad pasted code get the same clear message. The HUD (`scenes/hud.gd`) draws the warmth and health gauges, the seven-skill panel with levels and xp bars, the pack and equipment, the current style and arrow count, the stash, workbench and upgrades panels, the field-fire button and the save-code panel, and turns button presses into commands: a pack click equips gear, eats food, or by a fire cooks raw food. The death screen (`scenes/death_screen.gd`) lists exactly what was kept and lost. `scenes/save_store.gd` reads and writes the browser save.
 
 - `_process` adds frame time to an accumulator and calls `step()` for each whole tick, then `drain_events()`.
 - Each `moved` and `enemy_moved` event's `path` is replayed over the following tick by elapsed fraction, so the character and the enemies glide between tick positions and turn at corners instead of cutting them.
 - A left click is queued and resolved in `_physics_process` with a physics ray. A hit on a body carrying an `enemy_id` meta becomes `attack`, a hit on the gate becomes `cross_gate`, a hit on another body carrying an `object_id` meta (a placed object or a loot pile) becomes `interact`, any other hit becomes `move_to` at the hit point. Clicks on HUD widgets never reach the world.
 - `enemy_telegraphed` shows the coming blow's name over the enemy, coloured by style (orange-red melee, blue ranged) and larger with a `!` when heavy, until the tick it lands. Each enemy carries a name and health label; a dead one is hidden and unclickable until it respawns.
 - `died` stops the ticking and shows the death screen until the player dismisses it.
-- `banked`, `levelled` and `crafted` become a banner across the top; the rest become one line of status text. `saved` writes the browser save. `node_depleted` and `node_respawned` hide and show a tree's crown.
+- `enemy_stance` shows the captain's change of weapon over his head in the new style's colour, and his figure swaps the sabre and the bow in his hand.
+- `banked`, `levelled`, `crafted`, `built` and `ring_gate_opened` become a banner across the top; the rest become one line of status text. `saved` writes the browser save. `node_depleted` and `node_respawned` swap a node's prop between its full and spent look (a stump, a rock without ore, a frozen-over hole). `fire_lit` and `fire_out` add and remove a field fire. `ring_two_reached` stops the ticking and shows the ending screen (`scenes/ending_screen.gd`).
+- Equipped weapon, armour and tool are drawn on the character in their tier's material (`scenes/character_gear.gd`); armour also changes the silhouette by tier (vest, pauldrons, helm).
+- Props come from the CC0 Kenney Nature and Survival kits (`assets/models/`, credited in `docs/assets/CREDITS.md`), snow-capped by one shader (`scenes/shaders/snow_cap.gdshader`). A day-night cycle, falling snow and the character's breath outside the outpost (`scenes/atmosphere.gd`) run on frame time and change no rule.
 - The orbit camera (`scenes/orbit_camera.gd`) follows the character's rendered position and keeps its own yaw and distance.
 
 ## Adding a rule in a later slice

@@ -1,10 +1,10 @@
 ## Presentation glue for Frostmark. Owns one Sim, ticks it on a fixed accumulator, turns
-## ground clicks into `move_to`, marker and loot clicks into `interact` (the gate into
-## `cross_gate`) and enemy clicks into `attack`, and plays the simulation's events back as
-## motion, telegraph cues, HUD, banners and the death screen. The
-## grey-box world is built from the Sim's WorldDef so the drawing and the walkability grid
-## can never disagree. It starts on the title screen and writes the browser save whenever
-## the simulation reports a save point.
+## ground clicks into `move_to`, marker, field-fire and loot clicks into `interact` (the
+## outpost gate into `cross_gate`) and enemy clicks into `attack`, and plays the simulation's
+## events back as motion, telegraph cues, HUD, banners, the death screen and the ring-two
+## ending. The world is built from the Sim's WorldDef (props from scenes/props.gd) so the
+## drawing and the walkability grid can never disagree. It starts on the title screen and
+## writes the browser save whenever the simulation reports a save point.
 ##
 ## Nothing here decides a rule: every position the character or an enemy is drawn at comes
 ## from the simulation, interpolated along the polyline it walked in the last tick.
@@ -13,20 +13,21 @@ extends Node3D
 const CHARACTER_TURN_SPEED := 12.0  # radians per second, for the facing marker
 const RAY_LENGTH := 500.0
 
-const COLOR_GROUND := Color(0.86, 0.90, 0.96)
+const COLOR_GROUND := Color(0.84, 0.88, 0.95)
 const COLOR_OUTPOST_FLOOR := Color(0.60, 0.56, 0.50)
-const COLOR_WALL := Color(0.55, 0.56, 0.58)
 const OCCLUDER_ALPHA := 0.25
-const COLOR_BY_KIND := {
-	WorldDef.KIND_GATE: Color(0.45, 0.32, 0.20),
-	WorldDef.KIND_FIRE: Color(0.95, 0.45, 0.15),
-	WorldDef.KIND_STASH: Color(0.50, 0.35, 0.22),
-	WorldDef.KIND_WORKBENCH: Color(0.30, 0.42, 0.60),
-	WorldDef.KIND_TREE: Color(0.42, 0.30, 0.20),
+const COLOR_BY_SOLID := {
+	WorldDef.KIND_WALL: Color(0.47, 0.36, 0.25),
+	WorldDef.KIND_CLIFF: Color(0.62, 0.68, 0.76),
 }
-const COLOR_PINE := Color(0.18, 0.38, 0.30)
-const TRUNK_HEIGHT := 1.2
-const COLOR_BY_ENEMY := {"wolf": Color(0.42, 0.40, 0.40), "bandit_archer": Color(0.55, 0.24, 0.20)}
+const COLOR_GATE := Color(0.45, 0.32, 0.20)
+const COLOR_BY_ENEMY := {
+	"wolf": Color(0.42, 0.40, 0.40), "bandit_archer": Color(0.55, 0.24, 0.20),
+	"bandit_captain": Color(0.30, 0.10, 0.12),
+}
+## Stakes mark where the inner ring ends and ring one's danger begins.
+const RING_STAKE_SPACING := 6.0
+const COLOR_STAKE := Color(0.75, 0.18, 0.15)
 ## Telegraph cues are coloured by the style of the blow coming, so the counter reads at a glance.
 const COLOR_BY_STYLE := {
 	CombatTable.STYLE_MELEE: Color(0.95, 0.35, 0.2),
@@ -38,10 +39,11 @@ const CUE_FONT_HEAVY := 120
 
 ## What a rejection reason means to the player.
 const REASON_TEXT := {
-	SimVocab.REASON_NO_TOOL: "You need an axe for that.",
+	SimVocab.REASON_NO_TOOL: "You need the right tool: an axe for trees, a pickaxe for rocks, a rod for fishing.",
+	SimVocab.REASON_TOOL_TOO_WEAK: "A wooden pickaxe won't bite iron. Smith a bronze one.",
 	SimVocab.REASON_PACK_FULL: "Your pack is full.",
 	SimVocab.REASON_STASH_FULL: "The stash is full.",
-	SimVocab.REASON_DEPLETED: "That tree is felled. It will grow back.",
+	SimVocab.REASON_DEPLETED: "That's spent for now. It will come back.",
 	SimVocab.REASON_NOT_IN_OUTPOST: "The stash is only reachable inside the outpost.",
 	SimVocab.REASON_NOT_AT_WORKBENCH: "Stand at the workbench to craft.",
 	SimVocab.REASON_MISSING_INPUTS: "You don't have the materials for that.",
@@ -52,6 +54,13 @@ const REASON_TEXT := {
 	SimVocab.REASON_TARGET_DEAD: "It is already dead.",
 	SimVocab.REASON_NOT_FOOD: "You can't eat that.",
 	SimVocab.REASON_ALREADY_EATING: "You are already eating.",
+	SimVocab.REASON_NOT_AT_FIRE: "Stand by a fire to cook. Light one with three logs, or use the outpost's.",
+	SimVocab.REASON_NOT_COOKABLE: "That can't be cooked.",
+	SimVocab.REASON_NOTHING_LEFT: "Nothing left to cook.",
+	SimVocab.REASON_TIER_CAPPED: "Smithing stops at bronze. Iron is found in ring one, not made.",
+	SimVocab.REASON_UPGRADE_MISSING: "Build the upgrade that unlocks it first.",
+	SimVocab.REASON_ALREADY_BUILT: "Already built.",
+	SimVocab.REASON_UPGRADE_LOCKED: "That isn't open yet.",
 	SimVocab.REASON_BAD_CODE: "That is not a Frostmark save code. Check that you copied all of it.",
 	SimVocab.REASON_BAD_CHECKSUM: "That save code has been changed or damaged (its checksum does not match).",
 	SimVocab.REASON_UNSUPPORTED_VERSION: "That save code comes from a newer version of Frostmark.",
@@ -61,6 +70,9 @@ const REASON_TEXT := {
 const TitleScreen := preload("res://scenes/title_screen.gd")
 const Hud := preload("res://scenes/hud.gd")
 const DeathScreen := preload("res://scenes/death_screen.gd")
+const EndingScreen := preload("res://scenes/ending_screen.gd")
+const CharacterGear := preload("res://scenes/character_gear.gd")
+const Atmosphere := preload("res://scenes/atmosphere.gd")
 
 var sim: Sim
 var _accumulator := 0.0
@@ -72,16 +84,23 @@ var _pending_click: Variant = null  # screen position awaiting a physics query
 var _last_event := ""
 var _faded: Array[MeshInstance3D] = []  # blocks made see-through because they hide the character
 var _playing := false
-var _crowns := {}  # tree object id -> its crown mesh, hidden while the tree is felled
+var _node_looks := {}  # node object id -> its prop, whose Full/Spent children show its state
+var _ring_gates := {}  # ring gate object id -> {bars, label}
+var _fires := {}  # field fire id -> its prop
 var _title_screen: Control
 var _hud: Control
 var _death_screen: Control
+var _ending_screen: Control
+var _gear: Node3D
+var _atmosphere: Node
+var _clock := 0.0  # seconds of play, for flicker
 ## Enemy id -> {root, body, label, cue, cue_at, segment, length}: its drawing, its telegraph
 ## cue (shown until the tick `cue_at` resolves) and the polyline it walked last tick.
 var _enemies := {}
 var _loot := {}  # loot id -> its pile's node
 var _enemy_layer := Node3D.new()
 var _loot_layer := Node3D.new()
+var _fire_layer := Node3D.new()
 
 @onready var _world: Node3D = $World
 @onready var _character: Node3D = $Character
@@ -97,7 +116,13 @@ func _ready() -> void:
 	_build_world(sim.world)
 	add_child(_enemy_layer)
 	add_child(_loot_layer)
+	add_child(_fire_layer)
 	_build_enemies(sim.world)
+	_gear = CharacterGear.new()
+	_character.add_child(_gear)
+	_atmosphere = Atmosphere.new()
+	add_child(_atmosphere)
+	_atmosphere.setup($Sun, $WorldEnvironment.environment, _camera_rig, _character)
 	_hud = Hud.new()
 	_hud.command_requested.connect(_on_hud_command)
 	_hud.export_requested.connect(func() -> void: _hud.show_code(sim.export_code()))
@@ -111,11 +136,17 @@ func _ready() -> void:
 	_death_screen.dismissed.connect(_on_death_dismissed)
 	$HUD.add_child(_death_screen)
 	_death_screen.visible = false
+	_ending_screen = EndingScreen.new()
+	_ending_screen.dismissed.connect(_on_ending_dismissed)
+	$HUD.add_child(_ending_screen)
+	_ending_screen.visible = false
 	_hud.visible = false
 	_show_sim()
 
 
 func _process(delta: float) -> void:
+	_clock += delta
+	_flicker()
 	if not _playing:
 		return
 	_accumulator += delta
@@ -200,13 +231,14 @@ func _on_import(code: String) -> void:
 func _start() -> void:
 	_title_screen.visible = false
 	_death_screen.visible = false
+	_ending_screen.visible = false
 	_hud.visible = true
 	_playing = true
 	_accumulator = 0.0
 	_segment = []
 	_last_event = ""
 	_show_sim()
-	_hud.banner("Cut wood in the inner ring and walk it home. Past the trees, wolves and a bandit archer wait; your stash holds a bow, arrows and cooked fish.")
+	_hud.banner("Cut wood and walk it home through the gate. The workbench makes a pickaxe and a rod from logs. The bandit captain guards the gate to ring two, far to the south.")
 
 
 ## Redraws everything that depends on the state after a new, continued or imported sim.
@@ -216,8 +248,16 @@ func _show_sim() -> void:
 	_facing = sim.player_facing()
 	_place_character(sim.player_pos(), _facing, 0.0)
 	_camera_rig.global_position = _character.global_position
-	for id in _crowns:
-		(_crowns[id] as Node3D).visible = int(sim.state["nodes"][id]["left"]) > 0
+	for id in _node_looks:
+		_set_node_look(id, int(sim.state["nodes"][id]["left"]) > 0)
+	_sync_ring_gates()
+	for id in _fires:
+		(_fires[id] as Node).queue_free()
+	_fires.clear()
+	for id in sim.state["fires"]:
+		_add_field_fire(id)
+	_gear.show_equipment(sim.state["inventory"]["equipment"])
+	_atmosphere.set_outside(not sim.in_outpost())
 	for id in _enemies:
 		_sync_enemy(id)
 	for id in _loot:
@@ -245,6 +285,13 @@ func _on_death_dismissed() -> void:
 	_death_screen.visible = false
 	_playing = true
 	_accumulator = 0.0
+
+
+func _on_ending_dismissed() -> void:
+	_ending_screen.visible = false
+	_playing = true
+	_accumulator = 0.0
+	_hud.banner("Home at the outpost. The gate to ring two stands open for the next slice.")
 
 
 static func _reason_text(reason: String) -> String:
@@ -276,21 +323,52 @@ func _apply_events(events: Array[Dictionary]) -> void:
 						_last_event = "The workbench."
 					SimVocab.ACTION_WARM:
 						_last_event = "Warming up by the fire."
+						if _has_raw_food():
+							_last_event += " Click raw fish in your pack to cook it."
 					SimVocab.ACTION_GATHER:
-						_last_event = "Chopping..."
+						_last_event = _gather_verb(e["object_id"])
+					SimVocab.ACTION_RING_GATE:
+						if not sim.ring_gate_open(e["object_id"]):
+							_last_event = _ring_gate_text(e["object_id"])
 			SimVocab.EV_REGION_CHANGED:
 				_last_event = "Entered the %s." % str(e["to"]).replace("_", " ")
 				if e["from"] == WorldDef.REGION_OUTPOST:
 					_last_event += " The cold sets in."
+				elif e["to"] == WorldDef.REGION_RING_ONE:
+					_last_event += " Wolves and bandits hunt here."
+				_atmosphere.set_outside(e["to"] != WorldDef.REGION_OUTPOST)
 			SimVocab.EV_GATHERED:
 				_last_event = "+%d %s  (+%d %s xp)" % [e["count"], ItemTable.label(e["item"]), e["xp"], e["skill"]]
 			SimVocab.EV_ACTIVITY_STOPPED:
 				if e["reason"] not in [SimVocab.REASON_MOVED, SimVocab.REASON_TARGET_DEAD, SimVocab.REASON_DIED]:
 					_last_event = _reason_text(e["reason"])
 			SimVocab.EV_NODE_DEPLETED:
-				(_crowns[e["object_id"]] as Node3D).visible = false
+				_set_node_look(e["object_id"], false)
 			SimVocab.EV_NODE_RESPAWNED:
-				(_crowns[e["object_id"]] as Node3D).visible = true
+				_set_node_look(e["object_id"], true)
+			SimVocab.EV_COOKED:
+				if e["burnt"]:
+					_last_event = "The %s burns to a crisp." % ItemTable.label(e["item"]).to_lower()
+				else:
+					_last_event = "+1 %s  (+%d cooking xp)" % [ItemTable.label(e["output"]), e["xp"]]
+			SimVocab.EV_FIRE_LIT:
+				_add_field_fire(e["fire_id"])
+				_last_event = "You build a fire. It will burn for a minute."
+			SimVocab.EV_FIRE_OUT:
+				_remove_field_fire(e["fire_id"])
+			SimVocab.EV_BUILT:
+				var label: String = UpgradeTable.get_upgrade(e["upgrade"])["label"]
+				_hud.banner("Built: %s." % label)
+				_last_event = "Built the %s." % label.to_lower()
+			SimVocab.EV_RING_GATE_OPENED:
+				_sync_ring_gates()
+				_hud.banner("The gate to ring two is open.")
+			SimVocab.EV_RING_TWO_REACHED:
+				_playing = false
+				_ending_screen.show_ending(sim)
+				_sync_ring_gates()
+			SimVocab.EV_ENEMY_STANCE:
+				_show_cue(e)
 			SimVocab.EV_LEVELLED:
 				_hud.banner("%s level %d!" % [str(e["skill"]).capitalize(), e["level"]])
 			SimVocab.EV_BANKED:
@@ -299,6 +377,7 @@ func _apply_events(events: Array[Dictionary]) -> void:
 				_last_event = "Crafted: %s." % ItemTable.label(e["item"])
 				_hud.banner("Crafted a %s." % ItemTable.label(e["item"]).to_lower())
 			SimVocab.EV_EQUIPPED:
+				_gear.show_equipment(sim.state["inventory"]["equipment"])
 				if e["item"] == "":
 					_last_event = "Unequipped the %s." % ItemTable.label(e["previous"]).to_lower()
 				else:
@@ -336,6 +415,8 @@ func _apply_events(events: Array[Dictionary]) -> void:
 				]
 			SimVocab.EV_ENEMY_DIED:
 				_last_event = "%s falls." % _sentence(_enemy_name(e["enemy_id"]))
+				if e["enemy_kind"] == "bandit_captain" and not sim.ring_gate_open("ring_two_gate"):
+					_hud.banner("The bandit captain falls. Build the ring-two gate winch at the outpost to open his gate.")
 			SimVocab.EV_LOOT_DROPPED:
 				_add_loot(e["loot_id"])
 			SimVocab.EV_PICKED_UP:
@@ -349,7 +430,15 @@ func _apply_events(events: Array[Dictionary]) -> void:
 				_save()
 			SimVocab.EV_COMMAND_REJECTED:
 				var reason: String = e["reason"]
-				if REASON_TEXT.has(reason):
+				if reason == SimVocab.REASON_IN_OUTPOST and e["command"] == SimVocab.LIGHT_FIRE:
+					_last_event = "The outpost has its own fire."
+				elif reason == SimVocab.REASON_NO_TOOL and sim.is_node(str(e["args"].get("object_id", ""))):
+					var tool: String = WorldDef.NODE_KINDS[sim.world.objects[e["args"]["object_id"]]["kind"]]["tool"]
+					_last_event = "You need a %s for that. The workbench makes one from logs." % ("fishing rod" if tool == "rod" else tool)
+				elif reason == SimVocab.REASON_LEVEL_TOO_LOW and sim.is_node(str(e["args"].get("object_id", ""))):
+					var def: Dictionary = WorldDef.NODE_KINDS[sim.world.objects[e["args"]["object_id"]]["kind"]]
+					_last_event = "You need %s level %d for that." % [str(def["skill"]).capitalize(), def["level"]]
+				elif REASON_TEXT.has(reason):
 					_last_event = REASON_TEXT[reason]
 				else:
 					_last_event = "Can't do that (%s)." % reason.replace("_", " ")
@@ -466,7 +555,7 @@ static func _set_block_alpha(block: MeshInstance3D, alpha: float) -> void:
 		material.albedo_color.a = alpha
 
 
-# --- Grey-box world from the WorldDef -------------------------------------------------
+# --- The world from the WorldDef -----------------------------------------------------
 
 func _build_world(world: WorldDef) -> void:
 	var width := world.cols * world.cell_size
@@ -486,60 +575,223 @@ func _build_world(world: WorldDef) -> void:
 	for r in world.regions:
 		if r["name"] == WorldDef.REGION_OUTPOST:
 			_add_floor(r["polygon"], COLOR_OUTPOST_FLOOR)
+		elif r["name"] == WorldDef.REGION_INNER_RING:
+			_add_ring_stakes(r["polygon"])
 
 	for s in world.solids:
-		var box := _add_block(str(s["id"]), s["min"], s["max"], s["height"], COLOR_WALL)
-		_add_box_body(box, _box_size(s["min"], s["max"], s["height"]), Vector3.ZERO)
+		match s["kind"]:
+			WorldDef.KIND_OUTCROP:
+				var rock := Props.outcrop(_box_size(s["min"], s["max"], s["height"]))
+				_place_prop(rock, s["min"], s["max"])
+				_add_box_body(rock, _box_size(s["min"], s["max"], s["height"]), Vector3(0, s["height"] * 0.5, 0))
+			WorldDef.KIND_DECOR:
+				var tent := Props.model(Props.NATURE + "tent_detailedClosed.glb", s["height"], 0.55, Color(0.72, 0.62, 0.5))
+				tent.rotation.y = PI * 0.75
+				_place_prop(tent, s["min"], s["max"])
+				_add_box_body(tent, _box_size(s["min"], s["max"], s["height"]), Vector3(0, s["height"] * 0.5, 0))
+			_:
+				var box := _add_block(str(s["id"]), s["min"], s["max"], s["height"], COLOR_BY_SOLID.get(s["kind"], Color.MAGENTA))
+				_add_box_body(box, _box_size(s["min"], s["max"], s["height"]), Vector3.ZERO)
+	_add_cliff_forest(world)
 
 	for id in world.objects:
 		var o: Dictionary = world.objects[id]
-		var colour: Color = COLOR_BY_KIND.get(o["kind"], Color.MAGENTA)
-		if o["kind"] == WorldDef.KIND_TREE:
-			_add_tree(str(id), o, colour)
+		var kind: String = o["kind"]
+		var prop: Node3D
+		var label_text: String = o["label"]
+		match kind:
+			WorldDef.KIND_TREE, WorldDef.KIND_FROST_PINE:
+				prop = Props.pine(kind)
+				label_text = "" if kind == WorldDef.KIND_TREE else label_text
+			WorldDef.KIND_COPPER_ROCK, WorldDef.KIND_TIN_ROCK, WorldDef.KIND_IRON_ROCK:
+				prop = Props.ore_rock(kind, o["max"][0] - o["min"][0])
+			WorldDef.KIND_FISHING_HOLE, WorldDef.KIND_ICE_HOLE:
+				prop = Props.ice_hole(o["max"][0] - o["min"][0], kind == WorldDef.KIND_ICE_HOLE)
+			WorldDef.KIND_FIRE:
+				prop = Props.campfire(o["max"][0] - o["min"][0])
+			WorldDef.KIND_STASH:
+				prop = Props.chest(1.0)
+			WorldDef.KIND_WORKBENCH:
+				prop = Props.anvil(1.1)
+			WorldDef.KIND_RING_GATE:
+				prop = Props.ring_gate(o["max"][0] - o["min"][0], o["height"])
+		if prop == null:
+			# The outpost gate: a flat threshold block, clickable through a taller volume.
+			var gate := _add_block(str(id), o["min"], o["max"], o["height"], COLOR_GATE)
+			var click_size := _box_size(o["min"], o["max"], maxf(o["height"], 1.0))
+			var gate_body := _add_box_body(gate, click_size, Vector3(0, (click_size.y - o["height"]) * 0.5, 0))
+			gate_body.set_meta("object_id", id)
+			var gate_label := _label3d(o["label"], 64)
+			gate_label.position = Vector3(0, o["height"] * 0.5 + 1.0, 0)
+			gate.add_child(gate_label)
 			continue
-		var box := _add_block(str(id), o["min"], o["max"], o["height"], colour)
-		# A click volume at least 1 m tall so flat markers such as the gate are clickable.
-		var click_size := _box_size(o["min"], o["max"], maxf(o["height"], 1.0))
-		var body := _add_box_body(box, click_size, Vector3(0, (click_size.y - o["height"]) * 0.5, 0))
+		prop.name = str(id)
+		_place_prop(prop, o["min"], o["max"])
+		# A click volume over the whole footprint, at least 1 m tall so flat holes are clickable.
+		var height := maxf(o["height"], 1.0)
+		var body := _add_box_body(prop, _box_size(o["min"], o["max"], height), Vector3(0, height * 0.5, 0))
 		body.set_meta("object_id", id)
-		var label := _label3d(o["label"], 64)
-		label.position = Vector3(0, o["height"] * 0.5 + 1.0, 0)
-		box.add_child(label)
+		if sim.is_node(id):
+			_node_looks[id] = prop
+		if label_text != "":
+			var label := _label3d(label_text, 48 if sim.is_node(id) else 64)
+			label.position = Vector3(0, o["height"] + 0.8, 0)
+			prop.add_child(label)
+			if kind == WorldDef.KIND_RING_GATE:
+				_ring_gates[id] = {"bars": prop.get_node("Bars"), "label": label}
 
 
-## A pine: a thin trunk under a cone crown, with a click volume over the whole footprint.
-## The crown is hidden while the tree is felled, leaving the stump.
-func _add_tree(id: String, o: Dictionary, trunk_colour: Color) -> void:
-	var trunk := MeshInstance3D.new()
-	trunk.name = id
-	var box := BoxMesh.new()
-	box.size = Vector3(0.45, TRUNK_HEIGHT, 0.45)
-	box.material = _flat_material(trunk_colour)
-	trunk.mesh = box
-	var centre := Vector2((o["min"][0] + o["max"][0]) * 0.5, (o["min"][1] + o["max"][1]) * 0.5)
-	trunk.position = Vector3(centre.x, TRUNK_HEIGHT * 0.5, centre.y)
-	_world.add_child(trunk)
-	var body := _add_box_body(trunk, _box_size(o["min"], o["max"], o["height"]), Vector3(0, (o["height"] - TRUNK_HEIGHT) * 0.5, 0))
+## Stands a prop on the centre of a footprint.
+func _place_prop(prop: Node3D, min_xz: Array, max_xz: Array) -> void:
+	prop.position = Vector3((min_xz[0] + max_xz[0]) * 0.5, 0.0, (min_xz[1] + max_xz[1]) * 0.5)
+	_world.add_child(prop)
+
+
+## Red-topped stakes along the inner ring's edge: past them, ring one's enemies roam.
+func _add_ring_stakes(polygon: Array) -> void:
+	var points: Array[Vector3] = []
+	for i in polygon.size():
+		var a := Vector2(polygon[i][0], polygon[i][1])
+		var b := Vector2(polygon[(i + 1) % polygon.size()][0], polygon[(i + 1) % polygon.size()][1])
+		var steps := int(a.distance_to(b) / RING_STAKE_SPACING)
+		for k in steps:
+			var p := a.lerp(b, float(k) / steps)
+			if sim.world.is_walkable(p):
+				points.append(Vector3(p.x, 0.0, p.y))
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = 0.06
+	mesh.bottom_radius = 0.08
+	mesh.height = 1.1
+	mesh.radial_segments = 5
+	mesh.material = _flat_material(COLOR_STAKE)
+	_world.add_child(_multimesh(mesh, points, Vector3(0, 0.55, 0)))
+
+
+## A forest of pines over the cliffs at ring one's edge, drawn as one multimesh per surface.
+func _add_cliff_forest(world: WorldDef) -> void:
+	var points: Array[Vector3] = []
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	var edge := 61.0
+	for i in 140:
+		var t := rng.randf_range(-63.0, 63.0)
+		var depth := rng.randf_range(0.0, 2.5)
+		var side := i % 4
+		var p := Vector2(t, -edge - depth) if side == 0 else Vector2(edge + depth, t) if side == 1 else Vector2(t, edge + depth) if side == 2 else Vector2(-edge - depth, t)
+		if absf(p.x) < 24.0 and p.y > 0.0:
+			continue  # the camera looks over this stretch at the captain's gate: keep it clear
+		if not world.is_walkable(p):
+			points.append(Vector3(p.x, 2.6, p.y))
+	var tree := Props.model(Props.NATURE + "tree_pineDefaultA.glb", 3.6)
+	for mi in tree.find_children("*", "MeshInstance3D", true, false):
+		var source := mi as MeshInstance3D
+		var mesh := source.mesh.duplicate() as Mesh
+		for surface in mesh.get_surface_count():
+			mesh.surface_set_material(surface, source.get_surface_override_material(surface))
+		var inner := tree.get_child(0) as Node3D
+		var scale_offset := Transform3D(inner.basis, inner.position) * Props._relative_transform(inner, source)
+		_world.add_child(_multimesh(mesh, points, Vector3.ZERO, scale_offset))
+	tree.free()
+
+
+## One MultiMeshInstance3D drawing `mesh` at each of `points` (plus `offset`), each with a
+## little turn so repeats don't line up, after the local transform `local`.
+func _multimesh(mesh: Mesh, points: Array[Vector3], offset: Vector3, local := Transform3D.IDENTITY) -> MultiMeshInstance3D:
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.mesh = mesh
+	mm.instance_count = points.size()
+	for i in points.size():
+		var turn := Basis(Vector3.UP, float(i) * 2.399)
+		mm.set_instance_transform(i, Transform3D(turn, points[i] + offset) * local)
+	var mmi := MultiMeshInstance3D.new()
+	mmi.multimesh = mm
+	return mmi
+
+
+## A node prop shows its `Full` look while it has yields left and its `Spent` look while it
+## regrows.
+func _set_node_look(id: String, full: bool) -> void:
+	var prop: Node3D = _node_looks[id]
+	var full_look := prop.get_node_or_null("Full")
+	var spent_look := prop.get_node_or_null("Spent")
+	if full_look != null:
+		full_look.visible = full
+	if spent_look != null:
+		spent_look.visible = not full
+
+
+## The ring gate's bars stand while it is closed; its label says what it waits for.
+func _sync_ring_gates() -> void:
+	for id in _ring_gates:
+		var open := sim.ring_gate_open(id)
+		(_ring_gates[id]["bars"] as Node3D).visible = not open
+		(_ring_gates[id]["label"] as Label3D).text = "Gate to ring two (open)" if open else "Gate to ring two (barred)"
+
+
+func _ring_gate_text(id: String) -> String:
+	var gate: Dictionary = sim.world.objects[id]
+	var guardian_down := (sim.state["bosses_defeated"] as Array).has(gate["guardian"])
+	var built := (sim.state["upgrades"] as Array).has(gate["upgrade"])
+	if not guardian_down and not built:
+		return "The gate is barred. Defeat the bandit captain and build the gate winch at the outpost."
+	if not guardian_down:
+		return "The winch is built, but the bandit captain still holds this gate."
+	return "The captain is beaten. Build the ring-two gate winch at the outpost to open it."
+
+
+func _gather_verb(id: String) -> String:
+	match WorldDef.NODE_KINDS[sim.world.objects[id]["kind"]]["skill"]:
+		SkillTable.MINING:
+			return "Mining..."
+		SkillTable.FISHING:
+			return "Fishing..."
+	return "Chopping..."
+
+
+func _has_raw_food() -> bool:
+	for s in sim.state["inventory"]["pack"]:
+		if s != null and RecipeTable.is_cookable(s["item"]):
+			return true
+	return false
+
+
+# --- Field fires ----------------------------------------------------------------------
+
+func _add_field_fire(id: String) -> void:
+	var fire: Dictionary = sim.state["fires"][id]
+	var prop := Props.campfire(1.2)
+	prop.position = Vector3(float(fire["pos"][0]), 0.0, float(fire["pos"][1]))
+	_fire_layer.add_child(prop)
+	var body := _add_box_body(prop, Vector3(1.2, 1.0, 1.2), Vector3(0, 0.5, 0))
 	body.set_meta("object_id", id)
-	var crown := MeshInstance3D.new()
-	crown.name = "Crown"
-	var cone := CylinderMesh.new()
-	cone.top_radius = 0.0
-	cone.bottom_radius = 1.1
-	cone.height = o["height"] - TRUNK_HEIGHT + 1.0
-	cone.radial_segments = 7
-	cone.material = _flat_material(COLOR_PINE)
-	crown.mesh = cone
-	crown.position = Vector3(0, TRUNK_HEIGHT * 0.5 + cone.height * 0.5 - 0.4, 0)
-	trunk.add_child(crown)
-	_crowns[id] = crown
+	_fires[id] = prop
+
+
+func _remove_field_fire(id: String) -> void:
+	if _fires.has(id):
+		(_fires[id] as Node).queue_free()
+		_fires.erase(id)
+
+
+## Flames lick: every fire's flame stretches and settles a little out of step with the others.
+func _flicker() -> void:
+	var i := 0
+	for prop in [_world.get_node_or_null("fire")] + _fires.values():
+		if prop == null:
+			continue
+		var flame := (prop as Node3D).get_node_or_null("Flame") as Node3D
+		if flame != null:
+			flame.scale = Vector3(1.0, 1.0 + 0.15 * sin(_clock * 9.0 + i * 1.7), 1.0)
+		i += 1
 
 
 # --- Enemies and loot -----------------------------------------------------------------
 
-## One grey-box figure per placed enemy: a low box for a wolf, an upright capsule with a bow
-## stave for an archer, a click volume that becomes `attack`, a name-and-health label and a
-## telegraph cue above it.
+## One figure per placed enemy: a low box for a wolf, an upright capsule with a bow stave for
+## an archer, a bigger caped capsule carrying both a sabre and a bow for the captain (the one
+## in his hand follows his stance), a click volume that becomes `attack`, a name-and-health
+## label and a telegraph cue above it.
 func _build_enemies(world: WorldDef) -> void:
 	for id in world.enemies:
 		var kind: String = world.enemies[id]["kind"]
@@ -547,33 +799,52 @@ func _build_enemies(world: WorldDef) -> void:
 		var root := Node3D.new()
 		root.name = id
 		_enemy_layer.add_child(root)
+		var weapons := {}
+		var height := 1.8
 		if kind == "wolf":
 			_add_part(root, _box_mesh(Vector3(0.5, 0.55, 1.1), colour), Vector3(0, 0.45, 0))
 			_add_part(root, _box_mesh(Vector3(0.3, 0.3, 0.35), colour.darkened(0.3)), Vector3(0, 0.65, -0.65))
+			_add_part(root, _box_mesh(Vector3(0.12, 0.12, 0.45), colour.lightened(0.2)), Vector3(0, 0.6, 0.65))
 		else:
+			var boss := kind == "bandit_captain"
+			var size := 1.3 if boss else 1.0
+			height = 1.8 * size + 0.2
 			var body := CapsuleMesh.new()
-			body.radius = 0.32
-			body.height = 1.5
+			body.radius = 0.32 * size
+			body.height = 1.5 * size
 			body.material = _flat_material(colour)
-			_add_part(root, body, Vector3(0, 0.75, 0))
-			_add_part(root, _box_mesh(Vector3(0.06, 1.1, 0.06), COLOR_BY_KIND[WorldDef.KIND_TREE]), Vector3(0.38, 0.9, -0.2))
-		var click := _add_box_body(root, Vector3(1.1, 1.8, 1.3), Vector3(0, 0.9, 0))
+			_add_part(root, body, Vector3(0, 0.75 * size, 0))
+			var hood := SphereMesh.new()
+			hood.radius = 0.22 * size
+			hood.height = 0.4 * size
+			hood.radial_segments = 6
+			hood.rings = 3
+			hood.material = _flat_material(colour.darkened(0.35))
+			_add_part(root, hood, Vector3(0, 1.45 * size, 0))
+			var bow := _add_part(root, _box_mesh(Vector3(0.06, 1.1 * size, 0.06), Props.COLOR_WOOD), Vector3(-0.42 * size, 0.9 * size, -0.2))
+			weapons["captain_bow"] = bow
+			if boss:
+				_add_part(root, _box_mesh(Vector3(0.9, 1.2, 0.06), Color(0.55, 0.08, 0.08)), Vector3(0, 1.05, 0.42))  # cape
+				var sabre := _add_part(root, _box_mesh(Vector3(0.08, 0.9, 0.03), CharacterGear.TIER_COLORS[ItemTable.TIER_IRON]), Vector3(0.5, 1.0, -0.25))
+				sabre.rotation.x = -0.4
+				weapons["captain_sabre"] = sabre
+		var click := _add_box_body(root, Vector3(1.1, height, 1.3), Vector3(0, height * 0.5, 0))
 		click.set_meta("enemy_id", id)
 		var label := _label3d("", 48)
-		label.position = Vector3(0, 2.0, 0)
+		label.position = Vector3(0, height + 0.2, 0)
 		root.add_child(label)
 		var cue := _label3d("", CUE_FONT)
-		cue.position = Vector3(0, 2.7, 0)
+		cue.position = Vector3(0, height + 0.9, 0)
 		cue.visible = false
 		root.add_child(cue)
 		_enemies[id] = {
 			"root": root, "body": click, "label": label, "cue": cue, "cue_at": 0,
-			"segment": [], "length": 0.0,
+			"segment": [], "length": 0.0, "weapons": weapons,
 		}
 
 
-## Redraws one enemy from the state: hidden and unclickable while dead, its health label,
-## and no cue unless one is still due.
+## Redraws one enemy from the state: hidden and unclickable while dead, its health label, the
+## weapon in its hand, and no cue unless one is still due.
 func _sync_enemy(id: String) -> void:
 	var drawn: Dictionary = _enemies[id]
 	var e: Dictionary = sim.state["enemies"][id]
@@ -584,8 +855,13 @@ func _sync_enemy(id: String) -> void:
 	root.position = Vector3(float(e["pos"][0]), 0.0, float(e["pos"][1]))
 	var c := sim.combatant(id)
 	(drawn["label"] as Label3D).text = "%s  %d / %d" % [CombatTable.enemy(e["kind"])["label"], c["health"], c["health_max"]]
+	var weapons: Dictionary = drawn["weapons"]
+	if weapons.size() > 1:
+		for w in weapons:
+			(weapons[w] as Node3D).visible = w == c["weapon"]
 	var next: Dictionary = e["next"]
-	if not alive or e["mode"] != Sim.MODE_ENGAGED or not CombatTable.is_attack(str(next.get("action", ""))):
+	var announced := CombatTable.is_attack(str(next.get("action", ""))) or CombatTable.is_stance(str(next.get("action", "")))
+	if not alive or e["mode"] != Sim.MODE_ENGAGED or not announced:
 		(drawn["cue"] as Label3D).visible = false
 
 
@@ -594,7 +870,7 @@ func _sync_enemy(id: String) -> void:
 func _show_cue(e: Dictionary) -> void:
 	var drawn: Dictionary = _enemies[e["enemy_id"]]
 	var cue: Label3D = drawn["cue"]
-	var heavy: bool = e["heavy"]
+	var heavy: bool = e.get("heavy", false)
 	cue.text = "%s%s" % [CombatTable.action_label(e["action"]).to_upper(), "!" if heavy else ""]
 	cue.font_size = CUE_FONT_HEAVY if heavy else CUE_FONT
 	cue.modulate = COLOR_BY_STYLE.get(e["style"], Color.WHITE)

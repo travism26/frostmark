@@ -3,11 +3,12 @@
 ## Weight is whole kilograms and value whole coins so both stay exact through JSON. `stack`
 ## is how many fit in one pack or stash slot; 1 means the item never stacks. `slot` is the
 ## equipment slot the item goes in, or "" for materials. `tool` names what a tool counts as
-## for gathering ("axe" for woodcutting). `tier` is the gear tier the brief shows on the
-## character. A weapon carries its combat `style`, `power` (damage per hit before the style
-## edge), `speed` (ticks between swings), `reach` (metres) and, for a ranged weapon, the
-## `ammo` item each shot uses. Armour carries `defence`, taken off every hit. Food carries
-## `heal`, the health it restores spread over `heal_ticks` ticks. Engine-free like sim/.
+## for gathering ("axe" for woodcutting, "pickaxe" for mining, "rod" for fishing). `tier` is
+## the gear tier the brief shows on the character (wooden, bronze, iron); a better tool
+## gathers faster and surer. A weapon carries its combat `style`, `power` (damage per hit
+## before the style edge), `speed` (ticks between swings), `reach` (metres) and, for a ranged
+## weapon, the `ammo` item each shot uses. Armour carries `defence`, taken off every hit. Food
+## carries `heal`, the health it restores spread over `heal_ticks` ticks. Engine-free like sim/.
 class_name ItemTable
 extends RefCounted
 
@@ -17,40 +18,125 @@ const SLOT_TOOL := "tool"
 const EQUIPMENT_SLOTS: Array[String] = [SLOT_WEAPON, SLOT_ARMOUR, SLOT_TOOL]
 
 const TOOL_AXE := "axe"
+const TOOL_PICKAXE := "pickaxe"
+const TOOL_ROD := "rod"
+
+const TIER_WOODEN := "wooden"
+const TIER_BRONZE := "bronze"
+const TIER_IRON := "iron"
+## The gear tiers in order. A tier's rank is its index: wooden 0, bronze 1, iron 2.
+const TIERS: Array[String] = [TIER_WOODEN, TIER_BRONZE, TIER_IRON]
 
 const ITEMS := {
+	# Materials
 	"logs": {
 		"label": "Logs", "stack": 10, "weight": 1, "value": 2, "slot": "",
 	},
-	"wooden_axe": {
-		"label": "Wooden axe", "stack": 1, "weight": 2, "value": 5, "slot": SLOT_TOOL,
-		"tool": TOOL_AXE, "tier": "wooden",
+	"copper_ore": {
+		"label": "Copper ore", "stack": 10, "weight": 1, "value": 3, "slot": "",
 	},
-	"wooden_club": {
-		"label": "Wooden club", "stack": 1, "weight": 3, "value": 12, "slot": SLOT_WEAPON,
-		"style": "melee", "power": 5, "speed": 2, "reach": 1.5, "tier": "wooden",
+	"tin_ore": {
+		"label": "Tin ore", "stack": 10, "weight": 1, "value": 3, "slot": "",
 	},
-	"wooden_bow": {
-		"label": "Wooden bow", "stack": 1, "weight": 2, "value": 20, "slot": SLOT_WEAPON,
-		"style": "ranged", "power": 4, "speed": 2, "reach": 8.0, "ammo": "arrows", "tier": "wooden",
+	"iron_ore": {
+		"label": "Iron ore", "stack": 10, "weight": 2, "value": 8, "slot": "",
+	},
+	"bronze_bar": {
+		"label": "Bronze bar", "stack": 10, "weight": 1, "value": 8, "slot": "",
+	},
+	# Nothing in the first playable can smelt this; the workbench lists it to show the cap.
+	"iron_bar": {
+		"label": "Iron bar", "stack": 10, "weight": 2, "value": 20, "slot": "",
+	},
+	"wolf_pelt": {
+		"label": "Wolf pelt", "stack": 5, "weight": 1, "value": 8, "slot": "",
 	},
 	"arrows": {
 		"label": "Arrows", "stack": 100, "weight": 0, "value": 1, "slot": "",
+	},
+	# Food: raw is edible but poor; cooking at a fire makes it worth carrying.
+	"raw_fish": {
+		"label": "Raw fish", "stack": 10, "weight": 1, "value": 2, "slot": "",
+		"heal": 4, "heal_ticks": 2,
 	},
 	"cooked_fish": {
 		"label": "Cooked fish", "stack": 10, "weight": 1, "value": 6, "slot": "",
 		"heal": 24, "heal_ticks": 4,
 	},
-	"wolf_pelt": {
-		"label": "Wolf pelt", "stack": 5, "weight": 1, "value": 8, "slot": "",
+	"raw_trout": {
+		"label": "Raw trout", "stack": 10, "weight": 1, "value": 4, "slot": "",
+		"heal": 6, "heal_ticks": 2,
+	},
+	"cooked_trout": {
+		"label": "Cooked trout", "stack": 10, "weight": 1, "value": 12, "slot": "",
+		"heal": 40, "heal_ticks": 5,
+	},
+	# Tools
+	"wooden_axe": {
+		"label": "Wooden axe", "stack": 1, "weight": 2, "value": 5, "slot": SLOT_TOOL,
+		"tool": TOOL_AXE, "tier": TIER_WOODEN,
+	},
+	"bronze_axe": {
+		"label": "Bronze axe", "stack": 1, "weight": 2, "value": 24, "slot": SLOT_TOOL,
+		"tool": TOOL_AXE, "tier": TIER_BRONZE,
+	},
+	"iron_axe": {
+		"label": "Iron axe", "stack": 1, "weight": 3, "value": 60, "slot": SLOT_TOOL,
+		"tool": TOOL_AXE, "tier": TIER_IRON,
+	},
+	"wooden_pickaxe": {
+		"label": "Wooden pickaxe", "stack": 1, "weight": 2, "value": 6, "slot": SLOT_TOOL,
+		"tool": TOOL_PICKAXE, "tier": TIER_WOODEN,
+	},
+	"bronze_pickaxe": {
+		"label": "Bronze pickaxe", "stack": 1, "weight": 3, "value": 24, "slot": SLOT_TOOL,
+		"tool": TOOL_PICKAXE, "tier": TIER_BRONZE,
+	},
+	"iron_pickaxe": {
+		"label": "Iron pickaxe", "stack": 1, "weight": 3, "value": 60, "slot": SLOT_TOOL,
+		"tool": TOOL_PICKAXE, "tier": TIER_IRON,
+	},
+	"fishing_rod": {
+		"label": "Fishing rod", "stack": 1, "weight": 1, "value": 6, "slot": SLOT_TOOL,
+		"tool": TOOL_ROD, "tier": TIER_WOODEN,
+	},
+	# Weapons
+	"wooden_club": {
+		"label": "Wooden club", "stack": 1, "weight": 3, "value": 12, "slot": SLOT_WEAPON,
+		"style": "melee", "power": 5, "speed": 2, "reach": 1.5, "tier": TIER_WOODEN,
+	},
+	"bronze_sword": {
+		"label": "Bronze sword", "stack": 1, "weight": 3, "value": 40, "slot": SLOT_WEAPON,
+		"style": "melee", "power": 7, "speed": 2, "reach": 1.5, "tier": TIER_BRONZE,
 	},
 	"iron_sword": {
 		"label": "Iron sword", "stack": 1, "weight": 4, "value": 80, "slot": SLOT_WEAPON,
-		"style": "melee", "power": 9, "speed": 2, "reach": 1.5, "tier": "iron",
+		"style": "melee", "power": 9, "speed": 2, "reach": 1.5, "tier": TIER_IRON,
+	},
+	"wooden_bow": {
+		"label": "Wooden bow", "stack": 1, "weight": 2, "value": 20, "slot": SLOT_WEAPON,
+		"style": "ranged", "power": 4, "speed": 2, "reach": 8.0, "ammo": "arrows", "tier": TIER_WOODEN,
+	},
+	"bronze_bow": {
+		"label": "Bronze bow", "stack": 1, "weight": 2, "value": 44, "slot": SLOT_WEAPON,
+		"style": "ranged", "power": 6, "speed": 2, "reach": 8.0, "ammo": "arrows", "tier": TIER_BRONZE,
+	},
+	"iron_bow": {
+		"label": "Iron bow", "stack": 1, "weight": 2, "value": 84, "slot": SLOT_WEAPON,
+		"style": "ranged", "power": 8, "speed": 2, "reach": 8.0, "ammo": "arrows", "tier": TIER_IRON,
+	},
+	# Armour
+	"wooden_armour": {
+		"label": "Wooden armour", "stack": 1, "weight": 4, "value": 16, "slot": SLOT_ARMOUR,
+		"defence": 1, "tier": TIER_WOODEN,
+	},
+	"bronze_armour": {
+		"label": "Bronze armour", "stack": 1, "weight": 5, "value": 50, "slot": SLOT_ARMOUR,
+		"defence": 2, "tier": TIER_BRONZE,
 	},
 	"iron_armour": {
 		"label": "Iron armour", "stack": 1, "weight": 6, "value": 90, "slot": SLOT_ARMOUR,
-		"defence": 2, "tier": "iron",
+		"defence": 3, "tier": TIER_IRON,
 	},
 }
 
@@ -81,6 +167,16 @@ static func slot(kind: String) -> String:
 
 static func tool(kind: String) -> String:
 	return ITEMS[kind].get("tool", "")
+
+
+## The item's gear tier ("wooden", "bronze", "iron"), or "" for materials and food.
+static func tier(kind: String) -> String:
+	return ITEMS[kind].get("tier", "") if ITEMS.has(kind) else ""
+
+
+## A tier's rank: wooden 0, bronze 1, iron 2, and -1 for "" or anything unknown.
+static func tier_rank(tier_name: String) -> int:
+	return TIERS.find(tier_name)
 
 
 ## How much health the item restores when eaten, or 0 when it is not food.

@@ -21,12 +21,12 @@ const WALK_PER_TICK := WALK_SPEED * TICK_SECONDS
 const SNAP_RADIUS_CELLS := 2
 ## Bumped whenever the state shape changes. `restore()` migrates older snapshots forward
 ## (SaveCode.migrate) and refuses ones it cannot read.
-const STATE_VERSION := 3
+const STATE_VERSION := 4
 
 ## The pack: a fixed number of slots, and a carried weight (pack plus equipment, in kg)
 ## above which walking slows to OVERWEIGHT_SPEED of normal.
 const PACK_SLOTS := 12
-const CARRY_LIMIT := 20
+const CARRY_LIMIT := 30
 const OVERWEIGHT_SPEED := 0.6
 ## Stash slots a new character starts with; outpost upgrades raise it in a later slice.
 const STASH_START_SLOTS := 8
@@ -50,6 +50,12 @@ const FIRE_WARMTH := 24
 const FIRE_HEALTH := 2
 ## How close (metres from its footprint) the player must stand to use the workbench or a node.
 const USE_REACH := 1.5
+## A field fire burns FIELD_FIRE_LOGS logs from the pack and warms (and cooks) like the outpost
+## fire for FIELD_FIRE_TICKS ticks (a minute) before it goes out.
+const FIELD_FIRE_LOGS := 3
+const FIELD_FIRE_TICKS := 120
+## Field fire ids are this prefix and a number, so they never clash with placed objects.
+const FIELD_FIRE_PREFIX := "campfire_"
 
 ## Gathering: one attempt takes `gather_ticks(level)` ticks and succeeds with
 ## `gather_chance(level)` percent. Both improve with the gathering skill's level.
@@ -59,6 +65,16 @@ const GATHER_LEVELS_PER_TICK := 4
 const GATHER_BASE_CHANCE := 60
 const GATHER_CHANCE_PER_LEVEL := 4
 const GATHER_MAX_CHANCE := 95
+## Each gear tier of the tool above wooden takes a tick off an attempt and adds to its chance.
+const TOOL_TICKS_PER_TIER := 1
+const TOOL_CHANCE_PER_TIER := 10
+
+## Cooking: one item every COOK_TICKS ticks at any fire. Its burn chance is the raw item's
+## `burn` percent at the level it needs, less BURN_DROP_PER_LEVEL for every level above.
+const COOK_TICKS := 2
+const BURN_DROP_PER_LEVEL := 5
+## Smithing works no metal above this tier in the first playable: iron is found, not made.
+const SMITHING_TIER_CAP := ItemTable.TIER_BRONZE
 
 ## Death keeps this many of the most valuable things carried or worn (a stack is one thing).
 const DEATH_KEEPS := 3
@@ -77,6 +93,7 @@ const ENEMY_MODES: Array[String] = [MODE_IDLE, MODE_ENGAGED, MODE_RETURNING, MOD
 ## That is what makes a weapon swap land on the next tick, and eating cost it.
 const QUEUED_COMMANDS: Array[String] = [
 	SimVocab.SMITH, SimVocab.EQUIP, SimVocab.EAT, SimVocab.DROP, SimVocab.DEPOSIT, SimVocab.WITHDRAW,
+	SimVocab.BUILD, SimVocab.LIGHT_FIRE,
 ]
 
 var world: WorldDef
@@ -133,6 +150,9 @@ func new_state() -> Dictionary:
 		"enemies": _fresh_enemies(),
 		"loot": {},
 		"loot_seq": 0,
+		"fires": {},
+		"fire_seq": 0,
+		"bosses_defeated": [],
 		"upgrades": [],
 		"pending": [],
 	}
@@ -192,6 +212,8 @@ func command(kind: String, args: Dictionary = {}) -> Dictionary:
 			return _cmd_cross_gate(args)
 		SimVocab.ATTACK:
 			return _cmd_attack(args)
+		SimVocab.COOK:
+			return _cmd_cook(args)
 		SimVocab.EXPORT_SAVE:
 			return {"ok": true, "reason": "", "code": export_code()}
 		SimVocab.IMPORT_SAVE:
@@ -220,6 +242,8 @@ func _cmd_interact(args: Dictionary) -> Dictionary:
 	var id: String = str(args.get("object_id", ""))
 	if (state["loot"] as Dictionary).has(id):
 		return _walk_to_loot(id, args)
+	if (state["fires"] as Dictionary).has(id):
+		return _walk_to_field_fire(id, args)
 	if not world.objects.has(id):
 		return _reject(SimVocab.INTERACT, args, SimVocab.REASON_UNKNOWN_OBJECT)
 	if is_node(id):
@@ -303,6 +327,42 @@ func _walk_to_loot(id: String, args: Dictionary) -> Dictionary:
 	return {"ok": true, "reason": ""}
 
 
+## Walks to the side of a field fire nearest the player, a metre from its centre.
+func _walk_to_field_fire(id: String, args: Dictionary) -> Dictionary:
+	var at := _pos(state["fires"][id])
+	var here := player_pos()
+	var side := (here - at).normalized() if here.distance_to(at) > 0.01 else Vector2(0, 1)
+	var spot := at + side
+	var cell: Variant = world.nearest_walkable_cell(spot, SNAP_RADIUS_CELLS)
+	if cell == null or not _set_path(cell, spot if world.is_walkable(spot) else world.cell_center(cell), id):
+		return _reject(SimVocab.INTERACT, args, SimVocab.REASON_UNREACHABLE)
+	return {"ok": true, "reason": ""}
+
+
+## Starts cooking a pack slot's raw food at the fire the player stands by: one item every
+## COOK_TICKS ticks until that kind runs out, the pack has no room, or the player walks off.
+func _cmd_cook(args: Dictionary) -> Dictionary:
+	var pack: Array = state["inventory"]["pack"]
+	var i := _arg_index(args, pack)
+	if i < 0:
+		return _reject(SimVocab.COOK, args, SimVocab.REASON_BAD_ARGS)
+	if pack[i] == null:
+		return _reject(SimVocab.COOK, args, SimVocab.REASON_EMPTY_SLOT)
+	var kind: String = pack[i]["item"]
+	if not RecipeTable.is_cookable(kind):
+		return _reject(SimVocab.COOK, args, SimVocab.REASON_NOT_COOKABLE)
+	var reason := _cook_blocker(kind)
+	if reason != "":
+		return _reject(SimVocab.COOK, args, reason)
+	var player: Dictionary = state["player"]
+	if player["activity"].get("item", "") != kind:
+		_stop_activity(SimVocab.REASON_MOVED)
+	player["path"] = []
+	player["target_object"] = ""
+	player["activity"] = {"kind": SimVocab.COOK, "item": kind, "progress": 0}
+	return {"ok": true, "reason": ""}
+
+
 func _walk_to_object(kind: String, id: String, args: Dictionary) -> Dictionary:
 	var here := player_pos()
 	var cells := world.approach_cells(id)
@@ -361,10 +421,11 @@ func _reject(kind: String, args: Dictionary, reason: String) -> Dictionary:
 
 # --- Ticking --------------------------------------------------------------------------
 
-## Advances the world by exactly one tick: queued inventory commands (a swap, a meal), the
-## player closing on an attack target, movement, gathering, combat (the player's swing, then
-## every enemy), node regrowth, loot decay, then warmth, health and healing. A save point
-## reached during the tick is reported once, at its end, so the saved state is the whole tick.
+## Advances the world by exactly one tick: queued inventory commands (a swap, a meal, a
+## build, a field fire), the player closing on an attack target, movement, gathering or
+## cooking, combat (the player's swing, then every enemy), node regrowth, loot decay, field
+## fires burning out, then warmth, health and healing. A save point reached during the tick
+## is reported once, at its end, so the saved state is the whole tick.
 func step() -> void:
 	state["tick"] = int(state["tick"]) + 1
 	_ate = false
@@ -377,6 +438,7 @@ func step() -> void:
 	_step_combat()
 	_step_nodes()
 	_step_loot()
+	_step_fires()
 	_step_survival()
 	if _save_due != "":
 		_emit({"kind": SimVocab.EV_SAVED, "reason": _save_due, "tick": state["tick"]})
@@ -440,6 +502,11 @@ func _step_movement() -> void:
 				"action": SimVocab.ACTION_PICK_UP,
 			})
 			_pick_up(object_id)
+		elif (state["fires"] as Dictionary).has(object_id):
+			_emit({
+				"kind": SimVocab.EV_INTERACTED, "object_id": object_id, "object_kind": "campfire",
+				"action": SimVocab.ACTION_WARM,
+			})
 		elif world.objects.has(object_id):
 			var action := _action_for(object_id)
 			_emit({
@@ -448,12 +515,16 @@ func _step_movement() -> void:
 			})
 			if action == SimVocab.ACTION_GATHER:
 				_start_gathering(object_id)
+			elif action == SimVocab.ACTION_RING_GATE and ring_gate_open(object_id):
+				_reach_ring_two(object_id)
 
 
 func _action_for(object_id: String) -> String:
+	if is_node(object_id):
+		return SimVocab.ACTION_GATHER
 	match world.objects[object_id]["kind"]:
-		WorldDef.KIND_TREE:
-			return SimVocab.ACTION_GATHER
+		WorldDef.KIND_RING_GATE:
+			return SimVocab.ACTION_RING_GATE
 		WorldDef.KIND_FIRE:
 			return SimVocab.ACTION_WARM
 		WorldDef.KIND_STASH:
@@ -490,6 +561,51 @@ func _bank() -> void:
 	_save_due = "gate"
 
 
+# --- The ring gate ----------------------------------------------------------------------
+
+## Whether a ring gate stands open: its guardian has fallen at least once and the outpost has
+## built the upgrade that works it. Both stay true for good, so an open gate never closes.
+func ring_gate_open(object_id: String) -> bool:
+	if not world.objects.has(object_id) or world.objects[object_id]["kind"] != WorldDef.KIND_RING_GATE:
+		return false
+	var gate: Dictionary = world.objects[object_id]
+	return (state["bosses_defeated"] as Array).has(gate["guardian"]) and (state["upgrades"] as Array).has(gate["upgrade"])
+
+
+func _open_ring_gates() -> Array[String]:
+	var out: Array[String] = []
+	for id in world.objects_of_kind(WorldDef.KIND_RING_GATE):
+		if ring_gate_open(id):
+			out.append(id)
+	return out
+
+
+## Emits `ring_gate_opened` for every gate open now that was not open in `before`.
+func _announce_ring_gates(before: Array[String]) -> void:
+	for id in _open_ring_gates():
+		if not before.has(id):
+			_emit({"kind": SimVocab.EV_RING_GATE_OPENED, "object_id": id})
+
+
+## The player walked through the open gate to ring two: the first playable ends here. The
+## presentation shows the ending; the character comes home intact, beside the outpost fire,
+## and what they carried is banked as if they had walked in through the outpost gate.
+func _reach_ring_two(object_id: String) -> void:
+	_emit({"kind": SimVocab.EV_RING_TWO_REACHED, "object_id": object_id})
+	var player: Dictionary = state["player"]
+	var to := Vector2(world.rescue[0], world.rescue[1])
+	player["pos"] = _xz(to)
+	player["path"] = []
+	player["target_object"] = ""
+	_stop_activity(SimVocab.REASON_MOVED)
+	var region := world.region_at(to)
+	if region != player["region"]:
+		_emit({"kind": SimVocab.EV_REGION_CHANGED, "from": player["region"], "to": region})
+		player["region"] = region
+	_bank()
+	_save_due = "ring_two"
+
+
 static func _merged(entries: Array) -> Array:
 	var out: Array = []
 	for e in entries:
@@ -519,8 +635,11 @@ func _gather_blocker(object_id: String) -> String:
 	var def := _node_def(object_id)
 	if int(state["nodes"][object_id]["left"]) <= 0:
 		return SimVocab.REASON_DEPLETED
-	if not has_tool(def["tool"]):
+	var rank := tool_rank(def["tool"])
+	if rank < 0:
 		return SimVocab.REASON_NO_TOOL
+	if def["tool_tier"] != "" and rank < ItemTable.tier_rank(def["tool_tier"]):
+		return SimVocab.REASON_TOOL_TOO_WEAK
 	if skill_level(def["skill"]) < int(def["level"]):
 		return SimVocab.REASON_LEVEL_TOO_LOW
 	if Inventory.is_full_for(state["inventory"]["pack"], def["item"]):
@@ -550,19 +669,31 @@ func _stop_activity(reason: String) -> void:
 	})
 
 
-## Ticks one gathering attempt takes at `level`.
-static func gather_ticks(level: int) -> int:
-	return maxi(GATHER_MIN_TICKS, GATHER_BASE_TICKS - (level - 1) / GATHER_LEVELS_PER_TICK)
+## Ticks one gathering attempt takes at `level` with a tool `tool_tier` ranks above wooden.
+static func gather_ticks(level: int, tool_tier := 0) -> int:
+	return maxi(GATHER_MIN_TICKS, GATHER_BASE_TICKS - (level - 1) / GATHER_LEVELS_PER_TICK - tool_tier * TOOL_TICKS_PER_TIER)
 
 
-## Percent chance that one gathering attempt at `level` yields an item.
-static func gather_chance(level: int) -> int:
-	return mini(GATHER_MAX_CHANCE, GATHER_BASE_CHANCE + GATHER_CHANCE_PER_LEVEL * (level - 1))
+## Percent chance that one gathering attempt at `level` yields an item, with a tool
+## `tool_tier` ranks above wooden.
+static func gather_chance(level: int, tool_tier := 0) -> int:
+	return mini(GATHER_MAX_CHANCE, GATHER_BASE_CHANCE + GATHER_CHANCE_PER_LEVEL * (level - 1) + tool_tier * TOOL_CHANCE_PER_TIER)
+
+
+## Percent chance that cooking one `raw` item at cooking `level` burns it.
+static func burn_chance(raw: String, level: int) -> int:
+	var c := RecipeTable.cooking(raw)
+	return maxi(0, int(c["burn"]) - BURN_DROP_PER_LEVEL * (level - int(c["level"])))
 
 
 func _step_activity() -> void:
 	var activity: Dictionary = state["player"]["activity"]
-	if activity.is_empty() or activity["kind"] != SimVocab.GATHER:
+	if activity.is_empty():
+		return
+	if activity["kind"] == SimVocab.COOK:
+		_step_cooking(activity)
+		return
+	if activity["kind"] != SimVocab.GATHER:
 		return
 	var id: String = activity["object_id"]
 	var blocker := _gather_blocker(id)
@@ -571,12 +702,13 @@ func _step_activity() -> void:
 		return
 	var def := _node_def(id)
 	var skill: String = def["skill"]
+	var power := tool_rank(def["tool"])
 	activity["progress"] = int(activity["progress"]) + 1
 	_noise = maxf(_noise, CombatTable.NOISE_GATHER)
-	if int(activity["progress"]) < gather_ticks(skill_level(skill)):
+	if int(activity["progress"]) < gather_ticks(skill_level(skill), power):
 		return
 	activity["progress"] = 0
-	if not _roll(gather_chance(skill_level(skill))):
+	if not _roll(gather_chance(skill_level(skill), power)):
 		return
 	var item: String = def["item"]
 	Inventory.add(state["inventory"]["pack"], item, 1)
@@ -593,6 +725,49 @@ func _step_activity() -> void:
 		_stop_activity(SimVocab.REASON_DEPLETED)
 	elif Inventory.is_full_for(state["inventory"]["pack"], item):
 		_stop_activity(SimVocab.REASON_PACK_FULL)
+
+
+# --- Cooking --------------------------------------------------------------------------
+
+## Why cooking `raw` cannot go on right now, or "" when it can.
+func _cook_blocker(raw: String) -> String:
+	if not near_fire():
+		return SimVocab.REASON_NOT_AT_FIRE
+	var pack: Array = state["inventory"]["pack"]
+	if Inventory.count_of(pack, raw) <= 0:
+		return SimVocab.REASON_NOTHING_LEFT
+	var c := RecipeTable.cooking(raw)
+	if skill_level(SkillTable.COOKING) < int(c["level"]):
+		return SimVocab.REASON_LEVEL_TOO_LOW
+	var after := pack.duplicate(true)
+	Inventory.remove(after, raw, 1)
+	if Inventory.room_for(after, c["output"]) <= 0:
+		return SimVocab.REASON_PACK_FULL
+	return ""
+
+
+## One item every COOK_TICKS ticks: it either cooks (and trains cooking) or burns and is lost.
+func _step_cooking(activity: Dictionary) -> void:
+	var raw: String = activity["item"]
+	var blocker := _cook_blocker(raw)
+	if blocker != "":
+		_stop_activity(blocker)
+		return
+	activity["progress"] = int(activity["progress"]) + 1
+	if int(activity["progress"]) < COOK_TICKS:
+		return
+	activity["progress"] = 0
+	var c := RecipeTable.cooking(raw)
+	var pack: Array = state["inventory"]["pack"]
+	Inventory.remove(pack, raw, 1)
+	if _roll(burn_chance(raw, skill_level(SkillTable.COOKING))):
+		_emit({"kind": SimVocab.EV_COOKED, "item": raw, "output": "", "burnt": true, "xp": 0})
+	else:
+		Inventory.add(pack, c["output"], 1)
+		_emit({"kind": SimVocab.EV_COOKED, "item": raw, "output": c["output"], "burnt": false, "xp": int(c["xp"])})
+		_grant_xp(SkillTable.COOKING, int(c["xp"]))
+	if Inventory.count_of(pack, raw) <= 0:
+		_stop_activity(SimVocab.REASON_NOTHING_LEFT)
 
 
 func _step_nodes() -> void:
@@ -640,10 +815,12 @@ func combatant(id: String) -> Dictionary:
 		}
 	var e: Dictionary = state["enemies"][id]
 	var def := CombatTable.enemy(e["kind"])
-	var enemy_stats := CombatTable.weapon(def["weapon"])
+	# The weapon of the action declared last: a captain holds his bow from "draws his bow" on.
+	var held := CombatTable.stance_weapon(e["kind"], int(e["step"]) - 1)
+	var enemy_stats := CombatTable.weapon(held)
 	return {
 		"id": id, "kind": e["kind"], "pos": _pos(e), "health": int(e["health"]),
-		"health_max": int(def["health"]), "weapon": def["weapon"], "style": enemy_stats["style"],
+		"health_max": int(def["health"]), "weapon": held, "style": enemy_stats["style"],
 		"reach": enemy_stats["reach"], "defence": 0, "next": (e["next"] as Dictionary).duplicate(),
 	}
 
@@ -861,18 +1038,23 @@ func _enemy_declare(id: String) -> void:
 	var e: Dictionary = state["enemies"][id]
 	var me := combatant(id)
 	var action := CombatTable.ACTION_MOVE
+	var style: String = me["style"]
 	if (me["pos"] as Vector2).distance_to(player_pos()) <= float(me["reach"]):
 		var actions: Array = CombatTable.enemy(e["kind"])["actions"]
-		action = actions[int(e["step"]) % actions.size()]
-		e["step"] = (int(e["step"]) + 1) % actions.size()
+		var index := int(e["step"]) % actions.size()
+		action = actions[index]
+		style = CombatTable.weapon(CombatTable.stance_weapon(e["kind"], index))["style"]
+		e["step"] = (index + 1) % actions.size()
 	var at := int(state["tick"]) + 1
 	e["next"] = {"action": action, "at": at}
 	if CombatTable.is_attack(action):
 		_emit({
 			"kind": SimVocab.EV_ENEMY_TELEGRAPHED, "enemy_id": id, "action": action,
-			"style": me["style"], "damage": CombatTable.action_damage(action),
+			"style": style, "damage": CombatTable.action_damage(action),
 			"heavy": CombatTable.is_heavy(action), "at": at,
 		})
+	elif CombatTable.is_stance(action):
+		_emit({"kind": SimVocab.EV_ENEMY_STANCE, "enemy_id": id, "action": action, "style": style, "at": at})
 
 
 ## Moves an engaged enemy toward a point just inside its reach of the player, on the side it
@@ -936,12 +1118,20 @@ func _kill_enemy(id: String) -> void:
 	e["respawn_tick"] = int(state["tick"]) + int(def["respawn_ticks"])
 	_emit({"kind": SimVocab.EV_ENEMY_DIED, "enemy_id": id, "enemy_kind": e["kind"], "pos": _xz(at)})
 	var drops: Array = (def["loot"] as Array).duplicate(true)
+	var boss_loot: Array = def.get("boss_loot", [])
+	if not boss_loot.is_empty():
+		drops.append({"item": boss_loot[_rand(boss_loot.size())], "count": 1})
 	if _roll(int(def["rare_percent"])):
 		drops.append({"item": CombatTable.RARE_LOOT[_rand(CombatTable.RARE_LOOT.size())], "count": 1})
 	for i in drops.size():
 		_drop_loot(drops[i]["item"], int(drops[i]["count"]), at + Vector2(0.45 * i, 0.0))
 	if _attack_target() == id:
 		_stop_activity(SimVocab.REASON_TARGET_DEAD)
+	var defeated: Array = state["bosses_defeated"]
+	if def.get("boss", false) and not defeated.has(id):
+		var before := _open_ring_gates()
+		defeated.append(id)
+		_announce_ring_gates(before)
 
 
 func _home(id: String) -> Vector2:
@@ -983,6 +1173,75 @@ func _step_loot() -> void:
 		if tick >= int(loot[id]["expires_tick"]):
 			loot.erase(id)
 			_emit({"kind": SimVocab.EV_LOOT_GONE, "loot_id": id})
+
+
+# --- Field fires ----------------------------------------------------------------------
+
+func _step_fires() -> void:
+	var tick := int(state["tick"])
+	var fires: Dictionary = state["fires"]
+	for id in fires.keys():
+		if tick >= int(fires[id]["expires_tick"]):
+			fires.erase(id)
+			_emit({"kind": SimVocab.EV_FIRE_OUT, "fire_id": id})
+
+
+## Burns FIELD_FIRE_LOGS logs from the pack into a fire where the player stands. Not inside
+## the outpost, which has its own fire.
+func _light_fire(_args: Dictionary, commit: bool) -> String:
+	if in_outpost():
+		return SimVocab.REASON_IN_OUTPOST
+	var pack: Array = state["inventory"]["pack"]
+	if Inventory.count_of(pack, "logs") < FIELD_FIRE_LOGS:
+		return SimVocab.REASON_MISSING_INPUTS
+	if commit:
+		Inventory.remove(pack, "logs", FIELD_FIRE_LOGS)
+		state["fire_seq"] = int(state["fire_seq"]) + 1
+		var id := FIELD_FIRE_PREFIX + str(int(state["fire_seq"]))
+		var expires := int(state["tick"]) + FIELD_FIRE_TICKS
+		state["fires"][id] = {"pos": _xz(player_pos()), "expires_tick": expires}
+		_emit({"kind": SimVocab.EV_FIRE_LIT, "fire_id": id, "pos": _xz(player_pos()), "expires_tick": expires})
+	return ""
+
+
+# --- Outpost upgrades -----------------------------------------------------------------
+
+## Builds an outpost upgrade, paying its cost out of the stash. Inside the outpost only, once,
+## after the upgrades it requires; a locked upgrade is listed but cannot be built yet.
+func _build(args: Dictionary, commit: bool) -> String:
+	var id := str(args.get("upgrade", ""))
+	if not UpgradeTable.has(id):
+		return SimVocab.REASON_UNKNOWN_UPGRADE
+	var upgrades: Array = state["upgrades"]
+	if upgrades.has(id):
+		return SimVocab.REASON_ALREADY_BUILT
+	var u := UpgradeTable.get_upgrade(id)
+	if u["locked"] != "":
+		return SimVocab.REASON_UPGRADE_LOCKED
+	for need in u["requires"]:
+		if not upgrades.has(need):
+			return SimVocab.REASON_UPGRADE_MISSING
+	if not in_outpost():
+		return SimVocab.REASON_NOT_IN_OUTPOST
+	var slots: Array = state["stash"]["slots"]
+	var cost: Dictionary = u["cost"]
+	for kind in cost:
+		if Inventory.count_of(slots, kind) < int(cost[kind]):
+			return SimVocab.REASON_MISSING_INPUTS
+	if commit:
+		var before := _open_ring_gates()
+		for kind in cost:
+			Inventory.remove(slots, kind, int(cost[kind]))
+		upgrades.append(id)
+		var effects: Dictionary = u["effects"]
+		var more := int(effects.get("stash", 0))
+		if more > 0:
+			state["stash"]["capacity"] = int(state["stash"]["capacity"]) + more
+			slots.resize(slots.size() + more)
+		_emit({"kind": SimVocab.EV_BUILT, "upgrade": id, "effects": effects.duplicate(true)})
+		_announce_ring_gates(before)
+		_save_due = "build"
+	return ""
 
 
 # --- Skills ---------------------------------------------------------------------------
@@ -1073,7 +1332,8 @@ func _die(cause: String) -> void:
 	_save_due = "death"
 
 
-## Nothing makes an axe yet, so a death that took the last one would end woodcutting for good.
+## The workbench makes an axe only from logs, which need an axe, so a death that took the last
+## one would end woodcutting for good.
 ## When no axe is worn, carried or stashed, a spare wooden axe waits by the fire: in the tool
 ## slot when it is empty, else in the pack. Returns the item given, or "" when none was needed.
 func _spare_axe() -> String:
@@ -1136,6 +1396,10 @@ func _apply(kind: String, args: Dictionary, commit: bool) -> String:
 			return _eat(args, commit)
 		SimVocab.SMITH:
 			return _smith(args, commit)
+		SimVocab.BUILD:
+			return _build(args, commit)
+		SimVocab.LIGHT_FIRE:
+			return _light_fire(args, commit)
 	return SimVocab.REASON_NOT_IMPLEMENTED
 
 
@@ -1282,9 +1546,11 @@ func _smith(args: Dictionary, commit: bool) -> String:
 	var id := str(args.get("recipe", ""))
 	if not RecipeTable.has(id):
 		return SimVocab.REASON_UNKNOWN_RECIPE
+	var recipe := RecipeTable.get_recipe(id)
+	if ItemTable.tier_rank(recipe["tier"]) > ItemTable.tier_rank(SMITHING_TIER_CAP):
+		return SimVocab.REASON_TIER_CAPPED
 	if not in_outpost() or not near_kind(WorldDef.KIND_WORKBENCH, USE_REACH):
 		return SimVocab.REASON_NOT_AT_WORKBENCH
-	var recipe := RecipeTable.get_recipe(id)
 	if skill_level(recipe["skill"]) < int(recipe["level"]):
 		return SimVocab.REASON_LEVEL_TOO_LOW
 	if recipe["upgrade"] != "" and not (state["upgrades"] as Array).has(recipe["upgrade"]):
@@ -1363,8 +1629,17 @@ func restore(snap: Dictionary) -> bool:
 	copy["enemies"] = _restored_enemies(copy.get("enemies"))
 	copy["loot"] = _restored_loot(copy.get("loot"))
 	copy["loot_seq"] = maxi(0, int(copy["loot_seq"])) if _is_number(copy.get("loot_seq")) else 0
+	copy["fires"] = _restored_fires(copy.get("fires"))
+	copy["fire_seq"] = maxi(0, int(copy["fire_seq"])) if _is_number(copy.get("fire_seq")) else 0
+	var defeated: Array = []
+	if copy.get("bosses_defeated") is Array:
+		for id in copy["bosses_defeated"]:
+			if world.enemies.has(str(id)) and not defeated.has(str(id)):
+				defeated.append(str(id))
+	copy["bosses_defeated"] = defeated
 	var target := str(player.get("target_object", ""))
-	player["target_object"] = target if world.objects.has(target) or copy["loot"].has(target) else ""
+	var known_target: bool = world.objects.has(target) or copy["loot"].has(target) or copy["fires"].has(target)
+	player["target_object"] = target if known_target else ""
 	player["region"] = world.region_at(player_pos_of(player))
 	player["activity"] = _restored_activity(player.get("activity"), copy["enemies"])
 	player["ready_tick"] = int(player["ready_tick"]) if _is_number(player.get("ready_tick")) else 0
@@ -1457,6 +1732,10 @@ func _restored_activity(saved: Variant, enemies: Dictionary) -> Dictionary:
 		SimVocab.ATTACK:
 			if enemies.has(id) and enemies[id]["mode"] != MODE_DEAD:
 				return {"kind": SimVocab.ATTACK, "object_id": id}
+		SimVocab.COOK:
+			var item := str(saved.get("item", ""))
+			if RecipeTable.is_cookable(item) and _is_number(saved.get("progress")):
+				return {"kind": SimVocab.COOK, "item": item, "progress": int(saved["progress"])}
 	return {}
 
 
@@ -1507,6 +1786,18 @@ func _restored_loot(saved: Variant) -> Dictionary:
 	return out
 
 
+## Field fires from saved data: readable positions and burn-out ticks under the fire prefix.
+func _restored_fires(saved: Variant) -> Dictionary:
+	var out := {}
+	if not (saved is Dictionary):
+		return out
+	for id in saved:
+		var fire: Variant = saved[id]
+		if str(id).begins_with(FIELD_FIRE_PREFIX) and fire is Dictionary and _is_xz(fire.get("pos")) and _is_number(fire.get("expires_tick")):
+			out[str(id)] = {"pos": _xz(Vector2(fire["pos"][0], fire["pos"][1])), "expires_tick": int(fire["expires_tick"])}
+	return out
+
+
 static func _is_number(v: Variant) -> bool:
 	return v is int or v is float
 
@@ -1546,6 +1837,10 @@ func is_attacking() -> bool:
 	return state["player"]["activity"].get("kind", "") == SimVocab.ATTACK
 
 
+func is_cooking() -> bool:
+	return state["player"]["activity"].get("kind", "") == SimVocab.COOK
+
+
 func in_outpost() -> bool:
 	return state["player"]["region"] == WorldDef.REGION_OUTPOST
 
@@ -1559,8 +1854,30 @@ func near_kind(kind: String, reach: float) -> bool:
 	return false
 
 
+## True when the player stands within FIRE_REACH of the outpost fire or a burning field fire.
 func near_fire() -> bool:
-	return near_kind(WorldDef.KIND_FIRE, FIRE_REACH)
+	if near_kind(WorldDef.KIND_FIRE, FIRE_REACH):
+		return true
+	var here := player_pos()
+	for id in state["fires"]:
+		if _pos(state["fires"][id]).distance_to(here) <= FIRE_REACH:
+			return true
+	return false
+
+
+## The best tier rank (wooden 0, bronze 1, iron 2) among the tools of `tool_kind` worn or
+## carried, or -1 when there is none.
+func tool_rank(tool_kind: String) -> int:
+	var inventory: Dictionary = state["inventory"]
+	var best := -1
+	for slot in ItemTable.EQUIPMENT_SLOTS:
+		var item: String = inventory["equipment"][slot]
+		if item != "" and ItemTable.tool(item) == tool_kind:
+			best = maxi(best, ItemTable.tier_rank(ItemTable.tier(item)))
+	for s in inventory["pack"]:
+		if s != null and ItemTable.tool(s["item"]) == tool_kind:
+			best = maxi(best, ItemTable.tier_rank(ItemTable.tier(s["item"])))
+	return best
 
 
 ## Whether the pack or the tool slot holds a tool of kind `tool_kind` (for example "axe").

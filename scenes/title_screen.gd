@@ -54,10 +54,14 @@ func _ready() -> void:
 	_code.placeholder_text = "Paste a save code exported from Frostmark"
 	column.add_child(_code)
 	column.add_child(_button("Import code", _on_import))
+	var credit := _label("3D models from the Nature and Survival kits by Kenney (kenney.nl), CC0.", 13)
+	credit.modulate.a = 0.7
 	_message = _label("", 16)
 	_message.add_theme_color_override("font_color", COLOR_ERROR)
 	_message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(_message)
+	column.add_child(_spacer(12))
+	column.add_child(credit)
 	refresh()
 
 

@@ -1,6 +1,6 @@
 # Frostmark free asset catalogue
 
-Research only: this folder lists free game assets that could fit Frostmark. **Nothing here is downloaded or committed**, and no asset is approved for use until someone picks it and adds its credit to [CREDITS.md](CREDITS.md).
+Research only: this folder lists free game assets that could fit Frostmark. The catalogue itself downloads nothing; an asset is approved for use only when someone picks it, commits it under `assets/` and adds its credit to the "In use" table in [CREDITS.md](CREDITS.md).
 
 Every licence was read from the source's own page on **2026-10-16** where the page could be loaded. Where a page was blocked, errored, or named no licence, the entry says **unverified** rather than guessing. Treat "unverified" as "do not use until checked".
 
