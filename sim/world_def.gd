@@ -13,6 +13,7 @@ extends RefCounted
 const KIND_WALL := "wall"
 const KIND_CLIFF := "cliff"
 const KIND_OUTCROP := "outcrop"
+const KIND_DECOR := "decor"
 const KIND_GATE := "gate"
 const KIND_FIRE := "fire"
 const KIND_STASH := "stash"
@@ -76,7 +77,8 @@ const NODE_KINDS := {
 }
 
 ## Blocking geometry: {id, kind, min: [x, z], max: [x, z], height}. `kind` is a wall (the
-## outpost palisade), a cliff (ring one's outer edge) or an outcrop (a rock in the field).
+## outpost palisade), a cliff (ring one's outer edge), an outcrop (a rock in the field) or
+## decor (the tent in the yard).
 var solids: Array = []
 ## Interactable placements by id: {kind, label, min, max, height, blocks}.
 var objects: Dictionary = {}
@@ -107,6 +109,8 @@ static func outpost() -> WorldDef:
 		_solid("wall_west", [-half, -half], [-half + t, half]),
 		_solid("wall_south_west", [-half, half - t], [-gate_half_width, half]),
 		_solid("wall_south_east", [gate_half_width, half - t], [half, half]),
+		# The keeper's tent in the south-east corner of the yard.
+		_solid("tent", [6.0, 6.0], [9.0, 9.0], 1.6, KIND_DECOR),
 	]
 	# Ring one's outer edge: ice cliffs on all four sides out to the end of the grid, open only
 	# at the ring-two gate, so no ground in the world is walkable but unreachable.
