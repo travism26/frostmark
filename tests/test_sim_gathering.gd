@@ -152,7 +152,7 @@ func test_level_up_at_the_curve_threshold() -> void:
 
 
 func test_the_curve_is_shared_and_rising() -> void:
-	assert_eq(SkillTable.NAMES.size(), 7, "seven skills")
+	assert_eq(SkillTable.NAMES.size(), 8, "eight skills")
 	assert_eq(SkillTable.xp_for_level(1), 0)
 	var gap := 0
 	for level in range(2, 20):

@@ -23,6 +23,7 @@ const KIND_FROST_PINE := "frost_pine"
 const KIND_COPPER_ROCK := "copper_rock"
 const KIND_TIN_ROCK := "tin_rock"
 const KIND_IRON_ROCK := "iron_rock"
+const KIND_ICE_CRYSTAL := "ice_crystal"
 const KIND_FISHING_HOLE := "fishing_hole"
 const KIND_ICE_HOLE := "ice_hole"
 const KIND_RING_GATE := "ring_gate"
@@ -62,6 +63,11 @@ const NODE_KINDS := {
 		"tier": 1, "skill": "fishing", "level": 1, "tool": "rod", "tool_tier": "", "item": "raw_fish",
 		"yield": 6, "respawn_ticks": 80, "xp": 10,
 	},
+	# Mined for the frost shards a staff casts with, once mining is past its first level.
+	KIND_ICE_CRYSTAL: {
+		"tier": 1, "skill": "mining", "level": 2, "tool": "pickaxe", "tool_tier": "", "item": "ice_crystal",
+		"yield": 3, "respawn_ticks": 120, "xp": 14,
+	},
 	KIND_FROST_PINE: {
 		"tier": 2, "skill": "woodcutting", "level": 3, "tool": "axe", "tool_tier": "", "item": "logs",
 		"yield": 6, "respawn_ticks": 120, "xp": 16,
@@ -95,9 +101,9 @@ var path_grid: AStarGrid2D = null
 
 ## The first-playable world, as rings around the outpost. The walled outpost has one gate on
 ## its south side, the fire, the stash and the workbench. The inner ring (out to 24 m) is safe
-## but cold: pines south and north of the walls, copper rocks to the east, tin to the west and
-## one fishing hole to the north. Ring one (out to the cliffs at 60 m) holds the wolf packs and
-## bandit archers, the better nodes (frost pines west, iron east, an ice hole north) and, at
+## but cold: pines south and north of the walls, copper rocks to the east, tin to the west, one
+## fishing hole to the north and two ice crystals north-east and north-west. Ring one (out to the cliffs at 60 m) holds the wolf packs and
+## bandit archers and two frost witches, the better nodes (frost pines west, iron east, an ice hole north) and, at
 ## its far southern edge, the barred gate to ring two with the bandit captain standing at it.
 ## Ring one is only reached by walking through the inner ring.
 static func outpost() -> WorldDef:
@@ -174,6 +180,9 @@ static func outpost() -> WorldDef:
 	for i in tin.size():
 		_place(w, "tin_%d" % (i + 1), KIND_TIN_ROCK, "Tin rock", tin[i], [2.0, 2.0], 1.0)
 	_place(w, "fishing_hole", KIND_FISHING_HOLE, "Fishing hole", [-1.0, -19.0], [2.0, 2.0], 0.1)
+	var crystals := [[16.0, -14.0], [-18.0, -13.0]]
+	for i in crystals.size():
+		_place(w, "ice_crystal_%d" % (i + 1), KIND_ICE_CRYSTAL, "Ice crystal", crystals[i], [1.0, 1.0], 1.4)
 	var frost := [[-42.0, 8.0], [-46.0, 13.0], [-39.0, 15.0], [-44.0, 3.0]]
 	for i in frost.size():
 		_place(w, "frost_pine_%d" % (i + 1), KIND_FROST_PINE, "Frost pine", frost[i], [1.0, 1.0], 4.0)
@@ -184,8 +193,8 @@ static func outpost() -> WorldDef:
 	# Ring one's enemies. The near groups sit just past the southern pines: two wolves south-west,
 	# a pack of three farther west, a bandit archer south-east. Chopping the south-western pine is
 	# loud enough for the near pack to hear. Farther out: an archer camp by the iron, a pack among
-	# the frost pines, a pack by the ice hole, two archers flanking the road south, and the
-	# captain at the ring-two gate. Every group sits more than a fight's noise
+	# the frost pines, a pack by the ice hole, two archers flanking the road south, a frost witch
+	# out on each northern flank, and the captain at the ring-two gate. Every group sits more than a fight's noise
 	# (CombatTable.NOISE_FIGHT) from the next, so each is fought on its own.
 	var placements := [
 		["wolf_1", "wolf", [-7.5, 28.5], "west_pack"],
@@ -203,6 +212,8 @@ static func outpost() -> WorldDef:
 		["wolf_10", "wolf", [8.5, -45.5], "north_pack"],
 		["archer_4", "bandit_archer", [-15.5, 44.5], "archer_4"],
 		["archer_5", "bandit_archer", [17.5, 45.5], "archer_5"],
+		["witch_1", "frost_witch", [38.5, -24.5], "witch_1"],
+		["witch_2", "frost_witch", [-36.5, -22.5], "witch_2"],
 		["captain", "bandit_captain", [0.5, 56.5], "captain"],
 	]
 	for p in placements:

@@ -115,7 +115,7 @@ func test_a_version_1_snapshot_migrates() -> void:
 	assert_eq(sim.player_pos(), Vector2(3.5, -2.5), "keeps where the player stood")
 	assert_eq(sim.state["inventory"]["equipment"]["tool"], "wooden_axe", "gains a new character's kit")
 	assert_eq(sim.state["warmth"], Sim.WARMTH_MAX)
-	assert_eq(sim.state["skills"].size(), 7)
+	assert_eq(sim.state["skills"].size(), SkillTable.NAMES.size(), "every skill, magic too")
 	assert_eq(sim.state["nodes"].size(), sim.world.node_ids().size(), "every tree present and full")
 	# The same through a save code, the way an old exported code would arrive.
 	var imported := SimScript.new()
@@ -263,6 +263,57 @@ func test_a_version_4_snapshot_migrates_with_the_guide_off() -> void:
 	assert_eq(loaded.state["player"]["pos"], sim.state["player"]["pos"], "everything else as it was")
 	var events := H.run(loaded, 5)
 	assert_eq(H.of_kind(events, Vocab.EV_TIP).size() + H.of_kind(events, Vocab.EV_HINT).size(), 0)
+
+
+func test_a_version_5_snapshot_migrates_with_magic() -> void:
+	# What the guide build could snapshot: seven skills, no ice crystals, no frost witches, and the
+	# captain partway through his two-stance cycle.
+	var sim := SimScript.new()
+	var v5 := sim.snapshot()
+	v5["version"] = 5
+	v5["tick"] = 1200
+	(v5["skills"] as Dictionary).erase("magic")
+	v5["skills"]["melee"] = {"xp": 320, "level": 4}
+	v5["skills"]["ranged"] = {"xp": 160, "level": 3}
+	for id in ["ice_crystal_1", "ice_crystal_2"]:
+		(v5["nodes"] as Dictionary).erase(id)
+	for id in ["witch_1", "witch_2"]:
+		(v5["enemies"] as Dictionary).erase(id)
+	v5["nodes"]["tree_1"] = {"left": 0, "respawn_tick": 1250}
+	v5["enemies"]["captain"]["step"] = 7
+	v5["stash"]["slots"][3] = {"item": "iron_bow", "count": 1}
+	var migrated: Dictionary = SaveCode.migrate(v5, 6)
+	assert_eq(migrated["version"], 6)
+	assert_eq(migrated["skills"]["magic"], {"xp": 0, "level": 1}, "the eighth skill starts fresh")
+	assert_eq(migrated["skills"].size(), 8)
+	var loaded := SimScript.new()
+	assert_true(loaded.restore(v5), "restore migrates a version-5 snapshot")
+	assert_eq(loaded.state["version"], Sim.STATE_VERSION)
+	assert_eq(loaded.state["tick"], 1200)
+	assert_eq(loaded.state["skills"]["magic"], {"xp": 0, "level": 1})
+	assert_eq(loaded.state["skills"]["melee"], {"xp": 320, "level": 4}, "the other skills are kept")
+	assert_eq(loaded.state["skills"]["ranged"], {"xp": 160, "level": 3})
+	assert_eq(loaded.state["stash"]["slots"], v5["stash"]["slots"], "the stash is exactly as banked")
+	assert_eq(loaded.state["nodes"]["tree_1"], {"left": 0, "respawn_tick": 1250}, "known nodes keep their state")
+	for id in ["ice_crystal_1", "ice_crystal_2"]:
+		assert_eq(int(loaded.state["nodes"][id]["left"]), int(WorldDef.NODE_KINDS[WorldDef.KIND_ICE_CRYSTAL]["yield"]), "%s starts full" % id)
+	for id in ["witch_1", "witch_2"]:
+		assert_eq(loaded.state["enemies"][id]["mode"], Sim.MODE_IDLE, "%s waits at home" % id)
+	assert_eq(int(loaded.state["enemies"]["captain"]["step"]), 7, "the captain carries on from his step")
+	# The same through a save code, and the migrated character can level magic.
+	var imported := SimScript.new()
+	assert_true(imported.command(Vocab.IMPORT_SAVE, {"code": SaveCode.encode(v5)})["ok"])
+	assert_eq(imported.snapshot(), loaded.snapshot())
+	H.place(loaded, [-7.5, 23.5])
+	H.arm(loaded, "wooden_staff", [{"item": "frost_shards", "count": 5}])
+	assert_true(loaded.command(Vocab.ATTACK, {"enemy_id": "wolf_1"})["ok"])
+	H.run(loaded, 1)
+	assert_true(int(loaded.state["skills"]["magic"]["xp"]) > 0, "magic levels by use")
+
+
+func test_a_version_5_magic_entry_is_kept() -> void:
+	var migrated: Dictionary = SaveCode.migrate({"version": 5, "tick": 1, "skills": {"magic": {"xp": 60, "level": 2}}}, 6)
+	assert_eq(migrated["skills"]["magic"], {"xp": 60, "level": 2})
 
 
 func test_a_full_version_2_stash_gets_no_kit() -> void:
