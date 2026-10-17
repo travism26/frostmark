@@ -2,7 +2,8 @@
 ## origin and facing its -Z. Besides the idle, walk and run clips every FigureBody plays, it
 ## reads the simulation's player activity once given a `sim` and swings an axe while
 ## gathering, strikes with the equipped weapon's style while attacking and stirs the pot while
-## cooking. CharacterGear hangs the visible equipment off its bone slots.
+## cooking; it casts with a staff and flinches when a blow lands on it. CharacterGear hangs
+## the visible equipment off its bone slots.
 class_name CharacterView
 extends FigureBody
 
@@ -10,7 +11,8 @@ const MODEL := "res://assets/models/kaykit_adventurers/barbarian.glb"
 const HEIGHT := 1.8
 const CLIPS := {
 	"idle": "Idle", "walk": "Walking_A", "run": "Running_A",
-	"melee": "1H_Melee_Attack_Slice_Horizontal", "ranged": "2H_Ranged_Shoot", "death": "Death_A",
+	"melee": "1H_Melee_Attack_Slice_Horizontal", "ranged": "2H_Ranged_Shoot", "magic": "Spellcast_Shoot",
+	"flinch": "Hit_A", "death": "Death_A",
 }
 const CLIP_CHOP := "1H_Melee_Attack_Chop"
 const CLIP_FISH := "Interact"
@@ -50,7 +52,10 @@ func _base_clip() -> String:
 			var weapon: String = _sim.state["inventory"]["equipment"][ItemTable.SLOT_WEAPON]
 			if weapon == "":
 				return CLIP_PUNCH
-			return clips["ranged"] if CombatTable.weapon(weapon)["style"] == CombatTable.STYLE_RANGED else clips["melee"]
+			var style: String = CombatTable.weapon(weapon)["style"]
+			if style == CombatTable.STYLE_RANGED:
+				return clips["ranged"]
+			return clips["magic"] if style == CombatTable.STYLE_MAGIC else clips["melee"]
 		SimVocab.COOK:
 			return CLIP_COOK
 	return super()

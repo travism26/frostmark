@@ -1,7 +1,8 @@
 ## The character's visible gear: the weapon in the right hand (a bow in the left, a staff
 ## upright in the right), the armour on the chest and the tool on the back, each in its
 ## tier's colour (wood, bronze, iron, steel) and hung on the CharacterView's bone slots so it
-## swings with the animation. Armour also changes the silhouette by tier (a vest, then
+## swings with the animation. The fishing rod rides the back until the view plays its fishing
+## clip, then sits in the right hand. Armour also changes the silhouette by tier (a vest, then
 ## pauldrons, then a helm), so progress reads at a glance from the top-down camera.
 ##
 ## Presentation only: GameRoot hands it the equipment slots from the state after every
@@ -20,6 +21,9 @@ var _shown := {}  # slot -> item currently drawn
 var _pieces := {}  # slot -> the nodes drawn for it, to free when it changes
 var _equipment := {}
 var _view: CharacterView
+var _rod: Node3D  # the fishing rod, moved between its back sling and the hand
+var _rod_sling: Node3D
+var _rod_hand: Node3D
 
 
 func _init() -> void:
@@ -36,7 +40,16 @@ func show_equipment(equipment: Dictionary) -> void:
 
 
 func _process(_delta: float) -> void:
-	_redraw()  # waiting for the CharacterView to turn up
+	var view := _find_view()
+	if view == null:
+		_redraw()  # waiting for the CharacterView to turn up
+		return
+	if _rod == null:
+		set_process(false)
+		return
+	var holder := _rod_hand if view.current_clip() == CharacterView.CLIP_FISH else _rod_sling
+	if _rod.get_parent() != holder:
+		_rod.reparent(holder, false)
 
 
 func _redraw() -> void:
@@ -44,7 +57,6 @@ func _redraw() -> void:
 	if view == null:
 		set_process(true)
 		return
-	set_process(false)
 	for slot in ItemTable.EQUIPMENT_SLOTS:
 		var item: String = _equipment.get(slot, "")
 		if _shown[slot] == item:
@@ -53,6 +65,8 @@ func _redraw() -> void:
 		for node in _pieces[slot]:
 			(node as Node).queue_free()
 		_pieces[slot] = []
+		if slot == ItemTable.SLOT_TOOL:
+			_rod = null
 		if slot == ItemTable.SLOT_ARMOUR:
 			view.set_part_visible("Barbarian_Cape", item == "")  # the cape would hide the vest
 		if item == "" or not ItemTable.has(item):
@@ -64,6 +78,7 @@ func _redraw() -> void:
 				_build_armour(view, slot, item)
 			ItemTable.SLOT_TOOL:
 				_build_tool(view, slot, item)
+	set_process(_rod != null)
 
 
 func _find_view() -> CharacterView:
@@ -142,7 +157,8 @@ func _build_armour(view: CharacterView, slot: String, item: String) -> void:
 		Figures.part(head, band, Vector3(0, 0.42, 0))
 
 
-## The tool slung across the back: Kenney's axe or pickaxe, or a rod of primitives.
+## The tool slung across the back: Kenney's axe or pickaxe, or the fishing rod, which moves to
+## the right hand, tipped forward over the water, while the fishing clip plays.
 func _build_tool(view: CharacterView, slot: String, item: String) -> void:
 	var colour := _tier_colour(item)
 	var back := _mount(view, slot, "chest")
@@ -152,13 +168,14 @@ func _build_tool(view: CharacterView, slot: String, item: String) -> void:
 	back.add_child(sling)
 	match ItemTable.tool(item):
 		ItemTable.TOOL_ROD:
-			var shaft := CylinderMesh.new()
-			shaft.top_radius = 0.02
-			shaft.bottom_radius = 0.03
-			shaft.height = 1.3
-			shaft.radial_segments = 5
-			shaft.material = Props.flat(colour)
-			Figures.part(sling, shaft, Vector3(0, 0.55, 0))
+			_rod = Figures.rod(colour, 1.4)
+			_rod_sling = Node3D.new()
+			_rod_sling.position = Vector3(0, 0.2, 0)
+			sling.add_child(_rod_sling)
+			_rod_sling.add_child(_rod)
+			_rod_hand = Node3D.new()
+			_rod_hand.rotation.x = -1.0  # tipped forward over the water
+			_mount(view, slot, "handslot_r").add_child(_rod_hand)
 		_:
 			var tool := Figures.tool(ItemTable.tool(item), colour, 0.95)
 			tool.rotation.y = PI * 0.5  # the head stands off the back, not into it
