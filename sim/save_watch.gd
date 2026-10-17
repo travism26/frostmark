@@ -3,8 +3,8 @@
 ## private browsing). The save code is the fallback that always works, so both point at it.
 ##
 ## One SaveWatch lives for a session and is never saved: a fresh session starts the count
-## again. It counts ticks of play, not wall-clock time, so a paused game (title, death or
-## ending screen) does not count down. Engine-free like sim/.
+## again. It counts ticks of play, not wall-clock time, so a paused game (the title or death
+## screen) does not count down. Engine-free like sim/.
 class_name SaveWatch
 extends RefCounted
 

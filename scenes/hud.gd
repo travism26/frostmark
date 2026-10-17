@@ -210,7 +210,7 @@ func _refresh_craft() -> void:
 		(row["button"] as Button).disabled = why != ""
 		(row["button"] as Button).tooltip_text = _why_text(why)
 		if why == SimVocab.REASON_TIER_CAPPED:
-			(row["text"] as Label).text = "%s  -  iron is found in ring one, never smithed" % r["label"]
+			(row["text"] as Label).text = "%s  -  needs the blast furnace: smithing stops at bronze until then" % r["label"]
 
 
 func _add_craft_row(id: String) -> void:
@@ -288,6 +288,8 @@ static func _effect_text(effects: Dictionary) -> String:
 		for r in effects["recipes"]:
 			names.append(str(RecipeTable.get_recipe(r)["label"]).to_lower())
 		parts.append("unlocks %s" % ", ".join(names))
+	if effects.has("smithing_tier"):
+		parts.append("smithing works up to %s" % effects["smithing_tier"])
 	if effects.has("ring_gate"):
 		parts.append("works the gate to ring two once its captain falls")
 	if effects.has("waystone"):
@@ -311,7 +313,7 @@ static func _why_text(reason: String) -> String:
 		SimVocab.REASON_NOT_IN_OUTPOST:
 			return "Only inside the outpost."
 		SimVocab.REASON_TIER_CAPPED:
-			return "Smithing stops at bronze."
+			return "Smithing stops at bronze until the blast furnace is built."
 		SimVocab.REASON_PACK_FULL:
 			return "Your pack is full."
 	return reason.replace("_", " ").capitalize()

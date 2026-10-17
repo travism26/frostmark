@@ -1,5 +1,5 @@
 ## The character's visible gear: the weapon in hand, the armour on the body and the tool on
-## the back, each built in its tier's material (wood, bronze, iron). Armour also changes the
+## the back, each built in its tier's material (wood, bronze, iron, steel). Armour also changes the
 ## silhouette by tier (a plank vest, then pauldrons, then a helm), so progress reads at a
 ## glance from the top-down camera.
 ##
@@ -12,6 +12,7 @@ const TIER_COLORS := {
 	ItemTable.TIER_WOODEN: Color(0.55, 0.38, 0.22),
 	ItemTable.TIER_BRONZE: Color(0.82, 0.52, 0.22),
 	ItemTable.TIER_IRON: Color(0.66, 0.69, 0.74),
+	ItemTable.TIER_STEEL: Color(0.42, 0.50, 0.62),
 }
 const COLOR_GRIP := Color(0.25, 0.17, 0.11)
 const COLOR_STRING := Color(0.92, 0.9, 0.82)

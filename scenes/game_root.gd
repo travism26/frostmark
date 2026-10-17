@@ -1,8 +1,8 @@
 ## Presentation glue for Frostmark. Owns one Sim, ticks it on a fixed accumulator, turns
 ## ground clicks into `move_to`, marker, field-fire and loot clicks into `interact` (the
 ## outpost gate into `cross_gate`) and enemy clicks into `attack`, and plays the simulation's
-## events back as motion, telegraph cues, sound, HUD, banners, the death screen and the
-## ring-two ending. The world is built from the Sim's WorldDef (props from scenes/props.gd) so the
+## events back as motion, telegraph cues, sound, HUD, banners and the death screen. The
+## world is built from the Sim's WorldDef (props from scenes/props.gd) so the
 ## drawing and the walkability grid can never disagree. It starts on the title screen and
 ## writes the browser save whenever the simulation reports a save point, nudging the player
 ## to keep their save code after a long stretch of play or when the browser stops keeping saves.
@@ -20,11 +20,13 @@ const OCCLUDER_ALPHA := 0.25
 const COLOR_BY_SOLID := {
 	WorldDef.KIND_WALL: Color(0.47, 0.36, 0.25),
 	WorldDef.KIND_CLIFF: Color(0.62, 0.68, 0.76),
+	WorldDef.KIND_RUIN: Color(0.52, 0.53, 0.56),
 }
 const COLOR_GATE := Color(0.45, 0.32, 0.20)
 const COLOR_BY_ENEMY := {
 	"wolf": Color(0.42, 0.40, 0.40), "bandit_archer": Color(0.55, 0.24, 0.20),
 	"bandit_captain": Color(0.30, 0.10, 0.12), "frost_witch": Color(0.40, 0.48, 0.66),
+	"ice_troll": Color(0.58, 0.70, 0.78), "ruin_stalker": Color(0.24, 0.26, 0.30),
 }
 ## Stakes mark where the inner ring ends and ring one's danger begins.
 const RING_STAKE_SPACING := 6.0
@@ -67,7 +69,8 @@ const REASON_TEXT := {
 	SimVocab.REASON_NOT_AT_FIRE: "Stand by a fire to cook. Light one with three logs, or use the outpost's.",
 	SimVocab.REASON_NOT_COOKABLE: "That can't be cooked.",
 	SimVocab.REASON_NOTHING_LEFT: "Nothing left to cook.",
-	SimVocab.REASON_TIER_CAPPED: "Smithing stops at bronze. Iron is found in ring one, not made.",
+	SimVocab.REASON_TIER_CAPPED: "Smithing stops at bronze until the blast furnace is built. Iron is found, not made.",
+	SimVocab.REASON_UNREACHABLE: "You can't get there from here. Ring two is only reached through its gate.",
 	SimVocab.REASON_UPGRADE_MISSING: "Build the upgrade that unlocks it first.",
 	SimVocab.REASON_ALREADY_BUILT: "Already built.",
 	SimVocab.REASON_UPGRADE_LOCKED: "That isn't open yet.",
@@ -82,7 +85,6 @@ const Hud := preload("res://scenes/hud.gd")
 const GuidePanel := preload("res://scenes/guide_panel.gd")
 const HelpPanel := preload("res://scenes/help_panel.gd")
 const DeathScreen := preload("res://scenes/death_screen.gd")
-const EndingScreen := preload("res://scenes/ending_screen.gd")
 const SaveNotice := preload("res://scenes/save_notice.gd")
 const CharacterGear := preload("res://scenes/character_gear.gd")
 const Atmosphere := preload("res://scenes/atmosphere.gd")
@@ -107,12 +109,12 @@ var _playing := false
 var _node_looks := {}  # node object id -> its prop, whose Full/Spent children show its state
 var _ring_gates := {}  # ring gate object id -> {bars, label}
 var _fires := {}  # field fire id -> its prop
+var _placed_fires: Array = []  # the props of the fires placed in the world: the outpost's, the brazier
 var _title_screen: Control
 var _guide_panel: Control
 var _help_panel: Control
 var _hud: Control
 var _death_screen: Control
-var _ending_screen: Control
 var _save_notice: Control
 var _save_watch := SaveWatch.new()
 var _gear: Node3D
@@ -185,10 +187,6 @@ func _ready() -> void:
 	_death_screen.dismissed.connect(_on_death_dismissed)
 	$HUD.add_child(_death_screen)
 	_death_screen.visible = false
-	_ending_screen = EndingScreen.new()
-	_ending_screen.dismissed.connect(_on_ending_dismissed)
-	$HUD.add_child(_ending_screen)
-	_ending_screen.visible = false
 	_help_panel = HelpPanel.new()
 	_help_panel.hints_toggled.connect(_on_hints_set)
 	$HUD.add_child(_help_panel)
@@ -295,7 +293,6 @@ func _start() -> void:
 	_end_warmup(true)
 	_title_screen.visible = false
 	_death_screen.visible = false
-	_ending_screen.visible = false
 	_hud.visible = true
 	_save_notice.visible = false
 	_playing = true
@@ -383,13 +380,6 @@ func _on_death_dismissed() -> void:
 	_accumulator = 0.0
 
 
-func _on_ending_dismissed() -> void:
-	_ending_screen.visible = false
-	_playing = true
-	_accumulator = 0.0
-	_hud.banner("Home at the outpost. The gate to ring two stands open for the next slice.")
-
-
 static func _reason_text(reason: String) -> String:
 	return REASON_TEXT.get(reason, reason.replace("_", " ").capitalize() + ".")
 
@@ -425,7 +415,9 @@ func _apply_events(events: Array[Dictionary]) -> void:
 					SimVocab.ACTION_GATHER:
 						_last_event = _gather_verb(e["object_id"])
 					SimVocab.ACTION_RING_GATE:
-						if not sim.ring_gate_open(e["object_id"]):
+						if sim.ring_gate_open(e["object_id"]):
+							_last_event = "You pass through the gate."
+						else:
 							_last_event = _ring_gate_text(e["object_id"])
 			SimVocab.EV_REGION_CHANGED:
 				_last_event = "Entered the %s." % str(e["to"]).replace("_", " ")
@@ -433,6 +425,8 @@ func _apply_events(events: Array[Dictionary]) -> void:
 					_last_event += " The cold sets in."
 				elif e["to"] == WorldDef.REGION_RING_ONE:
 					_last_event += " Wolves and bandits hunt here."
+				elif e["to"] == WorldDef.REGION_RING_TWO:
+					_last_event += " Trolls and stalkers keep the ruins."
 				_atmosphere.set_outside(e["to"] != WorldDef.REGION_OUTPOST)
 			SimVocab.EV_GATHERED:
 				_last_event = "+%d %s  (+%d %s xp)" % [e["count"], ItemTable.label(e["item"]), e["xp"], e["skill"]]
@@ -461,9 +455,7 @@ func _apply_events(events: Array[Dictionary]) -> void:
 				_sync_ring_gates()
 				_hud.banner("The gate to ring two is open.")
 			SimVocab.EV_RING_TWO_REACHED:
-				_playing = false
-				_ending_screen.show_ending(sim)
-				_sync_ring_gates()
+				_hud.banner("Ring two. The snow lies over broken walls older than the outpost, and the tracks in it are not wolves'. An old brazier still burns past the gate.")
 			SimVocab.EV_ENEMY_STANCE:
 				_show_cue(e)
 			SimVocab.EV_LEVELLED:
@@ -825,10 +817,11 @@ func _build_world(world: WorldDef) -> void:
 			WorldDef.KIND_TREE, WorldDef.KIND_FROST_PINE:
 				prop = Props.pine(kind)
 				label_text = "" if kind == WorldDef.KIND_TREE else label_text
-			WorldDef.KIND_COPPER_ROCK, WorldDef.KIND_TIN_ROCK, WorldDef.KIND_IRON_ROCK, WorldDef.KIND_ICE_CRYSTAL:
+			WorldDef.KIND_COPPER_ROCK, WorldDef.KIND_TIN_ROCK, WorldDef.KIND_IRON_ROCK, WorldDef.KIND_ICE_CRYSTAL, \
+					WorldDef.KIND_COAL_ROCK, WorldDef.KIND_RICH_IRON_ROCK:
 				prop = Props.ore_rock(kind, o["max"][0] - o["min"][0])
-			WorldDef.KIND_FISHING_HOLE, WorldDef.KIND_ICE_HOLE:
-				prop = Props.ice_hole(o["max"][0] - o["min"][0], kind == WorldDef.KIND_ICE_HOLE)
+			WorldDef.KIND_FISHING_HOLE, WorldDef.KIND_ICE_HOLE, WorldDef.KIND_DEEP_HOLE:
+				prop = Props.ice_hole(o["max"][0] - o["min"][0], kind != WorldDef.KIND_FISHING_HOLE)
 			WorldDef.KIND_FIRE:
 				prop = Props.campfire(o["max"][0] - o["min"][0])
 			WorldDef.KIND_STASH:
@@ -855,6 +848,8 @@ func _build_world(world: WorldDef) -> void:
 		body.set_meta("object_id", id)
 		if sim.is_node(id):
 			_node_looks[id] = prop
+		if kind == WorldDef.KIND_FIRE:
+			_placed_fires.append(prop)
 		if label_text != "":
 			var label := _label3d(label_text, 48 if sim.is_node(id) else 64)
 			label.position = Vector3(0, o["height"] + 0.8, 0)
@@ -999,7 +994,7 @@ func _remove_field_fire(id: String) -> void:
 ## Flames lick: every fire's flame stretches and settles a little out of step with the others.
 func _flicker() -> void:
 	var i := 0
-	for prop in [_world.get_node_or_null("fire")] + _fires.values():
+	for prop in _placed_fires + _fires.values():
 		if prop == null:
 			continue
 		var flame := (prop as Node3D).get_node_or_null("Flame") as Node3D
@@ -1011,9 +1006,10 @@ func _flicker() -> void:
 # --- Enemies and loot -----------------------------------------------------------------
 
 ## One figure per placed enemy: a low box for a wolf, an upright capsule with a bow stave for
-## an archer or a frost-tipped staff for a witch, a bigger caped capsule carrying a sabre, a bow
-## and a staff for the captain (the one in his hand follows his stance), a click volume that becomes `attack`, a name-and-health
-## label and a telegraph cue above it.
+## an archer, a stalker or a frost-tipped staff for a witch, a bigger caped capsule carrying a
+## sabre, a bow and a staff for the captain (the one in his hand follows his stance), a hulking
+## pale capsule with an ice club for a troll, a click volume that becomes `attack`, a
+## name-and-health label and a telegraph cue above it.
 func _build_enemies(world: WorldDef) -> void:
 	for id in world.enemies:
 		var kind: String = world.enemies[id]["kind"]
@@ -1029,7 +1025,8 @@ func _build_enemies(world: WorldDef) -> void:
 			_add_part(root, _box_mesh(Vector3(0.12, 0.12, 0.45), colour.lightened(0.2)), Vector3(0, 0.6, 0.65))
 		else:
 			var boss := kind == "bandit_captain"
-			var size := 1.3 if boss else 1.0
+			var troll := kind == "ice_troll"
+			var size := 1.3 if boss else 1.6 if troll else 1.0
 			height = 1.8 * size + 0.2
 			var body := CapsuleMesh.new()
 			body.radius = 0.32 * size
@@ -1046,6 +1043,10 @@ func _build_enemies(world: WorldDef) -> void:
 			if kind == "frost_witch":
 				_add_part(root, _box_mesh(Vector3(0.06, 1.6, 0.06), Props.COLOR_WOOD), Vector3(0.42, 0.85, -0.2))
 				_add_part(root, _box_mesh(Vector3(0.16, 0.16, 0.16), Props.COLOR_FROST), Vector3(0.42, 1.7, -0.2))
+			elif troll:
+				# A club of ice in its right hand instead of a bow.
+				var club := _add_part(root, _box_mesh(Vector3(0.22, 1.0, 0.22), Props.COLOR_ICE), Vector3(0.62, 1.0, -0.3))
+				club.rotation.x = -0.5
 			else:
 				var bow := _add_part(root, _box_mesh(Vector3(0.06, 1.1 * size, 0.06), Props.COLOR_WOOD), Vector3(-0.42 * size, 0.9 * size, -0.2))
 				weapons["captain_bow"] = bow

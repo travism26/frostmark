@@ -26,6 +26,8 @@ const ORE_COLORS := {
 	WorldDef.KIND_TIN_ROCK: Color(0.78, 0.80, 0.84),
 	WorldDef.KIND_IRON_ROCK: Color(0.45, 0.28, 0.22),
 	WorldDef.KIND_ICE_CRYSTAL: COLOR_FROST,
+	WorldDef.KIND_COAL_ROCK: Color(0.12, 0.12, 0.14),
+	WorldDef.KIND_RICH_IRON_ROCK: Color(0.62, 0.30, 0.18),
 }
 
 static var _snow_materials := {}  # "colour|texture|snow_from" -> ShaderMaterial
