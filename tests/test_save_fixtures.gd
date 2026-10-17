@@ -46,3 +46,10 @@ func test_the_version_4_fixture_keeps_its_fire_and_kit() -> void:
 	assert_true(sim.command(Vocab.IMPORT_SAVE, {"code": _fixture(4)})["ok"])
 	assert_eq(sim.state["fires"].size(), 1, "the field fire it was saved beside still burns")
 	assert_true(int(sim.state["skills"]["woodcutting"]["xp"]) > 0, "the woodcutting it did is kept")
+
+
+func test_the_version_5_fixture_keeps_its_place_on_the_guide() -> void:
+	var sim := SimScript.new()
+	assert_true(sim.command(Vocab.IMPORT_SAVE, {"code": _fixture(5)})["ok"])
+	assert_true(sim.hints_on(), "the guide it was saved with is still on")
+	assert_eq(sim.hint(), "bank", "it cut a pine and is on its way home to bank")
