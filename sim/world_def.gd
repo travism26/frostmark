@@ -11,35 +11,72 @@ class_name WorldDef
 extends RefCounted
 
 const KIND_WALL := "wall"
+const KIND_CLIFF := "cliff"
+const KIND_OUTCROP := "outcrop"
 const KIND_GATE := "gate"
 const KIND_FIRE := "fire"
 const KIND_STASH := "stash"
 const KIND_WORKBENCH := "workbench"
 const KIND_TREE := "tree"
+const KIND_FROST_PINE := "frost_pine"
+const KIND_COPPER_ROCK := "copper_rock"
+const KIND_TIN_ROCK := "tin_rock"
+const KIND_IRON_ROCK := "iron_rock"
+const KIND_FISHING_HOLE := "fishing_hole"
+const KIND_ICE_HOLE := "ice_hole"
+const KIND_RING_GATE := "ring_gate"
 
 const REGION_OUTPOST := "outpost"
 const REGION_INNER_RING := "inner_ring"
 const REGION_RING_ONE := "ring_one"
+const REGION_RING_TWO := "ring_two"
 
 var cell_size := 1.0
-var cols := 64
-var rows := 64
-var origin: Array = [-32.0, -32.0]
+var cols := 128
+var rows := 128
+var origin: Array = [-64.0, -64.0]
 var spawn: Array = [0.5, 4.5]
 ## Where a player wakes after dying: beside the outpost fire.
 var rescue: Array = [0.5, 1.5]
 
-## Gatherable node kinds: the skill they train, the tool they need, what one success yields,
-## how many yields a node holds before it is depleted, the ticks until it regrows, and the
-## experience per success. Placed objects of these kinds get a matching entry in the state.
+## Gatherable node kinds: the skill they train and the level it needs, the tool they need (and
+## the lowest tool tier that works, "" for any), what one success yields, how many yields a
+## node holds before it is depleted, the ticks until it regrows, and the experience per
+## success. `tier` 1 nodes are the inner ring's; `tier` 2 nodes grow in ring one, need more
+## skill and pay more. Placed objects of these kinds get a matching entry in the state.
 const NODE_KINDS := {
 	KIND_TREE: {
-		"skill": "woodcutting", "level": 1, "tool": "axe", "item": "logs",
+		"tier": 1, "skill": "woodcutting", "level": 1, "tool": "axe", "tool_tier": "", "item": "logs",
 		"yield": 4, "respawn_ticks": 90, "xp": 10,
+	},
+	KIND_COPPER_ROCK: {
+		"tier": 1, "skill": "mining", "level": 1, "tool": "pickaxe", "tool_tier": "", "item": "copper_ore",
+		"yield": 4, "respawn_ticks": 100, "xp": 10,
+	},
+	KIND_TIN_ROCK: {
+		"tier": 1, "skill": "mining", "level": 1, "tool": "pickaxe", "tool_tier": "", "item": "tin_ore",
+		"yield": 4, "respawn_ticks": 100, "xp": 10,
+	},
+	KIND_FISHING_HOLE: {
+		"tier": 1, "skill": "fishing", "level": 1, "tool": "rod", "tool_tier": "", "item": "raw_fish",
+		"yield": 6, "respawn_ticks": 80, "xp": 10,
+	},
+	KIND_FROST_PINE: {
+		"tier": 2, "skill": "woodcutting", "level": 3, "tool": "axe", "tool_tier": "", "item": "logs",
+		"yield": 6, "respawn_ticks": 120, "xp": 16,
+	},
+	KIND_IRON_ROCK: {
+		"tier": 2, "skill": "mining", "level": 3, "tool": "pickaxe", "tool_tier": "bronze", "item": "iron_ore",
+		"yield": 3, "respawn_ticks": 150, "xp": 18,
+	},
+	KIND_ICE_HOLE: {
+		"tier": 2, "skill": "fishing", "level": 3, "tool": "rod", "tool_tier": "", "item": "raw_trout",
+		"yield": 5, "respawn_ticks": 120, "xp": 16,
 	},
 }
 
-## Blocking geometry: {id, kind, min: [x, z], max: [x, z], height}.
+## Blocking geometry: {id, kind, min: [x, z], max: [x, z], height}. `kind` is a wall (the
+## outpost palisade), a cliff (ring one's outer edge) or an outcrop (a rock in the field).
 var solids: Array = []
 ## Interactable placements by id: {kind, label, min, max, height, blocks}.
 var objects: Dictionary = {}
@@ -52,9 +89,13 @@ var enemies: Dictionary = {}
 var _blocked := PackedByteArray()
 
 
-## The outpost world: a walled outpost with one gate opening on its south side, placeholder
-## blocks for the fire, stash and workbench, and a stand of trees in the inner ring south
-## of the gate.
+## The first-playable world, as rings around the outpost. The walled outpost has one gate on
+## its south side, the fire, the stash and the workbench. The inner ring (out to 24 m) is safe
+## but cold: pines south and north of the walls, copper rocks to the east, tin to the west and
+## one fishing hole to the north. Ring one (out to the cliffs at 60 m) holds the wolf packs and
+## bandit archers, the better nodes (frost pines west, iron east, an ice hole north) and, at
+## its far southern edge, the barred gate to ring two with the bandit captain standing at it.
+## Ring one is only reached by walking through the inner ring.
 static func outpost() -> WorldDef:
 	var w := WorldDef.new()
 	var half := 10.0
@@ -67,6 +108,27 @@ static func outpost() -> WorldDef:
 		_solid("wall_south_west", [-half, half - t], [-gate_half_width, half]),
 		_solid("wall_south_east", [gate_half_width, half - t], [half, half]),
 	]
+	# Ring one's outer edge: ice cliffs on all four sides out to the end of the grid, open only
+	# at the ring-two gate, so no ground in the world is walkable but unreachable.
+	var edge := 60.0
+	var c := 4.0  # cliff thickness
+	w.solids.append_array([
+		_solid("cliff_north", [-edge - c, -edge - c], [edge + c, -edge], 3.0, KIND_CLIFF),
+		_solid("cliff_east", [edge, -edge - c], [edge + c, edge + c], 3.0, KIND_CLIFF),
+		_solid("cliff_west", [-edge - c, -edge - c], [-edge, edge + c], 3.0, KIND_CLIFF),
+		_solid("cliff_south_west", [-edge - c, edge], [-gate_half_width, edge + c], 3.0, KIND_CLIFF),
+		_solid("cliff_south_east", [gate_half_width, edge], [edge + c, edge + c], 3.0, KIND_CLIFF),
+		_solid("cliff_beyond_gate", [-gate_half_width, edge + 2.0], [gate_half_width, edge + c], 3.0, KIND_CLIFF),
+	])
+	# Rock outcrops in ring one, so the walk out is a route and not a straight line.
+	var outcrops := [
+		[[-6.0, 34.0], [-2.0, 38.0]], [[5.0, 39.0], [9.0, 42.0]], [[-22.0, 32.0], [-18.0, 35.0]],
+		[[21.0, 34.0], [26.0, 36.0]], [[-34.0, -32.0], [-30.0, -28.0]], [[28.0, -30.0], [33.0, -27.0]],
+		[[-30.0, 48.0], [-25.0, 52.0]], [[26.0, 50.0], [30.0, 54.0]], [[-51.0, -10.0], [-47.0, -6.0]],
+		[[48.0, -14.0], [52.0, -11.0]], [[-8.0, 48.0], [-4.0, 50.0]], [[33.0, 8.0], [36.0, 12.0]],
+	]
+	for i in outcrops.size():
+		w.solids.append(_solid("outcrop_%d" % (i + 1), outcrops[i][0], outcrops[i][1], 1.8, KIND_OUTCROP))
 	w.objects = {
 		"gate": {
 			"kind": KIND_GATE, "label": "Gate", "blocks": false, "height": 0.1,
@@ -85,20 +147,40 @@ static func outpost() -> WorldDef:
 			"kind": KIND_WORKBENCH, "label": "Workbench", "blocks": true, "height": 1.0,
 			"min": [5.0, -7.0], "max": [7.0, -6.0],
 		},
+		# Barred until the captain has fallen and the outpost has built its winch.
+		"ring_two_gate": {
+			"kind": KIND_RING_GATE, "label": "Gate to ring two", "blocks": true, "height": 3.5,
+			"min": [-gate_half_width, edge], "max": [gate_half_width, edge + 2.0],
+			"guardian": "captain", "upgrade": "ring_two_gate",
+		},
 	}
-	# Pines, one metre square, between 4 m and 12 m south of the gate.
-	var trees := [[-7.0, 14.0], [-3.0, 17.0], [3.0, 14.0], [6.0, 19.0], [-8.0, 20.0], [1.0, 21.0]]
+	# Pines, one metre square: six between 4 m and 12 m south of the gate, four north of the walls.
+	var trees := [
+		[-7.0, 14.0], [-3.0, 17.0], [3.0, 14.0], [6.0, 19.0], [-8.0, 20.0], [1.0, 21.0],
+		[-6.0, -15.0], [5.0, -14.0], [-13.0, -18.0], [12.0, -19.0],
+	]
 	for i in trees.size():
-		var at: Array = trees[i]
-		w.objects["tree_%d" % (i + 1)] = {
-			"kind": KIND_TREE, "label": "Pine", "blocks": true, "height": 3.0,
-			"min": [at[0], at[1]], "max": [at[0] + 1.0, at[1] + 1.0],
-		}
-	# A small patch just past the trees, over the line into ring one: two wolves south-west of
-	# the stand, a pack of three farther west, and a bandit archer to the south-east. Ring one
-	# proper comes later; this is enough to find a fight. Chopping the south-western pine is
-	# loud enough for the near pack to hear. The groups sit more than a fight's noise apart
-	# (CombatTable.NOISE_FIGHT), so each is fought on its own.
+		_place(w, "tree_%d" % (i + 1), KIND_TREE, "Pine", trees[i], [1.0, 1.0], 3.0)
+	var copper := [[13.0, -7.0], [17.0, -3.0], [13.0, 1.0]]
+	for i in copper.size():
+		_place(w, "copper_%d" % (i + 1), KIND_COPPER_ROCK, "Copper rock", copper[i], [2.0, 2.0], 1.0)
+	var tin := [[-15.0, -7.0], [-19.0, -3.0], [-15.0, 1.0]]
+	for i in tin.size():
+		_place(w, "tin_%d" % (i + 1), KIND_TIN_ROCK, "Tin rock", tin[i], [2.0, 2.0], 1.0)
+	_place(w, "fishing_hole", KIND_FISHING_HOLE, "Fishing hole", [-1.0, -19.0], [2.0, 2.0], 0.1)
+	var frost := [[-42.0, 8.0], [-46.0, 13.0], [-39.0, 15.0], [-44.0, 3.0]]
+	for i in frost.size():
+		_place(w, "frost_pine_%d" % (i + 1), KIND_FROST_PINE, "Frost pine", frost[i], [1.0, 1.0], 4.0)
+	var iron := [[40.0, 6.0], [45.0, 10.0], [41.0, 14.0]]
+	for i in iron.size():
+		_place(w, "iron_%d" % (i + 1), KIND_IRON_ROCK, "Iron rock", iron[i], [2.0, 2.0], 1.2)
+	_place(w, "ice_hole", KIND_ICE_HOLE, "Ice hole", [-9.0, -43.0], [2.0, 2.0], 0.1)
+	# Ring one's enemies. The near groups sit just past the southern pines: two wolves south-west,
+	# a pack of three farther west, a bandit archer south-east. Chopping the south-western pine is
+	# loud enough for the near pack to hear. Farther out: an archer camp by the iron, a pack among
+	# the frost pines, a pack by the ice hole, two archers flanking the road south, and the
+	# captain at the ring-two gate. Every group sits more than a fight's noise
+	# (CombatTable.NOISE_FIGHT) from the next, so each is fought on its own.
 	var placements := [
 		["wolf_1", "wolf", [-7.5, 28.5], "west_pack"],
 		["wolf_2", "wolf", [-5.5, 29.5], "west_pack"],
@@ -106,20 +188,38 @@ static func outpost() -> WorldDef:
 		["wolf_4", "wolf", [-27.5, 28.5], "far_pack"],
 		["wolf_5", "wolf", [-24.5, 29.5], "far_pack"],
 		["archer_1", "bandit_archer", [14.5, 28.5], "archer_1"],
+		["archer_2", "bandit_archer", [37.5, 27.5], "east_camp"],
+		["archer_3", "bandit_archer", [47.5, 24.5], "east_camp"],
+		["wolf_6", "wolf", [-45.5, 25.5], "pine_pack"],
+		["wolf_7", "wolf", [-47.5, 27.5], "pine_pack"],
+		["wolf_8", "wolf", [10.5, -43.5], "north_pack"],
+		["wolf_9", "wolf", [12.5, -41.5], "north_pack"],
+		["wolf_10", "wolf", [8.5, -45.5], "north_pack"],
+		["archer_4", "bandit_archer", [-15.5, 44.5], "archer_4"],
+		["archer_5", "bandit_archer", [17.5, 45.5], "archer_5"],
+		["captain", "bandit_captain", [0.5, 56.5], "captain"],
 	]
 	for p in placements:
 		w.enemies[p[0]] = {"kind": p[1], "home": p[2], "pack": p[3]}
 	w.regions = [
 		{"name": REGION_OUTPOST, "polygon": _rect_polygon([-half, -half], [half, half])},
 		{"name": REGION_INNER_RING, "polygon": _rect_polygon([-24.0, -24.0], [24.0, 24.0])},
-		{"name": REGION_RING_ONE, "polygon": _rect_polygon([-32.0, -32.0], [32.0, 32.0])},
+		{"name": REGION_RING_ONE, "polygon": _rect_polygon([-edge, -edge], [edge, edge])},
+		{"name": REGION_RING_TWO, "polygon": _rect_polygon([-64.0, -64.0], [64.0, 64.0])},
 	]
 	w.bake()
 	return w
 
 
-static func _solid(id: String, min_xz: Array, max_xz: Array, height := 2.5) -> Dictionary:
-	return {"id": id, "kind": KIND_WALL, "min": min_xz, "max": max_xz, "height": height}
+static func _place(w: WorldDef, id: String, kind: String, label: String, at: Array, size: Array, height: float) -> void:
+	w.objects[id] = {
+		"kind": kind, "label": label, "blocks": true, "height": height,
+		"min": [at[0], at[1]], "max": [at[0] + size[0], at[1] + size[1]],
+	}
+
+
+static func _solid(id: String, min_xz: Array, max_xz: Array, height := 2.5, kind := KIND_WALL) -> Dictionary:
+	return {"id": id, "kind": kind, "min": min_xz, "max": max_xz, "height": height}
 
 
 static func _rect_polygon(min_xz: Array, max_xz: Array) -> Array:
@@ -142,9 +242,12 @@ func bake() -> void:
 			_block_rect(o["min"], o["max"])
 
 
+## Blocks every cell whose centre lies inside the rectangle, visiting only the cells it spans.
 func _block_rect(min_xz: Array, max_xz: Array) -> void:
-	for y in rows:
-		for x in cols:
+	var lo := cell_of(Vector2(min_xz[0], min_xz[1]))
+	var hi := cell_of(Vector2(max_xz[0], max_xz[1]))
+	for y in range(maxi(0, lo.y), mini(rows, hi.y + 1)):
+		for x in range(maxi(0, lo.x), mini(cols, hi.x + 1)):
 			var c := cell_center(Vector2i(x, y))
 			if c.x >= min_xz[0] and c.x < max_xz[0] and c.y >= min_xz[1] and c.y < max_xz[1]:
 				_blocked[y * cols + x] = 1

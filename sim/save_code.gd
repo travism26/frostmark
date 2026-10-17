@@ -85,6 +85,8 @@ static func migrate(snapshot: Dictionary, target: int) -> Variant:
 				snap = _v1_to_v2(snap)
 			2:
 				snap = _v2_to_v3(snap)
+			3:
+				snap = _v3_to_v4(snap)
 			_:
 				return null
 		version = int(snap["version"])
@@ -142,4 +144,16 @@ static func _v2_to_v3(snap: Dictionary) -> Dictionary:
 				break
 			if slots[i] == null:
 				slots[i] = kit.pop_front()
+	return snap
+
+
+## Version 3 (slice 4) had one patch of ring one and no field fires, cooking or upgrades to
+## build. Version 4 adds field fires (none burning), the guardians defeated so far (none), and
+## leaves everything else as it was: the new nodes and enemies (the rest of ring one and the
+## captain) load full and at home, and the stash keeps its capacity.
+static func _v3_to_v4(snap: Dictionary) -> Dictionary:
+	snap["version"] = 4
+	snap["fires"] = {}
+	snap["fire_seq"] = 0
+	snap["bosses_defeated"] = []
 	return snap

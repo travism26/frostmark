@@ -2,8 +2,8 @@
 ##
 ## Every command the presentation can issue and every event the simulation can emit
 ## is named here once, so later slices extend this list instead of inventing strings.
-## Commands not yet in IMPLEMENTED are accepted by `Sim.command()` and answered with
-## `not_implemented` until their slice lands.
+## Commands not in IMPLEMENTED are accepted by `Sim.command()` and answered with
+## `not_implemented` until their slice lands (none are left in the first playable).
 ## The human-readable version of this vocabulary is docs/simulation.md.
 class_name SimVocab
 extends RefCounted
@@ -13,29 +13,31 @@ extends RefCounted
 const MOVE_TO := "move_to"          # {pos: [x, z]}            walk to a ground point
 const INTERACT := "interact"        # {object_id: String}      walk to an object or loot pile and start its action
 const GATHER := "gather"            # {object_id}              walk to a node and gather until it is spent
-const COOK := "cook"                # a later slice
+const COOK := "cook"                # {index}                  cook a pack slot's raw food at a fire, one at a time
 const SMITH := "smith"              # {recipe}                 craft a recipe at the workbench
 const EQUIP := "equip"              # {index} | {unequip: slot} equip a pack item, or unequip into the pack
 const EAT := "eat"                  # {index}                  eat food from a pack slot; costs the tick
 const DROP := "drop"                # {index, count?}          drop from a pack slot
 const DEPOSIT := "deposit"          # {index, count?}          pack slot to stash, inside the outpost
 const WITHDRAW := "withdraw"        # {index, count?}          stash slot to pack, inside the outpost
-const BUILD := "build"              # a later slice
+const BUILD := "build"              # {upgrade}                build an outpost upgrade from the stash, inside the outpost
 const ATTACK := "attack"            # {enemy_id}               close to reach and strike every ready tick
 const CROSS_GATE := "cross_gate"    # {}                       walk through the gate to its other side
 const EXPORT_SAVE := "export_save"  # {}                       returns {ok, reason, code}
 const IMPORT_SAVE := "import_save"  # {code}                   replaces the state from a save code
+const LIGHT_FIRE := "light_fire"    # {}                       burn logs from the pack into a field fire where you stand
 
-## Every command kind, in spec order. `Sim.command()` rejects anything else as `unknown_command`.
+## Every command kind: the spec's fifteen in spec order, then the brief's field fire.
+## `Sim.command()` rejects anything else as `unknown_command`.
 const COMMANDS: Array[String] = [
 	MOVE_TO, INTERACT, GATHER, COOK, SMITH, EQUIP, EAT, DROP, DEPOSIT, WITHDRAW,
-	BUILD, ATTACK, CROSS_GATE, EXPORT_SAVE, IMPORT_SAVE,
+	BUILD, ATTACK, CROSS_GATE, EXPORT_SAVE, IMPORT_SAVE, LIGHT_FIRE,
 ]
 
 ## Commands that do something in this slice. The rest answer `not_implemented`.
 const IMPLEMENTED: Array[String] = [
-	MOVE_TO, INTERACT, GATHER, SMITH, EQUIP, EAT, DROP, DEPOSIT, WITHDRAW, ATTACK, CROSS_GATE,
-	EXPORT_SAVE, IMPORT_SAVE,
+	MOVE_TO, INTERACT, GATHER, COOK, SMITH, EQUIP, EAT, DROP, DEPOSIT, WITHDRAW, BUILD, ATTACK,
+	CROSS_GATE, EXPORT_SAVE, IMPORT_SAVE, LIGHT_FIRE,
 ]
 
 # --- Events ---------------------------------------------------------------------
@@ -77,9 +79,14 @@ const EV_ENEMY_RESPAWNED := "enemy_respawned"    # {enemy_id, pos}
 const EV_LOOT_DROPPED := "loot_dropped"          # {loot_id, item, count, pos}
 const EV_PICKED_UP := "picked_up"                # {loot_id, item, count}
 const EV_LOOT_GONE := "loot_gone"                # {loot_id}  lay too long; the snow took it
-
-# Reserved for later slices, named now so the presentation can bind to them early.
-const EV_BUILT := "built"
+const EV_ENEMY_STANCE := "enemy_stance"          # {enemy_id, action, style, at}  a weapon change, announced a tick ahead
+# Cooking, field fires, the outpost and the ring gate
+const EV_COOKED := "cooked"                      # {item, output, burnt, xp}  output is "" when it burnt
+const EV_FIRE_LIT := "fire_lit"                  # {fire_id, pos, expires_tick}
+const EV_FIRE_OUT := "fire_out"                  # {fire_id}
+const EV_BUILT := "built"                        # {upgrade, effects}
+const EV_RING_GATE_OPENED := "ring_gate_opened"  # {object_id}  its guardian is dead and its upgrade built
+const EV_RING_TWO_REACHED := "ring_two_reached"  # {object_id}  walked through the open gate; the first playable's ending
 
 ## The combatant id of the player in `hit` and `missed` events; enemies use their own ids.
 const PLAYER := "player"
@@ -92,6 +99,7 @@ const ACTION_WARM := "warm"
 const ACTION_STASH := "stash"
 const ACTION_CRAFT := "craft"
 const ACTION_PICK_UP := "pick_up"
+const ACTION_RING_GATE := "ring_gate"
 
 # --- Rejection reasons ------------------------------------------------------------
 
@@ -124,6 +132,15 @@ const REASON_IN_OUTPOST := "in_outpost"
 const REASON_NO_AMMO := "no_ammo"
 const REASON_NOT_FOOD := "not_food"
 const REASON_ALREADY_EATING := "already_eating"
+# Gathering tools, cooking, smithing and the outpost
+const REASON_TOOL_TOO_WEAK := "tool_too_weak"
+const REASON_NOT_AT_FIRE := "not_at_fire"
+const REASON_NOT_COOKABLE := "not_cookable"
+const REASON_NOTHING_LEFT := "nothing_left"
+const REASON_TIER_CAPPED := "tier_capped"
+const REASON_UNKNOWN_UPGRADE := "unknown_upgrade"
+const REASON_ALREADY_BUILT := "already_built"
+const REASON_UPGRADE_LOCKED := "upgrade_locked"
 # Save codes
 const REASON_BAD_CODE := "bad_code"
 const REASON_BAD_CHECKSUM := "bad_checksum"
