@@ -845,6 +845,7 @@ func _build_world(world: WorldDef) -> void:
 					_add_fade_twin(box)  # the twin follows the new look
 				_add_box_body(box, _box_size(s["min"], s["max"], s["height"]), Vector3.ZERO)
 	_add_cliff_forest(world)
+	_world.add_child(WorldDressing.dressing(world))
 
 	for id in world.objects:
 		var o: Dictionary = world.objects[id]

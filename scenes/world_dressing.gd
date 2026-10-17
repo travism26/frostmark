@@ -354,6 +354,181 @@ static func _tri_shade(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, ca: 
 	st.add_vertex(c)
 
 
+# --- Set dressing ------------------------------------------------------------------------
+
+## Dressing is kept this far from any solid or object footprint, so it never crowds a thing
+## the player clicks, and this far from where an enemy stands.
+const DRESSING_MARGIN := 1.3
+const DRESSING_HOME_MARGIN := 3.0
+const PINE_MARGIN := 2.5
+const PINE_HOME_MARGIN := 5.0
+## Pines grow only in this outer band of ring one, where the player rarely walks, since
+## dressing has no collision and a path may pass through it.
+const PINE_BAND_FROM := 42.0
+## The wind the drifts lie along, as a turn about the up axis.
+const WIND_ANGLE := 0.55
+
+## Rocks, drifts, bushes, logs, stumps and a few pines across the inner ring and ring one,
+## and the clutter of a lived-in yard inside the walls: one multimesh per model surface,
+## nothing clickable, seeded so every session sees the same frontier.
+static func dressing(world: WorldDef) -> Node3D:
+	var root := Node3D.new()
+	root.name = "Dressing"
+	var placer := Placer.new(world, 41)
+	# Snow drifts: low blobs lying along the prevailing wind.
+	var drift := SphereMesh.new()
+	drift.radius = 1.0
+	drift.height = 2.0
+	drift.radial_segments = 9
+	drift.rings = 4
+	drift.material = Props.flat(Color(0.95, 0.97, 1.0))
+	var drifts: Array[Transform3D] = []
+	for p in placer.scatter(42, 11.0, 59.0, 2.5, 0.4, DRESSING_HOME_MARGIN):
+		var basis := Basis(Vector3.UP, WIND_ANGLE + placer.rng.randf_range(-0.3, 0.3)).scaled(Vector3(placer.rng.randf_range(1.8, 3.4), placer.rng.randf_range(0.11, 0.2), placer.rng.randf_range(0.7, 1.3)))
+		drifts.append(Transform3D(basis, Vector3(p.x, 0.0, p.y)))
+	root.add_child(multimesh(drift, drifts))
+	var rock_tint := Color(0.52, 0.58, 0.72)
+	for name in ["rock_smallA", "rock_smallB", "rock_smallC"]:
+		_scatter_model(root, Props.NATURE + name + ".glb", 0.5, 0.6, rock_tint, placer.spots(24, 11.0, 59.0, 1.6, 0.7, 1.5))
+	for name in ["stone_smallA", "stone_smallB"]:
+		_scatter_model(root, Props.NATURE + name + ".glb", 0.55, 0.3, Color(0.84, 0.90, 0.98), placer.spots(14, 11.0, 59.0, 1.8, 0.8, 1.6))
+	for name in ["plant_bush", "plant_bushSmall"]:
+		_scatter_model(root, Props.NATURE + name + ".glb", 0.6, 0.5, Color(0.42, 0.62, 0.55), placer.spots(22, 11.0, 59.0, 1.6, 0.8, 1.4))
+	_scatter_model(root, Props.NATURE + "log.glb", 0.32, 0.5, Color.WHITE, placer.spots(18, 11.0, 59.0, 1.8, 0.9, 1.3))
+	_scatter_model(root, Props.NATURE + "stump_old.glb", 0.4, 0.5, Color.WHITE, placer.spots(16, 11.0, 59.0, 1.8, 0.9, 1.3))
+	var pines := {"tree_pineSmallA": [2.4, 14], "tree_pineRoundA": [3.3, 8], "tree_pineDefaultB": [3.5, 8], "tree_pineTallB_detailed": [4.6, 8]}
+	for name in pines:
+		var spots := placer.spots(pines[name][1], PINE_BAND_FROM, 59.0, 3.0, 0.85, 1.15, PINE_MARGIN, PINE_HOME_MARGIN)
+		_scatter_model(root, Props.NATURE + name + ".glb", pines[name][0], 0.4, Color.WHITE, spots)
+	root.add_child(yard_props())
+	return root
+
+
+## The keeper's clutter inside the walls: barrels by the stash, crates by the workbench, a
+## log stack and a bucket by the fire, a signpost inside the gate and a bedroll by the tent.
+static func yard_props() -> Node3D:
+	var yard := Node3D.new()
+	yard.name = "Yard"
+	var items := [
+		[Props.SURVIVAL + "barrel.glb", 0.9, Vector2(-8.2, -8.0), 0.3],
+		[Props.SURVIVAL + "barrel.glb", 0.85, Vector2(-7.4, -8.5), 1.9],
+		[Props.SURVIVAL + "box.glb", 0.7, Vector2(8.3, -8.2), 0.2],
+		[Props.SURVIVAL + "box.glb", 0.6, Vector2(8.1, -7.3), 0.9],
+		[Props.NATURE + "log_stackLarge.glb", 0.55, Vector2(-8.4, 1.5), PI * 0.5],
+		[Props.SURVIVAL + "bucket.glb", 0.35, Vector2(1.9, 1.4), 0.0],
+		[Props.SURVIVAL + "signpost.glb", 1.5, Vector2(-3.4, 8.0), PI * 0.1],
+		[Props.SURVIVAL + "bedroll.glb", 0.22, Vector2(4.6, 8.0), PI * 0.4],
+		[Props.SURVIVAL + "tree-log.glb", 0.3, Vector2(-8.5, 3.4), PI * 0.5],
+	]
+	for item in items:
+		var prop := Props.model(item[0], item[1], 0.6)
+		prop.position = Vector3(item[2].x, 0.0, item[2].y)
+		prop.rotation.y = item[3]
+		yard.add_child(prop)
+	var drift := SphereMesh.new()
+	drift.radius = 1.0
+	drift.height = 2.0
+	drift.radial_segments = 9
+	drift.rings = 4
+	drift.material = Props.flat(Color(0.95, 0.97, 1.0))
+	var corners: Array[Transform3D] = []
+	for corner in [Vector2(-8.3, -8.3), Vector2(8.3, -8.3), Vector2(-8.3, 8.2)]:
+		corners.append(Transform3D(Basis(Vector3.UP, corner.angle()).scaled(Vector3(1.6, 0.14, 1.1)), Vector3(corner.x, 0.0, corner.y)))
+	yard.add_child(multimesh(drift, corners))
+	return yard
+
+
+## Draws one Kenney model, scaled to `height` and snow-capped like a prop, once per transform:
+## one multimesh per mesh, carrying the prop's materials.
+static func _scatter_model(parent: Node3D, path: String, height: float, snow_from: float, tint: Color, transforms: Array[Transform3D]) -> void:
+	if transforms.is_empty():
+		return
+	var holder := Props.model(path, height, snow_from, tint)
+	var inner := holder.get_child(0) as Node3D
+	for node in holder.find_children("*", "MeshInstance3D", true, false):
+		var source := node as MeshInstance3D
+		var mesh := source.mesh.duplicate() as Mesh
+		for surface in mesh.get_surface_count():
+			mesh.surface_set_material(surface, source.get_surface_override_material(surface))
+		var local := Transform3D(inner.basis, inner.position) * Props._relative_transform(inner, source)
+		var placed: Array[Transform3D] = []
+		for t in transforms:
+			placed.append(t * local)
+		parent.add_child(multimesh(mesh, placed))
+	holder.free()
+
+
+## Picks dressing spots on walkable ground: in a square band `from`..`to` metres from the
+## centre, clear of every footprint and enemy home, off the stretch the camera looks over at
+## the ring-two gate, and at least `spacing` from each other (a coarse grid keeps that cheap).
+class Placer:
+	var rng := RandomNumberGenerator.new()
+	var _world: WorldDef
+	var _rects: Array = []  # [min: Vector2, max: Vector2] per solid and object footprint
+	var _homes: Array[Vector2] = []
+	var _taken := {}  # Vector2i cell -> Array[Vector2] of spots in it
+	const CELL := 3.0
+
+	func _init(world: WorldDef, seed_value: int) -> void:
+		_world = world
+		rng.seed = seed_value
+		for s in world.solids:
+			_rects.append([Vector2(s["min"][0], s["min"][1]), Vector2(s["max"][0], s["max"][1])])
+		for id in world.objects:
+			var o: Dictionary = world.objects[id]
+			_rects.append([Vector2(o["min"][0], o["min"][1]), Vector2(o["max"][0], o["max"][1])])
+		for id in world.enemies:
+			_homes.append(Vector2(world.enemies[id]["home"][0], world.enemies[id]["home"][1]))
+		# The gate approach, inside and out, stays clear so the way home always reads.
+		_rects.append([Vector2(-3.5, -1.0), Vector2(3.5, 15.0)])
+
+	## `count` spots with a random turn and a scale between `scale_min` and `scale_max`.
+	func spots(count: int, from: float, to: float, spacing: float, scale_min: float, scale_max: float, margin := DRESSING_MARGIN, home_margin := DRESSING_HOME_MARGIN) -> Array[Transform3D]:
+		var out: Array[Transform3D] = []
+		for p in scatter(count, from, to, spacing, margin, home_margin):
+			var basis := Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3.ONE * rng.randf_range(scale_min, scale_max))
+			out.append(Transform3D(basis, Vector3(p.x, 0.0, p.y)))
+		return out
+
+	func scatter(count: int, from: float, to: float, spacing: float, margin: float, home_margin: float) -> Array[Vector2]:
+		var out: Array[Vector2] = []
+		var tries := 0
+		while out.size() < count and tries < count * 60:
+			tries += 1
+			var p := Vector2(rng.randf_range(-to, to), rng.randf_range(-to, to))
+			var reach := maxf(absf(p.x), absf(p.y))
+			if reach < from or reach >= to:
+				continue
+			if absf(p.x) < 24.0 and p.y > 50.0:
+				continue
+			if not _world.is_walkable(p) or not _clear(p, margin, home_margin) or not _spaced(p, spacing):
+				continue
+			out.append(p)
+			var cell := Vector2i(int(floor(p.x / CELL)), int(floor(p.y / CELL)))
+			if not _taken.has(cell):
+				_taken[cell] = []
+			(_taken[cell] as Array).append(p)
+		return out
+
+	func _clear(p: Vector2, margin: float, home_margin: float) -> bool:
+		for r in _rects:
+			if p.x > r[0].x - margin and p.x < r[1].x + margin and p.y > r[0].y - margin and p.y < r[1].y + margin:
+				return false
+		for h in _homes:
+			if p.distance_to(h) < home_margin:
+				return false
+		return true
+
+	func _spaced(p: Vector2, spacing: float) -> bool:
+		var cell := Vector2i(int(floor(p.x / CELL)), int(floor(p.y / CELL)))
+		for dx in range(-1, 2):
+			for dy in range(-1, 2):
+				for q in _taken.get(cell + Vector2i(dx, dy), []):
+					if p.distance_to(q) < spacing:
+						return false
+		return true
+
+
 # --- Shared helpers ----------------------------------------------------------------------
 
 ## One MultiMeshInstance3D drawing `mesh` once per transform. Dressing never casts a click
