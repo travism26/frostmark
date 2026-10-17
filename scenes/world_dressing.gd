@@ -58,11 +58,30 @@ static func _ground_material(base: Color, shade: Color, sparkle: float, drift_co
 	return m
 
 
-## The ring look's palette tint over every ground material (the atmosphere node calls this
-## whenever the tint at the character changes).
+## The ring look's palette tint over the yard (the atmosphere node calls this whenever the
+## tint at the character changes). The open snowfield ignores it: it is painted by ring.
 static func apply_tint(tint: Color) -> void:
 	for m in _ground_materials:
 		m.set_shader_parameter("tint", tint)
+
+
+## Paints the open snowfield by ring: each ring's `snow_tone` from the ring-look table out to
+## its edge (the reach of its region polygon), stepping to the next across a short band, so
+## the snow itself says where one ring ends and the next begins.
+static func paint_rings(material: ShaderMaterial, world: WorldDef) -> void:
+	var names := RingLook.rings(world)
+	var edges := Vector3.ZERO
+	for i in mini(3, names.size()):
+		var reach := 0.0
+		for p in world.regions[i]["polygon"]:
+			reach = maxf(reach, maxf(absf(p[0]), absf(p[1])))
+		edges[i] = reach
+	material.set_shader_parameter("ring_tones", true)
+	material.set_shader_parameter("ring_edges", edges)
+	var slots := ["tone_outpost", "tone_inner", "tone_one", "tone_two"]
+	for i in slots.size():
+		var ring: String = names[mini(i, names.size() - 1)]
+		material.set_shader_parameter(slots[i], RingLook.entry(ring)["snow_tone"])
 
 
 ## One seamless tile of soft fractal noise, generated once (deterministic seed) so the

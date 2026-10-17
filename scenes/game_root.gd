@@ -827,6 +827,7 @@ func _build_world(world: WorldDef) -> void:
 	var plane := PlaneMesh.new()
 	plane.size = Vector2(width, depth) * 2.5  # snow runs on past the cliffs; only the world is clickable
 	plane.material = WorldDressing.snowfield_material()
+	WorldDressing.paint_rings(plane.material, world)
 	ground.mesh = plane
 	ground.position = centre
 	_world.add_child(ground)
