@@ -47,7 +47,7 @@ const BANNER_MAX_WIDTH := 580.0
 
 var sim: Sim
 var _panel := PANEL_NONE
-var _tab := IconTable.TAB_PACK
+var _tab := ""  # the tab shown; set by the first show_tab in _ready
 var _folded := false  # the panel shows only its tab strip
 var _warmth: Orb
 var _health: Orb
@@ -113,6 +113,11 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	# The panel hugs its open page: its parent is no container, so shrink it by hand once the
+	# page change has settled into the minimum size.
+	var wanted := _side.get_combined_minimum_size()
+	if not is_equal_approx(_side.size.y, wanted.y):
+		_side.size = Vector2(_side.size.x, wanted.y)
 	if _banner_left > 0.0:
 		_banner_left -= delta
 		_banner_box.modulate.a = clampf(_banner_left / 0.6, 0.0, 1.0)
@@ -157,8 +162,6 @@ func show_tab(tab: String) -> void:
 	for t in _pages:
 		(_pages[t] as Control).visible = t == tab and not _folded
 		(_tab_buttons[t] as Button).set_pressed_no_signal(t == tab and not _folded)
-	_side.custom_minimum_size = Vector2.ZERO
-	_side.reset_size()
 	refresh()
 
 
