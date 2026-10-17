@@ -45,7 +45,7 @@ const UPGRADES := {
 	"waystone": {
 		"label": "Ring-one waystone", "cost": {"iron_ore": 10, "bronze_bar": 6, "logs": 10},
 		"requires": ["ring_two_gate"], "effects": {"waystone": "ring_one"},
-		"locked": "Waystones wake when ring two opens.",
+		"locked": "Waystones wake in a later slice.",
 	},
 }
 
