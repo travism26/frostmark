@@ -36,8 +36,10 @@ static func load_from(path := PATH) -> AudioSettings:
 	return settings
 
 
+## Writes these settings, keeping whatever else the file holds (the interface section).
 func save_to(path := PATH) -> bool:
 	var cfg := ConfigFile.new()
+	cfg.load(path)  # a missing or unreadable file starts fresh
 	cfg.set_value(SECTION, "volume", volume)
 	cfg.set_value(SECTION, "music", music)
 	cfg.set_value(SECTION, "muted", muted)
