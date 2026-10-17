@@ -4,7 +4,7 @@
 ## is how many fit in one pack or stash slot; 1 means the item never stacks. `slot` is the
 ## equipment slot the item goes in, or "" for materials. `tool` names what a tool counts as
 ## for gathering ("axe" for woodcutting, "pickaxe" for mining, "rod" for fishing). `tier` is
-## the gear tier the brief shows on the character (wooden, bronze, iron); a better tool
+## the gear tier the brief shows on the character (wooden, bronze, iron, steel); a better tool
 ## gathers faster and surer. A weapon carries its combat `style`, `power` (damage per hit
 ## before the style edge), `speed` (ticks between swings), `reach` (metres) and, for a ranged
 ## weapon, the `ammo` item each shot uses (arrows for a bow, frost shards for a staff's cast).
@@ -25,8 +25,9 @@ const TOOL_ROD := "rod"
 const TIER_WOODEN := "wooden"
 const TIER_BRONZE := "bronze"
 const TIER_IRON := "iron"
-## The gear tiers in order. A tier's rank is its index: wooden 0, bronze 1, iron 2.
-const TIERS: Array[String] = [TIER_WOODEN, TIER_BRONZE, TIER_IRON]
+const TIER_STEEL := "steel"
+## The gear tiers in order. A tier's rank is its index: wooden 0, bronze 1, iron 2, steel 3.
+const TIERS: Array[String] = [TIER_WOODEN, TIER_BRONZE, TIER_IRON, TIER_STEEL]
 
 const ITEMS := {
 	# Materials
@@ -45,12 +46,18 @@ const ITEMS := {
 	"bronze_bar": {
 		"label": "Bronze bar", "stack": 10, "weight": 1, "value": 8, "slot": "",
 	},
-	# Nothing in the first playable can smelt this; the workbench lists it to show the cap.
-	"iron_bar": {
-		"label": "Iron bar", "stack": 10, "weight": 2, "value": 20, "slot": "",
+	# Ring two's seams. Coal and iron ore smelt into steel once the blast furnace is built.
+	"coal": {
+		"label": "Coal", "stack": 10, "weight": 1, "value": 6, "slot": "",
+	},
+	"steel_bar": {
+		"label": "Steel bar", "stack": 10, "weight": 2, "value": 30, "slot": "",
 	},
 	"wolf_pelt": {
 		"label": "Wolf pelt", "stack": 5, "weight": 1, "value": 8, "slot": "",
+	},
+	"troll_hide": {
+		"label": "Troll hide", "stack": 5, "weight": 2, "value": 20, "slot": "",
 	},
 	"arrows": {
 		"label": "Arrows", "stack": 100, "weight": 0, "value": 1, "slot": "",
@@ -80,6 +87,14 @@ const ITEMS := {
 		"label": "Cooked trout", "stack": 10, "weight": 1, "value": 12, "slot": "",
 		"heal": 40, "heal_ticks": 5,
 	},
+	"raw_char": {
+		"label": "Raw char", "stack": 10, "weight": 1, "value": 6, "slot": "",
+		"heal": 8, "heal_ticks": 2,
+	},
+	"cooked_char": {
+		"label": "Cooked char", "stack": 10, "weight": 1, "value": 18, "slot": "",
+		"heal": 56, "heal_ticks": 7,
+	},
 	# Tools
 	"wooden_axe": {
 		"label": "Wooden axe", "stack": 1, "weight": 2, "value": 5, "slot": SLOT_TOOL,
@@ -93,6 +108,10 @@ const ITEMS := {
 		"label": "Iron axe", "stack": 1, "weight": 3, "value": 60, "slot": SLOT_TOOL,
 		"tool": TOOL_AXE, "tier": TIER_IRON,
 	},
+	"steel_axe": {
+		"label": "Steel axe", "stack": 1, "weight": 3, "value": 120, "slot": SLOT_TOOL,
+		"tool": TOOL_AXE, "tier": TIER_STEEL,
+	},
 	"wooden_pickaxe": {
 		"label": "Wooden pickaxe", "stack": 1, "weight": 2, "value": 6, "slot": SLOT_TOOL,
 		"tool": TOOL_PICKAXE, "tier": TIER_WOODEN,
@@ -104,6 +123,10 @@ const ITEMS := {
 	"iron_pickaxe": {
 		"label": "Iron pickaxe", "stack": 1, "weight": 3, "value": 60, "slot": SLOT_TOOL,
 		"tool": TOOL_PICKAXE, "tier": TIER_IRON,
+	},
+	"steel_pickaxe": {
+		"label": "Steel pickaxe", "stack": 1, "weight": 3, "value": 120, "slot": SLOT_TOOL,
+		"tool": TOOL_PICKAXE, "tier": TIER_STEEL,
 	},
 	"fishing_rod": {
 		"label": "Fishing rod", "stack": 1, "weight": 1, "value": 6, "slot": SLOT_TOOL,
@@ -121,6 +144,10 @@ const ITEMS := {
 	"iron_sword": {
 		"label": "Iron sword", "stack": 1, "weight": 4, "value": 80, "slot": SLOT_WEAPON,
 		"style": "melee", "power": 9, "speed": 2, "reach": 1.5, "tier": TIER_IRON,
+	},
+	"steel_sword": {
+		"label": "Steel sword", "stack": 1, "weight": 4, "value": 160, "slot": SLOT_WEAPON,
+		"style": "melee", "power": 11, "speed": 2, "reach": 1.5, "tier": TIER_STEEL,
 	},
 	"wooden_bow": {
 		"label": "Wooden bow", "stack": 1, "weight": 2, "value": 20, "slot": SLOT_WEAPON,
@@ -146,6 +173,14 @@ const ITEMS := {
 		"label": "Iron staff", "stack": 1, "weight": 2, "value": 86, "slot": SLOT_WEAPON,
 		"style": "magic", "power": 8, "speed": 2, "reach": 6.0, "ammo": "frost_shards", "tier": TIER_IRON,
 	},
+	"steel_bow": {
+		"label": "Steel bow", "stack": 1, "weight": 2, "value": 168, "slot": SLOT_WEAPON,
+		"style": "ranged", "power": 10, "speed": 2, "reach": 8.0, "ammo": "arrows", "tier": TIER_STEEL,
+	},
+	"steel_staff": {
+		"label": "Steel staff", "stack": 1, "weight": 2, "value": 172, "slot": SLOT_WEAPON,
+		"style": "magic", "power": 10, "speed": 2, "reach": 6.0, "ammo": "frost_shards", "tier": TIER_STEEL,
+	},
 	# Armour
 	"wooden_armour": {
 		"label": "Wooden armour", "stack": 1, "weight": 4, "value": 16, "slot": SLOT_ARMOUR,
@@ -158,6 +193,10 @@ const ITEMS := {
 	"iron_armour": {
 		"label": "Iron armour", "stack": 1, "weight": 6, "value": 90, "slot": SLOT_ARMOUR,
 		"defence": 3, "tier": TIER_IRON,
+	},
+	"steel_armour": {
+		"label": "Steel armour", "stack": 1, "weight": 7, "value": 180, "slot": SLOT_ARMOUR,
+		"defence": 4, "tier": TIER_STEEL,
 	},
 }
 
@@ -190,12 +229,12 @@ static func tool(kind: String) -> String:
 	return ITEMS[kind].get("tool", "")
 
 
-## The item's gear tier ("wooden", "bronze", "iron"), or "" for materials and food.
+## The item's gear tier ("wooden", "bronze", "iron", "steel"), or "" for materials and food.
 static func tier(kind: String) -> String:
 	return ITEMS[kind].get("tier", "") if ITEMS.has(kind) else ""
 
 
-## A tier's rank: wooden 0, bronze 1, iron 2, and -1 for "" or anything unknown.
+## A tier's rank: wooden 0, bronze 1, iron 2, steel 3, and -1 for "" or anything unknown.
 static func tier_rank(tier_name: String) -> int:
 	return TIERS.find(tier_name)
 

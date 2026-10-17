@@ -51,7 +51,7 @@ func test_craft_frees_the_input_slot_for_the_output() -> void:
 func test_craft_needs_the_inputs() -> void:
 	var sim := _at_workbench([{"item": "logs", "count": 1}])
 	assert_eq(sim.command(Vocab.SMITH, {"recipe": "wooden_club"})["reason"], Vocab.REASON_MISSING_INPUTS)
-	assert_eq(sim.command(Vocab.SMITH, {"recipe": "steel_sword"})["reason"], Vocab.REASON_UNKNOWN_RECIPE)
+	assert_eq(sim.command(Vocab.SMITH, {"recipe": "mithril_sword"})["reason"], Vocab.REASON_UNKNOWN_RECIPE)
 
 
 func test_craft_needs_the_workbench() -> void:

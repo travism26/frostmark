@@ -91,6 +91,8 @@ static func migrate(snapshot: Dictionary, target: int) -> Variant:
 				snap = _v4_to_v5(snap)
 			5:
 				snap = _v5_to_v6(snap)
+			6:
+				snap = _v6_to_v7(snap)
 			_:
 				return null
 		version = int(snap["version"])
@@ -180,4 +182,15 @@ static func _v5_to_v6(snap: Dictionary) -> Dictionary:
 	var skills: Variant = snap.get("skills")
 	if skills is Dictionary and not skills.has("magic"):
 		skills["magic"] = {"xp": 0, "level": 1}
+	return snap
+
+
+## Version 6 ended at the gate to ring two: walking through it sent the character home with
+## the ending screen. Version 7 opens ring two and adds the rings the character has walked
+## into (none recorded yet, so the first walk through the gate is still announced). Everything
+## else is as it was: ring two's nodes and monsters load full and at home, and a character who
+## saw the old ending simply finds the gate open.
+static func _v6_to_v7(snap: Dictionary) -> Dictionary:
+	snap["version"] = 7
+	snap["rings_reached"] = []
 	return snap

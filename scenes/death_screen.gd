@@ -56,7 +56,8 @@ func _ready() -> void:
 func show_death(e: Dictionary) -> void:
 	var cause: String = e["cause"]
 	if CombatTable.is_enemy_kind(cause):
-		_cause.text = "Killed by a %s." % str(CombatTable.enemy(cause)["label"]).to_lower()
+		var killer := str(CombatTable.enemy(cause)["label"]).to_lower()
+		_cause.text = "Killed by %s %s." % ["an" if killer.left(1) in ["a", "e", "i", "o", "u"] else "a", killer]
 	else:
 		_cause.text = "The cold took you."
 	_kept.text = _list(e["kept"])

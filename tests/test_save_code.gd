@@ -316,6 +316,49 @@ func test_a_version_5_magic_entry_is_kept() -> void:
 	assert_eq(migrated["skills"]["magic"], {"xp": 60, "level": 2})
 
 
+func test_a_version_6_snapshot_migrates() -> void:
+	# What the magic build could snapshot: the captain beaten and the winch built (a character
+	# who saw the old ending), stood by the gate, with ring two unknown to it.
+	var v6 := SimScript.new().snapshot()
+	v6["version"] = 6
+	v6.erase("rings_reached")
+	for id in v6["enemies"].keys():
+		if not id.begins_with("wolf") and not id.begins_with("archer") and not id.begins_with("witch") and id != "captain":
+			v6["enemies"].erase(id)
+	for id in v6["nodes"].keys():
+		if id.begins_with("coal") or id.begins_with("rich_iron") or id.begins_with("deep_hole"):
+			v6["nodes"].erase(id)
+	v6["tick"] = 5000
+	v6["bosses_defeated"] = ["captain"]
+	v6["upgrades"] = ["stash_shelves", "forge", "armoury", "ring_two_gate"]
+	v6["player"]["pos"] = [0.5, 50.5]
+	v6["player"]["region"] = "ring_one"
+	v6["enemies"]["captain"]["mode"] = "dead"
+	v6["enemies"]["captain"]["respawn_tick"] = 9000
+	v6["inventory"]["pack"][0] = {"item": "iron_ore", "count": 4}
+	var migrated: Dictionary = SaveCode.migrate(v6, 7)
+	assert_eq(migrated["version"], 7)
+	assert_eq(migrated["rings_reached"], [])
+	var sim := SimScript.new()
+	assert_true(sim.restore(v6), "restore migrates a version-6 snapshot")
+	assert_eq(sim.state["version"], Sim.STATE_VERSION)
+	assert_eq(sim.state["rings_reached"], [], "no ring reached yet")
+	assert_eq(sim.state["bosses_defeated"], ["captain"])
+	assert_eq(sim.state["upgrades"], v6["upgrades"], "upgrades are kept")
+	assert_eq(H.pack_count(sim, "iron_ore"), 4)
+	assert_eq(sim.state["enemies"]["troll_1"]["mode"], Sim.MODE_IDLE, "ring two's monsters wait at home")
+	assert_eq(int(sim.state["nodes"]["coal_1"]["left"]), int(WorldDef.NODE_KINDS[WorldDef.KIND_COAL_ROCK]["yield"]), "and its nodes are full")
+	assert_true(sim.ring_gate_open("ring_two_gate"), "the gate the old ending opened stands open")
+	# The same through a save code, and the migrated character walks into ring two.
+	var imported := SimScript.new()
+	assert_true(imported.command(Vocab.IMPORT_SAVE, {"code": SaveCode.encode(v6)})["ok"])
+	assert_eq(imported.snapshot(), sim.snapshot())
+	sim.command(Vocab.INTERACT, {"object_id": "ring_two_gate"})
+	var events := H.run_until_idle(sim, 40)
+	assert_eq(sim.state["player"]["region"], WorldDef.REGION_RING_TWO)
+	assert_eq(H.of_kind(events, Vocab.EV_RING_TWO_REACHED).size(), 1, "the first walk through is still announced")
+
+
 func test_a_full_version_2_stash_gets_no_kit() -> void:
 	var full: Array = []
 	for i in 8:

@@ -1,5 +1,5 @@
 ## The world as rings: a safe inner ring, ring one's enemies and better nodes, the ring-two
-## gate at the far edge with the captain at it, and field fires.
+## gate at the far edge with the captain at it, ring two's ruins beyond it, and field fires.
 extends "res://tests/run.gd".TestCase
 
 const H := preload("res://tests/sim_helpers.gd")
@@ -10,10 +10,14 @@ const WorldDefScript := preload("res://sim/world_def.gd")
 
 func test_the_inner_ring_has_no_enemies() -> void:
 	var w := WorldDefScript.outpost()
-	assert_true(w.enemies.size() >= 10, "ring one is populated")
+	var count := {}
 	for id in w.enemies:
 		var home: Array = w.enemies[id]["home"]
-		assert_eq(w.region_at(Vector2(home[0], home[1])), WorldDef.REGION_RING_ONE, "%s lives in ring one" % id)
+		var region := w.region_at(Vector2(home[0], home[1]))
+		assert_true(region in [WorldDef.REGION_RING_ONE, WorldDef.REGION_RING_TWO], "%s lives out in a ring" % id)
+		count[region] = int(count.get(region, 0)) + 1
+	assert_true(int(count.get(WorldDef.REGION_RING_ONE, 0)) >= 10, "ring one is populated")
+	assert_true(int(count.get(WorldDef.REGION_RING_TWO, 0)) >= 6, "ring two is populated")
 
 
 func test_the_inner_ring_has_trees_rocks_and_one_fishing_hole() -> void:
@@ -26,9 +30,11 @@ func test_the_inner_ring_has_trees_rocks_and_one_fishing_hole() -> void:
 		if region == WorldDef.REGION_INNER_RING:
 			inner[kind] = int(inner.get(kind, 0)) + 1
 			assert_eq(tier, 1, "%s in the inner ring is a first-tier node" % id)
-		else:
-			assert_eq(region, WorldDef.REGION_RING_ONE, "%s is in a ring" % id)
+		elif region == WorldDef.REGION_RING_ONE:
 			assert_eq(tier, 2, "%s in ring one is a better node" % id)
+		else:
+			assert_eq(region, WorldDef.REGION_RING_TWO, "%s is in a ring" % id)
+			assert_eq(tier, 3, "%s in ring two is a third-tier node" % id)
 	assert_true(int(inner.get(WorldDef.KIND_TREE, 0)) >= 6, "trees")
 	assert_true(int(inner.get(WorldDef.KIND_COPPER_ROCK, 0)) >= 2, "copper rocks")
 	assert_true(int(inner.get(WorldDef.KIND_TIN_ROCK, 0)) >= 2, "tin rocks")
@@ -40,6 +46,9 @@ func test_better_nodes_need_more_skill_and_pay_more() -> void:
 		[WorldDef.KIND_TREE, WorldDef.KIND_FROST_PINE],
 		[WorldDef.KIND_COPPER_ROCK, WorldDef.KIND_IRON_ROCK],
 		[WorldDef.KIND_FISHING_HOLE, WorldDef.KIND_ICE_HOLE],
+		[WorldDef.KIND_IRON_ROCK, WorldDef.KIND_COAL_ROCK],
+		[WorldDef.KIND_IRON_ROCK, WorldDef.KIND_RICH_IRON_ROCK],
+		[WorldDef.KIND_ICE_HOLE, WorldDef.KIND_DEEP_HOLE],
 	]
 	for pair in pairs:
 		var basic: Dictionary = WorldDef.NODE_KINDS[pair[0]]
@@ -61,10 +70,14 @@ func test_the_ring_two_gate_is_at_the_far_edge_with_the_captain() -> void:
 	assert_true(Vector2(home[0], home[1]).distance_to(at) < 6.0, "the captain stands at the gate")
 
 
-func test_everything_placed_can_be_reached_from_the_outpost() -> void:
+## Everything nearer than the ring-two gate is walked to from the outpost; everything in ring two
+## from just past the gate.
+func test_everything_placed_can_be_reached_from_its_side_of_the_gate() -> void:
 	var w := WorldDefScript.outpost()
-	var from := w.cell_of(Vector2(w.spawn[0], w.spawn[1]))
+	var outpost := w.cell_of(Vector2(w.spawn[0], w.spawn[1]))
+	var beyond := w.cell_of(Vector2(0.5, 64.5))
 	for id in w.objects:
+		var from := beyond if w.region_at(w.object_center(id)) == WorldDef.REGION_RING_TWO else outpost
 		var reachable := false
 		for cell in w.approach_cells(id):
 			if not GridPath.find(w, from, cell).is_empty():
@@ -72,8 +85,10 @@ func test_everything_placed_can_be_reached_from_the_outpost() -> void:
 				break
 		assert_true(reachable, "%s can be walked to" % id)
 	for id in w.enemies:
-		var home: Array = w.enemies[id]["home"]
-		assert_false(GridPath.find(w, from, w.cell_of(Vector2(home[0], home[1]))).is_empty(), "%s's home can be walked to" % id)
+		var at: Array = w.enemies[id]["home"]
+		var home := Vector2(at[0], at[1])
+		var from := beyond if w.region_at(home) == WorldDef.REGION_RING_TWO else outpost
+		assert_false(GridPath.find(w, from, w.cell_of(home)).is_empty(), "%s's home can be walked to" % id)
 
 
 func test_ring_one_is_reached_through_the_inner_ring() -> void:

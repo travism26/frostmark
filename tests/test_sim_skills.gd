@@ -235,24 +235,29 @@ func test_bronze_gear_needs_smithing_level() -> void:
 	assert_eq(H.pack_count(sim, "bronze_sword"), 1)
 
 
-func test_smithing_refuses_iron() -> void:
-	var sim := _at_workbench([{"item": "iron_ore", "count": 10}], ["forge"])
+func test_smithing_stops_at_bronze_until_the_blast_furnace() -> void:
+	var sim := _at_workbench([{"item": "iron_ore", "count": 5}, {"item": "coal", "count": 10}], ["forge"])
 	_set_level(sim, SkillTable.SMITHING, 50)
-	assert_eq(sim.command(Vocab.SMITH, {"recipe": "iron_bar"})["reason"], Vocab.REASON_TIER_CAPPED)
+	assert_eq(sim.command(Vocab.SMITH, {"recipe": "steel_bar"})["reason"], Vocab.REASON_TIER_CAPPED)
 	H.run(sim, 1)
-	assert_eq(H.pack_count(sim, "iron_ore"), 10, "the ore is untouched")
+	assert_eq(H.pack_count(sim, "iron_ore"), 5, "the ore is untouched")
 	var capped := 0
 	for id in RecipeTable.ids():
-		if RecipeTable.get_recipe(id)["tier"] == ItemTable.TIER_IRON:
+		var tier: String = RecipeTable.get_recipe(id)["tier"]
+		assert_ne(tier, ItemTable.TIER_IRON, "%s: no recipe works iron" % id)
+		if ItemTable.tier_rank(tier) > ItemTable.tier_rank(Sim.SMITHING_TIER_CAP):
 			capped += 1
 			assert_eq(sim.command(Vocab.SMITH, {"recipe": id})["reason"], Vocab.REASON_TIER_CAPPED, id)
-	assert_true(capped > 0, "the workbench lists iron, and refuses it")
+	assert_true(capped > 0, "the workbench lists steel, and refuses it")
 
 
 func test_every_gathering_and_crafting_skill_feeds_the_next() -> void:
 	# Gathering feeds crafting: every recipe input and every cooked dish comes from a node, a
-	# recipe or ring one's loot.
-	var sources := {"wolf_pelt": true, "arrows": true}
+	# recipe or an enemy's loot.
+	var sources := {}
+	for kind in CombatTable.ENEMIES:
+		for drop in CombatTable.ENEMIES[kind]["loot"]:
+			sources[drop["item"]] = true
 	for kind in WorldDef.NODE_KINDS:
 		sources[WorldDef.NODE_KINDS[kind]["item"]] = true
 	for id in RecipeTable.ids():

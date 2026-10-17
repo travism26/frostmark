@@ -1,6 +1,7 @@
-## Routing on the first-playable world: A* routes step cell to cell without cutting corners,
-## smoothed routes keep line of sight, the same click always gives the same route, re-baking
-## the grid re-routes, and a click across the whole world is cheap enough for one frame.
+## Routing on the world: A* routes step cell to cell without cutting corners, smoothed routes
+## keep line of sight, the same click always gives the same route, re-baking the grid re-routes,
+## no route crosses the ring-two gate, and a click across the whole world is cheap enough for
+## one frame, even one that finds no route.
 extends "res://tests/run.gd".TestCase
 
 const SimScript := preload("res://sim/sim.gd")
@@ -14,6 +15,8 @@ const PAIRS := 150
 const CLICK_BUDGET_MS := 16.0
 ## Far ring-one points on the other side of the outpost walls from the spawn.
 const FAR_CLICKS := [[-55.0, -55.0], [55.0, -55.0], [-55.0, 55.0], [55.0, 55.0], [-30.0, -50.0]]
+## Ring-two points: walkable, but only through the ring-two gate, which no route crosses.
+const BEYOND_THE_GATE := [[-50.5, 120.5], [50.5, 70.5]]
 
 
 func _pairs(w: WorldDef) -> Array:
@@ -36,7 +39,10 @@ func test_routes_step_cell_to_cell_without_cutting_corners() -> void:
 		var from: Vector2i = pair[0]
 		var to: Vector2i = pair[1]
 		var cells := GridPath.find(w, from, to)
-		assert_false(cells.is_empty(), "%s to %s routes (all walkable ground is connected)" % [from, to])
+		if _beyond_the_gate(w, from) != _beyond_the_gate(w, to):
+			assert_true(cells.is_empty(), "%s to %s does not route: the ring-two gate is the only way" % [from, to])
+			continue
+		assert_false(cells.is_empty(), "%s to %s routes (walkable ground on one side is connected)" % [from, to])
 		if cells.is_empty():
 			continue
 		assert_eq(cells[0], from, "starts on its own cell")
@@ -48,6 +54,10 @@ func test_routes_step_cell_to_cell_without_cutting_corners() -> void:
 			if d.x != 0 and d.y != 0:
 				var corners := w.is_walkable_cell(cells[i - 1] + Vector2i(d.x, 0)) and w.is_walkable_cell(cells[i - 1] + Vector2i(0, d.y))
 				assert_true(corners, "a diagonal step at %s cuts no corner" % cells[i])
+
+
+static func _beyond_the_gate(w: WorldDef, cell: Vector2i) -> bool:
+	return w.region_at(w.cell_center(cell)) == WorldDef.REGION_RING_TWO
 
 
 func test_smoothed_routes_keep_line_of_sight_and_end_on_the_goal() -> void:
@@ -106,4 +116,10 @@ func test_a_click_across_the_world_routes_inside_a_frame() -> void:
 		var result := sim.command(Vocab.MOVE_TO, {"pos": target})
 		worst = maxf(worst, (Time.get_ticks_usec() - t0) / 1000.0)
 		assert_true(result["ok"], "%s is reachable from the spawn" % [target])
+	for target in BEYOND_THE_GATE:
+		var sim := SimScript.new()
+		var t0 := Time.get_ticks_usec()
+		var result := sim.command(Vocab.MOVE_TO, {"pos": target})
+		worst = maxf(worst, (Time.get_ticks_usec() - t0) / 1000.0)
+		assert_eq(result["reason"], Vocab.REASON_UNREACHABLE, "%s is only reached through the gate" % [target])
 	assert_true(worst < CLICK_BUDGET_MS, "the slowest far click took %.1f ms" % worst)
