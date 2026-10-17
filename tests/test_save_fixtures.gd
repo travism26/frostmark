@@ -61,3 +61,12 @@ func test_the_version_6_fixture_keeps_its_magic_and_shards() -> void:
 	assert_eq(sim.state["inventory"]["equipment"]["weapon"], "wooden_staff", "the staff it cast with is still in hand")
 	assert_eq(sim.state["inventory"]["pack"][0], {"item": "frost_shards", "count": 9}, "the shards it had left")
 	assert_true(int(sim.state["skills"]["magic"]["xp"]) > 0, "the magic it levelled is kept")
+
+
+func test_the_version_7_fixture_is_in_ring_two_with_its_steel() -> void:
+	var sim := SimScript.new()
+	assert_true(sim.command(Vocab.IMPORT_SAVE, {"code": _fixture(7)})["ok"])
+	assert_eq(sim.state["player"]["region"], WorldDef.REGION_RING_TWO, "it was saved just through the gate")
+	assert_eq(sim.state["rings_reached"], [WorldDef.REGION_RING_TWO], "its first walk in is not announced again")
+	assert_eq(sim.state["inventory"]["equipment"]["weapon"], "steel_sword", "the steel sword it carried")
+	assert_eq(sim.smithing_cap(), ItemTable.TIER_STEEL, "its blast furnace still smiths steel")
