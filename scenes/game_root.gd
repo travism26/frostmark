@@ -261,8 +261,8 @@ func _apply_events(events: Array[Dictionary]) -> void:
 				_last_event = "Dropped %d %s in the snow." % [e["count"], ItemTable.label(e["item"])]
 			SimVocab.EV_TOOK_DAMAGE:
 				_last_event = "You are freezing. Get back to the fire."
-			SimVocab.EV_COLLAPSED:
-				_hud.banner("You collapsed in the cold and woke by the fire.")
+			SimVocab.EV_DIED:
+				_hud.banner("You died and woke by the fire.")
 			SimVocab.EV_SAVED:
 				_save()
 			SimVocab.EV_COMMAND_REJECTED:

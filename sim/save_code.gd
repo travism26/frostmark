@@ -83,6 +83,8 @@ static func migrate(snapshot: Dictionary, target: int) -> Variant:
 		match version:
 			1:
 				snap = _v1_to_v2(snap)
+			2:
+				snap = _v2_to_v3(snap)
 			_:
 				return null
 		version = int(snap["version"])
@@ -114,4 +116,30 @@ static func _v1_to_v2(snap: Dictionary) -> Dictionary:
 	snap["pending"] = []
 	if snap.get("player") is Dictionary:
 		snap["player"]["activity"] = {}
+	return snap
+
+
+## Version 2 (slice 3) had no combat. Version 3 adds the player's swing timer, food healing in
+## progress, the enemies (empty here, so every enemy loads at home, unhurt and idle), ground
+## loot, and the slice-4 starter kit (a wooden bow, 30 arrows, 5 cooked fish) placed in empty
+## stash slots so a slice-3 character can fight too. What does not fit is not added.
+static func _v2_to_v3(snap: Dictionary) -> Dictionary:
+	snap["version"] = 3
+	snap["healing"] = []
+	snap["enemies"] = {}
+	snap["loot"] = {}
+	snap["loot_seq"] = 0
+	if snap.get("player") is Dictionary:
+		snap["player"]["ready_tick"] = 0
+	var stash: Variant = snap.get("stash")
+	if stash is Dictionary and stash.get("slots") is Array:
+		var slots: Array = stash["slots"]
+		var kit := [
+			{"item": "wooden_bow", "count": 1}, {"item": "arrows", "count": 30}, {"item": "cooked_fish", "count": 5},
+		]
+		for i in slots.size():
+			if kit.is_empty():
+				break
+			if slots[i] == null:
+				slots[i] = kit.pop_front()
 	return snap

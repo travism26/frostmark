@@ -1,4 +1,4 @@
-## Warmth and health: the cold outside, the fire inside, and collapsing at zero health.
+## Warmth and health: the cold outside, the fire inside, and freezing to death at zero health.
 extends "res://tests/run.gd".TestCase
 
 const H := preload("res://tests/sim_helpers.gd")
@@ -48,19 +48,20 @@ func test_health_drains_at_zero_warmth() -> void:
 	assert_eq(hurt[0]["cause"], "cold")
 
 
-func test_collapse_wakes_by_the_fire_with_the_pack_intact() -> void:
+func test_freezing_to_death_is_a_real_death() -> void:
 	var sim := SimScript.new()
 	H.walk_to(sim, H.OUTSIDE)
 	H.set_pack(sim, [{"item": "logs", "count": 6}])
 	H.patch(sim, {"warmth": 0, "health": 2})
 	var events := H.run(sim, 3)
-	var collapsed := H.of_kind(events, Vocab.EV_COLLAPSED)
-	assert_eq(collapsed.size(), 1)
+	var died := H.of_kind(events, Vocab.EV_DIED)
+	assert_eq(died.size(), 1)
+	assert_eq(died[0]["cause"], "cold")
 	assert_eq(sim.state["player"]["region"], WorldDef.REGION_OUTPOST)
 	assert_true(sim.near_fire(), "beside the fire")
-	assert_eq(H.pack_count(sim, "logs"), 6, "the pack is intact")
 	assert_eq(H.of_kind(events, Vocab.EV_BANKED).size(), 0, "waking inside is not crossing the gate")
-	assert_true(int(sim.state["health"]) > 0)
+	assert_eq(int(sim.state["health"]), Sim.HEALTH_MAX)
+	assert_eq(int(sim.state["warmth"]), Sim.WARMTH_MAX)
 
 
 func test_a_full_gauge_lasts_an_outing() -> void:
