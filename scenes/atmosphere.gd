@@ -32,6 +32,7 @@ var _flake_material: StandardMaterial3D
 var _grade: ShaderMaterial
 var _look := {}
 var _override: Variant = null
+var _pos := Vector2(INF, INF)
 var _wind := -1.0
 var _tint := Color(-1, -1, -1)
 
@@ -83,7 +84,14 @@ func set_look_override(fixed: Variant) -> void:
 func _process(_delta: float) -> void:
 	if sun == null:
 		return
-	_apply(_override if _override is Dictionary else RingLook.at(_world, _character_pos()))
+	if _override is Dictionary:
+		_apply(_override)
+		return
+	var pos := _character_pos()
+	if pos == _pos:
+		return
+	_pos = pos
+	_apply(RingLook.at(_world, pos))
 
 
 func _character_pos() -> Vector2:
@@ -91,7 +99,11 @@ func _character_pos() -> Vector2:
 	return Vector2(p.x, p.z)
 
 
+## Pushes `look` to the sun, the sky, the fog, the snow and the grade. The same look as last
+## frame costs nothing: deep inside a ring nothing changes from frame to frame.
 func _apply(look: Dictionary) -> void:
+	if look == _look:
+		return
 	_look = look
 	environment.background_color = look["sky"]
 	environment.ambient_light_color = look["ambient_color"]

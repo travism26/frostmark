@@ -51,6 +51,8 @@ const SHADOW_REACH := 1.6
 ## Fires nearest the character carry a dynamic light; the rest keep their pool and flames.
 ## GL Compatibility lights every mesh for each light in range, so the count stays small.
 const MAX_FIRE_LIGHTS := 4
+## How far the character walks before the fires are sorted by distance again.
+const LIGHT_RESORT_METRES := 0.5
 
 ## What a rejection reason means to the player.
 const REASON_TEXT := {
@@ -118,6 +120,8 @@ var _ring_gates := {}  # ring gate object id -> {bars, label}
 var _waystones := {}  # waystone object id -> {glow, label}
 var _fires := {}  # field fire id -> its prop
 var _placed_fires: Array = []  # the props of the fires placed in the world: the outpost's, the brazier
+var _light_anchor := Vector3(INF, INF, INF)  # where the character stood when the fire lights were last sorted
+var _light_count := -1  # how many fires there were then
 var _title_screen: Control
 var _guide_panel: Control
 var _waystone_panel: Control
@@ -1054,14 +1058,20 @@ func _remove_field_fire(id: String) -> void:
 
 
 ## Fires flicker on their own (each `Flame` is a FireFx, scenes/fire_fx.gd). Here only the
-## light budget is kept: the MAX_FIRE_LIGHTS fires nearest the character carry a light.
+## light budget is kept: the MAX_FIRE_LIGHTS fires nearest the character carry a light. The
+## fires are sorted again only once the character has moved or a fire was lit or went out.
 func _flicker() -> void:
+	var here := _character.global_position
+	var count := _placed_fires.size() + _fires.size()
+	if count == _light_count and here.distance_squared_to(_light_anchor) < LIGHT_RESORT_METRES * LIGHT_RESORT_METRES:
+		return
+	_light_anchor = here
+	_light_count = count
 	var fires: Array = []
 	for prop in _placed_fires:
 		fires.append(prop)
 	for id in _fires:
 		fires.append(_fires[id])
-	var here := _character.global_position
 	fires.sort_custom(func(a: Node3D, b: Node3D) -> bool:
 		return a.global_position.distance_squared_to(here) < b.global_position.distance_squared_to(here))
 	for i in fires.size():
