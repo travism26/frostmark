@@ -37,6 +37,7 @@ const SKILL_ICONS := {
 	SkillTable.SMITHING: {"icon": "wrench", "colour": Color(0.85, 0.88, 0.92)},
 	SkillTable.MELEE: {"icon": "cross", "colour": Color(0.95, 0.42, 0.42)},
 	SkillTable.RANGED: {"icon": "target", "colour": Color(0.95, 0.80, 0.45)},
+	SkillTable.MAGIC: {"icon": "star", "colour": Color(0.72, 0.55, 1.0)},
 }
 
 var sim: Sim
@@ -745,28 +746,9 @@ func _build_save() -> void:
 	buttons.add_child(close)
 
 
-## A panel's title strip: the heading on the left and, when `on_close` is given, a close
-## cross on the right. The title Label is kept in the "title" metadata for retitling.
+## A panel's title strip (UiTheme.header): the title Label is in the "title" metadata.
 static func _header(title: String, on_close: Callable = Callable()) -> PanelContainer:
-	var bar := PanelContainer.new()
-	bar.theme_type_variation = "HeaderBar"
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 8)
-	bar.add_child(row)
-	var label := UiTheme.heading(title, 15)
-	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	row.add_child(label)
-	bar.set_meta("title", label)
-	if on_close.is_valid():
-		var b := Button.new()
-		b.theme_type_variation = "CloseButton"
-		b.icon = UiTheme.icon("cross", 11)
-		b.tooltip_text = "Close"
-		b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		b.pressed.connect(on_close)
-		row.add_child(b)
-	return bar
+	return UiTheme.header(title, on_close)
 
 
 static func _gap(width: float, expand: bool = false) -> Control:

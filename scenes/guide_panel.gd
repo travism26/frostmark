@@ -8,8 +8,6 @@ extends Control
 
 signal dismissed
 
-const Hud := preload("res://scenes/hud.gd")
-
 ## How long a tip, and the line that closes the hint path, stay up.
 const TIP_SECONDS := 10.0
 
@@ -23,7 +21,8 @@ var _hint_left := 0.0
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_panel = Hud._panel_box()
+	_panel = PanelContainer.new()
+	_panel.add_theme_stylebox_override("panel", UiTheme.panel_style(UiTheme.PANEL_EMBER))
 	_panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	_panel.offset_left = 24
@@ -34,8 +33,9 @@ func _ready() -> void:
 	_panel.add_child(box)
 	var head := HBoxContainer.new()
 	box.add_child(head)
-	var title := Hud._text("Next", 14)
+	var title := UiTheme.heading("Next", 14, UiTheme.EMBER)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	head.add_child(title)
 	var hide := Button.new()
 	hide.text = "Hide hints"
@@ -46,7 +46,7 @@ func _ready() -> void:
 	_hint = _wrapped(14)
 	box.add_child(_hint)
 	_tip = _wrapped(13)
-	_tip.add_theme_color_override("font_color", Color(0.55, 0.25, 0.05))
+	_tip.add_theme_color_override("font_color", Color(1.0, 0.78, 0.45))
 	box.add_child(_tip)
 	_panel.visible = false
 
@@ -98,8 +98,6 @@ func _relayout(on := true) -> void:
 
 
 static func _wrapped(size: int) -> Label:
-	var l := Hud._text("", size)
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.custom_minimum_size = Vector2(276, 0)
+	var l := UiTheme.wrapped("", 276, size)
 	l.visible = false
 	return l

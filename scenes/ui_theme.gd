@@ -232,6 +232,22 @@ static func _build() -> Theme:
 	t.set_stylebox("panel", "TooltipPanel", _flat(Color(0.04, 0.06, 0.10, 0.96), Color(ICE, 0.6), 1, 5, Vector2(10, 6)))
 	t.set_color("font_color", "TooltipLabel", TEXT)
 	t.set_font_size("font_size", "TooltipLabel", 13)
+	# Check boxes and sliders (the help and sound panels).
+	t.set_font_size("font_size", "CheckBox", 14)
+	t.set_color("font_color", "CheckBox", TEXT)
+	t.set_color("font_hover_color", "CheckBox", Color(1, 1, 1))
+	t.set_color("font_pressed_color", "CheckBox", TEXT)
+	t.set_color("font_hover_pressed_color", "CheckBox", Color(1, 1, 1))
+	t.set_color("font_focus_color", "CheckBox", TEXT)
+	t.set_constant("h_separation", "CheckBox", 8)
+	for state in ["normal", "hover", "pressed", "hover_pressed", "focus", "disabled"]:
+		t.set_stylebox(state, "CheckBox", _flat(Color(0, 0, 0, 0), Color(0, 0, 0, 0), 0, 0, Vector2(4, 4)))
+	t.set_stylebox("slider", "HSlider", _track(4))
+	t.set_stylebox("grabber_area", "HSlider", _fill(ICE_DIM, 4))
+	t.set_stylebox("grabber_area_highlight", "HSlider", _fill(ICE, 4))
+	t.set_constant("center_grabber", "HSlider", 0)
+	t.set_constant("grabber_offset", "HSlider", 0)
+
 	t.set_constant("separation", "VBoxContainer", 6)
 	t.set_constant("separation", "HBoxContainer", 6)
 	t.set_constant("h_separation", "GridContainer", 5)
@@ -327,6 +343,38 @@ static func panel_style(kind: String = PANEL_SLATE) -> StyleBoxTexture:
 		sb.modulate_color = Color(1, 1, 1)
 		_frames[kind] = sb
 	return _frames[kind]
+
+
+## A panel's title strip: the heading on the left and, when `on_close` is given, a close
+## cross on the right. The title Label is kept in the "title" metadata for retitling.
+static func header(title: String, on_close: Callable = Callable()) -> PanelContainer:
+	var bar := PanelContainer.new()
+	bar.theme_type_variation = "HeaderBar"
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	bar.add_child(row)
+	var label := heading(title, 15)
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(label)
+	bar.set_meta("title", label)
+	if on_close.is_valid():
+		var b := Button.new()
+		b.theme_type_variation = "CloseButton"
+		b.icon = icon("cross", 11)
+		b.tooltip_text = "Close"
+		b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		b.pressed.connect(on_close)
+		row.add_child(b)
+	return bar
+
+
+## A body label that wraps at `width` pixels.
+static func wrapped(text: String, width: float, size: int = 14, colour: Color = TEXT) -> Label:
+	var l := body(text, size, colour)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.custom_minimum_size = Vector2(width, 0)
+	return l
 
 
 ## A round coloured badge with one letter in it, for skills the icon pack has no glyph for.

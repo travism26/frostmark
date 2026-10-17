@@ -8,7 +8,6 @@ extends Control
 
 signal travel_requested(object_id: String)
 
-const Hud := preload("res://scenes/hud.gd")
 const WIDTH := 320.0
 
 ## What a refusal means at the stone.
@@ -26,7 +25,8 @@ var _stone := ""
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_panel = Hud._panel_box()
+	_panel = PanelContainer.new()
+	_panel.add_theme_stylebox_override("panel", UiTheme.panel_style(UiTheme.PANEL_ICE))
 	_panel.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	_panel.offset_left = -WIDTH * 0.5
@@ -35,13 +35,13 @@ func _ready() -> void:
 	add_child(_panel)
 	var box := VBoxContainer.new()
 	_panel.add_child(box)
-	box.add_child(Hud._text("Waystone", 14))
-	_note = Hud._text("", 13)
-	_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_note.custom_minimum_size = Vector2(WIDTH - 20, 0)
+	box.add_child(UiTheme.heading("Waystone", 14, UiTheme.ICE))
+	_note = UiTheme.wrapped("", WIDTH - 20, 13)
 	box.add_child(_note)
 	_travel = Button.new()
 	_travel.text = "Travel to the outpost"
+	_travel.theme_type_variation = "PrimaryButton"
+	_travel.icon = UiTheme.icon("home", 16)
 	_travel.pressed.connect(func() -> void: travel_requested.emit(_stone))
 	box.add_child(_travel)
 	_panel.visible = false
