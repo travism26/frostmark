@@ -89,6 +89,8 @@ var regions: Array = []
 var enemies: Dictionary = {}
 
 var _blocked := PackedByteArray()
+## GridPath's native A* grid over `_blocked`, built on the first route and dropped by bake().
+var path_grid: AStarGrid2D = null
 
 
 ## The first-playable world, as rings around the outpost. The walled outpost has one gate on
@@ -235,6 +237,7 @@ static func _rect_polygon(min_xz: Array, max_xz: Array) -> Array:
 
 ## Rasterises solids and blocking objects into the walkability grid. Call after editing them.
 func bake() -> void:
+	path_grid = null
 	_blocked = PackedByteArray()
 	_blocked.resize(cols * rows)
 	_blocked.fill(0)
@@ -279,6 +282,12 @@ func in_bounds(cell: Vector2i) -> bool:
 
 func is_walkable_cell(cell: Vector2i) -> bool:
 	return in_bounds(cell) and _blocked[cell.y * cols + cell.x] == 0
+
+
+## One byte per cell, row-major from cell (0, 0), 1 where the cell is blocked. For hot loops
+## that cannot afford a call per cell; everything else asks is_walkable_cell().
+func blocked_cells() -> PackedByteArray:
+	return _blocked
 
 
 func is_walkable(pos: Vector2) -> bool:

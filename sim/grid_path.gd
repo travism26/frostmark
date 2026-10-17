@@ -2,18 +2,13 @@
 ##
 ## Pure functions over plain data so the simulation can route headless. Eight-connected,
 ## no corner cutting (a diagonal step needs both orthogonal neighbours free), octile heuristic.
+## The search is the engine's native AStarGrid2D, built once per world and kept on it
+## (`WorldDef.path_grid`), so a route across the whole world costs well under a frame.
 class_name GridPath
 extends RefCounted
 
-const COST_STRAIGHT := 10
-const COST_DIAGONAL := 14
 ## How close to a blocked cell a smoothed segment may pass, in metres.
 const SMOOTH_MARGIN := 0.3
-
-const _DIRS: Array[Vector2i] = [
-	Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1),
-	Vector2i(1, 1), Vector2i(1, -1), Vector2i(-1, 1), Vector2i(-1, -1),
-]
 
 
 ## Cells from `from` to `to` inclusive, or an empty array when no route exists.
@@ -24,144 +19,89 @@ static func find(world: WorldDef, from: Vector2i, to: Vector2i) -> Array[Vector2
 	if from == to:
 		out.append(from)
 		return out
-
-	var cols := world.cols
-	var n := cols * world.rows
-	var g := PackedInt32Array()
-	g.resize(n)
-	g.fill(0x7fffffff)
-	var came := PackedInt32Array()
-	came.resize(n)
-	came.fill(-1)
-	var closed := PackedByteArray()
-	closed.resize(n)
-	closed.fill(0)
-
-	var start := from.y * cols + from.x
-	var goal := to.y * cols + to.x
-	g[start] = 0
-	var heap := _Heap.new()
-	heap.push(_heuristic(from, to), start)
-
-	while not heap.is_empty():
-		var cur: int = heap.pop()
-		if cur == goal:
-			break
-		if closed[cur] == 1:
-			continue
-		closed[cur] = 1
-		var cc := Vector2i(cur % cols, cur / cols)
-		for d in _DIRS:
-			var nc := cc + d
-			if not world.is_walkable_cell(nc):
-				continue
-			var diagonal := d.x != 0 and d.y != 0
-			if diagonal:
-				if not world.is_walkable_cell(cc + Vector2i(d.x, 0)):
-					continue
-				if not world.is_walkable_cell(cc + Vector2i(0, d.y)):
-					continue
-			var ni := nc.y * cols + nc.x
-			if closed[ni] == 1:
-				continue
-			var ng: int = g[cur] + (COST_DIAGONAL if diagonal else COST_STRAIGHT)
-			if ng < g[ni]:
-				g[ni] = ng
-				came[ni] = cur
-				heap.push(ng + _heuristic(nc, to), ni)
-
-	if came[goal] == -1:
-		return out
-	var i := goal
-	while i != -1:
-		out.append(Vector2i(i % cols, i / cols))
-		i = came[i]
-	out.reverse()
-	return out
+	return _grid(world).get_id_path(from, to)
 
 
-static func _heuristic(a: Vector2i, b: Vector2i) -> int:
-	var dx := absi(a.x - b.x)
-	var dy := absi(a.y - b.y)
-	return COST_STRAIGHT * (dx + dy) + (COST_DIAGONAL - 2 * COST_STRAIGHT) * mini(dx, dy)
+## The world's A* grid, built from its walkability on first use. Straight steps cost 1 and
+## diagonal ones the square root of 2.
+static func _grid(world: WorldDef) -> AStarGrid2D:
+	if world.path_grid != null:
+		return world.path_grid
+	var grid := AStarGrid2D.new()
+	grid.region = Rect2i(0, 0, world.cols, world.rows)
+	grid.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_ONLY_IF_NO_OBSTACLES
+	grid.default_compute_heuristic = AStarGrid2D.HEURISTIC_OCTILE
+	grid.default_estimate_heuristic = AStarGrid2D.HEURISTIC_OCTILE
+	grid.update()
+	var blocked := world.blocked_cells()
+	for i in blocked.size():
+		if blocked[i] != 0:
+			grid.set_point_solid(Vector2i(i % world.cols, i / world.cols))
+	world.path_grid = grid
+	return grid
 
 
-## True when the straight segment a->b stays on walkable ground (with SMOOTH_MARGIN).
+## True when the straight segment a->b stays on walkable ground (with SMOOTH_MARGIN): every
+## sample a quarter cell apart passes WorldDef.is_walkable_with_margin(). The check is inlined
+## over the raw grid because smoothing and every chasing enemy call it in a loop.
 static func has_line_of_sight(world: WorldDef, a: Vector2, b: Vector2) -> bool:
-	var length := a.distance_to(b)
-	var step := world.cell_size * 0.25
-	var steps := maxi(1, int(ceil(length / step)))
+	var blocked := world.blocked_cells()
+	var cols := world.cols
+	var rows := world.rows
+	var ox: float = world.origin[0]
+	var oz: float = world.origin[1]
+	var size := world.cell_size
+	var steps := maxi(1, int(ceil(a.distance_to(b) / (size * 0.25))))
 	for i in range(steps + 1):
 		var p := a.lerp(b, float(i) / steps)
-		if not world.is_walkable_with_margin(p, SMOOTH_MARGIN):
+		var cx := int(floor((p.x - ox) / size))
+		var cz := int(floor((p.y - oz) / size))
+		var lx := int(floor((p.x - SMOOTH_MARGIN - ox) / size))
+		var hx := int(floor((p.x + SMOOTH_MARGIN - ox) / size))
+		var lz := int(floor((p.y - SMOOTH_MARGIN - oz) / size))
+		var hz := int(floor((p.y + SMOOTH_MARGIN - oz) / size))
+		if lx < 0 or lz < 0 or hx >= cols or hz >= rows:
+			return false
+		var row := cz * cols
+		if blocked[row + lx] != 0 or blocked[row + cx] != 0 or blocked[row + hx] != 0:
+			return false
+		if blocked[lz * cols + cx] != 0 or blocked[hz * cols + cx] != 0:
 			return false
 	return true
 
 
-## Greedy string-pulling: from `start`, keep only the farthest waypoint each hop can see.
-## `points` are the waypoints after `start`; the last point is always kept.
+## String-pulling: from `start`, each hop goes to a far waypoint it can see. It tries the last
+## waypoint first (open ground usually sees it), else gallops 1, 2, 4, 8 ... waypoints ahead
+## until one is out of sight and halves back to the farthest one in sight, so a hop costs a
+## handful of sight checks however long the path. `points` are the waypoints after `start`;
+## the last point is always kept, and every segment of the result has line of sight.
 static func smooth(world: WorldDef, start: Vector2, points: Array[Vector2]) -> Array[Vector2]:
 	var out: Array[Vector2] = []
+	var last := points.size() - 1
 	var from := start
 	var i := 0
-	while i < points.size():
-		var far := i
-		for j in range(points.size() - 1, i, -1):
-			if has_line_of_sight(world, from, points[j]):
-				far = j
-				break
-		out.append(points[far])
-		from = points[far]
-		i = far + 1
+	while i <= last:
+		# Neighbouring cells of the path always see each other, so points[i] is the fallback.
+		var seen := i
+		if i < last and has_line_of_sight(world, from, points[last]):
+			seen = last
+		else:
+			var stride := 1
+			var blind := -1
+			while seen < last:
+				var j := mini(seen + stride, last)
+				if not has_line_of_sight(world, from, points[j]):
+					blind = j
+					break
+				seen = j
+				stride *= 2
+			while blind - seen > 1:
+				var mid := (seen + blind) / 2
+				if has_line_of_sight(world, from, points[mid]):
+					seen = mid
+				else:
+					blind = mid
+		out.append(points[seen])
+		from = points[seen]
+		i = seen + 1
 	return out
-
-
-## Binary min-heap of (priority, cell index) pairs.
-class _Heap:
-	extends RefCounted
-	var _keys := PackedInt32Array()
-	var _vals := PackedInt32Array()
-
-	func is_empty() -> bool:
-		return _keys.is_empty()
-
-	func push(key: int, val: int) -> void:
-		_keys.append(key)
-		_vals.append(val)
-		var i := _keys.size() - 1
-		while i > 0:
-			var parent := (i - 1) >> 1
-			if _keys[parent] <= _keys[i]:
-				break
-			_swap(i, parent)
-			i = parent
-
-	func pop() -> int:
-		var top := _vals[0]
-		var last := _keys.size() - 1
-		_swap(0, last)
-		_keys.remove_at(last)
-		_vals.remove_at(last)
-		var i := 0
-		var n := _keys.size()
-		while true:
-			var l := 2 * i + 1
-			var r := l + 1
-			var m := i
-			if l < n and _keys[l] < _keys[m]:
-				m = l
-			if r < n and _keys[r] < _keys[m]:
-				m = r
-			if m == i:
-				break
-			_swap(i, m)
-			i = m
-		return top
-
-	func _swap(a: int, b: int) -> void:
-		var k := _keys[a]
-		_keys[a] = _keys[b]
-		_keys[b] = k
-		var v := _vals[a]
-		_vals[a] = _vals[b]
-		_vals[b] = v
