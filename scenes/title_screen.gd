@@ -79,7 +79,9 @@ func _ready() -> void:
 	_new_button.icon = UiTheme.icon("plus", 16)
 	_new_button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(_new_button)
-	column.add_child(_button("Controls", func() -> void: help_requested.emit()))
+	var controls := _button("Controls", func() -> void: help_requested.emit(), "")
+	controls.icon = UiTheme.icon("question", 16)
+	column.add_child(controls)
 	column.add_child(_spacer(6))
 
 	var import_panel := PanelContainer.new()
