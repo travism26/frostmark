@@ -147,8 +147,8 @@ static func _palisade(size: Vector3, centre: Vector2) -> ArrayMesh:
 	var along_x := size.x >= size.z
 	var length := size.x if along_x else size.z
 	var thick := size.z if along_x else size.x
-	var rng := _rng(centre)
-	var st := _begin()
+	var rng := MeshKit.rng(centre)
+	var st := MeshKit.begin()
 	var base_y := -size.y * 0.5
 	var spacing := 0.5
 	var count := int(length / spacing)
@@ -163,30 +163,8 @@ static func _palisade(size: Vector3, centre: Vector2) -> ArrayMesh:
 			var lean := Vector2(rng.randf_range(-0.03, 0.03), rng.randf_range(-0.03, 0.03))
 			var colour := COLOR_TIMBER * rng.randf_range(0.82, 1.08)
 			colour.a = 1.0
-			_log(st, _local(u, v, along_x), base_y - 0.1, top, 0.33 if post else 0.26, 0.3 if post else 0.24, lean, colour)
-	return _finish(st)
-
-
-## A sharpened log: a six-sided trunk from `y0` to `top`, a short band blending into snow,
-## and a snow-white point `tip` high, leaning by `lean` per metre of height.
-static func _log(st: SurfaceTool, at: Vector3, y0: float, top: float, r: float, tip: float, lean: Vector2, colour: Color) -> void:
-	var band := top - 0.1
-	var ring0: Array[Vector3] = []
-	var ring1: Array[Vector3] = []
-	var ring2: Array[Vector3] = []
-	for k in 6:
-		var a := k * TAU / 6.0
-		var off := Vector3(cos(a) * r, 0.0, sin(a) * r)
-		ring0.append(at + off + Vector3(0, y0, 0))
-		ring1.append(at + off + Vector3(lean.x * (band - y0), band, lean.y * (band - y0)))
-		ring2.append(at + off * 0.82 + Vector3(lean.x * (top - y0), top, lean.y * (top - y0)))
-	var apex := at + Vector3(lean.x * (top + tip - y0), top + tip, lean.y * (top + tip - y0))
-	for k in 6:
-		var n := (k + 1) % 6
-		var out := Vector3(cos((k + 0.5) * TAU / 6.0), 0.0, sin((k + 0.5) * TAU / 6.0))
-		_quad(st, ring0[k], ring0[n], ring1[n], ring1[k], colour, colour, out)
-		_quad(st, ring1[k], ring1[n], ring2[n], ring2[k], colour, COLOR_SNOW_CAP, out)
-		_tri(st, ring2[k], ring2[n], apex, COLOR_SNOW_CAP, out + Vector3.UP)
+			MeshKit.log_post(st, MeshKit.local(u, v, along_x), base_y - 0.1, top, 0.33 if post else 0.26, 0.3 if post else 0.24, lean, colour)
+	return MeshKit.finish(st)
 
 
 ## A ridge of ice along the footprint: a bank of snow at its toe, a face towards the world
@@ -201,8 +179,8 @@ static func _ice_cliff(size: Vector3, centre: Vector2) -> ArrayMesh:
 	var n := -1.0 if towards_centre > 0.0 else 1.0  # +v is out of the box on the inner side
 	var inner := -n * thick * 0.5
 	var outer := n * thick * 0.5
-	var rng := _rng(centre)
-	var st := _begin()
+	var rng := MeshKit.rng(centre)
+	var st := MeshKit.begin()
 	var base_y := -size.y * 0.5
 	var top_y := base_y + size.y
 	var steps := maxi(int(length / 1.6), 1)
@@ -212,27 +190,27 @@ static func _ice_cliff(size: Vector3, centre: Vector2) -> ArrayMesh:
 		if i > 0 and i < steps:
 			u += rng.randf_range(-0.35, 0.35)
 		stations.append([
-			_local(u, inner + n * rng.randf_range(1.2, 1.7), along_x) + Vector3(0, base_y, 0),
-			_local(u, inner + n * rng.randf_range(0.1, 0.4), along_x) + Vector3(0, base_y + rng.randf_range(0.3, 0.55), 0),
-			_local(u, inner + n * rng.randf_range(0.0, 0.5), along_x) + Vector3(0, base_y + size.y * rng.randf_range(0.4, 0.6), 0),
-			_local(u, inner + n * rng.randf_range(-0.5, 0.1), along_x) + Vector3(0, top_y + rng.randf_range(0.1, 0.8), 0),
-			_local(u, inner - n * thick * rng.randf_range(0.35, 0.55), along_x) + Vector3(0, top_y + rng.randf_range(1.0, 2.2), 0),
-			_local(u, outer, along_x) + Vector3(0, top_y * 0.4 + base_y * 0.6, 0),
-			_local(u, outer, along_x) + Vector3(0, base_y, 0),
+			MeshKit.local(u, inner + n * rng.randf_range(1.2, 1.7), along_x) + Vector3(0, base_y, 0),
+			MeshKit.local(u, inner + n * rng.randf_range(0.1, 0.4), along_x) + Vector3(0, base_y + rng.randf_range(0.3, 0.55), 0),
+			MeshKit.local(u, inner + n * rng.randf_range(0.0, 0.5), along_x) + Vector3(0, base_y + size.y * rng.randf_range(0.4, 0.6), 0),
+			MeshKit.local(u, inner + n * rng.randf_range(-0.5, 0.1), along_x) + Vector3(0, top_y + rng.randf_range(0.1, 0.8), 0),
+			MeshKit.local(u, inner - n * thick * rng.randf_range(0.35, 0.55), along_x) + Vector3(0, top_y + rng.randf_range(1.0, 2.2), 0),
+			MeshKit.local(u, outer, along_x) + Vector3(0, top_y * 0.4 + base_y * 0.6, 0),
+			MeshKit.local(u, outer, along_x) + Vector3(0, base_y, 0),
 		])
 	var colours := [COLOR_SNOW_CAP, COLOR_ICE_DEEP, COLOR_ICE, COLOR_ICE, COLOR_SNOW_CAP, COLOR_SNOW_CAP, COLOR_ICE_PALE]
-	var face_out := _local(0.0, n, along_x)
+	var face_out := MeshKit.local(0.0, n, along_x)
 	var hints := [face_out + Vector3.UP * 2.0, face_out, face_out, face_out + Vector3.UP, Vector3.UP, -face_out + Vector3.UP, -face_out]
 	for i in steps:
 		var a: Array = stations[i]
 		var b: Array = stations[i + 1]
 		for k in 6:
-			_quad(st, a[k], b[k], b[k + 1], a[k + 1], colours[k], colours[k + 1], hints[k])
+			MeshKit.quad(st, a[k], b[k], b[k + 1], a[k + 1], colours[k], colours[k + 1], hints[k])
 	# End caps so the ridge is closed where two cliffs meet at a corner.
 	for end in [stations[0], stations[steps]]:
-		var cap_out := _local(-1.0 if end == stations[0] else 1.0, 0.0, along_x)
+		var cap_out := MeshKit.local(-1.0 if end == stations[0] else 1.0, 0.0, along_x)
 		for k in range(1, 6):
-			_tri(st, end[1], end[k], end[k + 1], colours[k], cap_out)
+			MeshKit.tri(st, end[1], end[k], end[k + 1], colours[k], cap_out)
 	# Shards: pyramids of ice along the crest and a few broken ones at the foot.
 	for i in int(length / 1.4):
 		var u := rng.randf_range(-length * 0.5 + 0.5, length * 0.5 - 0.5)
@@ -240,21 +218,8 @@ static func _ice_cliff(size: Vector3, centre: Vector2) -> ArrayMesh:
 		var v := inner - n * thick * rng.randf_range(0.15, 0.6) if on_top else inner + n * rng.randf_range(0.4, 1.0)
 		var h := rng.randf_range(1.2, 2.6) if on_top else rng.randf_range(0.5, 1.1)
 		var y := top_y + rng.randf_range(0.3, 1.0) if on_top else base_y
-		_shard(st, _local(u, v, along_x) + Vector3(0, y, 0), rng.randf_range(0.4, 0.8), h, rng.randf() * TAU, COLOR_ICE if on_top else COLOR_ICE_DEEP)
-	return _finish(st)
-
-
-## A four-sided spike of ice, pale towards its point.
-static func _shard(st: SurfaceTool, at: Vector3, r: float, h: float, turn: float, colour: Color) -> void:
-	var apex := at + Vector3(0, h, 0)
-	var ring: Array[Vector3] = []
-	for k in 4:
-		var a := turn + k * TAU / 4.0
-		ring.append(at + Vector3(cos(a) * r, -0.3, sin(a) * r))
-	for k in 4:
-		var m := (k + 1) % 4
-		var out := (ring[k] + ring[m]) * 0.5 - at
-		_tri_shade(st, ring[k], ring[m], apex, colour, colour, COLOR_ICE_PALE, out + Vector3.UP * 0.5)
+		MeshKit.shard(st, MeshKit.local(u, v, along_x) + Vector3(0, y, 0), rng.randf_range(0.4, 0.8), h, rng.randf() * TAU, COLOR_ICE if on_top else COLOR_ICE_DEEP)
+	return MeshKit.finish(st)
 
 
 # --- The outpost gateway ------------------------------------------------------------------
@@ -266,18 +231,18 @@ static func _shard(st: SurfaceTool, at: Vector3, r: float, h: float, turn: float
 static func gateway(min_xz: Array, max_xz: Array) -> MeshInstance3D:
 	var width: float = max_xz[0] - min_xz[0]
 	var depth: float = max_xz[1] - min_xz[1]
-	var st := _begin()
+	var st := MeshKit.begin()
 	for side in [-1.0, 1.0]:
-		_log(st, Vector3(side * (width * 0.5 + 0.2), 0.0, 0.0), -0.1, GATEWAY_HEIGHT, 0.36, 0.42, Vector2.ZERO, COLOR_TIMBER_DARK)
-	_box(st, Vector3(0.0, GATEWAY_HEIGHT - 0.05, 0.0), Vector3(width + 1.2, 0.32, 0.42), COLOR_TIMBER_DARK, COLOR_SNOW_CAP)
-	_box(st, Vector3(0.0, GATEWAY_HEIGHT - 0.5, 0.0), Vector3(width + 0.4, 0.16, 0.24), COLOR_TIMBER, COLOR_TIMBER)
+		MeshKit.log_post(st, Vector3(side * (width * 0.5 + 0.2), 0.0, 0.0), -0.1, GATEWAY_HEIGHT, 0.36, 0.42, Vector2.ZERO, COLOR_TIMBER_DARK)
+	MeshKit.box(st, Vector3(0.0, GATEWAY_HEIGHT - 0.05, 0.0), Vector3(width + 1.2, 0.32, 0.42), COLOR_TIMBER_DARK, COLOR_SNOW_CAP)
+	MeshKit.box(st, Vector3(0.0, GATEWAY_HEIGHT - 0.5, 0.0), Vector3(width + 0.4, 0.16, 0.24), COLOR_TIMBER, COLOR_TIMBER)
 	var planks := 4
 	for i in planks:
 		var plank := COLOR_TIMBER * (0.85 + 0.08 * (i % 2))
 		plank.a = 1.0
-		_box(st, Vector3(-width * 0.5 + (i + 0.5) * width / planks, 0.045, 0.0), Vector3(width / planks - 0.08, 0.09, depth * 0.9), plank, plank)
+		MeshKit.box(st, Vector3(-width * 0.5 + (i + 0.5) * width / planks, 0.045, 0.0), Vector3(width / planks - 0.08, 0.09, depth * 0.9), plank, plank)
 	var gate := MeshInstance3D.new()
-	gate.mesh = _finish(st)
+	gate.mesh = MeshKit.finish(st)
 	var trim := Node3D.new()
 	trim.name = "Trim"
 	gate.add_child(trim)
@@ -286,81 +251,6 @@ static func gateway(min_xz: Array, max_xz: Array) -> MeshInstance3D:
 	banner.rotation.y = PI * 0.5
 	trim.add_child(banner)
 	return gate
-
-
-## An axis-aligned box of `size` centred at `at`, its sides in `colour` and its top in `top`.
-static func _box(st: SurfaceTool, at: Vector3, size: Vector3, colour: Color, top: Color) -> void:
-	var h := size * 0.5
-	var c: Array[Vector3] = []
-	for i in 8:
-		c.append(at + Vector3(-h.x if i & 1 == 0 else h.x, -h.y if i & 2 == 0 else h.y, -h.z if i & 4 == 0 else h.z))
-	# Bottom corners 0 1 4 5, top corners 2 3 6 7 (bit 1 = +x, bit 2 = +y, bit 4 = +z).
-	_quad(st, c[0], c[1], c[3], c[2], colour, colour, Vector3.BACK * -1.0)
-	_quad(st, c[4], c[5], c[7], c[6], colour, colour, Vector3.BACK)
-	_quad(st, c[0], c[4], c[6], c[2], colour, colour, Vector3.LEFT)
-	_quad(st, c[1], c[5], c[7], c[3], colour, colour, Vector3.RIGHT)
-	_quad(st, c[2], c[3], c[7], c[6], top, top, Vector3.UP)
-	_quad(st, c[0], c[1], c[5], c[4], colour, colour, Vector3.DOWN)
-
-
-# --- Mesh helpers ------------------------------------------------------------------------
-
-static func _rng(centre: Vector2) -> RandomNumberGenerator:
-	var rng := RandomNumberGenerator.new()
-	rng.seed = int(centre.x * 31.0 + centre.y * 7.0) + 1000
-	return rng
-
-
-## Maps a point along (`u`) and across (`v`) a solid to the footprint's own axes.
-static func _local(u: float, v: float, along_x: bool) -> Vector3:
-	return Vector3(u, 0.0, v) if along_x else Vector3(v, 0.0, u)
-
-
-static func _begin() -> SurfaceTool:
-	var st := SurfaceTool.new()
-	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	return st
-
-
-## Flat normals from the unshared vertices, and one fresh material so this mesh can fade on
-## its own when it hides the character.
-static func _finish(st: SurfaceTool) -> ArrayMesh:
-	st.generate_normals()
-	var mesh := st.commit()
-	var m := StandardMaterial3D.new()
-	m.shading_mode = BaseMaterial3D.SHADING_MODE_PER_VERTEX
-	m.vertex_color_use_as_albedo = true
-	m.roughness = 1.0
-	mesh.surface_set_material(0, m)
-	return mesh
-
-
-## A quad `a b c d` whose bottom edge is `a b` in `low` and top edge `c d` in `high`, wound so
-## its normal leans towards `outward`.
-static func _quad(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3, low: Color, high: Color, outward: Vector3) -> void:
-	_tri_shade(st, a, b, c, low, low, high, outward)
-	_tri_shade(st, a, c, d, low, high, high, outward)
-
-
-static func _tri(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, colour: Color, outward: Vector3) -> void:
-	_tri_shade(st, a, b, c, colour, colour, colour, outward)
-
-
-## One triangle, flipped if needed so Godot's clockwise front face points along `outward`.
-static func _tri_shade(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, ca: Color, cb: Color, cc: Color, outward: Vector3) -> void:
-	if (b - a).cross(c - a).dot(outward) > 0.0:
-		var t := b
-		b = c
-		c = t
-		var tc := cb
-		cb = cc
-		cc = tc
-	st.set_color(ca)
-	st.add_vertex(a)
-	st.set_color(cb)
-	st.add_vertex(b)
-	st.set_color(cc)
-	st.add_vertex(c)
 
 
 # --- Set dressing ------------------------------------------------------------------------
