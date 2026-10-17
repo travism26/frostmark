@@ -6,7 +6,7 @@ Everything that is a rule lives in `sim/`, as RefCounted scripts with no Node, s
 |------|-------|
 | `sim/sim.gd` (`Sim`) | All game state, `command()`, `step()`, `drain_events()`, `snapshot()`, `restore()` |
 | `sim/world_def.gd` (`WorldDef`) | The world as data: walkability grid, named regions, object placements |
-| `sim/grid_path.gd` (`GridPath`) | A* over the grid plus line-of-sight smoothing |
+| `sim/grid_path.gd` (`GridPath`) | A* over the grid (the engine's `AStarGrid2D`, built once per world) plus line-of-sight smoothing |
 | `sim/vocab.gd` (`SimVocab`) | Every command kind, event kind, interaction action and rejection reason as a constant |
 | `sim/items.gd` (`ItemTable`) | Every item kind: label, stack size, weight, value, equipment slot, tool kind, tier, weapon stats, armour defence, food healing |
 | `sim/combat.gd` (`CombatTable`) | Combat as data: the style edge table, natural weapons, enemy kinds and their action cycles, noise radii, the damage arithmetic |
@@ -58,8 +58,8 @@ Any other kind is `unknown_command`. Rejection reasons for movement: `bad_args`,
 1. Off the grid: rejected.
 2. The clicked cell is walkable: the destination is the exact click point.
 3. The clicked cell is blocked (a wall, the fire): snap to the nearest walkable cell within 2 cells by distance, destination is that cell's centre. Further inside a solid than that: rejected.
-4. A* routes from the player's cell to the destination cell (8-connected, no corner cutting). No route: rejected.
-5. The cell path is smoothed by line of sight with a 0.3 m margin, so open-floor walks are straight lines.
+4. A* routes from the player's cell to the destination cell (8-connected, no corner cutting, straight steps 1 and diagonal ones the square root of 2). No route: rejected.
+5. The cell path is smoothed by line of sight with a 0.3 m margin, so open-floor walks are straight lines. Each leg tries the last waypoint first, else gallops 1, 2, 4, 8 ... waypoints ahead and halves back to the farthest one in sight, so a route across the whole world takes a few milliseconds and a click never stalls a frame.
 
 `interact` picks the nearest routable approach cell: the ring of free cells around a blocking object, or the object's own cells when it does not block (the gate).
 
@@ -297,7 +297,8 @@ The presentation draws the same solids and objects (as props, `scenes/props.gd`)
 - `banked`, `levelled`, `crafted`, `built` and `ring_gate_opened` become a banner across the top; the rest become one line of status text. `saved` writes the browser save. `node_depleted` and `node_respawned` swap a node's prop between its full and spent look (a stump, a rock without ore, a frozen-over hole). `fire_lit` and `fire_out` add and remove a field fire. `ring_two_reached` stops the ticking and shows the ending screen (`scenes/ending_screen.gd`).
 - Equipped weapon, armour and tool are drawn on the character in their tier's material (`scenes/character_gear.gd`); armour also changes the silhouette by tier (vest, pauldrons, helm).
 - Props come from the CC0 Kenney Nature and Survival kits (`assets/models/`, credited in `docs/assets/CREDITS.md`), snow-capped by one shader (`scenes/shaders/snow_cap.gdshader`). A day-night cycle, falling snow and the character's breath outside the outpost (`scenes/atmosphere.gd`) run on frame time and change no rule.
-- The orbit camera (`scenes/orbit_camera.gd`) follows the character's rendered position and keeps its own yaw and distance.
+- The orbit camera (`scenes/orbit_camera.gd`) follows the character's rendered position and keeps its own yaw and distance. The sun's shadows reach 1.6 orbit distances, just past the edge of the view.
+- A wall, cliff or the gate between the camera and the character swaps to a see-through twin of its material, made with the block. Behind the title screen a tiny sample of every material (plain and instanced, with and without a fire's light), every label size and the HUD are drawn for a few frames, so the browser compiles shaders and rasterises fonts there rather than freezing mid-walk.
 
 ## Adding a rule in a later slice
 
