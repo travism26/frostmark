@@ -87,11 +87,13 @@ func is_moving() -> bool:
 	return _move_hold > 0.0 or _speed >= MIN_SPEED
 
 
-## Plays the attack clip for a `style` ("melee" or "ranged") once, then returns to the base clip.
+## Plays the attack clip for a `style` ("melee", "ranged" or "magic") once, then returns to
+## the base clip. A rig without a magic clip sweeps its melee one.
 func strike(style: String) -> void:
 	if _dead or _player == null:
 		return
-	var clip: String = clips.get("ranged" if style == CombatTable.STYLE_RANGED else "melee", "")
+	var key := "ranged" if style == CombatTable.STYLE_RANGED else "magic" if style == CombatTable.STYLE_MAGIC else "melee"
+	var clip: String = clips.get(key, clips.get("melee", ""))
 	if clip == "" or not _player.has_animation(clip):
 		return
 	_one_shot = clip

@@ -1,11 +1,11 @@
-## Builders for the living figures: the enemies of ring one as animated CC0 models (KayKit
-## Adventurers for the bandits, the Quaternius wolf; credited in docs/assets/CREDITS.md) and
+## Builders for the living figures: the enemies of rings one and two as animated CC0 models
+## (KayKit Adventurers for the bandits, witch, stalker and troll, the Quaternius wolf; credited in docs/assets/CREDITS.md) and
 ## the hand-held pieces the player and the bandits share (a bow of staves, a club, a frost
 ## staff, the KayKit sword, Kenney's axe and pickaxe).
 ##
 ## Presentation only. `enemy` returns a FigureBody standing on the ground at its origin with a
 ## `height` metadata for the click volume and labels; the captain carries nodes named
-## `captain_sabre` and `captain_bow` that GameRoot shows by his stance. Hand pieces are
+## `captain_sabre`, `captain_bow` and `captain_staff` that GameRoot shows by his stance. Hand pieces are
 ## authored in a FigureBody `mount` frame: +Y up, -Z forward, the grip on the origin.
 class_name Figures
 extends RefCounted
@@ -21,7 +21,8 @@ const WOLF_HEIGHT := 2.7
 
 const HUMANOID_CLIPS := {
 	"idle": "Idle", "walk": "Walking_A", "run": "Running_A",
-	"melee": "1H_Melee_Attack_Chop", "ranged": "2H_Ranged_Shoot", "death": "Death_A",
+	"melee": "1H_Melee_Attack_Chop", "ranged": "2H_Ranged_Shoot", "magic": "1H_Melee_Attack_Slice_Horizontal",
+	"death": "Death_A",
 }
 const WOLF_CLIPS := {
 	"idle": "Idle", "walk": "Walk", "run": "Gallop", "melee": "Attack", "ranged": "Attack", "death": "Death",
@@ -32,10 +33,17 @@ const COLOR_GRIP := Color(0.25, 0.17, 0.11)
 const COLOR_ARCHER := Color(0.55, 0.16, 0.14)  # the rogue redrawn in bandit red
 const COLOR_CAPTAIN_CAPE := Color(0.62, 0.08, 0.08)
 const COLOR_WOLF := Color(1.45, 1.5, 1.6)  # the grey coat lifted towards snow
+const COLOR_WITCH := Color(0.40, 0.48, 0.70)  # the rogue in a rimed blue-violet
+const COLOR_TROLL := Color(0.62, 0.74, 0.82)  # the barbarian gone pale as old ice
+const COLOR_STALKER := Color(0.22, 0.24, 0.28)  # the rogue in ruin-shadow grey
+const COLOR_BONE := Color(0.86, 0.82, 0.72)
+const ROGUE_SPARES := ["Knife", "Knife_Offhand", "1H_Crossbow", "2H_Crossbow", "Throwable"]
 
 
-## An enemy of `kind`: a 1 m wolf, a hooded archer with a bow, or the armoured captain with
-## a sabre and a war bow (one shown at a time).
+## An enemy of `kind`: a 1 m wolf, a hooded archer with a bow, a frost witch (the rogue in
+## blue-violet with a staff), a ruin stalker (the rogue in shadow grey with a bone bow), an ice
+## troll (the barbarian, pale and huge, with an ice club) or the armoured captain with a
+## sabre, a war bow and a rime staff (one shown at a time, by his stance).
 static func enemy(kind: String) -> FigureBody:
 	match kind:
 		"wolf":
@@ -52,9 +60,30 @@ static func enemy(kind: String) -> FigureBody:
 			sabre.scale = Vector3.ONE * 0.7
 			var bow_hand := captain.mount("handslot_l", "captain_bow")
 			bow_hand.add_child(bow(Props.COLOR_DARK_WOOD, 1.4))
+			var staff_hand := captain.mount("handslot_r", "captain_staff")
+			staff_hand.add_child(staff(Props.COLOR_DARK_WOOD, 1.7))
 			return captain
+		"frost_witch":
+			var witch := humanoid("rogue_hooded.glb", 1.8, ROGUE_SPARES)
+			witch.recolour(COLOR_WITCH)
+			witch.mount("handslot_r", "staff").add_child(staff(Props.COLOR_WOOD, 1.5))
+			return witch
+		"ruin_stalker":
+			var stalker := humanoid("rogue_hooded.glb", 1.85, ROGUE_SPARES)
+			stalker.recolour(COLOR_STALKER)
+			stalker.mount("handslot_l", "bow").add_child(bow(COLOR_BONE, 1.2))
+			return stalker
+		"ice_troll":
+			var troll := humanoid("barbarian.glb", 1.8 * 1.6, ["Barbarian_Hat", "Barbarian_Cape"])
+			troll.recolour(COLOR_TROLL)
+			troll.run_speed = 2.5
+			var club_hand := troll.mount("handslot_r", "club")
+			var ice_club := club(Props.COLOR_ICE)
+			ice_club.scale = Vector3.ONE * 1.6
+			club_hand.add_child(ice_club)
+			return troll
 		_:
-			var archer := humanoid("rogue_hooded.glb", 1.8, ["Knife", "Knife_Offhand", "1H_Crossbow", "2H_Crossbow", "Throwable"])
+			var archer := humanoid("rogue_hooded.glb", 1.8, ROGUE_SPARES)
 			archer.recolour(COLOR_ARCHER)
 			archer.mount("handslot_l", "bow").add_child(bow(Props.COLOR_WOOD, 1.1))
 			return archer

@@ -124,6 +124,7 @@ var _death_screen: Control
 var _save_notice: Control
 var _save_watch := SaveWatch.new()
 var _gear: Node3D
+var _character_view: CharacterView
 var _atmosphere: Node
 var _audio: Node
 var _sound_panel: Control
@@ -154,7 +155,12 @@ func _ready() -> void:
 	add_child(_fire_layer)
 	_build_enemies(sim.world)
 	_gear = CharacterGear.new()
+	_character_view = CharacterView.new()
+	_character.add_child(_character_view)
 	_character.add_child(_gear)
+	UiTheme.style_hud_label($HUD/Title, "title")
+	UiTheme.style_hud_label($HUD/Status, "status")
+	UiTheme.style_hud_label($HUD/Hint, "hint")
 	_atmosphere = Atmosphere.new()
 	add_child(_atmosphere)
 	_atmosphere.setup($Sun, $WorldEnvironment.environment, _camera_rig, _character)
@@ -329,6 +335,7 @@ func _show_sim() -> void:
 	for id in sim.state["fires"]:
 		_add_field_fire(id)
 	_gear.show_equipment(sim.state["inventory"]["equipment"])
+	_character_view.set_sim(sim)
 	_atmosphere.set_outside(not sim.in_outpost())
 	_audio.sim = sim
 	_audio.set_region(sim.state["player"]["region"])
@@ -1059,58 +1066,25 @@ func _flicker() -> void:
 
 # --- Enemies and loot -----------------------------------------------------------------
 
-## One figure per placed enemy: a low box for a wolf, an upright capsule with a bow stave for
-## an archer, a stalker or a frost-tipped staff for a witch, a bigger caped capsule carrying a
-## sabre, a bow and a staff for the captain (the one in his hand follows his stance), a hulking
-## pale capsule with an ice club for a troll, a click volume that becomes `attack`, a
-## name-and-health label and a telegraph cue above it.
+## One figure per placed enemy: an animated model from Figures (the captain's sabre, bow and
+## staff are its `captain_sabre`, `captain_bow` and `captain_staff` nodes; the one in his hand
+## follows his stance),
+## a click volume that becomes `attack`, a name-and-health label and a telegraph cue above it.
 func _build_enemies(world: WorldDef) -> void:
 	for id in world.enemies:
 		var kind: String = world.enemies[id]["kind"]
-		var colour: Color = COLOR_BY_ENEMY.get(kind, Color.MAGENTA)
 		var root := Node3D.new()
 		root.name = id
 		_enemy_layer.add_child(root)
+		var figure := Figures.enemy(kind)
+		figure.name = "Figure"
+		root.add_child(figure)
 		var weapons := {}
-		var height := 1.8
-		if kind == "wolf":
-			_add_part(root, _box_mesh(Vector3(0.5, 0.55, 1.1), colour), Vector3(0, 0.45, 0))
-			_add_part(root, _box_mesh(Vector3(0.3, 0.3, 0.35), colour.darkened(0.3)), Vector3(0, 0.65, -0.65))
-			_add_part(root, _box_mesh(Vector3(0.12, 0.12, 0.45), colour.lightened(0.2)), Vector3(0, 0.6, 0.65))
-		else:
-			var boss := kind == "bandit_captain"
-			var troll := kind == "ice_troll"
-			var size := 1.3 if boss else 1.6 if troll else 1.0
-			height = 1.8 * size + 0.2
-			var body := CapsuleMesh.new()
-			body.radius = 0.32 * size
-			body.height = 1.5 * size
-			body.material = _flat_material(colour)
-			_add_part(root, body, Vector3(0, 0.75 * size, 0))
-			var hood := SphereMesh.new()
-			hood.radius = 0.22 * size
-			hood.height = 0.4 * size
-			hood.radial_segments = 6
-			hood.rings = 3
-			hood.material = _flat_material(colour.darkened(0.35))
-			_add_part(root, hood, Vector3(0, 1.45 * size, 0))
-			if kind == "frost_witch":
-				_add_part(root, _box_mesh(Vector3(0.06, 1.6, 0.06), Props.COLOR_WOOD), Vector3(0.42, 0.85, -0.2))
-				_add_part(root, _box_mesh(Vector3(0.16, 0.16, 0.16), Props.COLOR_FROST), Vector3(0.42, 1.7, -0.2))
-			elif troll:
-				# A club of ice in its right hand instead of a bow.
-				var club := _add_part(root, _box_mesh(Vector3(0.22, 1.0, 0.22), Props.COLOR_ICE), Vector3(0.62, 1.0, -0.3))
-				club.rotation.x = -0.5
-			else:
-				var bow := _add_part(root, _box_mesh(Vector3(0.06, 1.1 * size, 0.06), Props.COLOR_WOOD), Vector3(-0.42 * size, 0.9 * size, -0.2))
-				weapons["captain_bow"] = bow
-			if boss:
-				_add_part(root, _box_mesh(Vector3(0.9, 1.2, 0.06), Color(0.55, 0.08, 0.08)), Vector3(0, 1.05, 0.42))  # cape
-				var sabre := _add_part(root, _box_mesh(Vector3(0.08, 0.9, 0.03), CharacterGear.TIER_COLORS[ItemTable.TIER_IRON]), Vector3(0.5, 1.0, -0.25))
-				sabre.rotation.x = -0.4
-				weapons["captain_sabre"] = sabre
-				var staff := _add_part(root, _box_mesh(Vector3(0.07, 1.8, 0.07), Props.COLOR_FROST), Vector3(0.5, 1.0, -0.25))
-				weapons["captain_staff"] = staff
+		for w in ["captain_sabre", "captain_bow", "captain_staff"]:
+			var piece := figure.find_child(w, true, false)
+			if piece != null:
+				weapons[w] = piece
+		var height: float = figure.get_meta("height")
 		var click := _add_box_body(root, Vector3(1.1, height, 1.3), Vector3(0, height * 0.5, 0))
 		click.set_meta("enemy_id", id)
 		var label := _label3d("", 48)
@@ -1136,6 +1110,11 @@ func _sync_enemy(id: String) -> void:
 	root.visible = alive
 	(drawn["body"] as StaticBody3D).collision_layer = 1 if alive else 0
 	root.position = Vector3(float(e["pos"][0]), 0.0, float(e["pos"][1]))
+	var figure: FigureBody = root.get_node("Figure")
+	if alive:
+		figure.revive()
+	else:
+		figure.die()
 	var c := sim.combatant(id)
 	(drawn["label"] as Label3D).text = "%s  %d / %d" % [CombatTable.enemy(e["kind"])["label"], c["health"], c["health_max"]]
 	var weapons: Dictionary = drawn["weapons"]
@@ -1159,6 +1138,8 @@ func _show_cue(e: Dictionary) -> void:
 	cue.modulate = COLOR_BY_STYLE.get(e["style"], Color.WHITE)
 	cue.visible = true
 	drawn["cue_at"] = int(e["at"])
+	if CombatTable.is_attack(e["action"]):
+		((drawn["root"] as Node3D).get_node("Figure") as FigureBody).strike(e["style"])
 
 
 func _expire_cues() -> void:
