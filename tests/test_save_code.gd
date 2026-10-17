@@ -176,6 +176,75 @@ func test_a_version_2_snapshot_migrates() -> void:
 	assert_true(sim.command(Vocab.ATTACK, {"enemy_id": "archer_1"})["ok"])
 
 
+func test_a_version_3_snapshot_migrates() -> void:
+	# What slice 4 could snapshot: one patch of ring one, no field fires, no fallen guardians,
+	# the wolves and the archer it knew about, and a stash with banked logs.
+	var stash: Array = [
+		{"item": "wooden_bow", "count": 1}, {"item": "arrows", "count": 22}, {"item": "cooked_fish", "count": 3},
+		{"item": "logs", "count": 10}, {"item": "wolf_pelt", "count": 2}, null, null, null,
+	]
+	var pack: Array = []
+	pack.resize(12)
+	pack[0] = {"item": "iron_sword", "count": 1}
+	var skills := {}
+	for name in SkillTable.NAMES:
+		skills[name] = {"xp": 0, "level": 1}
+	skills["melee"] = {"xp": 320, "level": 4}
+	var v3 := {
+		"version": 3, "tick": 900, "rng": 4242,
+		"player": {
+			"pos": [-6.5, 24.5], "facing": [0.0, 1.0], "path": [], "target_object": "",
+			"region": "ring_one", "activity": {}, "ready_tick": 880,
+		},
+		"warmth": 150, "health": 70, "healing": [6, 6],
+		"inventory": {"pack": pack, "equipment": {"weapon": "wooden_club", "armour": "", "tool": "wooden_axe"}},
+		"stash": {"capacity": 8, "slots": stash},
+		"skills": skills,
+		"nodes": {"tree_1": {"left": 1, "respawn_tick": 0}, "tree_2": {"left": 0, "respawn_tick": 950}},
+		"enemies": {
+			"wolf_1": {"kind": "wolf", "pos": [-7.0, 26.0], "facing": [0.0, -1.0], "health": 9, "mode": "engaged",
+				"next": {"action": "bite", "at": 901}, "step": 1, "respawn_tick": 0},
+			"archer_1": {"kind": "bandit_archer", "pos": [14.5, 28.5], "facing": [0.0, -1.0], "health": 0,
+				"mode": "dead", "next": {}, "step": 0, "respawn_tick": 960},
+		},
+		"loot": {"loot_3": {"item": "wolf_pelt", "count": 1, "pos": [-7.0, 27.0], "expires_tick": 1400}},
+		"loot_seq": 3,
+		"upgrades": [], "pending": [],
+	}
+	var sim := SimScript.new()
+	assert_true(sim.restore(v3), "restore migrates a version-3 snapshot")
+	assert_eq(sim.state["version"], Sim.STATE_VERSION)
+	assert_eq(sim.state["tick"], 900)
+	assert_eq(sim.state["rng"], 4242)
+	assert_eq(int(sim.state["health"]), 70, "keeps what it had")
+	assert_eq(sim.state["healing"], [6, 6])
+	assert_eq(sim.state["skills"]["melee"], {"xp": 320, "level": 4})
+	assert_eq(H.pack_count(sim, "iron_sword"), 1)
+	assert_eq(sim.state["stash"]["slots"], stash, "the stash is exactly as banked")
+	assert_eq(int(sim.state["stash"]["capacity"]), 8)
+	assert_eq(sim.state["fires"], {}, "no field fires yet")
+	assert_eq(sim.state["fire_seq"], 0)
+	assert_eq(sim.state["bosses_defeated"], [], "the captain has not fallen")
+	assert_eq(sim.state["nodes"]["tree_1"], {"left": 1, "respawn_tick": 0}, "known nodes keep their state")
+	assert_eq(sim.state["nodes"]["tree_2"], {"left": 0, "respawn_tick": 950})
+	assert_eq(int(sim.state["nodes"]["copper_1"]["left"]), int(WorldDef.NODE_KINDS[WorldDef.KIND_COPPER_ROCK]["yield"]), "new nodes start full")
+	assert_eq(sim.state["enemies"]["wolf_1"]["mode"], Sim.MODE_ENGAGED, "a fight in progress carries on")
+	assert_eq(int(sim.state["enemies"]["wolf_1"]["health"]), 9)
+	assert_eq(sim.state["enemies"]["archer_1"]["mode"], Sim.MODE_DEAD)
+	assert_eq(sim.state["enemies"]["captain"]["mode"], Sim.MODE_IDLE, "the captain waits at his gate")
+	assert_eq(sim.state["enemies"].size(), sim.world.enemies.size(), "every enemy placed")
+	assert_eq(sim.state["loot"]["loot_3"]["item"], "wolf_pelt")
+	# The same through a save code, and the migrated character plays the new rules.
+	var imported := SimScript.new()
+	assert_true(imported.command(Vocab.IMPORT_SAVE, {"code": SaveCode.encode(v3)})["ok"])
+	assert_eq(imported.snapshot(), sim.snapshot())
+	H.place(sim, [0.5, 4.5])
+	assert_true(sim.command(Vocab.BUILD, {"upgrade": "stash_shelves"})["ok"], "can build from the old stash")
+	H.place(sim, [-6.5, 24.5])
+	H.set_pack(sim, [{"item": "logs", "count": 3}])
+	assert_true(sim.command(Vocab.LIGHT_FIRE)["ok"], "can light a field fire")
+
+
 func test_a_full_version_2_stash_gets_no_kit() -> void:
 	var full: Array = []
 	for i in 8:
