@@ -78,6 +78,8 @@ const REASON_TEXT := {
 
 const TitleScreen := preload("res://scenes/title_screen.gd")
 const Hud := preload("res://scenes/hud.gd")
+const GuidePanel := preload("res://scenes/guide_panel.gd")
+const HelpPanel := preload("res://scenes/help_panel.gd")
 const DeathScreen := preload("res://scenes/death_screen.gd")
 const EndingScreen := preload("res://scenes/ending_screen.gd")
 const SaveNotice := preload("res://scenes/save_notice.gd")
@@ -103,6 +105,8 @@ var _node_looks := {}  # node object id -> its prop, whose Full/Spent children s
 var _ring_gates := {}  # ring gate object id -> {bars, label}
 var _fires := {}  # field fire id -> its prop
 var _title_screen: Control
+var _guide_panel: Control
+var _help_panel: Control
 var _hud: Control
 var _death_screen: Control
 var _ending_screen: Control
@@ -150,7 +154,12 @@ func _ready() -> void:
 	_save_notice.show_requested.connect(_on_show_code)
 	_save_notice.dismissed.connect(_save_watch.code_seen)
 	$HUD.add_child(_save_notice)
+	_hud.help_requested.connect(func() -> void: _help_panel.open(true, sim.hints_on()))
+	_guide_panel = GuidePanel.new()
+	_guide_panel.dismissed.connect(_on_hints_set.bind(false))
+	_hud.add_child(_guide_panel)
 	_title_screen = TitleScreen.new()
+	_title_screen.help_requested.connect(func() -> void: _help_panel.open(false))
 	_title_screen.new_character.connect(_on_new_character)
 	_title_screen.continue_requested.connect(_on_continue)
 	_title_screen.import_requested.connect(_on_import)
@@ -165,6 +174,9 @@ func _ready() -> void:
 	_ending_screen.dismissed.connect(_on_ending_dismissed)
 	$HUD.add_child(_ending_screen)
 	_ending_screen.visible = false
+	_help_panel = HelpPanel.new()
+	_help_panel.hints_toggled.connect(_on_hints_set)
+	$HUD.add_child(_help_panel)
 	_hud.visible = false
 	_show_sim()
 	_build_warmup()
@@ -177,7 +189,7 @@ func _process(delta: float) -> void:
 	var shadow_reach: float = _camera_rig.distance * SHADOW_REACH
 	if _sun.directional_shadow_max_distance != shadow_reach:
 		_sun.directional_shadow_max_distance = shadow_reach
-	if not _playing:
+	if not _playing or _help_panel.visible:
 		return
 	_accumulator += delta
 	while _accumulator >= Sim.TICK_SECONDS and _playing:
@@ -201,7 +213,7 @@ func _process(delta: float) -> void:
 
 func _physics_process(_delta: float) -> void:
 	_fade_occluders()
-	if _pending_click == null or not _playing:
+	if _pending_click == null or not _playing or _help_panel.visible:
 		return
 	var screen: Vector2 = _pending_click
 	_pending_click = null
@@ -235,6 +247,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _on_new_character() -> void:
 	sim = Sim.new(sim.world)  # the world is static data: reuse it and its path grid
+	sim.command(SimVocab.NEW_CHARACTER, {"previous": SaveStore.read()})  # hints are for the first character
 	_start()
 	_save()
 
@@ -303,6 +316,7 @@ func _show_sim() -> void:
 	for id in sim.state["loot"]:
 		_add_loot(id)
 	_hud.refresh()
+	_guide_panel.show_sim(sim)
 	_refresh_status()
 
 
@@ -335,6 +349,14 @@ func _on_copy_code() -> void:
 func _on_hud_command(kind: String, args: Dictionary) -> void:
 	sim.command(kind, args)
 	_apply_events(sim.drain_events())
+
+
+## Hides the guide (its own button, or the help switch) or brings it back, and saves the choice.
+func _on_hints_set(on: bool) -> void:
+	sim.command(SimVocab.SET_HINTS, {"on": on})
+	_apply_events(sim.drain_events())
+	_guide_panel.show_sim(sim)
+	_save()
 
 
 func _on_death_dismissed() -> void:
@@ -484,6 +506,10 @@ func _apply_events(events: Array[Dictionary]) -> void:
 				_remove_loot(e["loot_id"])
 			SimVocab.EV_SAVED:
 				_save()
+			SimVocab.EV_HINT:
+				_guide_panel.show_hint(e["hint"])
+			SimVocab.EV_TIP:
+				_guide_panel.show_tip(e["tip"])
 			SimVocab.EV_COMMAND_REJECTED:
 				var reason: String = e["reason"]
 				if reason == SimVocab.REASON_IN_OUTPOST and e["command"] == SimVocab.LIGHT_FIRE:
