@@ -36,6 +36,14 @@ const COLOR_BY_STYLE := {
 const COLOR_LOOT := Color(0.85, 0.68, 0.2)
 const CUE_FONT := 72
 const CUE_FONT_HEAVY := 120
+const LOOT_FONT := 40
+## Frames the warm-up stage is drawn behind the title screen before it is freed.
+const WARMUP_FRAMES := 6
+## Every character a label can show, rasterised into the font atlas behind the title.
+const WARMUP_GLYPHS := "ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789 !?.,:;'()/+-x"
+## The sun's shadows reach this many orbit distances from the camera: just past the far edge
+## of the view at the camera's pitch and lens, and no farther.
+const SHADOW_REACH := 1.6
 
 ## What a rejection reason means to the player.
 const REASON_TEXT := {
@@ -83,6 +91,11 @@ var _facing := Vector2(0, 1)
 var _pending_click: Variant = null  # screen position awaiting a physics query
 var _last_event := ""
 var _faded: Array[MeshInstance3D] = []  # blocks made see-through because they hide the character
+## Fadeable mesh -> its see-through twin material, made with the block so a fade swaps a
+## material the GPU has already compiled instead of changing one's shader mid-walk.
+var _fade_twins := {}
+var _warmup: Node3D  # samples of every look, drawn behind the title screen, then freed
+var _warmup_until := 0
 var _playing := false
 var _node_looks := {}  # node object id -> its prop, whose Full/Spent children show its state
 var _ring_gates := {}  # ring gate object id -> {bars, label}
@@ -108,6 +121,7 @@ var _fire_layer := Node3D.new()
 @onready var _camera: Camera3D = $CameraRig/Camera3D
 @onready var _title: Label = $HUD/Title
 @onready var _status: Label = $HUD/Status
+@onready var _sun: DirectionalLight3D = $Sun
 
 
 func _ready() -> void:
@@ -142,11 +156,16 @@ func _ready() -> void:
 	_ending_screen.visible = false
 	_hud.visible = false
 	_show_sim()
+	_build_warmup()
 
 
 func _process(delta: float) -> void:
 	_clock += delta
 	_flicker()
+	_end_warmup(false)
+	var shadow_reach: float = _camera_rig.distance * SHADOW_REACH
+	if _sun.directional_shadow_max_distance != shadow_reach:
+		_sun.directional_shadow_max_distance = shadow_reach
 	if not _playing:
 		return
 	_accumulator += delta
@@ -199,13 +218,13 @@ func _unhandled_input(event: InputEvent) -> void:
 # --- Title screen and saves -----------------------------------------------------------
 
 func _on_new_character() -> void:
-	sim = Sim.new()
+	sim = Sim.new(sim.world)  # the world is static data: reuse it and its path grid
 	_start()
 	_save()
 
 
 func _on_continue() -> void:
-	var fresh := Sim.new()
+	var fresh := Sim.new(sim.world)
 	var result := fresh.command(SimVocab.IMPORT_SAVE, {"code": SaveStore.read()})
 	if not result["ok"]:
 		_title_screen.show_error("Your browser save could not be loaded. %s" % _reason_text(result["reason"]))
@@ -216,7 +235,7 @@ func _on_continue() -> void:
 
 
 func _on_import(code: String) -> void:
-	var fresh := Sim.new()
+	var fresh := Sim.new(sim.world)
 	var result := fresh.command(SimVocab.IMPORT_SAVE, {"code": code})
 	if not result["ok"]:
 		_title_screen.show_error(_reason_text(result["reason"]))
@@ -229,6 +248,7 @@ func _on_import(code: String) -> void:
 
 
 func _start() -> void:
+	_end_warmup(true)
 	_title_screen.visible = false
 	_death_screen.visible = false
 	_ending_screen.visible = false
@@ -544,15 +564,135 @@ func _fade_occluders() -> void:
 	_faded = hits
 
 
-static func _set_block_alpha(block: MeshInstance3D, alpha: float) -> void:
-	var meshes: Array[MeshInstance3D] = [block]
-	for child in block.get_children():
-		if child is MeshInstance3D:
-			meshes.append(child)  # a tree's crown fades with its trunk
-	for m in meshes:
-		var material := m.mesh.material as StandardMaterial3D
-		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA if alpha < 1.0 else BaseMaterial3D.TRANSPARENCY_DISABLED
-		material.albedo_color.a = alpha
+func _set_block_alpha(block: MeshInstance3D, alpha: float) -> void:
+	block.material_override = _fade_twins.get(block) if alpha < 1.0 else null
+
+
+## A see-through copy of a mesh's material, kept for the session so it is compiled once.
+func _add_fade_twin(mesh: MeshInstance3D) -> void:
+	var twin := (mesh.mesh.material as StandardMaterial3D).duplicate() as StandardMaterial3D
+	twin.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	twin.albedo_color.a = OCCLUDER_ALPHA
+	_fade_twins[mesh] = twin
+
+
+# --- Shader warm-up -------------------------------------------------------------------
+
+## The browser compiles a shader the first time something draws with it, freezing the game
+## for 50 to 275 ms. So behind the title screen a tiny sample of every look the world can
+## show is drawn in front of the camera for a few frames: each material once plain and once
+## instanced, beside and away from a fire's light (both change the compiled shader), plus
+## the see-through fade twins and every label size with every glyph it can print. The HUD
+## is drawn under the title too, so its text is rasterised before the first click.
+func _build_warmup() -> void:
+	var looks := {}  # shader key -> [a mesh, a material with that key]
+	for root: Node in [_world, _enemy_layer, _character]:
+		for node in root.find_children("*", "GeometryInstance3D", true, false):
+			var mesh: Mesh = null
+			if node is MeshInstance3D:
+				mesh = (node as MeshInstance3D).mesh
+			elif node is MultiMeshInstance3D:
+				mesh = (node as MultiMeshInstance3D).multimesh.mesh
+			if mesh == null:
+				continue
+			for i in mesh.get_surface_count():
+				var material: Material = (node as GeometryInstance3D).material_override
+				if material == null and node is MeshInstance3D:
+					material = (node as MeshInstance3D).get_active_material(i)
+				elif material == null:
+					material = mesh.surface_get_material(i)
+				_add_look(looks, mesh, material)
+	for m: MeshInstance3D in _fade_twins:
+		_add_look(looks, m.mesh, _fade_twins[m])
+	var sizes := {CUE_FONT: true, CUE_FONT_HEAVY: true, LOOT_FONT: true}
+	for root: Node in [_world, _enemy_layer]:
+		for label in root.find_children("*", "Label3D", true, false):
+			sizes[(label as Label3D).font_size] = true
+
+	_warmup = Node3D.new()
+	_warmup.name = "Warmup"
+	_warmup.position = Vector3(0, 0, -2.0)
+	_camera.add_child(_warmup)
+	for lit in [false, true]:
+		var cluster := Node3D.new()
+		cluster.position = Vector3(0.4 if lit else -0.4, 0, 0)
+		_warmup.add_child(cluster)
+		if lit:
+			var glow := OmniLight3D.new()
+			glow.omni_range = 0.3
+			cluster.add_child(glow)
+		var n := 0
+		for key in looks:
+			for instanced in [false, true]:
+				var sample := _warmup_sample(looks[key][0], looks[key][1], instanced)
+				sample.position = Vector3((n % 8) * 0.03 - 0.1, (n / 8) * 0.03 - 0.1, 0)
+				cluster.add_child(sample)
+				n += 1
+	var row := 0
+	for size in sizes:
+		var label := _label3d(WARMUP_GLYPHS, size)
+		label.pixel_size = 0.00002
+		label.position = Vector3(0, -0.2 - row * 0.01, 0)
+		_warmup.add_child(label)
+		row += 1
+	_hud.visible = true
+	_hud.banner(WARMUP_GLYPHS)
+	_warmup_until = Engine.get_frames_drawn() + WARMUP_FRAMES
+
+
+static func _add_look(looks: Dictionary, mesh: Mesh, material: Material) -> void:
+	var key := _shader_key(material)
+	if not looks.has(key):
+		looks[key] = [mesh, material]
+
+
+## What decides a material's compiled shader: a ShaderMaterial's shader, or a built-in
+## material's class, switches, modes and which textures it has. Colours and other numbers
+## are uniforms and share one shader.
+static func _shader_key(material: Material) -> String:
+	if material == null:
+		return "default"
+	if material is ShaderMaterial:
+		return "shader %d" % (material as ShaderMaterial).shader.get_instance_id()
+	var parts := PackedStringArray([material.get_class()])
+	for p in material.get_property_list():
+		if p["usage"] & PROPERTY_USAGE_STORAGE == 0:
+			continue
+		match p["type"]:
+			TYPE_BOOL, TYPE_INT:
+				parts.append("%s=%s" % [p["name"], material.get(p["name"])])
+			TYPE_OBJECT:
+				parts.append("%s=%s" % [p["name"], material.get(p["name"]) != null])
+	return " ".join(parts)
+
+
+## A tiny copy of `mesh` drawn with `material`, alone or as a one-instance multimesh.
+static func _warmup_sample(mesh: Mesh, material: Material, instanced: bool) -> GeometryInstance3D:
+	var sample: GeometryInstance3D
+	if instanced:
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.mesh = mesh
+		mm.instance_count = 1
+		var mmi := MultiMeshInstance3D.new()
+		mmi.multimesh = mm
+		sample = mmi
+	else:
+		var mi := MeshInstance3D.new()
+		mi.mesh = mesh
+		sample = mi
+	sample.material_override = material
+	var extent := maxf(mesh.get_aabb().get_longest_axis_size(), 0.001)
+	sample.scale = Vector3.ONE * (0.02 / extent)
+	return sample
+
+
+## Frees the warm-up stage once it has been drawn for WARMUP_FRAMES frames, or at once.
+func _end_warmup(now: bool) -> void:
+	if _warmup != null and (now or Engine.get_frames_drawn() >= _warmup_until):
+		_warmup.queue_free()
+		_warmup = null
+		_hud.visible = _playing
 
 
 # --- The world from the WorldDef -----------------------------------------------------
@@ -918,7 +1058,7 @@ func _add_loot(id: String) -> void:
 	var click := _add_box_body(root, Vector3(0.8, 0.6, 0.8), Vector3(0, 0.3, 0))
 	click.set_meta("object_id", id)
 	var count := int(pile["count"])
-	var label := _label3d(ItemTable.label(pile["item"]) + (" x%d" % count if count > 1 else ""), 40)
+	var label := _label3d(ItemTable.label(pile["item"]) + (" x%d" % count if count > 1 else ""), LOOT_FONT)
 	label.position = Vector3(0, 0.8, 0)
 	root.add_child(label)
 	_loot[id] = root
@@ -983,6 +1123,7 @@ func _add_block(id: String, min_xz: Array, max_xz: Array, height: float, colour:
 	mesh.mesh = box
 	mesh.position = Vector3((min_xz[0] + max_xz[0]) * 0.5, height * 0.5, (min_xz[1] + max_xz[1]) * 0.5)
 	_world.add_child(mesh)
+	_add_fade_twin(mesh)
 	return mesh
 
 
