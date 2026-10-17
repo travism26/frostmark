@@ -426,3 +426,19 @@ func test_a_fight_is_deterministic() -> void:
 	H.run(a, 40)
 	H.run(b, 40)
 	assert_eq(a.snapshot(), b.snapshot())
+
+
+func test_fighting_one_pack_does_not_wake_the_other() -> void:
+	var sim := SimScript.new()
+	H.place(sim, [-7.5, 23.5])
+	H.arm(sim, "wooden_club")
+	for id in ["wolf_1", "wolf_2"]:
+		sim.command(Vocab.ATTACK, {"enemy_id": id})
+		for i in 40:
+			H.run(sim, 1)
+			if sim.state["enemies"][id]["mode"] == Sim.MODE_DEAD:
+				break
+	assert_eq(sim.state["enemies"]["wolf_1"]["mode"], Sim.MODE_DEAD)
+	assert_eq(sim.state["enemies"]["wolf_2"]["mode"], Sim.MODE_DEAD, "a club wins against the near pack")
+	for id in ["wolf_3", "wolf_4", "wolf_5", "archer_1"]:
+		assert_eq(sim.state["enemies"][id]["mode"], Sim.MODE_IDLE, "%s heard nothing" % id)

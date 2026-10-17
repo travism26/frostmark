@@ -203,7 +203,7 @@ func _start() -> void:
 	_segment = []
 	_last_event = ""
 	_show_sim()
-	_hud.banner("Cut wood in the inner ring and walk it home. Past the trees, wolves and a bandit archer wait;\nyour stash holds a bow, arrows and cooked fish.")
+	_hud.banner("Cut wood in the inner ring and walk it home. Past the trees, wolves and a bandit archer wait; your stash holds a bow, arrows and cooked fish.")
 
 
 ## Redraws everything that depends on the state after a new, continued or imported sim.

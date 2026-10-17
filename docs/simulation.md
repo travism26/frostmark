@@ -190,7 +190,7 @@ Everything that fights is a combatant of one shape, `sim.combatant(id)`: `{id, k
 
 **Loot** piles lie for 600 ticks (five minutes) and then the snow takes them. `interact` on a pile walks onto it and picks up as much as fits; the rest stays.
 
-The placed enemies sit just past the trees, over the line into ring one at z = 24: two wolves (`wolf_1`, `wolf_2`, the near pack) south-west of the stand, a pack of three farther west, and one bandit archer to the south-east. Chopping the south-western pine is loud enough for the near pack to hear.
+The placed enemies sit just past the trees, over the line into ring one at z = 24: two wolves (`wolf_1`, `wolf_2`, the near pack) south-west of the stand, a pack of three farther west, and one bandit archer to the south-east. The groups sit more than a fight's noise (12 m) apart, so each is fought on its own. Chopping the south-western pine is loud enough for the near pack to hear.
 
 ## Death
 

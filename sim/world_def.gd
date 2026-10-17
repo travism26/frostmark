@@ -97,13 +97,14 @@ static func outpost() -> WorldDef:
 	# A small patch just past the trees, over the line into ring one: two wolves south-west of
 	# the stand, a pack of three farther west, and a bandit archer to the south-east. Ring one
 	# proper comes later; this is enough to find a fight. Chopping the south-western pine is
-	# loud enough for the near pack to hear.
+	# loud enough for the near pack to hear. The groups sit more than a fight's noise apart
+	# (CombatTable.NOISE_FIGHT), so each is fought on its own.
 	var placements := [
 		["wolf_1", "wolf", [-7.5, 28.5], "west_pack"],
 		["wolf_2", "wolf", [-5.5, 29.5], "west_pack"],
-		["wolf_3", "wolf", [-19.5, 27.5], "far_pack"],
-		["wolf_4", "wolf", [-21.5, 28.5], "far_pack"],
-		["wolf_5", "wolf", [-18.5, 29.5], "far_pack"],
+		["wolf_3", "wolf", [-25.5, 27.5], "far_pack"],
+		["wolf_4", "wolf", [-27.5, 28.5], "far_pack"],
+		["wolf_5", "wolf", [-24.5, 29.5], "far_pack"],
 		["archer_1", "bandit_archer", [8.5, 28.5], "archer_1"],
 	]
 	for p in placements:
