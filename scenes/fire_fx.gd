@@ -1,4 +1,4 @@
-## A campfire's fire: tongues of flame and wisps above them, embers that rise and wink out,
+## A campfire's fire: a solid flame cone, tongues of flame and wisps above it, embers that rise and wink out,
 ## a thread of smoke leaning with the wind, a glowing core on the logs and a warm light that
 ## flickers. CPU particles on additive billboards (Kenney particle textures, CC0), under
 ## sixty per fire. Presentation only: GameRoot names it `Flame` and leaves it to burn.
@@ -17,6 +17,7 @@ const WIND := Vector3(0.25, 1.0, 0.08)
 
 var _light: OmniLight3D
 var _core: MeshInstance3D
+var _tongue: Node3D  # the solid flame the camera always sees, under the particles
 var _glow: MeshInstance3D
 var _size := 1.0
 var _light_energy := 1.6
@@ -53,6 +54,27 @@ func _build(light: bool) -> void:
 	_core.mesh = core
 	_core.position.y = s * 0.14
 	add_child(_core)
+	# A solid two-layer flame cone, so the fire reads from the top-down camera even where
+	# the additive particles wash out against bright snow.
+	_tongue = Node3D.new()
+	add_child(_tongue)
+	for layer in [[s * 0.30, s * 0.85, Color(1.0, 0.5, 0.12), 1.4], [s * 0.16, s * 0.55, Color(1.0, 0.85, 0.35), 2.2]]:
+		var cone := MeshInstance3D.new()
+		var mesh := CylinderMesh.new()
+		mesh.top_radius = 0.0
+		mesh.bottom_radius = layer[0]
+		mesh.height = layer[1]
+		mesh.radial_segments = 7
+		var cone_m := StandardMaterial3D.new()
+		cone_m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		cone_m.albedo_color = layer[2]
+		cone_m.emission_enabled = true
+		cone_m.emission = layer[2]
+		cone_m.emission_energy_multiplier = layer[3]
+		mesh.material = cone_m
+		cone.mesh = mesh
+		cone.position.y = layer[1] * 0.5 + 0.05
+		_tongue.add_child(cone)
 	_glow = MeshInstance3D.new()
 	var glow := QuadMesh.new()
 	glow.size = Vector2(s * 1.1, s * 1.1)
@@ -134,6 +156,8 @@ func _process(delta: float) -> void:
 	if _light != null:
 		_light.light_energy = _light_energy * flicker
 	_core.scale = Vector3(1.0, 0.9 + 0.3 * flicker, 1.0)
+	_tongue.scale = Vector3(1.0 + 0.08 * sin(t * 1.9), 0.8 + 0.35 * flicker, 1.0 + 0.08 * cos(t * 1.3))
+	_tongue.rotation.y = _time * 0.8
 	_glow.scale = Vector3.ONE * (0.9 + 0.25 * flicker)
 
 
