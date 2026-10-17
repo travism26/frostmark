@@ -21,6 +21,8 @@ Gathered resources pay for outpost upgrades, which work as a tech tree and push 
 4. Past the red stakes is ring one: wolves, bandit archers, frost pines, iron and an ice hole. Read the cue over an enemy's head and counter it (a blade up close beats a bow, a bow at range beats a blade), eat to heal, and get home before the cold or a blow takes you.
 5. Build the ring-two gate winch, then beat the bandit captain at the far southern gate. He switches between sabre and bow. Walk through the gate he guarded to finish the first playable.
 
+A first character gets short hints for the first outing and tips when it is cold, the pack is full or an enemy winds up; **Hide hints** turns them off, and **Help** (in the HUD, or **Controls** on the title screen) lists the controls and can turn them back on. Later characters start with hints off.
+
 Click the ground to walk and anything else to use it. Click a pack item to equip or eat it (or, by a fire, to cook it), and right-click to drop it. Q and E, or a middle-mouse drag, rotate the camera; the mouse wheel zooms. If you die you wake by the fire, keeping your three most valuable things; your stash, skills and upgrades are untouched.
 
 Progress is saved in the browser at the gate, after every stash, workbench or upgrade action, and on death, so Continue on the title screen picks up where you left off. **Save code** shows your character as a text code; paste it into Import code on the title screen in any browser to carry it over. After 45 minutes of play the game reminds you to copy it. If the browser cannot keep saves (storage full, or blocked as in some private browsing), the game says so and keeps running: the save code is then your save.

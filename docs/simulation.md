@@ -14,6 +14,7 @@ Everything that is a rule lives in `sim/`, as RefCounted scripts with no Node, s
 | `sim/upgrades.gd` (`UpgradeTable`) | The outpost tech tree: cost, prerequisites, effects, and whether an upgrade is locked in this version |
 | `sim/skills.gd` (`SkillTable`) | The seven skill names and the one experience curve they share |
 | `sim/inventory.gd` (`Inventory`) | Static helpers over slot arrays: room, stacking, weight, removal |
+| `sim/guide.gd` (`GuideTable`) | The first-outing guide as data: the hint steps and their triggering events, the contextual tips with their triggers, conditions and cooldowns, and every line of their text |
 | `sim/save_code.gd` (`SaveCode`) | Save-code encoding and decoding, and the forward migrations between state versions |
 | `sim/save_watch.gd` (`SaveWatch`) | When to nudge the player about their save code: the long-play reminder and the warning when browser saves stop holding. Never saved |
 
@@ -47,8 +48,10 @@ Walking consumes `Sim.WALK_PER_TICK` metres of path per tick (4 m/s, so 2 m). A 
 | `eat` | `{index}` | 4 | Eat one food item from a pack slot. Lands next tick, costs that tick's step and swing, heals over the food's ticks |
 | `export_save` | `{}` | 3 | Returns `{ok, reason, code}`: the state as a save code. Changes nothing |
 | `import_save` | `{code}` | 3 | Validates, migrates and loads a save code, replacing the state at once. Emits `saved` (reason `import_save`) or `save_rejected` |
+| `set_hints` | `{on: bool}` | guide | Turns the first-outing guide off (the player dismissed it) or back on, where its path left off. Emits `hints_set`. At once, not queued |
+| `new_character` | `{previous: String}` | guide | Replaces the state with a new character at once. The guide starts on only when `previous` (the browser save being replaced) is empty |
 
-Any other kind is `unknown_command`. Rejection reasons for movement: `bad_args`, `outside_world` (off the grid), `not_walkable` (no free cell within `SNAP_RADIUS_CELLS`), `unreachable` (no route), `unknown_object`. For gathering: `not_gatherable`, `depleted`, `no_tool`, `level_too_low`, `pack_full`. For the inventory: `empty_slot`, `not_equippable`, `pack_full`, `stash_full`, `not_in_outpost`. Gathering also refuses `tool_too_weak` (iron needs a bronze pickaxe or better). For crafting: `unknown_recipe`, `tier_capped` (above bronze), `not_at_workbench`, `level_too_low`, `upgrade_missing`, `missing_inputs`, `pack_full`. For cooking: `bad_args`, `empty_slot`, `not_cookable`, `not_at_fire`, `level_too_low`, `pack_full`. For building: `unknown_upgrade`, `already_built`, `upgrade_locked`, `upgrade_missing` (a prerequisite), `not_in_outpost`, `missing_inputs` (from the stash). For a field fire: `in_outpost`, `missing_inputs`. For combat: `unknown_enemy`, `target_dead`, `in_outpost` (nothing is fought from inside), `no_ammo` (a ranged weapon with no arrows in the pack). For eating: `empty_slot`, `not_food`, `already_eating` (one meal a tick). For save codes: `bad_code`, `bad_checksum`, `unsupported_version`, `bad_snapshot`.
+Any other kind is `unknown_command`. Rejection reasons for movement: `bad_args`, `outside_world` (off the grid), `not_walkable` (no free cell within `SNAP_RADIUS_CELLS`), `unreachable` (no route), `unknown_object`. For gathering: `not_gatherable`, `depleted`, `no_tool`, `level_too_low`, `pack_full`. For the inventory: `empty_slot`, `not_equippable`, `pack_full`, `stash_full`, `not_in_outpost`. Gathering also refuses `tool_too_weak` (iron needs a bronze pickaxe or better). For crafting: `unknown_recipe`, `tier_capped` (above bronze), `not_at_workbench`, `level_too_low`, `upgrade_missing`, `missing_inputs`, `pack_full`. For cooking: `bad_args`, `empty_slot`, `not_cookable`, `not_at_fire`, `level_too_low`, `pack_full`. For building: `unknown_upgrade`, `already_built`, `upgrade_locked`, `upgrade_missing` (a prerequisite), `not_in_outpost`, `missing_inputs` (from the stash). For a field fire: `in_outpost`, `missing_inputs`. For combat: `unknown_enemy`, `target_dead`, `in_outpost` (nothing is fought from inside), `no_ammo` (a ranged weapon with no arrows in the pack). For eating: `empty_slot`, `not_food`, `already_eating` (one meal a tick). For save codes: `bad_code`, `bad_checksum`, `unsupported_version`, `bad_snapshot`. For the guide: `bad_args`.
 
 ### Interaction actions
 
@@ -109,6 +112,9 @@ Any other kind is `unknown_command`. Rejection reasons for movement: `bad_args`,
 | `ring_two_reached` | `object_id` | The player walked through the open gate to ring two: the first playable's ending. They are back beside the outpost fire with the pack banked |
 | `saved` | `reason, tick` | A save point: `gate`, `deposit`, `withdraw`, `craft`, `build`, `death`, `ring_two` or `import_save`. The presentation stores `sim.export_code()` |
 | `save_rejected` | `reason` | An `import_save` failed |
+| `hint` | `hint` | The guide moved to its next hint step (a `GuideTable` id), or `""` once the path is walked |
+| `tip` | `tip` | A contextual tip fired (a `GuideTable.TIPS` id) |
+| `hints_set` | `on` | The guide was turned off or back on |
 
 ## State shape
 
@@ -116,7 +122,7 @@ Any other kind is `unknown_command`. Rejection reasons for movement: `bad_args`,
 
 ```
 {
-  "version": 4,
+  "version": 5,
   "tick": 0,
   "rng": 1,                      # 31-bit generator state for gathering and drop rolls
   "player": {
@@ -146,7 +152,8 @@ Any other kind is `unknown_command`. Rejection reasons for movement: `bad_args`,
   "fire_seq": 1,                 # the last field fire id handed out
   "bosses_defeated": ["captain"],  # guardians that have fallen at least once, kept for good
   "upgrades": ["stash_shelves"], # built upgrade ids
-  "pending": []                  # queued inventory commands for the next tick
+  "pending": [],                 # queued inventory commands for the next tick
+  "guide": {"on": true, "step": 0, "tips": {"cold": 640}}  # hint step reached; the tick each tip may fire again
 }
 ```
 
@@ -259,6 +266,14 @@ At zero health, from a blow or the cold, the player keeps the three most valuabl
 
 The gate to ring two (`ring_two_gate`) stands in the cliffs at ring one's far southern edge, barred: it blocks walking like a wall. It is open once its guardian (`captain`) is in `bosses_defeated` and its upgrade (`ring_two_gate`) is built, in either order; whichever comes second emits `ring_gate_opened`, and an open gate never closes. `interact` walks to it from the ring-one side; arriving while it is open emits `ring_two_reached`, puts the player beside the outpost fire with health, skills and gear as they were, banks the pack as crossing the outpost gate does, and is a save point (`ring_two`). The presentation shows the ending screen. Arriving while it is barred does nothing but the `interacted` event.
 
+## The first-outing guide
+
+The brief rules out quests and dialogue, so the guide only says what to try next. `GuideTable.STEPS` is the hint path: walk, cut a pine, walk the logs back through the gate, craft at the workbench. Each step is done by its trigger event (`moved`; `gathered` of logs; `banked` with something in it; `crafted`), and only the current step listens, so doing things early never skips ahead. Every event is checked as it is emitted, so a rejected command counts at once. Each advance emits `hint`. `sim.hint()` is the current step's id, `""` when the guide is off or the path is walked.
+
+`GuideTable.TIPS` are the contextual tips. `pack_full` fires on a gather or pick-up refused or stopped for a full pack; `telegraph` on an enemy's telegraphed blow; `cold` is a condition checked at the end of each tick: warmth at or below `GuideTable.COLD_WARMTH`, outside, and away from any fire. A tip that fires emits `tip` and stays quiet for its `cooldown` ticks. Tips keep firing after the path is walked, while the guide is on.
+
+`set_hints` turns everything off or back on. `new_character` turns it off for every character after the first: the presentation passes the browser save it is about to replace. A character from before the guide existed migrates with it off.
+
 ## The gate and banking
 
 Walls leave the gate as the only way into the outpost, so any walk whose region changes into `outpost` has crossed it inward. That moves every pack slot into the stash (filling existing stacks first), leaves what does not fit in the pack as overflow, emits `banked`, and makes the tick a save point. Equipment is worn, not banked. Walking out starts the warmth drain because the region is no longer `outpost`.
@@ -269,7 +284,7 @@ The simulation never touches the filesystem. It reports save points with `saved`
 
 A save code is base64 of `FM|<version>|<checksum>|<snapshot JSON>`. The JSON is compact with sorted keys. The checksum is the first 16 hex digits of SHA-256 over `<version>|<snapshot JSON>`: it catches typos, truncation and hand edits, and is not meant to stop a determined cheat. Decoding accepts only the canonical base64 of the decoded bytes, so every changed character is caught. It ignores whitespace from wrapped pastes, refuses codes from a newer build, and never raises an engine error.
 
-`SaveCode.migrate(snap, target)` applies one step per version. Each step hard-codes the defaults of its own version, so retuning a constant later never changes what an old save migrates into. `1 -> 2` keeps the slice-2 tick and position and adds a new character's inventory, stash, skills, warmth, health and nodes. `2 -> 3` adds the swing timer, an empty healing queue, enemies (empty, so every enemy loads at home and idle) and ground loot, and puts the slice-4 starter kit (a wooden bow, 30 arrows, 5 cooked fish) into empty stash slots so a slice-3 character can fight too. What does not fit is not added. `3 -> 4` adds no field fires and no fallen guardians and changes nothing else: the stash keeps its capacity, known nodes and enemies keep their state, and the new ring-one nodes, enemies and the captain load full and at home.
+`SaveCode.migrate(snap, target)` applies one step per version. Each step hard-codes the defaults of its own version, so retuning a constant later never changes what an old save migrates into. `1 -> 2` keeps the slice-2 tick and position and adds a new character's inventory, stash, skills, warmth, health and nodes. `2 -> 3` adds the swing timer, an empty healing queue, enemies (empty, so every enemy loads at home and idle) and ground loot, and puts the slice-4 starter kit (a wooden bow, 30 arrows, 5 cooked fish) into empty stash slots so a slice-3 character can fight too. What does not fit is not added. `3 -> 4` adds no field fires and no fallen guardians and changes nothing else: the stash keeps its capacity, known nodes and enemies keep their state, and the new ring-one nodes, enemies and the captain load full and at home. `4 -> 5` adds the first-outing guide switched off with its four steps walked, since a version-4 character has already been played.
 
 Every version ever shipped keeps a real save code in `tests/fixtures/save_v<N>.txt`, and `tests/test_save_fixtures.gd` imports each into the current build. **Each future version bump adds its fixture** (a code exported from the build that introduces the version) along with its migration step; old fixtures are never edited. The test fails when a version has no fixture.
 
@@ -300,6 +315,7 @@ The presentation draws the same solids and objects (as props, `scenes/props.gd`)
 - `died` stops the ticking and shows the death screen until the player dismisses it.
 - `enemy_stance` shows the captain's change of weapon over his head in the new style's colour, and his figure swaps the sabre and the bow in his hand.
 - `banked`, `levelled`, `crafted`, `built` and `ring_gate_opened` become a banner across the top; the rest become one line of status text. `saved` writes the browser save. `node_depleted` and `node_respawned` swap a node's prop between its full and spent look (a stump, a rock without ore, a frozen-over hole). `fire_lit` and `fire_out` add and remove a field fire. `ring_two_reached` stops the ticking and shows the ending screen (`scenes/ending_screen.gd`).
+- New character sends `new_character` with the browser save it replaces. `hint` and `tip` show in the guide panel (`scenes/guide_panel.gd`), bottom left; its Hide hints button sends `set_hints` off and saves. The help panel (`scenes/help_panel.gd`) lists the controls and the loop, opens from the title screen's Controls button and the HUD's Help button, holds the ticking while open, and in a game has a Show hints switch.
 - Equipped weapon, armour and tool are drawn on the character in their tier's material (`scenes/character_gear.gd`); armour also changes the silhouette by tier (vest, pauldrons, helm).
 - Props come from the CC0 Kenney Nature and Survival kits (`assets/models/`, credited in `docs/assets/CREDITS.md`), snow-capped by one shader (`scenes/shaders/snow_cap.gdshader`). A day-night cycle, falling snow and the character's breath outside the outpost (`scenes/atmosphere.gd`) run on frame time and change no rule.
 - The orbit camera (`scenes/orbit_camera.gd`) follows the character's rendered position and keeps its own yaw and distance. The sun's shadows reach 1.6 orbit distances, just past the edge of the view.
