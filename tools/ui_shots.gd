@@ -1,10 +1,9 @@
-## Board-only, not shipped: renders the side panel, orbs and a telegraph ring in each frame
-## style for the UI board, from the real scene with a stocked character.
+## Board-only, not shipped: renders the side panel, orbs and a telegraph ring from the real
+## scene with a stocked character, as the UI board did for its frame styles.
 ##
-##   godot --resolution 1280x720 -s tools/ui_shots.gd -- <out_dir> [style ...]
+##   godot --resolution 1280x720 -s tools/ui_shots.gd -- <out_dir>
 ##
-## Styles are UiTheme.FRAME_STYLES; all three when none is given. Per style it writes
-## <style>_<tab>.png for every tab and <style>_fight.png with a wolf's telegraph ring up.
+## Writes ui_<tab>.png for every tab and ui_fight.png with a wolf's telegraph ring up.
 extends SceneTree
 
 const H := preload("res://tests/sim_helpers.gd")
@@ -15,7 +14,6 @@ const OUTPOST_SPOT := [0.5, 4.5]
 const FIGHT_SPOT := [-5.0, 28.5]  # beside wolf_1's home in ring one
 
 var _out_dir := ""
-var _styles: Array[String] = []
 var _saved_game := PackedByteArray()
 var _had_save := false
 
@@ -23,14 +21,10 @@ var _had_save := false
 func _init() -> void:
 	var args := OS.get_cmdline_user_args()
 	if args.is_empty():
-		printerr("usage: godot -s tools/ui_shots.gd -- <out_dir> [style ...]")
+		printerr("usage: godot -s tools/ui_shots.gd -- <out_dir>")
 		quit(2)
 		return
 	_out_dir = args[0]
-	for i in range(1, args.size()):
-		_styles.append(args[i])
-	if _styles.is_empty():
-		_styles = UiTheme.FRAME_STYLES.duplicate()
 	DirAccess.make_dir_recursive_absolute(_out_dir)
 	if FileAccess.file_exists("user://frostmark.save"):
 		_had_save = true
@@ -39,8 +33,7 @@ func _init() -> void:
 
 
 func _run() -> void:
-	for style in _styles:
-		UiTheme.set_frame_style(style)
+	for style in ["ui"]:
 		change_scene_to_file("res://scenes/main.tscn")
 		await process_frame
 		await process_frame

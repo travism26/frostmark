@@ -36,7 +36,6 @@ const TIMBER := Color(0.30, 0.19, 0.11)
 const TIMBER_LIGHT := Color(0.42, 0.28, 0.16)
 const IRON := Color(0.46, 0.50, 0.56)
 const IRON_DARK := Color(0.22, 0.25, 0.30)
-const STONE := Color(0.36, 0.38, 0.42)
 
 const FONT_CINZEL := "res://assets/fonts/Cinzel[wght].ttf"
 const FONT_INTER := "res://assets/fonts/Inter[opsz,wght].ttf"
@@ -48,17 +47,10 @@ const PANEL_DANGER := "danger"
 const PANEL_ICE := "ice"
 const PANEL_EMBER := "ember"
 
-## The frame styles the UI board offered. `frame_style` picks the one in use; the board
-## script switches it to render the options.
-const FRAME_TIMBER := "timber"  # timber band, iron line, ice glow
-const FRAME_FROST := "frost"  # a thin iron rim on frosted glass
-const FRAME_STONE := "stone"  # a bevelled stone band with an ember glow
-const FRAME_STYLES: Array[String] = [FRAME_TIMBER, FRAME_FROST, FRAME_STONE]
 ## The frame texture is this big, with its band and glow inside the 9-slice margin.
 const FRAME_PX := 72
 const FRAME_MARGIN := 24
 
-static var frame_style := FRAME_TIMBER
 static var _theme: Theme
 static var _fonts := {}  # "cinzel:700:2" -> FontVariation
 static var _frames := {}  # kind -> StyleBoxTexture
@@ -72,14 +64,6 @@ static func theme() -> Theme:
 	if _theme == null:
 		_theme = _build()
 	return _theme
-
-
-## Switches the frame style and drops every cached style so the next `theme()` rebuilds.
-## Board-only: controls already on screen keep the theme they were given.
-static func set_frame_style(style: String) -> void:
-	frame_style = style
-	_theme = null
-	_frames = {}
 
 
 static func _build() -> Theme:
@@ -362,7 +346,7 @@ static func wrapped(text: String, width: float, size: int = 14, colour: Color = 
 
 
 ## A framed, frosted panel in a colour key: PANEL_SLATE, PANEL_DANGER, PANEL_ICE or
-## PANEL_EMBER. The frame is drawn in code in the current `frame_style`.
+## PANEL_EMBER. The frame (timber and iron, the UI board's pick) is drawn in code.
 static func panel_style(kind: String = PANEL_SLATE) -> StyleBoxTexture:
 	if not _frames.has(kind):
 		var fill := SLATE
@@ -378,7 +362,7 @@ static func panel_style(kind: String = PANEL_SLATE) -> StyleBoxTexture:
 				fill = Color(0.12, 0.08, 0.06, 0.92)
 				glow = EMBER
 		var sb := StyleBoxTexture.new()
-		sb.texture = ImageTexture.create_from_image(_frame_image(frame_style, fill, glow))
+		sb.texture = ImageTexture.create_from_image(_frame_image(fill, glow))
 		sb.texture_margin_left = FRAME_MARGIN
 		sb.texture_margin_top = FRAME_MARGIN
 		sb.texture_margin_right = FRAME_MARGIN
@@ -536,10 +520,10 @@ static func _check_icon(on: bool) -> Texture2D:
 
 # --- The frame --------------------------------------------------------------------------
 
-## The 9-slice frame art for a style, drawn from a signed distance to a rounded box: a band
-## along the edge (timber, a thin iron rim or bevelled stone), an iron line inside it where
-## the style has one, and the frosted fill with a soft glow fading inward from the band.
-static func _frame_image(style: String, fill: Color, glow: Color) -> Image:
+## The 9-slice frame art, drawn from a signed distance to a rounded box: a timber band along
+## the edge with iron rivets in its corners, an iron line inside it, and the frosted fill
+## with a soft glow fading inward from the band.
+static func _frame_image(fill: Color, glow: Color) -> Image:
 	var n := FRAME_PX
 	var img := Image.create(n, n, false, Image.FORMAT_RGBA8)
 	var radius := 12.0
@@ -549,24 +533,6 @@ static func _frame_image(style: String, fill: Color, glow: Color) -> Image:
 	var glow_strength := 0.34
 	var band_colour := TIMBER
 	var band_edge := TIMBER_LIGHT
-	match style:
-		FRAME_FROST:
-			radius = 14.0
-			band = 2.5
-			line = 0.0
-			glow_len = 16.0
-			glow_strength = 0.30
-			band_colour = IRON
-			band_edge = IRON.lightened(0.3)
-		FRAME_STONE:
-			radius = 9.0
-			band = 6.0
-			line = 0.0
-			glow_len = 12.0
-			glow_strength = 0.28
-			band_colour = STONE
-			band_edge = STONE.lightened(0.25)
-			glow = EMBER
 	var half := n * 0.5
 	for y in n:
 		for x in n:
@@ -580,15 +546,10 @@ static func _frame_image(style: String, fill: Color, glow: Color) -> Image:
 			var depth := -d  # pixels inside the outer edge
 			var c: Color
 			if depth < band:
-				# The band: lighter toward its outer edge (frost) or along its grain (timber),
-				# and bevelled on stone, lit from the top left.
+				# The band: lighter toward its outer edge, with a faint grain.
 				var t := clampf(depth / band, 0.0, 1.0)
 				c = band_edge.lerp(band_colour, t)
-				if style == FRAME_TIMBER:
-					c = c.darkened(0.08 * (0.5 + 0.5 * sin((x + y) * 1.7)))
-				elif style == FRAME_STONE:
-					var light := clampf(0.5 - (p.x + p.y) / n, 0.0, 1.0)
-					c = c.lerp(band_edge, light * 0.45)
+				c = c.darkened(0.08 * (0.5 + 0.5 * sin((x + y) * 1.7)))
 				c.a = 1.0
 			elif depth < band + line:
 				c = IRON
@@ -597,7 +558,7 @@ static func _frame_image(style: String, fill: Color, glow: Color) -> Image:
 				var g := exp(-inside / glow_len) * glow_strength
 				c = fill.lerp(Color(glow, fill.a), g)
 				c.a = fill.a + (1.0 - fill.a) * g * 0.5
-			if style == FRAME_TIMBER and depth < band + 1.0:
+			if depth < band + 1.0:
 				# Iron rivets in the corners of the band.
 				var corner := Vector2(absf(p.x), absf(p.y)) - Vector2(half - radius * 0.9, half - radius * 0.9)
 				if corner.length() < 2.6:

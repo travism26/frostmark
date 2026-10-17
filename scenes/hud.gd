@@ -23,6 +23,12 @@ const TAB_LABELS := {
 	IconTable.TAB_PACK: "Pack", IconTable.TAB_EQUIPMENT: "Equipment", IconTable.TAB_SKILLS: "Skills",
 	IconTable.TAB_UPGRADES: "Upgrades", IconTable.TAB_SETTINGS: "Settings",
 }
+## Hotkeys, in the usual MMO way: B for the bag, C for the character, K for skills, U for
+## upgrades, O for options. Q and E stay the camera's; Escape folds the panel to its tabs.
+const TAB_KEYS := {
+	KEY_B: IconTable.TAB_PACK, KEY_C: IconTable.TAB_EQUIPMENT, KEY_K: IconTable.TAB_SKILLS,
+	KEY_U: IconTable.TAB_UPGRADES, KEY_O: IconTable.TAB_SETTINGS,
+}
 
 const PANEL_NONE := ""
 const PANEL_STASH := "stash"
@@ -42,6 +48,7 @@ const BANNER_MAX_WIDTH := 580.0
 var sim: Sim
 var _panel := PANEL_NONE
 var _tab := IconTable.TAB_PACK
+var _folded := false  # the panel shows only its tab strip
 var _warmth: Orb
 var _health: Orb
 var _fire_button: Button
@@ -142,13 +149,35 @@ func close_panels() -> void:
 	open_panel(PANEL_NONE)
 
 
-## Brings one of the side panel's tabs to the front.
+## Brings one of the side panel's tabs to the front. The open tab's button (or its key) a
+## second time folds the panel to its tab strip, so the world has the screen back.
 func show_tab(tab: String) -> void:
+	_folded = tab == _tab and not _folded
 	_tab = tab
 	for t in _pages:
-		(_pages[t] as Control).visible = t == tab
-		(_tab_buttons[t] as Button).set_pressed_no_signal(t == tab)
+		(_pages[t] as Control).visible = t == tab and not _folded
+		(_tab_buttons[t] as Button).set_pressed_no_signal(t == tab and not _folded)
+	_side.custom_minimum_size = Vector2.ZERO
+	_side.reset_size()
 	refresh()
+
+
+## Folds the panel to its tab strip.
+func fold() -> void:
+	if not _folded:
+		show_tab(_tab)
+
+
+func _unhandled_key_input(event: InputEvent) -> void:
+	if not visible or not (event is InputEventKey) or not event.pressed or event.echo:
+		return
+	var key: Key = (event as InputEventKey).keycode
+	if TAB_KEYS.has(key):
+		show_tab(TAB_KEYS[key])
+		get_viewport().set_input_as_handled()
+	elif key == KEY_ESCAPE and not _folded:
+		fold()
+		get_viewport().set_input_as_handled()
 
 
 func show_code(code: String) -> void:
@@ -523,7 +552,7 @@ func _build_side() -> void:
 		b.theme_type_variation = "TabButton"
 		b.toggle_mode = true
 		b.button_group = group
-		b.tooltip_text = TAB_LABELS[tab]
+		b.tooltip_text = "%s  (%s; again to fold the panel)" % [TAB_LABELS[tab], OS.get_keycode_string(TAB_KEYS.find_key(tab))]
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.add_child(_centered(UiTheme.badge(tab, 30)))
 		b.custom_minimum_size = Vector2(44, 44)
