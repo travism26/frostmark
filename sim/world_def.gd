@@ -31,6 +31,7 @@ const KIND_COAL_ROCK := "coal_rock"
 const KIND_RICH_IRON_ROCK := "rich_iron_rock"
 const KIND_DEEP_HOLE := "deep_hole"
 const KIND_RING_GATE := "ring_gate"
+const KIND_WAYSTONE := "waystone"
 
 const REGION_OUTPOST := "outpost"
 const REGION_INNER_RING := "inner_ring"
@@ -209,6 +210,9 @@ static func outpost() -> WorldDef:
 	for i in iron.size():
 		_place(w, "iron_%d" % (i + 1), KIND_IRON_ROCK, "Iron rock", iron[i], [2.0, 2.0], 1.2)
 	_place(w, "ice_hole", KIND_ICE_HOLE, "Ice hole", [-9.0, -43.0], [2.0, 2.0], 0.1)
+	# Ring one's waystone stands near the far southern road, out of sight of the captain and the
+	# archer flanking the road east, so the long walk back from his gate can be skipped.
+	_place(w, "ring_one_waystone", KIND_WAYSTONE, "Waystone", [12.0, 54.0], [1.0, 1.0], 2.2)
 	# Ring one's enemies. The near groups sit just past the southern pines: two wolves south-west,
 	# a pack of three farther west, a bandit archer south-east. Chopping the south-western pine is
 	# loud enough for the near pack to hear. Farther out: an archer camp by the iron, a pack among
@@ -294,6 +298,9 @@ static func _ring_two(w: WorldDef) -> void:
 	var rich := [[-9.0, 97.0], [6.0, 98.0], [-2.0, 106.0]]
 	for i in rich.size():
 		_place(w, "rich_iron_%d" % (i + 1), KIND_RICH_IRON_ROCK, "Rich iron vein", rich[i], [2.0, 2.0], 1.4)
+	# Ring two's waystone stands in the far ruins south of the keep, between the troll and the
+	# stalker that keep them and out of sight of both.
+	_place(w, "ring_two_waystone", KIND_WAYSTONE, "Waystone", [0.0, 118.0], [1.0, 1.0], 2.2)
 	var placements := [
 		["stalker_1", "ruin_stalker", [-32.5, 72.5], "stalker_1"],
 		["troll_1", "ice_troll", [-44.5, 94.5], "troll_1"],

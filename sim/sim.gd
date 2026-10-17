@@ -21,7 +21,7 @@ const WALK_PER_TICK := WALK_SPEED * TICK_SECONDS
 const SNAP_RADIUS_CELLS := 2
 ## Bumped whenever the state shape changes. `restore()` migrates older snapshots forward
 ## (SaveCode.migrate) and refuses ones it cannot read.
-const STATE_VERSION := 7
+const STATE_VERSION := 8
 
 ## The pack: a fixed number of slots, and a carried weight (pack plus equipment, in kg)
 ## above which walking slows to OVERWEIGHT_SPEED of normal.
@@ -78,6 +78,11 @@ const BURN_DROP_PER_LEVEL := 5
 const SMITHING_TIER_CAP := ItemTable.TIER_BRONZE
 ## Passing an open ring gate walks the player this far past the gate's centre on the far side.
 const RING_GATE_STEP := 3.0
+## Waystone travel channels this many ticks (three seconds) standing by the stone; a blow taken
+## in that time breaks it, so it is a way home, not a way out of a fight. It ends this far
+## outside the outpost gate, so the last step through the gate, which banks, is the player's.
+const TRAVEL_TICKS := 6
+const TRAVEL_GATE_STEP := 2.5
 
 ## Death keeps this many of the most valuable things carried or worn (a stack is one thing).
 const DEATH_KEEPS := 3
@@ -157,6 +162,7 @@ func new_state() -> Dictionary:
 		"fire_seq": 0,
 		"bosses_defeated": [],
 		"rings_reached": [],
+		"waystones": [],
 		"upgrades": [],
 		"pending": [],
 		"guide": {"on": true, "step": 0, "tips": {}},
@@ -227,6 +233,8 @@ func command(kind: String, args: Dictionary = {}) -> Dictionary:
 			return _cmd_set_hints(args)
 		SimVocab.NEW_CHARACTER:
 			return _cmd_new_character(args)
+		SimVocab.TRAVEL:
+			return _cmd_travel(args)
 	return _reject(kind, args, SimVocab.REASON_NOT_IMPLEMENTED)
 
 
@@ -349,6 +357,23 @@ func _cmd_attack(args: Dictionary) -> Dictionary:
 	return {"ok": true, "reason": ""}
 
 
+## Starts channelling at a waystone the player stands by: TRAVEL_TICKS ticks later they stand
+## outside the outpost gate, unless they walk, take up something else or are hit first.
+func _cmd_travel(args: Dictionary) -> Dictionary:
+	var id: String = str(args.get("object_id", ""))
+	var reason := travel_check(id)
+	if reason != "":
+		return _reject(SimVocab.TRAVEL, args, reason)
+	var player: Dictionary = state["player"]
+	if player["activity"].get("object_id", "") != id:
+		_stop_activity(SimVocab.REASON_MOVED)
+	player["path"] = []
+	player["target_object"] = ""
+	player["activity"] = {"kind": SimVocab.TRAVEL, "object_id": id, "progress": 0}
+	_emit({"kind": SimVocab.EV_TRAVEL_STARTED, "object_id": id, "ticks": TRAVEL_TICKS})
+	return {"ok": true, "reason": ""}
+
+
 ## Walks onto a loot pile; arriving picks up as much of it as the pack has room for.
 func _walk_to_loot(id: String, args: Dictionary) -> Dictionary:
 	var at := _pos(state["loot"][id])
@@ -453,8 +478,8 @@ func _reject(kind: String, args: Dictionary, reason: String) -> Dictionary:
 # --- Ticking --------------------------------------------------------------------------
 
 ## Advances the world by exactly one tick: queued inventory commands (a swap, a meal, a
-## build, a field fire), the player closing on an attack target, movement, gathering or
-## cooking, combat (the player's swing, then every enemy), node regrowth, loot decay, field
+## build, a field fire), the player closing on an attack target, movement, gathering, cooking
+## or channelling at a waystone, combat (the player's swing, then every enemy), node regrowth, loot decay, field
 ## fires burning out, then warmth, health and healing. A save point reached during the tick
 ## is reported once, at its end, so the saved state is the whole tick.
 func step() -> void:
@@ -553,6 +578,8 @@ func _step_movement() -> void:
 				_start_gathering(object_id)
 			elif action == SimVocab.ACTION_RING_GATE and ring_gate_open(object_id):
 				_pass_ring_gate(object_id)
+			elif action == SimVocab.ACTION_WAYSTONE:
+				_attune(object_id)
 
 
 func _action_for(object_id: String) -> String:
@@ -567,6 +594,8 @@ func _action_for(object_id: String) -> String:
 			return SimVocab.ACTION_STASH
 		WorldDef.KIND_WORKBENCH:
 			return SimVocab.ACTION_CRAFT
+		WorldDef.KIND_WAYSTONE:
+			return SimVocab.ACTION_WAYSTONE
 	return SimVocab.ACTION_NONE
 
 
@@ -667,6 +696,85 @@ func _same_side(enemy_id: String) -> bool:
 	return home_beyond == (state["player"]["region"] == WorldDef.REGION_RING_TWO)
 
 
+# --- Waystones --------------------------------------------------------------------------
+
+## Whether a built upgrade has woken this waystone.
+func waystone_awake(object_id: String) -> bool:
+	for id in state["upgrades"]:
+		if (UpgradeTable.get_upgrade(id).get("effects", {}).get("waystones", []) as Array).has(object_id):
+			return true
+	return false
+
+
+## Whether the player has visited this waystone. Visiting attunes it for good, awake or not.
+func waystone_attuned(object_id: String) -> bool:
+	return (state["waystones"] as Array).has(object_id)
+
+
+## Why `travel` from `object_id` would be refused right now, or "" when it would start.
+## Read-only, for the presentation's travel button.
+func travel_check(object_id: String) -> String:
+	if not world.objects.has(object_id):
+		return SimVocab.REASON_UNKNOWN_OBJECT
+	if world.objects[object_id]["kind"] != WorldDef.KIND_WAYSTONE:
+		return SimVocab.REASON_NOT_WAYSTONE
+	if not waystone_awake(object_id):
+		return SimVocab.REASON_UPGRADE_MISSING
+	if not waystone_attuned(object_id):
+		return SimVocab.REASON_NOT_ATTUNED
+	if world.distance_to_object(object_id, player_pos()) > USE_REACH:
+		return SimVocab.REASON_NOT_AT_WAYSTONE
+	return ""
+
+
+## The player reached a waystone: the first visit attunes it, a save point so it is not lost.
+func _attune(object_id: String) -> void:
+	if waystone_attuned(object_id):
+		return
+	(state["waystones"] as Array).append(object_id)
+	_emit({"kind": SimVocab.EV_WAYSTONE_ATTUNED, "object_id": object_id})
+	_save_due = "waystone"
+
+
+## One tick of channelling; the last one carries the player home.
+func _step_travel(activity: Dictionary) -> void:
+	var id: String = activity["object_id"]
+	var blocker := travel_check(id)
+	if blocker != "":
+		_stop_activity(blocker)
+		return
+	activity["progress"] = int(activity["progress"]) + 1
+	if int(activity["progress"]) >= TRAVEL_TICKS:
+		_travel(id)
+
+
+## The channel is done: the player stands TRAVEL_GATE_STEP outside the outpost gate, facing it,
+## with the pack unbanked. Every enemy fighting them loses the trail and heads home. A save point.
+func _travel(object_id: String) -> void:
+	var player: Dictionary = state["player"]
+	var from := player_pos()
+	var gate_id: String = world.objects_of_kind(WorldDef.KIND_GATE)[0]
+	var gate: Dictionary = world.objects[gate_id]
+	var outward := Vector2(gate["outward"][0], gate["outward"][1])
+	var spot := world.object_center(gate_id) + outward * TRAVEL_GATE_STEP
+	var cell: Variant = world.nearest_walkable_cell(spot, SNAP_RADIUS_CELLS)
+	var to := world.cell_center(cell) if cell != null else spot
+	player["activity"] = {}
+	player["pos"] = _xz(to)
+	player["facing"] = _xz(-outward)
+	player["path"] = []
+	player["target_object"] = ""
+	_emit({"kind": SimVocab.EV_TRAVELLED, "object_id": object_id, "from": _xz(from), "to": _xz(to)})
+	var region := world.region_at(to)
+	if region != player["region"]:
+		_emit({"kind": SimVocab.EV_REGION_CHANGED, "from": player["region"], "to": region})
+		player["region"] = region
+	for id in state["enemies"]:
+		if state["enemies"][id]["mode"] == MODE_ENGAGED:
+			_disengage(id)
+	_save_due = "waystone"
+
+
 static func _merged(entries: Array) -> Array:
 	var out: Array = []
 	for e in entries:
@@ -753,6 +861,9 @@ func _step_activity() -> void:
 		return
 	if activity["kind"] == SimVocab.COOK:
 		_step_cooking(activity)
+		return
+	if activity["kind"] == SimVocab.TRAVEL:
+		_step_travel(activity)
 		return
 	if activity["kind"] != SimVocab.GATHER:
 		return
@@ -996,6 +1107,8 @@ func _strike(attacker: String, defender: String, base: int) -> int:
 	})
 	if defender == SimVocab.PLAYER:
 		_emit({"kind": SimVocab.EV_TOOK_DAMAGE, "amount": amount, "cause": a["kind"], "health": health})
+		if is_travelling():
+			_stop_activity(SimVocab.REASON_INTERRUPTED)
 	_noise = maxf(_noise, CombatTable.NOISE_FIGHT)
 	return amount
 
@@ -1778,6 +1891,13 @@ func restore(snap: Dictionary) -> bool:
 			if r == WorldDef.REGION_RING_TWO and not reached.has(r):
 				reached.append(r)
 	copy["rings_reached"] = reached
+	var attuned: Array = []
+	if copy.get("waystones") is Array:
+		for id in copy["waystones"]:
+			var w := str(id)
+			if world.objects.has(w) and world.objects[w]["kind"] == WorldDef.KIND_WAYSTONE and not attuned.has(w):
+				attuned.append(w)
+	copy["waystones"] = attuned
 	var target := str(player.get("target_object", ""))
 	var known_target: bool = world.objects.has(target) or copy["loot"].has(target) or copy["fires"].has(target)
 	player["target_object"] = target if known_target else ""
@@ -1890,6 +2010,9 @@ func _restored_activity(saved: Variant, enemies: Dictionary) -> Dictionary:
 		SimVocab.ATTACK:
 			if enemies.has(id) and enemies[id]["mode"] != MODE_DEAD:
 				return {"kind": SimVocab.ATTACK, "object_id": id}
+		SimVocab.TRAVEL:
+			if world.objects.has(id) and world.objects[id]["kind"] == WorldDef.KIND_WAYSTONE and _is_number(saved.get("progress")):
+				return {"kind": SimVocab.TRAVEL, "object_id": id, "progress": int(saved["progress"])}
 		SimVocab.COOK:
 			var item := str(saved.get("item", ""))
 			if RecipeTable.is_cookable(item) and _is_number(saved.get("progress")):
@@ -1997,6 +2120,10 @@ func is_attacking() -> bool:
 
 func is_cooking() -> bool:
 	return state["player"]["activity"].get("kind", "") == SimVocab.COOK
+
+
+func is_travelling() -> bool:
+	return state["player"]["activity"].get("kind", "") == SimVocab.TRAVEL
 
 
 func in_outpost() -> bool:

@@ -70,3 +70,12 @@ func test_the_version_7_fixture_is_in_ring_two_with_its_steel() -> void:
 	assert_eq(sim.state["rings_reached"], [WorldDef.REGION_RING_TWO], "its first walk in is not announced again")
 	assert_eq(sim.state["inventory"]["equipment"]["weapon"], "steel_sword", "the steel sword it carried")
 	assert_eq(sim.smithing_cap(), ItemTable.TIER_STEEL, "its blast furnace still smiths steel")
+
+
+func test_the_version_8_fixture_is_attuned_by_ring_ones_waystone() -> void:
+	var sim := SimScript.new()
+	assert_true(sim.command(Vocab.IMPORT_SAVE, {"code": _fixture(8)})["ok"])
+	assert_eq(sim.state["waystones"], ["ring_one_waystone"], "the stone it visited")
+	assert_true(sim.waystone_awake("ring_one_waystone"), "its waystone upgrade is built")
+	assert_eq(sim.travel_check("ring_one_waystone"), "", "it can travel home from where it stands")
+	assert_eq(sim.state["inventory"]["pack"][0], {"item": "iron_ore", "count": 3}, "with its haul")

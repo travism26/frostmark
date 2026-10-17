@@ -359,6 +359,38 @@ func test_a_version_6_snapshot_migrates() -> void:
 	assert_eq(H.of_kind(events, Vocab.EV_RING_TWO_REACHED).size(), 1, "the first walk through is still announced")
 
 
+func test_a_version_7_snapshot_migrates() -> void:
+	# What the ring-two build could snapshot: deep in ring two with a haul, the winch and the
+	# blast furnace built, standing beside where its waystone now stands.
+	var v7 := SimScript.new().snapshot()
+	v7["version"] = 7
+	v7.erase("waystones")
+	v7["tick"] = 8000
+	v7["bosses_defeated"] = ["captain"]
+	v7["rings_reached"] = ["ring_two"]
+	v7["upgrades"] = ["stash_shelves", "forge", "armoury", "ring_two_gate", "blast_furnace"]
+	v7["player"]["pos"] = [-0.5, 118.5]
+	v7["player"]["region"] = "ring_two"
+	v7["inventory"]["pack"][0] = {"item": "coal", "count": 7}
+	var migrated: Dictionary = SaveCode.migrate(v7, 8)
+	assert_eq(migrated["version"], 8)
+	assert_eq(migrated["waystones"], [])
+	var sim := SimScript.new()
+	assert_true(sim.restore(v7), "restore migrates a version-7 snapshot")
+	assert_eq(sim.state["version"], Sim.STATE_VERSION)
+	assert_eq(sim.state["waystones"], [], "no waystone visited yet")
+	assert_eq(sim.state["upgrades"], v7["upgrades"], "upgrades are kept")
+	assert_eq(sim.state["rings_reached"], ["ring_two"])
+	assert_eq(H.pack_count(sim, "coal"), 7)
+	var imported := SimScript.new()
+	assert_true(imported.command(Vocab.IMPORT_SAVE, {"code": SaveCode.encode(v7)})["ok"])
+	assert_eq(imported.snapshot(), sim.snapshot())
+	# The stone beside it has to be visited, and the upgrade built, before it carries anyone.
+	assert_eq(sim.command(Vocab.TRAVEL, {"object_id": "ring_two_waystone"})["reason"], Vocab.REASON_UPGRADE_MISSING)
+	H.patch(sim, {"upgrades": v7["upgrades"] + ["waystone"]})
+	assert_eq(sim.command(Vocab.TRAVEL, {"object_id": "ring_two_waystone"})["reason"], Vocab.REASON_NOT_ATTUNED)
+
+
 func test_a_full_version_2_stash_gets_no_kit() -> void:
 	var full: Array = []
 	for i in 8:

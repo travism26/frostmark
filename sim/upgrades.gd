@@ -5,8 +5,10 @@
 ## upgrade changes: `stash` adds that many stash slots, `recipes` names the workbench recipes
 ## it unlocks (RecipeTable entries whose `upgrade` is this id), `smithing_tier` raises the
 ## highest metal tier the workbench works, `ring_gate` names the ring gate it readies (it
-## opens once that ring's guardian has fallen too), and `waystone` names a waystone. An upgrade with `locked` set is listed but cannot be built in this version;
-## the text says why. Listed in the order the upgrades panel shows them. Engine-free.
+## opens once that ring's guardian has fallen too), and `waystones` lists the waystone objects it
+## wakes (each still has to be visited once before it carries anyone home). An upgrade with
+## `locked` set is listed but cannot be built in this version; the text says why. Listed in the
+## order the upgrades panel shows them. Engine-free.
 class_name UpgradeTable
 extends RefCounted
 
@@ -42,10 +44,11 @@ const UPGRADES := {
 		},
 		"locked": "",
 	},
+	# Shortcuts home from deep in the rings. Travel never banks: the walk through the gate does.
 	"waystone": {
-		"label": "Ring-one waystone", "cost": {"iron_ore": 10, "bronze_bar": 6, "logs": 10},
-		"requires": ["ring_two_gate"], "effects": {"waystone": "ring_one"},
-		"locked": "Waystones wake in a later slice.",
+		"label": "Waystones", "cost": {"iron_ore": 10, "bronze_bar": 6, "logs": 10},
+		"requires": ["ring_two_gate"], "effects": {"waystones": ["ring_one_waystone", "ring_two_waystone"]},
+		"locked": "",
 	},
 }
 
