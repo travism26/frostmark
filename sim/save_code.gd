@@ -93,6 +93,8 @@ static func migrate(snapshot: Dictionary, target: int) -> Variant:
 				snap = _v5_to_v6(snap)
 			6:
 				snap = _v6_to_v7(snap)
+			7:
+				snap = _v7_to_v8(snap)
 			_:
 				return null
 		version = int(snap["version"])
@@ -193,4 +195,13 @@ static func _v5_to_v6(snap: Dictionary) -> Dictionary:
 static func _v6_to_v7(snap: Dictionary) -> Dictionary:
 	snap["version"] = 7
 	snap["rings_reached"] = []
+	return snap
+
+
+## Version 7 had waystones listed but locked. Version 8 wakes them and records the waystones the
+## character has visited: none yet, so each must be walked to once. Nothing else changes: the
+## upgrade could not be built before, so no old character has it.
+static func _v7_to_v8(snap: Dictionary) -> Dictionary:
+	snap["version"] = 8
+	snap["waystones"] = []
 	return snap

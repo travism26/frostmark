@@ -4,7 +4,7 @@
 ## Presentation only. Every builder returns a Node3D standing on the ground at its origin;
 ## GameRoot places it where the WorldDef says the object is. Props that change with the state
 ## carry named children GameRoot toggles: a node's `Full` and `Spent` looks, a fire's `Flame`,
-## the ring gate's `Bars`.
+## the ring gate's `Bars`, a waystone's `Glow`.
 class_name Props
 extends RefCounted
 
@@ -18,6 +18,7 @@ const COLOR_ICE := Color(0.72, 0.86, 0.95)
 ## Ice crystal and frost shard: the cold a staff casts with.
 const COLOR_FROST := Color(0.55, 0.85, 1.0)
 const COLOR_WATER := Color(0.10, 0.20, 0.30)
+const COLOR_STONE := Color(0.50, 0.53, 0.58)
 const COLOR_FLAME := Color(1.0, 0.55, 0.15)
 const COLOR_FLAME_CORE := Color(1.0, 0.85, 0.35)
 ## Ore glints, by the rock kind they sit in.
@@ -208,6 +209,31 @@ static func ring_gate(width: float, height: float) -> Node3D:
 		brace.mesh = box(Vector3(width, 0.25, 0.35), COLOR_DARK_WOOD)
 		brace.position = Vector3(0, height * y, 0)
 		bars.add_child(brace)
+	return root
+
+
+## A waystone: a standing stone `height` tall on a low plinth, `width` across, with frost runes
+## (`Glow`) that light once the outpost has woken it.
+static func waystone(width: float, height: float) -> Node3D:
+	var root := Node3D.new()
+	var plinth := MeshInstance3D.new()
+	plinth.mesh = box(Vector3(width * 1.3, 0.25, width * 1.3), COLOR_STONE)
+	plinth.position.y = 0.125
+	root.add_child(plinth)
+	var stone := MeshInstance3D.new()
+	stone.mesh = box(Vector3(width * 0.7, height, width * 0.5), COLOR_STONE)
+	stone.position.y = 0.25 + height * 0.5
+	root.add_child(stone)
+	var glow := Node3D.new()
+	glow.name = "Glow"
+	root.add_child(glow)
+	for side in [-1, 1]:
+		var rune := MeshInstance3D.new()
+		rune.mesh = BoxMesh.new()
+		(rune.mesh as BoxMesh).size = Vector3(width * 0.25, height * 0.45, 0.04)
+		(rune.mesh as BoxMesh).material = flat(COLOR_FROST, 1.5)
+		rune.position = Vector3(0, 0.25 + height * 0.55, side * (width * 0.25 + 0.02))
+		glow.add_child(rune)
 	return root
 
 

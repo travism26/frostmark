@@ -36,16 +36,16 @@ func test_the_table_is_well_formed() -> void:
 func test_the_first_playable_subset() -> void:
 	var stash := 0
 	var gate := false
-	var waystone_locked := false
+	var waystones := false
 	for id in UpgradeTable.ids():
 		var u := UpgradeTable.get_upgrade(id)
 		stash += int(u["effects"].get("stash", 0))
 		gate = gate or u["effects"].get("ring_gate", "") == "ring_two_gate"
-		if u["effects"].has("waystone"):
-			waystone_locked = u["locked"] != ""
+		waystones = waystones or u["effects"].has("waystones")
+		assert_eq(u["locked"], "", "%s can be built" % id)
 	assert_true(stash > 0, "stash capacity upgrades")
 	assert_true(gate, "the ring-two gate upgrade")
-	assert_true(waystone_locked, "waystones listed but locked")
+	assert_true(waystones, "the waystone upgrade")
 
 
 func test_a_met_upgrade_is_built_from_the_stash_and_applies() -> void:
@@ -92,10 +92,12 @@ func test_building_needs_the_materials_and_the_outpost() -> void:
 	assert_eq(sim.command(Vocab.BUILD, {"upgrade": "palace"})["reason"], Vocab.REASON_UNKNOWN_UPGRADE)
 
 
-func test_waystones_are_listed_but_locked() -> void:
+func test_waystones_need_the_gate_winch_first() -> void:
 	var lots := [{"item": "logs", "count": 10}, {"item": "bronze_bar", "count": 10}, {"item": "iron_ore", "count": 10}]
-	var sim := _with_stash(lots, ["stash_shelves", "forge", "armoury", "ring_two_gate"])
-	assert_eq(sim.command(Vocab.BUILD, {"upgrade": "waystone"})["reason"], Vocab.REASON_UPGRADE_LOCKED)
+	var sim := _with_stash(lots, ["stash_shelves", "forge", "armoury"])
+	assert_eq(sim.command(Vocab.BUILD, {"upgrade": "waystone"})["reason"], Vocab.REASON_UPGRADE_MISSING)
+	sim = _with_stash(lots, ["stash_shelves", "forge", "armoury", "ring_two_gate"])
+	assert_true(sim.command(Vocab.BUILD, {"upgrade": "waystone"})["ok"])
 
 
 func test_the_forge_unlocks_bronze_recipes() -> void:

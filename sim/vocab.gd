@@ -28,18 +28,20 @@ const IMPORT_SAVE := "import_save"  # {code}                   replaces the stat
 const LIGHT_FIRE := "light_fire"    # {}                       burn logs from the pack into a field fire where you stand
 const SET_HINTS := "set_hints"      # {on: bool}               turn the first-outing guide off (dismiss) or back on
 const NEW_CHARACTER := "new_character"  # {previous: String}   start over; a previous save code turns the guide off
+const TRAVEL := "travel"            # {object_id}              channel at a waystone, then stand at the outpost gate
 
 ## Every command kind: the spec's fifteen in spec order, then the brief's field fire, then the
-## first-outing guide's two. `Sim.command()` rejects anything else as `unknown_command`.
+## first-outing guide's two, then waystone travel. `Sim.command()` rejects anything else as
+## `unknown_command`.
 const COMMANDS: Array[String] = [
 	MOVE_TO, INTERACT, GATHER, COOK, SMITH, EQUIP, EAT, DROP, DEPOSIT, WITHDRAW,
-	BUILD, ATTACK, CROSS_GATE, EXPORT_SAVE, IMPORT_SAVE, LIGHT_FIRE, SET_HINTS, NEW_CHARACTER,
+	BUILD, ATTACK, CROSS_GATE, EXPORT_SAVE, IMPORT_SAVE, LIGHT_FIRE, SET_HINTS, NEW_CHARACTER, TRAVEL,
 ]
 
 ## Commands that do something in this slice. The rest answer `not_implemented`.
 const IMPLEMENTED: Array[String] = [
 	MOVE_TO, INTERACT, GATHER, COOK, SMITH, EQUIP, EAT, DROP, DEPOSIT, WITHDRAW, BUILD, ATTACK,
-	CROSS_GATE, EXPORT_SAVE, IMPORT_SAVE, LIGHT_FIRE, SET_HINTS, NEW_CHARACTER,
+	CROSS_GATE, EXPORT_SAVE, IMPORT_SAVE, LIGHT_FIRE, SET_HINTS, NEW_CHARACTER, TRAVEL,
 ]
 
 # --- Events ---------------------------------------------------------------------
@@ -89,6 +91,10 @@ const EV_FIRE_OUT := "fire_out"                  # {fire_id}
 const EV_BUILT := "built"                        # {upgrade, effects}
 const EV_RING_GATE_OPENED := "ring_gate_opened"  # {object_id}  its guardian is dead and its upgrade built
 const EV_RING_TWO_REACHED := "ring_two_reached"  # {object_id}  first walked into ring two, through that gate; once per character
+# Waystones
+const EV_WAYSTONE_ATTUNED := "waystone_attuned"  # {object_id}  first visit to a waystone; once per waystone
+const EV_TRAVEL_STARTED := "travel_started"      # {object_id, ticks}  channelling began; done in `ticks` ticks unless interrupted
+const EV_TRAVELLED := "travelled"                # {object_id, from, to}  the channel finished: the player stands outside the outpost gate
 # The first-outing guide (text in GuideTable)
 const EV_HINT := "hint"                          # {hint}  the guide's current hint step: a GuideTable id, "" once the path is walked
 const EV_TIP := "tip"                            # {tip}   a contextual tip fired: a GuideTable.TIPS id
@@ -106,6 +112,7 @@ const ACTION_STASH := "stash"
 const ACTION_CRAFT := "craft"
 const ACTION_PICK_UP := "pick_up"
 const ACTION_RING_GATE := "ring_gate"
+const ACTION_WAYSTONE := "waystone"
 
 # --- Rejection reasons ------------------------------------------------------------
 
@@ -147,6 +154,11 @@ const REASON_TIER_CAPPED := "tier_capped"
 const REASON_UNKNOWN_UPGRADE := "unknown_upgrade"
 const REASON_ALREADY_BUILT := "already_built"
 const REASON_UPGRADE_LOCKED := "upgrade_locked"
+# Waystones
+const REASON_NOT_WAYSTONE := "not_waystone"
+const REASON_NOT_ATTUNED := "not_attuned"
+const REASON_NOT_AT_WAYSTONE := "not_at_waystone"
+const REASON_INTERRUPTED := "interrupted"
 # Save codes
 const REASON_BAD_CODE := "bad_code"
 const REASON_BAD_CHECKSUM := "bad_checksum"

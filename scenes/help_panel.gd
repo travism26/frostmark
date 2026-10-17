@@ -22,6 +22,7 @@ const LOOP := [
 	"Walk back in: crossing the gate banks your pack in the stash. Nothing you carry is safe until then.",
 	"Take logs from the stash and make a pickaxe or a rod at the workbench.",
 	"Warmth drains outside. Get home, or to a fire, before it runs out.",
+	"Once built, a waystone you have visited takes you to the outpost gate. It does not bank: walk through the gate for that.",
 	"If you die you keep your three most valuable things. The stash is never touched.",
 ]
 
