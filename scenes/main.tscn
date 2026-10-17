@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://g0sbfclqrd2e"]
+[gd_scene load_steps=3 format=3 uid="uid://g0sbfclqrd2e"]
 
 [ext_resource type="Script" uid="uid://dhfqbcujion6t" path="res://scenes/game_root.gd" id="1_root"]
 [ext_resource type="Script" uid="uid://cbfxpkm6jtmsk" path="res://scenes/orbit_camera.gd" id="2_cam"]
@@ -9,25 +9,6 @@ background_color = Color(0.72, 0.8, 0.88, 1)
 ambient_light_source = 2
 ambient_light_color = Color(0.85, 0.9, 1, 1)
 ambient_light_energy = 0.5
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_body"]
-shading_mode = 2
-albedo_color = Color(0.2, 0.45, 0.75, 1)
-roughness = 1.0
-
-[sub_resource type="CapsuleMesh" id="CapsuleMesh_body"]
-material = SubResource("StandardMaterial3D_body")
-radius = 0.35
-height = 1.6
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_nose"]
-shading_mode = 2
-albedo_color = Color(1, 0.85, 0.2, 1)
-roughness = 1.0
-
-[sub_resource type="BoxMesh" id="BoxMesh_nose"]
-material = SubResource("StandardMaterial3D_nose")
-size = Vector3(0.2, 0.2, 0.4)
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1_root")
@@ -45,14 +26,6 @@ directional_shadow_max_distance = 51.2
 [node name="World" type="Node3D" parent="."]
 
 [node name="Character" type="Node3D" parent="."]
-
-[node name="Body" type="MeshInstance3D" parent="Character"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
-mesh = SubResource("CapsuleMesh_body")
-
-[node name="Nose" type="MeshInstance3D" parent="Character"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, -0.45)
-mesh = SubResource("BoxMesh_nose")
 
 [node name="CameraRig" type="Node3D" parent="."]
 script = ExtResource("2_cam")
