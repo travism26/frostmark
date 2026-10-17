@@ -1,0 +1,3 @@
+Wolf by Quaternius, via Poly Pizza (https://poly.pizza/m/P1gU3Qkr9r).
+Licence: Public Domain, CC0 1.0 (http://creativecommons.org/publicdomain/zero/1.0/), as stated on the Poly Pizza model page and in the Quaternius FAQ (https://quaternius.com/faq.html).
+The file in this folder is the original .glb with its unused animation clips removed to keep the web build small.

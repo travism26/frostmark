@@ -6,8 +6,7 @@ extends Control
 
 signal hints_toggled(on: bool)
 
-const COLOR_BACKDROP := Color(0.08, 0.11, 0.16, 0.8)
-const Hud := preload("res://scenes/hud.gd")
+const COLOR_BACKDROP := Color(0.02, 0.04, 0.07, 0.72)
 
 const CONTROLS := [
 	["Walk", "Click the ground."],
@@ -30,6 +29,7 @@ var _hints: CheckBox
 
 
 func _ready() -> void:
+	theme = UiTheme.theme()
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	var backdrop := ColorRect.new()
@@ -39,36 +39,44 @@ func _ready() -> void:
 	var centre := CenterContainer.new()
 	centre.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(centre)
-	var panel := Hud._panel_box()
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", UiTheme.panel_style(UiTheme.PANEL_ICE))
 	centre.add_child(panel)
 	var column := VBoxContainer.new()
 	column.custom_minimum_size = Vector2(620, 0)
-	column.add_theme_constant_override("separation", 6)
+	column.add_theme_constant_override("separation", 8)
 	panel.add_child(column)
 
-	column.add_child(Hud._text("Controls", 22))
+	column.add_child(UiTheme.header("Controls", func() -> void: visible = false))
 	var grid := GridContainer.new()
 	grid.columns = 2
 	grid.add_theme_constant_override("h_separation", 16)
+	grid.add_theme_constant_override("v_separation", 6)
 	column.add_child(grid)
 	for row in CONTROLS:
-		grid.add_child(Hud._text(row[0], 15))
-		grid.add_child(_wrapped(row[1], 520))
-	column.add_child(Hud._text("The loop", 22))
+		var key := UiTheme.heading(row[0], 13, UiTheme.ICE)
+		key.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		grid.add_child(key)
+		grid.add_child(UiTheme.wrapped(row[1], 520))
+	column.add_child(HSeparator.new())
+	column.add_child(UiTheme.heading("The loop", 15))
 	for line in LOOP:
-		column.add_child(_wrapped("- " + line, 620))
+		column.add_child(UiTheme.wrapped("- " + line, 620, 14, Color(0.78, 0.86, 0.96)))
+	column.add_child(HSeparator.new())
 
+	var foot := HBoxContainer.new()
+	column.add_child(foot)
 	_hints = CheckBox.new()
 	_hints.text = "Show hints"
-	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color"]:
-		_hints.add_theme_color_override(state, Hud.COLOR_TEXT)
+	_hints.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_hints.toggled.connect(func(on: bool) -> void: hints_toggled.emit(on))
-	column.add_child(_hints)
+	foot.add_child(_hints)
 	var close := Button.new()
 	close.text = "Close"
-	close.custom_minimum_size = Vector2(0, 36)
+	close.theme_type_variation = "PrimaryButton"
+	close.custom_minimum_size = Vector2(140, 36)
 	close.pressed.connect(func() -> void: visible = false)
-	column.add_child(close)
+	foot.add_child(close)
 	visible = false
 
 
@@ -83,10 +91,3 @@ func _unhandled_input(event: InputEvent) -> void:
 	if visible and event.is_action_pressed("ui_cancel"):
 		visible = false
 		get_viewport().set_input_as_handled()
-
-
-static func _wrapped(text: String, width: float) -> Label:
-	var l := Hud._text(text, 14)
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.custom_minimum_size = Vector2(width, 0)
-	return l

@@ -19,8 +19,6 @@ const COLOR_ICE := Color(0.72, 0.86, 0.95)
 const COLOR_FROST := Color(0.55, 0.85, 1.0)
 const COLOR_WATER := Color(0.10, 0.20, 0.30)
 const COLOR_STONE := Color(0.50, 0.53, 0.58)
-const COLOR_FLAME := Color(1.0, 0.55, 0.15)
-const COLOR_FLAME_CORE := Color(1.0, 0.85, 0.35)
 ## Ore glints, by the rock kind they sit in.
 const ORE_COLORS := {
 	WorldDef.KIND_COPPER_ROCK: Color(0.85, 0.45, 0.20),
@@ -144,33 +142,11 @@ static func ice_hole(size: float, deep: bool) -> Node3D:
 	return root
 
 
-## A campfire `size` metres across: logs, a flame (`Flame`) and a warm light.
+## A campfire `size` metres across: logs under a fire (`Flame`, see scenes/fire_fx.gd) that
+## burns, flickers and lights its surroundings on its own.
 static func campfire(size: float, light := true) -> Node3D:
 	var root := model(NATURE + "campfire_logs.glb", size * 0.25)
-	var flame := Node3D.new()
-	flame.name = "Flame"
-	root.add_child(flame)
-	for layer in [[size * 0.32, size * 0.9, COLOR_FLAME], [size * 0.18, size * 0.6, COLOR_FLAME_CORE]]:
-		var cone := MeshInstance3D.new()
-		var mesh := CylinderMesh.new()
-		mesh.top_radius = 0.0
-		mesh.bottom_radius = layer[0]
-		mesh.height = layer[1]
-		mesh.radial_segments = 6
-		var m := StandardMaterial3D.new()
-		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		m.albedo_color = layer[2]
-		mesh.material = m
-		cone.mesh = mesh
-		cone.position.y = layer[1] * 0.5 + 0.05
-		flame.add_child(cone)
-	if light:
-		var glow := OmniLight3D.new()
-		glow.light_color = Color(1.0, 0.65, 0.35)
-		glow.light_energy = 1.6
-		glow.omni_range = 7.0
-		glow.position.y = 1.0
-		flame.add_child(glow)
+	root.add_child(FireFx.create(size, light))
 	return root
 
 

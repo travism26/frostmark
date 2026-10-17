@@ -1,14 +1,12 @@
 ## A small notice at the top of the screen about the save code: the reminder after a long
 ## stretch of play, or the warning that the browser is not keeping saves. It offers to copy
 ## the code, show it, or go away. It only shows text and emits the player's choice; GameRoot
-## owns the SaveWatch that decides when it appears. Drawn in the HUD's panel style.
+## owns the SaveWatch that decides when it appears. Drawn in the theme's ember key.
 extends Control
 
 signal copy_requested
 signal show_requested
 signal dismissed
-
-const Hud := preload("res://scenes/hud.gd")
 
 const REMINDER := "You have been playing a while. Copy your save code and keep it somewhere safe: it carries your character to any browser."
 const UNSTORED := "This browser is not keeping your saves (its storage is full or blocked, as in some private browsing). The game carries on, but copy your save code now and again: it is your save."
@@ -18,21 +16,29 @@ var _note: Label
 
 
 func _ready() -> void:
+	theme = UiTheme.theme()
 	set_anchors_preset(Control.PRESET_CENTER_TOP)
 	offset_left = -280
 	offset_right = 280
 	offset_top = 16
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var panel := Hud._panel_box()
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", UiTheme.panel_style(UiTheme.PANEL_EMBER))
 	panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
 	add_child(panel)
 	var box := VBoxContainer.new()
 	panel.add_child(box)
-	_text = Hud._text("", 14)
-	_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var head := HBoxContainer.new()
+	box.add_child(head)
+	var pic := TextureRect.new()
+	pic.texture = UiTheme.icon("save", 16)
+	pic.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED
+	pic.modulate = UiTheme.EMBER
+	head.add_child(pic)
+	head.add_child(UiTheme.heading("Your save", 14, UiTheme.EMBER))
+	_text = UiTheme.wrapped("", 520, 14)
 	box.add_child(_text)
-	_note = Hud._text("", 13)
-	_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_note = UiTheme.wrapped("", 520, 13, UiTheme.TEXT_DIM)
 	box.add_child(_note)
 	var buttons := HBoxContainer.new()
 	box.add_child(buttons)

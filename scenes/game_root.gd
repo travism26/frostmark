@@ -124,6 +124,7 @@ var _death_screen: Control
 var _save_notice: Control
 var _save_watch := SaveWatch.new()
 var _gear: Node3D
+var _character_view: CharacterView
 var _atmosphere: Node
 var _audio: Node
 var _sound_panel: Control
@@ -154,7 +155,12 @@ func _ready() -> void:
 	add_child(_fire_layer)
 	_build_enemies(sim.world)
 	_gear = CharacterGear.new()
+	_character_view = CharacterView.new()
+	_character.add_child(_character_view)
 	_character.add_child(_gear)
+	UiTheme.style_hud_label($HUD/Title, "title")
+	UiTheme.style_hud_label($HUD/Status, "status")
+	UiTheme.style_hud_label($HUD/Hint, "hint")
 	_atmosphere = Atmosphere.new()
 	add_child(_atmosphere)
 	_atmosphere.setup($Sun, $WorldEnvironment.environment, _camera_rig, _character)
@@ -329,6 +335,7 @@ func _show_sim() -> void:
 	for id in sim.state["fires"]:
 		_add_field_fire(id)
 	_gear.show_equipment(sim.state["inventory"]["equipment"])
+	_character_view.set_sim(sim)
 	_atmosphere.set_outside(not sim.in_outpost())
 	_audio.sim = sim
 	_audio.set_region(sim.state["player"]["region"])
@@ -672,7 +679,13 @@ func _set_block_alpha(block: MeshInstance3D, alpha: float) -> void:
 
 ## A see-through copy of a mesh's material, kept for the session so it is compiled once.
 func _add_fade_twin(mesh: MeshInstance3D) -> void:
-	var twin := (mesh.mesh.material as StandardMaterial3D).duplicate() as StandardMaterial3D
+	# Primitive and array meshes alike keep their material on surface 0; skip any without one.
+	if mesh.mesh == null or mesh.mesh.get_surface_count() == 0:
+		return
+	var material := mesh.mesh.surface_get_material(0) as StandardMaterial3D
+	if material == null:
+		return
+	var twin := material.duplicate() as StandardMaterial3D
 	twin.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	twin.albedo_color.a = OCCLUDER_ALPHA
 	_fade_twins[mesh] = twin
@@ -807,8 +820,8 @@ func _build_world(world: WorldDef) -> void:
 	var ground := MeshInstance3D.new()
 	ground.name = "Ground"
 	var plane := PlaneMesh.new()
-	plane.size = Vector2(width, depth)
-	plane.material = _flat_material(COLOR_GROUND)
+	plane.size = Vector2(width, depth) * 2.5  # snow runs on past the cliffs; only the world is clickable
+	plane.material = WorldDressing.snowfield_material()
 	ground.mesh = plane
 	ground.position = centre
 	_world.add_child(ground)
@@ -833,8 +846,13 @@ func _build_world(world: WorldDef) -> void:
 				_add_box_body(tent, _box_size(s["min"], s["max"], s["height"]), Vector3(0, s["height"] * 0.5, 0))
 			_:
 				var box := _add_block(str(s["id"]), s["min"], s["max"], s["height"], COLOR_BY_SOLID.get(s["kind"], Color.MAGENTA))
+				var look := WorldDressing.solid_mesh(s["kind"], s["min"], s["max"], s["height"])
+				if look != null:
+					box.mesh = look  # a palisade or an ice ridge over the same footprint
+					_add_fade_twin(box)  # the twin follows the new look
 				_add_box_body(box, _box_size(s["min"], s["max"], s["height"]), Vector3.ZERO)
 	_add_cliff_forest(world)
+	_world.add_child(WorldDressing.dressing(world))
 
 	for id in world.objects:
 		var o: Dictionary = world.objects[id]
@@ -861,13 +879,15 @@ func _build_world(world: WorldDef) -> void:
 			WorldDef.KIND_WAYSTONE:
 				prop = Props.waystone(o["max"][0] - o["min"][0], o["height"])
 		if prop == null:
-			# The outpost gate: a flat threshold block, clickable through a taller volume.
-			var gate := _add_block(str(id), o["min"], o["max"], o["height"], COLOR_GATE)
+			# The outpost gate: a timber gateway over the threshold, clickable through a taller volume.
+			var gate := WorldDressing.gateway(o["min"], o["max"])
+			gate.name = str(id)
+			_place_prop(gate, o["min"], o["max"])
 			var click_size := _box_size(o["min"], o["max"], maxf(o["height"], 1.0))
-			var gate_body := _add_box_body(gate, click_size, Vector3(0, (click_size.y - o["height"]) * 0.5, 0))
+			var gate_body := _add_box_body(gate, click_size, Vector3(0, click_size.y * 0.5, 0))
 			gate_body.set_meta("object_id", id)
 			var gate_label := _label3d(o["label"], 64)
-			gate_label.position = Vector3(0, o["height"] * 0.5 + 1.0, 0)
+			gate_label.position = Vector3(0, WorldDressing.GATEWAY_HEIGHT + 0.9, 0)
 			gate.add_child(gate_label)
 			continue
 		prop.name = str(id)
@@ -1032,72 +1052,32 @@ func _remove_field_fire(id: String) -> void:
 		_fires.erase(id)
 
 
-## Flames lick: every fire's flame stretches and settles a little out of step with the others.
+## Fires flicker on their own (each `Flame` is a FireFx, scenes/fire_fx.gd); nothing per frame here.
 func _flicker() -> void:
-	var i := 0
-	for prop in _placed_fires + _fires.values():
-		if prop == null:
-			continue
-		var flame := (prop as Node3D).get_node_or_null("Flame") as Node3D
-		if flame != null:
-			flame.scale = Vector3(1.0, 1.0 + 0.15 * sin(_clock * 9.0 + i * 1.7), 1.0)
-		i += 1
+	pass
 
 
 # --- Enemies and loot -----------------------------------------------------------------
 
-## One figure per placed enemy: a low box for a wolf, an upright capsule with a bow stave for
-## an archer, a stalker or a frost-tipped staff for a witch, a bigger caped capsule carrying a
-## sabre, a bow and a staff for the captain (the one in his hand follows his stance), a hulking
-## pale capsule with an ice club for a troll, a click volume that becomes `attack`, a
-## name-and-health label and a telegraph cue above it.
+## One figure per placed enemy: an animated model from Figures (the captain's sabre, bow and
+## staff are its `captain_sabre`, `captain_bow` and `captain_staff` nodes; the one in his hand
+## follows his stance),
+## a click volume that becomes `attack`, a name-and-health label and a telegraph cue above it.
 func _build_enemies(world: WorldDef) -> void:
 	for id in world.enemies:
 		var kind: String = world.enemies[id]["kind"]
-		var colour: Color = COLOR_BY_ENEMY.get(kind, Color.MAGENTA)
 		var root := Node3D.new()
 		root.name = id
 		_enemy_layer.add_child(root)
+		var figure := Figures.enemy(kind)
+		figure.name = "Figure"
+		root.add_child(figure)
 		var weapons := {}
-		var height := 1.8
-		if kind == "wolf":
-			_add_part(root, _box_mesh(Vector3(0.5, 0.55, 1.1), colour), Vector3(0, 0.45, 0))
-			_add_part(root, _box_mesh(Vector3(0.3, 0.3, 0.35), colour.darkened(0.3)), Vector3(0, 0.65, -0.65))
-			_add_part(root, _box_mesh(Vector3(0.12, 0.12, 0.45), colour.lightened(0.2)), Vector3(0, 0.6, 0.65))
-		else:
-			var boss := kind == "bandit_captain"
-			var troll := kind == "ice_troll"
-			var size := 1.3 if boss else 1.6 if troll else 1.0
-			height = 1.8 * size + 0.2
-			var body := CapsuleMesh.new()
-			body.radius = 0.32 * size
-			body.height = 1.5 * size
-			body.material = _flat_material(colour)
-			_add_part(root, body, Vector3(0, 0.75 * size, 0))
-			var hood := SphereMesh.new()
-			hood.radius = 0.22 * size
-			hood.height = 0.4 * size
-			hood.radial_segments = 6
-			hood.rings = 3
-			hood.material = _flat_material(colour.darkened(0.35))
-			_add_part(root, hood, Vector3(0, 1.45 * size, 0))
-			if kind == "frost_witch":
-				_add_part(root, _box_mesh(Vector3(0.06, 1.6, 0.06), Props.COLOR_WOOD), Vector3(0.42, 0.85, -0.2))
-				_add_part(root, _box_mesh(Vector3(0.16, 0.16, 0.16), Props.COLOR_FROST), Vector3(0.42, 1.7, -0.2))
-			elif troll:
-				# A club of ice in its right hand instead of a bow.
-				var club := _add_part(root, _box_mesh(Vector3(0.22, 1.0, 0.22), Props.COLOR_ICE), Vector3(0.62, 1.0, -0.3))
-				club.rotation.x = -0.5
-			else:
-				var bow := _add_part(root, _box_mesh(Vector3(0.06, 1.1 * size, 0.06), Props.COLOR_WOOD), Vector3(-0.42 * size, 0.9 * size, -0.2))
-				weapons["captain_bow"] = bow
-			if boss:
-				_add_part(root, _box_mesh(Vector3(0.9, 1.2, 0.06), Color(0.55, 0.08, 0.08)), Vector3(0, 1.05, 0.42))  # cape
-				var sabre := _add_part(root, _box_mesh(Vector3(0.08, 0.9, 0.03), CharacterGear.TIER_COLORS[ItemTable.TIER_IRON]), Vector3(0.5, 1.0, -0.25))
-				sabre.rotation.x = -0.4
-				weapons["captain_sabre"] = sabre
-				var staff := _add_part(root, _box_mesh(Vector3(0.07, 1.8, 0.07), Props.COLOR_FROST), Vector3(0.5, 1.0, -0.25))
-				weapons["captain_staff"] = staff
+		for w in ["captain_sabre", "captain_bow", "captain_staff"]:
+			var piece := figure.find_child(w, true, false)
+			if piece != null:
+				weapons[w] = piece
+		var height: float = figure.get_meta("height")
 		var click := _add_box_body(root, Vector3(1.1, height, 1.3), Vector3(0, height * 0.5, 0))
 		click.set_meta("enemy_id", id)
 		var label := _label3d("", 48)
@@ -1123,6 +1103,11 @@ func _sync_enemy(id: String) -> void:
 	root.visible = alive
 	(drawn["body"] as StaticBody3D).collision_layer = 1 if alive else 0
 	root.position = Vector3(float(e["pos"][0]), 0.0, float(e["pos"][1]))
+	var figure: FigureBody = root.get_node("Figure")
+	if alive:
+		figure.revive()
+	else:
+		figure.die()
 	var c := sim.combatant(id)
 	(drawn["label"] as Label3D).text = "%s  %d / %d" % [CombatTable.enemy(e["kind"])["label"], c["health"], c["health_max"]]
 	var weapons: Dictionary = drawn["weapons"]
@@ -1146,6 +1131,8 @@ func _show_cue(e: Dictionary) -> void:
 	cue.modulate = COLOR_BY_STYLE.get(e["style"], Color.WHITE)
 	cue.visible = true
 	drawn["cue_at"] = int(e["at"])
+	if CombatTable.is_attack(e["action"]):
+		((drawn["root"] as Node3D).get_node("Figure") as FigureBody).strike(e["style"])
 
 
 func _expire_cues() -> void:
@@ -1238,10 +1225,12 @@ func _add_floor(polygon: Array, colour: Color) -> void:
 	floor_mesh.name = "OutpostFloor"
 	var plane := PlaneMesh.new()
 	plane.size = hi - lo
-	plane.material = _flat_material(colour)
+	plane.material = WorldDressing.yard_material()
 	floor_mesh.mesh = plane
 	floor_mesh.position = Vector3((lo.x + hi.x) * 0.5, 0.01, (lo.y + hi.y) * 0.5)
 	_world.add_child(floor_mesh)
+	# Stones trodden in from the gate on the south wall to the fire in the middle.
+	_world.add_child(WorldDressing.path_stones(Vector2((lo.x + hi.x) * 0.5, hi.y - 0.8), Vector2((lo.x + hi.x) * 0.5, (lo.y + hi.y) * 0.5 + 1.6)))
 
 
 func _add_block(id: String, min_xz: Array, max_xz: Array, height: float, colour: Color) -> MeshInstance3D:
