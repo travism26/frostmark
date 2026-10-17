@@ -39,6 +39,7 @@ func test_carry_weight_counts_pack_and_equipment() -> void:
 
 func test_deposit_and_withdraw_inside_the_outpost() -> void:
 	var sim := SimScript.new()
+	H.patch(sim, {"stash": {"capacity": Sim.STASH_START_SLOTS, "slots": []}})  # without the starting kit
 	H.set_pack(sim, [{"item": "logs", "count": 6}])
 	assert_true(sim.command(Vocab.DEPOSIT, {"index": 0, "count": 4})["ok"])
 	var events := H.run(sim, 1)

@@ -26,7 +26,7 @@ var cols := 64
 var rows := 64
 var origin: Array = [-32.0, -32.0]
 var spawn: Array = [0.5, 4.5]
-## Where a player who collapses from the cold wakes: beside the outpost fire.
+## Where a player wakes after dying: beside the outpost fire.
 var rescue: Array = [0.5, 1.5]
 
 ## Gatherable node kinds: the skill they train, the tool they need, what one success yields,
@@ -45,6 +45,9 @@ var solids: Array = []
 var objects: Dictionary = {}
 ## Named regions in precedence order: {name, polygon: [[x, z], ...]}. First match wins.
 var regions: Array = []
+## Enemy placements by id: {kind, home: [x, z], pack}. The kind's stats are in CombatTable;
+## enemies sharing a `pack` notice the player together. Every placement gets a state entry.
+var enemies: Dictionary = {}
 
 var _blocked := PackedByteArray()
 
@@ -91,6 +94,21 @@ static func outpost() -> WorldDef:
 			"kind": KIND_TREE, "label": "Pine", "blocks": true, "height": 3.0,
 			"min": [at[0], at[1]], "max": [at[0] + 1.0, at[1] + 1.0],
 		}
+	# A small patch just past the trees, over the line into ring one: two wolves south-west of
+	# the stand, a pack of three farther west, and a bandit archer to the south-east. Ring one
+	# proper comes later; this is enough to find a fight. Chopping the south-western pine is
+	# loud enough for the near pack to hear. The groups sit more than a fight's noise apart
+	# (CombatTable.NOISE_FIGHT), so each is fought on its own.
+	var placements := [
+		["wolf_1", "wolf", [-7.5, 28.5], "west_pack"],
+		["wolf_2", "wolf", [-5.5, 29.5], "west_pack"],
+		["wolf_3", "wolf", [-25.5, 27.5], "far_pack"],
+		["wolf_4", "wolf", [-27.5, 28.5], "far_pack"],
+		["wolf_5", "wolf", [-24.5, 29.5], "far_pack"],
+		["archer_1", "bandit_archer", [14.5, 28.5], "archer_1"],
+	]
+	for p in placements:
+		w.enemies[p[0]] = {"kind": p[1], "home": p[2], "pack": p[3]}
 	w.regions = [
 		{"name": REGION_OUTPOST, "polygon": _rect_polygon([-half, -half], [half, half])},
 		{"name": REGION_INNER_RING, "polygon": _rect_polygon([-24.0, -24.0], [24.0, 24.0])},

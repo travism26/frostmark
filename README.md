@@ -17,9 +17,11 @@ Gathered resources pay for outpost upgrades, which work as a tech tree and push 
 
 Start a new character on the title screen. Click the gate to walk out, then click a pine to chop it: logs go into your twelve-slot pack and woodcutting levels up as you cut. Warmth drains while you are outside; when it runs out your health starts to fall, so walk back through the gate in time. Crossing the gate inward banks your whole pack into the stash and saves.
 
-Inside the outpost, stand by the fire to warm up. Click the stash to withdraw or deposit, and the workbench to craft a wooden club from four logs. Click a pack item to equip it, right-click to drop it. Q and E, or a middle-mouse drag, rotate the camera; the mouse wheel zooms between fixed limits.
+Past the trees, over the line into ring one, two wolves wait to the south-west and a bandit archer to the south-east. Your stash starts with a wooden bow, 30 arrows and 5 cooked fish; withdraw them, then click an enemy to fight it. Combat runs on half-second ticks and you strike automatically while in reach. Every enemy shows its next blow over its head one tick before it lands, so counter it. A club up close beats the archer, and the bow at distance beats a wolf. Swapping weapons takes effect on the next tick, or you can step out of reach. Click cooked fish in your pack to eat it: it costs a tick and heals over the next few. Each shot spends an arrow. Dead enemies drop loot; click a pile to pick it up. If you die you wake by the fire, keeping your three most valuable things and losing the rest; your stash and skills are untouched.
 
-Progress is saved in the browser at the gate and after every stash or workbench action, so Continue on the title screen picks up where you left off. **Save code** shows your character as a text code; paste it into Import code on the title screen in any browser to carry it over.
+Inside the outpost, stand by the fire to warm up. Click the stash to withdraw or deposit, and the workbench to craft a wooden club from four logs. Click a pack item to equip or eat it, right-click to drop it. Q and E, or a middle-mouse drag, rotate the camera; the mouse wheel zooms between fixed limits.
+
+Progress is saved in the browser at the gate, after every stash or workbench action, and on death, so Continue on the title screen picks up where you left off. **Save code** shows your character as a text code; paste it into Import code on the title screen in any browser to carry it over.
 
 ## Running it locally
 

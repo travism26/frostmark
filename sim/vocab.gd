@@ -11,17 +11,17 @@ extends RefCounted
 # --- Commands -------------------------------------------------------------------
 
 const MOVE_TO := "move_to"          # {pos: [x, z]}            walk to a ground point
-const INTERACT := "interact"        # {object_id: String}      walk to an object and start its action
+const INTERACT := "interact"        # {object_id: String}      walk to an object or loot pile and start its action
 const GATHER := "gather"            # {object_id}              walk to a node and gather until it is spent
 const COOK := "cook"                # a later slice
 const SMITH := "smith"              # {recipe}                 craft a recipe at the workbench
 const EQUIP := "equip"              # {index} | {unequip: slot} equip a pack item, or unequip into the pack
-const EAT := "eat"                  # slice 4
+const EAT := "eat"                  # {index}                  eat food from a pack slot; costs the tick
 const DROP := "drop"                # {index, count?}          drop from a pack slot
 const DEPOSIT := "deposit"          # {index, count?}          pack slot to stash, inside the outpost
 const WITHDRAW := "withdraw"        # {index, count?}          stash slot to pack, inside the outpost
 const BUILD := "build"              # a later slice
-const ATTACK := "attack"            # slice 4
+const ATTACK := "attack"            # {enemy_id}               close to reach and strike every ready tick
 const CROSS_GATE := "cross_gate"    # {}                       walk through the gate to its other side
 const EXPORT_SAVE := "export_save"  # {}                       returns {ok, reason, code}
 const IMPORT_SAVE := "import_save"  # {code}                   replaces the state from a save code
@@ -34,7 +34,7 @@ const COMMANDS: Array[String] = [
 
 ## Commands that do something in this slice. The rest answer `not_implemented`.
 const IMPLEMENTED: Array[String] = [
-	MOVE_TO, INTERACT, GATHER, SMITH, EQUIP, DROP, DEPOSIT, WITHDRAW, CROSS_GATE,
+	MOVE_TO, INTERACT, GATHER, SMITH, EQUIP, EAT, DROP, DEPOSIT, WITHDRAW, ATTACK, CROSS_GATE,
 	EXPORT_SAVE, IMPORT_SAVE,
 ]
 
@@ -59,17 +59,30 @@ const EV_DEPOSITED := "deposited"                # {item, count}
 const EV_WITHDREW := "withdrew"                  # {item, count}
 const EV_BANKED := "banked"                      # {items, overflow}  each a list of {item, count}
 const EV_WARMTH_CHANGED := "warmth_changed"      # {warmth, max}
-const EV_TOOK_DAMAGE := "took_damage"            # {amount, cause, health}
-const EV_COLLAPSED := "collapsed"                # {cause, pos}  health hit zero; woke by the fire
+const EV_TOOK_DAMAGE := "took_damage"            # {amount, cause, health}  cause: "cold" or an enemy kind
+const EV_HEALED := "healed"                      # {amount, health}
+const EV_ATE := "ate"                            # {item, heal, ticks}
+const EV_DIED := "died"                          # {cause, kept, lost, spare, pos}  kept/lost: lists of {item, count}; spare: item given back or ""
 const EV_SAVED := "saved"                        # {reason, tick}  a save point: persist sim.export_code()
 const EV_SAVE_REJECTED := "save_rejected"        # {reason}
+# Combat
+const EV_ENEMY_NOTICED := "enemy_noticed"        # {enemy_id, cause}  cause: sight, noise, pack or hit
+const EV_ENEMY_MOVED := "enemy_moved"            # {enemy_id, from, to, path, facing}
+const EV_ENEMY_TELEGRAPHED := "enemy_telegraphed"  # {enemy_id, action, style, damage, heavy, at}
+const EV_HIT := "hit"                            # {attacker, target, amount, style, multiplier, health}
+const EV_MISSED := "missed"                      # {attacker, target, action}  the target was out of reach
+const EV_ENEMY_DIED := "enemy_died"              # {enemy_id, enemy_kind, pos}
+const EV_ENEMY_DISENGAGED := "enemy_disengaged"  # {enemy_id}  heading home; the player is in the outpost
+const EV_ENEMY_RESPAWNED := "enemy_respawned"    # {enemy_id, pos}
+const EV_LOOT_DROPPED := "loot_dropped"          # {loot_id, item, count, pos}
+const EV_PICKED_UP := "picked_up"                # {loot_id, item, count}
+const EV_LOOT_GONE := "loot_gone"                # {loot_id}  lay too long; the snow took it
 
 # Reserved for later slices, named now so the presentation can bind to them early.
-const EV_ATE := "ate"
 const EV_BUILT := "built"
-const EV_ENEMY_TELEGRAPHED := "enemy_telegraphed"
-const EV_ENEMY_DIED := "enemy_died"
-const EV_DIED := "died"
+
+## The combatant id of the player in `hit` and `missed` events; enemies use their own ids.
+const PLAYER := "player"
 
 # --- Interaction actions (the `action` of `interacted`) --------------------------
 
@@ -78,6 +91,7 @@ const ACTION_GATHER := "gather"
 const ACTION_WARM := "warm"
 const ACTION_STASH := "stash"
 const ACTION_CRAFT := "craft"
+const ACTION_PICK_UP := "pick_up"
 
 # --- Rejection reasons ------------------------------------------------------------
 
@@ -102,7 +116,14 @@ const REASON_UNKNOWN_RECIPE := "unknown_recipe"
 const REASON_UPGRADE_MISSING := "upgrade_missing"
 const REASON_MISSING_INPUTS := "missing_inputs"
 const REASON_MOVED := "moved"
-const REASON_COLLAPSED := "collapsed"
+const REASON_DIED := "died"
+# Combat and eating
+const REASON_UNKNOWN_ENEMY := "unknown_enemy"
+const REASON_TARGET_DEAD := "target_dead"
+const REASON_IN_OUTPOST := "in_outpost"
+const REASON_NO_AMMO := "no_ammo"
+const REASON_NOT_FOOD := "not_food"
+const REASON_ALREADY_EATING := "already_eating"
 # Save codes
 const REASON_BAD_CODE := "bad_code"
 const REASON_BAD_CHECKSUM := "bad_checksum"

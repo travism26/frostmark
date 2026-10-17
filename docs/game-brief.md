@@ -178,7 +178,7 @@ The ship order is in [roadmap.md](roadmap.md): five slices, one per PR, each pla
 
 The decision list leaves these open. They are recorded here so nobody settles them by accident.
 
-1. **The combat triangle without magic.** The triangle is melee > ranged > magic > melee, but launch has only melee and ranged as combat skills. What does magic beat or lose to before magic exists, and what do enemies use in that slot?
+1. **The combat triangle without magic.** **Settled in slice 4:** until magic exists the rule is two-way. Melee has the edge up close and ranged has the edge at distance, and the same style is neutral. Wolves fight in melee and bandit archers at range, and the bandit captain alternates the two. The full triangle (melee beats ranged, ranged beats magic, magic beats melee) widens in when magic arrives with ring two.
 2. **"Most valuable" on death.** Is value the trade price, the gear tier, or something the player picks? Do stacks count as one item?
 3. **Running out of warmth.** What happens when warmth hits zero: damage over time, death, or something else? **Settled in slice 3:** at zero warmth health drains per tick, so a scramble home is possible. Until combat brings the real death rule, health at zero wakes you by the outpost fire with your pack intact.
 4. **Waystones and banking.** Does travelling by waystone bank your loot, or does only the outpost gate do that?

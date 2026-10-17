@@ -21,7 +21,7 @@ const WALK_PER_TICK := WALK_SPEED * TICK_SECONDS
 const SNAP_RADIUS_CELLS := 2
 ## Bumped whenever the state shape changes. `restore()` migrates older snapshots forward
 ## (SaveCode.migrate) and refuses ones it cannot read.
-const STATE_VERSION := 2
+const STATE_VERSION := 3
 
 ## The pack: a fixed number of slots, and a carried weight (pack plus equipment, in kg)
 ## above which walking slows to OVERWEIGHT_SPEED of normal.
@@ -31,12 +31,16 @@ const OVERWEIGHT_SPEED := 0.6
 ## Stash slots a new character starts with; outpost upgrades raise it in a later slice.
 const STASH_START_SLOTS := 8
 const STARTING_TOOL := "wooden_axe"
+## A new character's stash holds a bow, a quiver and food, so both combat styles and healing
+## are there for the first fight. A slice-3 character gets the same kit on migration.
+const STARTING_STASH := [
+	{"item": "wooden_bow", "count": 1}, {"item": "arrows", "count": 30}, {"item": "cooked_fish", "count": 5},
+]
 
 ## Warmth is whole points. Outside the outpost it drains WARMTH_DRAIN per tick, so a full
 ## gauge lasts WARMTH_MAX / WARMTH_DRAIN ticks (three minutes). Within FIRE_REACH metres of
 ## a fire it refills FIRE_WARMTH per tick and health refills FIRE_HEALTH per tick. At zero
-## warmth, health drains COLD_DAMAGE per tick instead; at zero health the player collapses
-## and wakes by the outpost fire with full health and the pack intact.
+## warmth, health drains COLD_DAMAGE per tick instead; at zero health the player dies.
 const WARMTH_MAX := 360
 const WARMTH_DRAIN := 1
 const HEALTH_MAX := 100
@@ -56,9 +60,23 @@ const GATHER_BASE_CHANCE := 60
 const GATHER_CHANCE_PER_LEVEL := 4
 const GATHER_MAX_CHANCE := 95
 
+## Death keeps this many of the most valuable things carried or worn (a stack is one thing).
+const DEATH_KEEPS := 3
+## Ground loot lies this many ticks (five minutes) before the snow takes it.
+const LOOT_TICKS := 600
+
+## Enemy modes. Idle at home until it notices the player, engaged while fighting, returning
+## home (deaf to the player) after the player reaches the outpost, dead until it respawns.
+const MODE_IDLE := "idle"
+const MODE_ENGAGED := "engaged"
+const MODE_RETURNING := "returning"
+const MODE_DEAD := "dead"
+const ENEMY_MODES: Array[String] = [MODE_IDLE, MODE_ENGAGED, MODE_RETURNING, MODE_DEAD]
+
 ## Commands that change the inventory are queued and applied at the start of the next tick.
+## That is what makes a weapon swap land on the next tick, and eating cost it.
 const QUEUED_COMMANDS: Array[String] = [
-	SimVocab.SMITH, SimVocab.EQUIP, SimVocab.DROP, SimVocab.DEPOSIT, SimVocab.WITHDRAW,
+	SimVocab.SMITH, SimVocab.EQUIP, SimVocab.EAT, SimVocab.DROP, SimVocab.DEPOSIT, SimVocab.WITHDRAW,
 ]
 
 var world: WorldDef
@@ -66,6 +84,12 @@ var state: Dictionary = {}
 var _events: Array[Dictionary] = []
 ## Why this tick reached a save point, or "" when it did not. Flushed as one `saved` event.
 var _save_due := ""
+## Within one tick only, reset by `step()`: whether the player ate (which costs the tick's
+## step and swing), the radius of the loudest noise the player made, and what killed the
+## player when a blow brought health to zero.
+var _ate := false
+var _noise := 0.0
+var _dead_cause := ""
 
 
 func _init(world_def: WorldDef = null) -> void:
@@ -74,9 +98,13 @@ func _init(world_def: WorldDef = null) -> void:
 
 
 ## A fresh state for this world: a new character at the spawn point, idle, facing south,
-## warm, with an empty pack, the starting axe in the tool slot and every node full.
+## warm, with an empty pack, the starting axe in the tool slot, the starting kit in the stash,
+## every node full and every enemy at home.
 func new_state() -> Dictionary:
 	var spawn := Vector2(world.spawn[0], world.spawn[1])
+	var stash := Inventory.empty_slots(STASH_START_SLOTS)
+	for kit in STARTING_STASH:
+		Inventory.add(stash, kit["item"], kit["count"])
 	return {
 		"version": STATE_VERSION,
 		"tick": 0,
@@ -88,18 +116,23 @@ func new_state() -> Dictionary:
 			"target_object": "",
 			"region": world.region_at(spawn),
 			"activity": {},
+			"ready_tick": 0,
 		},
 		"warmth": WARMTH_MAX,
 		"health": HEALTH_MAX,
+		"healing": [],
 		"inventory": {
 			"pack": Inventory.empty_slots(PACK_SLOTS),
 			"equipment": {
 				ItemTable.SLOT_WEAPON: "", ItemTable.SLOT_ARMOUR: "", ItemTable.SLOT_TOOL: STARTING_TOOL,
 			},
 		},
-		"stash": {"capacity": STASH_START_SLOTS, "slots": Inventory.empty_slots(STASH_START_SLOTS)},
+		"stash": {"capacity": STASH_START_SLOTS, "slots": stash},
 		"skills": SkillTable.new_table(),
 		"nodes": _full_nodes(),
+		"enemies": _fresh_enemies(),
+		"loot": {},
+		"loot_seq": 0,
 		"upgrades": [],
 		"pending": [],
 	}
@@ -110,6 +143,28 @@ func _full_nodes() -> Dictionary:
 	for id in world.node_ids():
 		out[id] = {"left": int(WorldDef.NODE_KINDS[world.objects[id]["kind"]]["yield"]), "respawn_tick": 0}
 	return out
+
+
+func _fresh_enemies() -> Dictionary:
+	var out := {}
+	for id in world.enemies:
+		out[id] = _fresh_enemy(id)
+	return out
+
+
+## An enemy at home, unhurt and idle.
+func _fresh_enemy(id: String) -> Dictionary:
+	var placed: Dictionary = world.enemies[id]
+	return {
+		"kind": placed["kind"],
+		"pos": [float(placed["home"][0]), float(placed["home"][1])],
+		"facing": [0.0, -1.0],
+		"health": int(CombatTable.enemy(placed["kind"])["health"]),
+		"mode": MODE_IDLE,
+		"next": {},
+		"step": 0,
+		"respawn_tick": 0,
+	}
 
 
 # --- Commands -----------------------------------------------------------------------
@@ -135,6 +190,8 @@ func command(kind: String, args: Dictionary = {}) -> Dictionary:
 			return _cmd_gather(args)
 		SimVocab.CROSS_GATE:
 			return _cmd_cross_gate(args)
+		SimVocab.ATTACK:
+			return _cmd_attack(args)
 		SimVocab.EXPORT_SAVE:
 			return {"ok": true, "reason": "", "code": export_code()}
 		SimVocab.IMPORT_SAVE:
@@ -161,6 +218,8 @@ func _cmd_move_to(args: Dictionary) -> Dictionary:
 
 func _cmd_interact(args: Dictionary) -> Dictionary:
 	var id: String = str(args.get("object_id", ""))
+	if (state["loot"] as Dictionary).has(id):
+		return _walk_to_loot(id, args)
 	if not world.objects.has(id):
 		return _reject(SimVocab.INTERACT, args, SimVocab.REASON_UNKNOWN_OBJECT)
 	if is_node(id):
@@ -213,6 +272,37 @@ func _cmd_import_save(args: Dictionary) -> Dictionary:
 	return {"ok": true, "reason": ""}
 
 
+## Targets an enemy: the player closes to the weapon's reach and strikes on every ready tick
+## until the enemy dies, the player walks away, or a ranged weapon runs out of ammunition.
+func _cmd_attack(args: Dictionary) -> Dictionary:
+	var id: String = str(args.get("enemy_id", ""))
+	var enemies: Dictionary = state["enemies"]
+	if not enemies.has(id):
+		return _reject(SimVocab.ATTACK, args, SimVocab.REASON_UNKNOWN_ENEMY)
+	if enemies[id]["mode"] == MODE_DEAD:
+		return _reject(SimVocab.ATTACK, args, SimVocab.REASON_TARGET_DEAD)
+	if in_outpost():
+		return _reject(SimVocab.ATTACK, args, SimVocab.REASON_IN_OUTPOST)
+	if not _has_ammo():
+		return _reject(SimVocab.ATTACK, args, SimVocab.REASON_NO_AMMO)
+	var player: Dictionary = state["player"]
+	if player["activity"].get("object_id", "") != id:
+		_stop_activity(SimVocab.REASON_MOVED)
+	player["path"] = []
+	player["target_object"] = ""
+	player["activity"] = {"kind": SimVocab.ATTACK, "object_id": id}
+	return {"ok": true, "reason": ""}
+
+
+## Walks onto a loot pile; arriving picks up as much of it as the pack has room for.
+func _walk_to_loot(id: String, args: Dictionary) -> Dictionary:
+	var at := _pos(state["loot"][id])
+	var cell: Variant = world.nearest_walkable_cell(at, SNAP_RADIUS_CELLS)
+	if cell == null or not _set_path(cell, at if world.is_walkable(at) else world.cell_center(cell), id):
+		return _reject(SimVocab.INTERACT, args, SimVocab.REASON_UNREACHABLE)
+	return {"ok": true, "reason": ""}
+
+
 func _walk_to_object(kind: String, id: String, args: Dictionary) -> Dictionary:
 	var here := player_pos()
 	var cells := world.approach_cells(id)
@@ -228,22 +318,15 @@ func _walk_to_object(kind: String, id: String, args: Dictionary) -> Dictionary:
 ## Routes the player to `goal_cell`, ending exactly at `destination`. False when unreachable.
 func _set_path(goal_cell: Vector2i, destination: Vector2, object_id: String) -> bool:
 	var here := player_pos()
-	var cells := GridPath.find(world, world.cell_of(here), goal_cell)
-	if cells.is_empty():
+	var plain := _route(here, goal_cell, destination)
+	if plain.is_empty():
 		return false
-	var points: Array[Vector2] = []
-	for i in range(1, cells.size()):
-		points.append(world.cell_center(cells[i]))
-	if points.is_empty() or points[points.size() - 1] != destination:
-		points.append(destination)
-	var path := GridPath.smooth(world, here, points)
-	var plain: Array = []
 	var length := 0.0
 	var prev := here
-	for p in path:
-		plain.append(_xz(p))
-		length += prev.distance_to(p)
-		prev = p
+	for p in plain:
+		var v := Vector2(p[0], p[1])
+		length += prev.distance_to(v)
+		prev = v
 	_stop_activity(SimVocab.REASON_MOVED)
 	state["player"]["path"] = plain
 	state["player"]["target_object"] = object_id
@@ -254,6 +337,23 @@ func _set_path(goal_cell: Vector2i, destination: Vector2, object_id: String) -> 
 	return true
 
 
+## A smoothed route from `from` to `goal_cell` ending exactly at `destination`, as plain
+## `[x, z]` waypoints after `from`. Empty when there is no route.
+func _route(from: Vector2, goal_cell: Vector2i, destination: Vector2) -> Array:
+	var cells := GridPath.find(world, world.cell_of(from), goal_cell)
+	if cells.is_empty():
+		return []
+	var points: Array[Vector2] = []
+	for i in range(1, cells.size()):
+		points.append(world.cell_center(cells[i]))
+	if points.is_empty() or points[points.size() - 1] != destination:
+		points.append(destination)
+	var plain: Array = []
+	for p in GridPath.smooth(world, from, points):
+		plain.append(_xz(p))
+	return plain
+
+
 func _reject(kind: String, args: Dictionary, reason: String) -> Dictionary:
 	_emit({"kind": SimVocab.EV_COMMAND_REJECTED, "command": kind, "reason": reason, "args": args})
 	return {"ok": false, "reason": reason}
@@ -261,15 +361,22 @@ func _reject(kind: String, args: Dictionary, reason: String) -> Dictionary:
 
 # --- Ticking --------------------------------------------------------------------------
 
-## Advances the world by exactly one tick: queued inventory commands, then movement, then
-## gathering, node regrowth and the cold. A save point reached during the tick is reported
-## once, at its end, so the saved state is the whole tick.
+## Advances the world by exactly one tick: queued inventory commands (a swap, a meal), the
+## player closing on an attack target, movement, gathering, combat (the player's swing, then
+## every enemy), node regrowth, loot decay, then warmth, health and healing. A save point
+## reached during the tick is reported once, at its end, so the saved state is the whole tick.
 func step() -> void:
 	state["tick"] = int(state["tick"]) + 1
+	_ate = false
+	_noise = 0.0
+	_dead_cause = ""
 	_step_pending()
+	_step_pursuit()
 	_step_movement()
 	_step_activity()
+	_step_combat()
 	_step_nodes()
+	_step_loot()
 	_step_survival()
 	if _save_due != "":
 		_emit({"kind": SimVocab.EV_SAVED, "reason": _save_due, "tick": state["tick"]})
@@ -288,7 +395,7 @@ func _step_pending() -> void:
 func _step_movement() -> void:
 	var player: Dictionary = state["player"]
 	var path: Array = player["path"]
-	if path.is_empty():
+	if path.is_empty() or _ate:
 		return
 	var start := player_pos()
 	var pos := start
@@ -327,7 +434,13 @@ func _step_movement() -> void:
 		var object_id: String = player["target_object"]
 		player["target_object"] = ""
 		_emit({"kind": SimVocab.EV_ARRIVED, "pos": _xz(pos), "object_id": object_id})
-		if object_id != "":
+		if (state["loot"] as Dictionary).has(object_id):
+			_emit({
+				"kind": SimVocab.EV_INTERACTED, "object_id": object_id, "object_kind": "loot",
+				"action": SimVocab.ACTION_PICK_UP,
+			})
+			_pick_up(object_id)
+		elif world.objects.has(object_id):
 			var action := _action_for(object_id)
 			_emit({
 				"kind": SimVocab.EV_INTERACTED, "object_id": object_id,
@@ -459,6 +572,7 @@ func _step_activity() -> void:
 	var def := _node_def(id)
 	var skill: String = def["skill"]
 	activity["progress"] = int(activity["progress"]) + 1
+	_noise = maxf(_noise, CombatTable.NOISE_GATHER)
 	if int(activity["progress"]) < gather_ticks(skill_level(skill)):
 		return
 	activity["progress"] = 0
@@ -491,11 +605,384 @@ func _step_nodes() -> void:
 			_emit({"kind": SimVocab.EV_NODE_RESPAWNED, "object_id": id})
 
 
-## A deterministic roll kept in the state (a 31-bit LCG, exact through JSON).
+## A deterministic roll kept in the state: true with `percent` percent chance.
 func _roll(percent: int) -> bool:
+	return _rand(100) < percent
+
+
+## The next draw of the generator kept in the state (a 31-bit LCG, exact through JSON), as a
+## whole number from 0 to n - 1.
+func _rand(n: int) -> int:
 	var r := (int(state["rng"]) * 1103515245 + 12345) % 2147483648
 	state["rng"] = r
-	return (r >> 16) % 100 < percent
+	return (r >> 16) % n
+
+
+# --- Combat ---------------------------------------------------------------------------
+
+## The player and every enemy as one combatant shape: {id, kind, pos, health, health_max,
+## weapon, style, reach, defence, next}. The style comes from the weapon. `next` is the action
+## declared for the coming tick as {action, at}, or {} when nothing is lined up. Every blow
+## is resolved through this view, so the player and an enemy are hit by the same arithmetic.
+func combatant(id: String) -> Dictionary:
+	if id == SimVocab.PLAYER:
+		var weapon := player_weapon()
+		var stats := CombatTable.weapon(weapon)
+		var tick := int(state["tick"])
+		var next := {}
+		if is_attacking() and int(state["player"]["ready_tick"]) <= tick + 1:
+			next = {"action": SimVocab.ATTACK, "at": tick + 1}
+		return {
+			"id": id, "kind": SimVocab.PLAYER, "pos": player_pos(), "health": int(state["health"]),
+			"health_max": HEALTH_MAX, "weapon": weapon, "style": stats["style"], "reach": stats["reach"],
+			"defence": ItemTable.defence(state["inventory"]["equipment"][ItemTable.SLOT_ARMOUR]),
+			"next": next,
+		}
+	var e: Dictionary = state["enemies"][id]
+	var def := CombatTable.enemy(e["kind"])
+	var enemy_stats := CombatTable.weapon(def["weapon"])
+	return {
+		"id": id, "kind": e["kind"], "pos": _pos(e), "health": int(e["health"]),
+		"health_max": int(def["health"]), "weapon": def["weapon"], "style": enemy_stats["style"],
+		"reach": enemy_stats["reach"], "defence": 0, "next": (e["next"] as Dictionary).duplicate(),
+	}
+
+
+## The weapon the player fights with: what is in the weapon slot, or fists when it is empty.
+func player_weapon() -> String:
+	var w: String = state["inventory"]["equipment"][ItemTable.SLOT_WEAPON]
+	return w if w != "" else CombatTable.UNARMED
+
+
+func player_style() -> String:
+	return CombatTable.weapon(player_weapon())["style"]
+
+
+## False only for a ranged weapon with no ammunition left in the pack.
+func _has_ammo() -> bool:
+	var ammo: String = CombatTable.weapon(player_weapon())["ammo"]
+	return ammo == "" or Inventory.count_of(state["inventory"]["pack"], ammo) > 0
+
+
+## The enemy the player is attacking, or "".
+func _attack_target() -> String:
+	var activity: Dictionary = state["player"]["activity"]
+	return str(activity.get("object_id", "")) if activity.get("kind", "") == SimVocab.ATTACK else ""
+
+
+## While attacking, walks the player to within the weapon's reach of the target, re-routing
+## as the target moves, and stands still once in reach.
+func _step_pursuit() -> void:
+	var target := _attack_target()
+	if target == "" or _ate:
+		return
+	var player: Dictionary = state["player"]
+	var here := player_pos()
+	var there := _pos(state["enemies"][target])
+	var reach: float = CombatTable.weapon(player_weapon())["reach"]
+	if here.distance_to(there) <= reach:
+		player["path"] = []
+		return
+	var goal := there + (here - there).normalized() * reach * CombatTable.APPROACH_FRACTION
+	var path: Array = player["path"]
+	if not path.is_empty() and Vector2(path[-1][0], path[-1][1]).distance_to(goal) < 0.5:
+		return
+	var cell: Variant = world.nearest_walkable_cell(goal, SNAP_RADIUS_CELLS)
+	if cell == null:
+		return
+	player["path"] = _route(here, cell, goal if world.is_walkable(goal) else world.cell_center(cell))
+
+
+## The player's swing, then every enemy's turn. A player killed by a blow dies once, at the
+## end, so the enemies' turns in between see the fight as over.
+func _step_combat() -> void:
+	_step_player_attack()
+	for id in state["enemies"]:
+		_step_enemy(id)
+	if _dead_cause != "":
+		_die(_dead_cause)
+
+
+## The player strikes on a ready tick, outside the outpost, with the target in reach. A
+## ranged weapon spends one arrow per shot and refuses to fire with none. Hits train the
+## style's skill.
+func _step_player_attack() -> void:
+	var target := _attack_target()
+	var tick := int(state["tick"])
+	var player: Dictionary = state["player"]
+	if target == "" or _ate or in_outpost() or tick < int(player["ready_tick"]):
+		return
+	var me := combatant(SimVocab.PLAYER)
+	var foe := combatant(target)
+	var toward: Vector2 = (foe["pos"] as Vector2) - (me["pos"] as Vector2)
+	if toward.length() > float(me["reach"]):
+		return
+	if not _has_ammo():
+		_stop_activity(SimVocab.REASON_NO_AMMO)
+		return
+	var stats := CombatTable.weapon(me["weapon"])
+	if stats["ammo"] != "":
+		Inventory.remove(state["inventory"]["pack"], stats["ammo"], 1)
+	player["ready_tick"] = tick + int(stats["speed"])
+	if toward != Vector2.ZERO:
+		player["facing"] = _xz(toward.normalized())
+	var skill: String = CombatTable.STYLE_SKILLS[me["style"]]
+	var base := int(stats["power"]) + (skill_level(skill) - 1) / CombatTable.LEVELS_PER_POWER
+	var amount := _strike(SimVocab.PLAYER, target, base)
+	_grant_xp(skill, amount * CombatTable.XP_PER_DAMAGE)
+	var e: Dictionary = state["enemies"][target]
+	if int(e["health"]) <= 0:
+		_kill_enemy(target)
+	elif e["mode"] != MODE_ENGAGED:
+		_engage(target, CombatTable.NOTICE_HIT)
+
+
+## One blow from `attacker` on `defender` for `base` damage before the style edge and armour.
+## Applies it, emits `hit` (and `took_damage` when the player is hit), makes fight noise and
+## returns the damage dealt.
+func _strike(attacker: String, defender: String, base: int) -> int:
+	var a := combatant(attacker)
+	var d := combatant(defender)
+	var distance := (a["pos"] as Vector2).distance_to(d["pos"])
+	var amount := CombatTable.damage(base, a["style"], d["style"], distance, int(d["defence"]))
+	var health := maxi(0, int(d["health"]) - amount)
+	if defender == SimVocab.PLAYER:
+		state["health"] = health
+	else:
+		state["enemies"][defender]["health"] = health
+	_emit({
+		"kind": SimVocab.EV_HIT, "attacker": attacker, "target": defender, "amount": amount,
+		"style": a["style"], "multiplier": CombatTable.multiplier(a["style"], d["style"], distance),
+		"health": health,
+	})
+	if defender == SimVocab.PLAYER:
+		_emit({"kind": SimVocab.EV_TOOK_DAMAGE, "amount": amount, "cause": a["kind"], "health": health})
+	_noise = maxf(_noise, CombatTable.NOISE_FIGHT)
+	return amount
+
+
+func _step_enemy(id: String) -> void:
+	var e: Dictionary = state["enemies"][id]
+	var tick := int(state["tick"])
+	match e["mode"]:
+		MODE_DEAD:
+			if tick >= int(e["respawn_tick"]):
+				state["enemies"][id] = _fresh_enemy(id)
+				_emit({"kind": SimVocab.EV_ENEMY_RESPAWNED, "enemy_id": id, "pos": _xz(_home(id))})
+		MODE_IDLE:
+			var cause := _notice_cause(id)
+			if cause != "":
+				_engage(id, cause)
+		MODE_ENGAGED:
+			if _dead_cause != "":
+				return
+			if in_outpost():
+				_disengage(id)
+				return
+			# A pack mate that noticed earlier this tick has already declared its next action.
+			if int(e["next"].get("at", 0)) > tick:
+				return
+			_enemy_act(id)
+			_enemy_declare(id)
+		MODE_RETURNING:
+			var home := _home(id)
+			_walk_enemy(id, home)
+			if _pos(e).distance_to(home) < 0.01:
+				e["mode"] = MODE_IDLE
+				e["health"] = int(CombatTable.enemy(e["kind"])["health"])
+				e["step"] = 0
+
+
+## Why an idle enemy notices the player this tick ("sight" or "noise"), or "" when it does not.
+## Nothing outside notices a player inside the outpost.
+func _notice_cause(id: String) -> String:
+	if in_outpost() or _dead_cause != "":
+		return ""
+	var e: Dictionary = state["enemies"][id]
+	var d := _pos(e).distance_to(player_pos())
+	if d <= float(CombatTable.enemy(e["kind"])["sight"]):
+		return CombatTable.NOTICE_SIGHT
+	if d <= _noise:
+		return CombatTable.NOTICE_NOISE
+	return ""
+
+
+## An enemy notices the player and joins the fight, and the rest of its pack with it.
+func _engage(id: String, cause: String) -> void:
+	_engage_one(id, cause)
+	var pack: String = world.enemies[id]["pack"]
+	for other in state["enemies"]:
+		if other != id and world.enemies[other]["pack"] == pack and state["enemies"][other]["mode"] == MODE_IDLE:
+			_engage_one(other, CombatTable.NOTICE_PACK)
+
+
+func _engage_one(id: String, cause: String) -> void:
+	state["enemies"][id]["mode"] = MODE_ENGAGED
+	_emit({"kind": SimVocab.EV_ENEMY_NOTICED, "enemy_id": id, "cause": cause})
+	_enemy_declare(id)
+
+
+func _disengage(id: String) -> void:
+	var e: Dictionary = state["enemies"][id]
+	e["mode"] = MODE_RETURNING
+	e["next"] = {}
+	_emit({"kind": SimVocab.EV_ENEMY_DISENGAGED, "enemy_id": id})
+
+
+## Carries out what the enemy declared last tick: closes in, rests, or strikes. A strike whose
+## target has stepped out of reach since it was telegraphed is a miss.
+func _enemy_act(id: String) -> void:
+	var e: Dictionary = state["enemies"][id]
+	var next: Dictionary = e["next"]
+	var action := CombatTable.ACTION_MOVE
+	if int(next.get("at", -1)) == int(state["tick"]):
+		action = str(next["action"])
+	e["next"] = {}
+	if action == CombatTable.ACTION_MOVE:
+		_chase(id)
+		return
+	if not CombatTable.is_attack(action):
+		return
+	var me := combatant(id)
+	var toward := player_pos() - (me["pos"] as Vector2)
+	if toward != Vector2.ZERO:
+		e["facing"] = _xz(toward.normalized())
+	if toward.length() > float(me["reach"]):
+		_emit({"kind": SimVocab.EV_MISSED, "attacker": id, "target": SimVocab.PLAYER, "action": action})
+		return
+	_strike(id, SimVocab.PLAYER, CombatTable.action_damage(action))
+	if int(state["health"]) <= 0:
+		_dead_cause = e["kind"]
+
+
+## Declares what the enemy does next tick: the next action of its cycle while the player is in
+## its reach, else closing in. An attack is telegraphed now, exactly one tick before it lands.
+func _enemy_declare(id: String) -> void:
+	var e: Dictionary = state["enemies"][id]
+	var me := combatant(id)
+	var action := CombatTable.ACTION_MOVE
+	if (me["pos"] as Vector2).distance_to(player_pos()) <= float(me["reach"]):
+		var actions: Array = CombatTable.enemy(e["kind"])["actions"]
+		action = actions[int(e["step"]) % actions.size()]
+		e["step"] = (int(e["step"]) + 1) % actions.size()
+	var at := int(state["tick"]) + 1
+	e["next"] = {"action": action, "at": at}
+	if CombatTable.is_attack(action):
+		_emit({
+			"kind": SimVocab.EV_ENEMY_TELEGRAPHED, "enemy_id": id, "action": action,
+			"style": me["style"], "damage": CombatTable.action_damage(action),
+			"heavy": CombatTable.is_heavy(action), "at": at,
+		})
+
+
+## Moves an engaged enemy toward a point just inside its reach of the player, on the side it
+## comes from, fanned out a little per enemy so a pack does not stack on one spot.
+func _chase(id: String) -> void:
+	var me := combatant(id)
+	var here: Vector2 = me["pos"]
+	var target := player_pos()
+	var away := (here - target).normalized()
+	if away == Vector2.ZERO:
+		away = Vector2(0, 1)
+	away = away.rotated(float(world.enemies.keys().find(id) % 3 - 1) * 0.5)
+	_walk_enemy(id, target + away * float(me["reach"]) * CombatTable.APPROACH_FRACTION)
+
+
+## Walks an enemy up to its speed toward `goal`: straight when the ground between is open,
+## else along a grid route. It never steps into the outpost. Emits `enemy_moved` if it moved.
+func _walk_enemy(id: String, goal: Vector2) -> void:
+	var e: Dictionary = state["enemies"][id]
+	var start := _pos(e)
+	if start.distance_to(goal) < 0.01:
+		return
+	var points: Array = []
+	if GridPath.has_line_of_sight(world, start, goal):
+		points = [_xz(goal)]
+	else:
+		var cell: Variant = world.nearest_walkable_cell(goal, SNAP_RADIUS_CELLS)
+		if cell == null:
+			return
+		points = _route(start, cell, goal if world.is_walkable(goal) else world.cell_center(cell))
+	var budget := float(CombatTable.enemy(e["kind"])["speed"])
+	var pos := start
+	var via: Array = [_xz(start)]
+	for p in points:
+		if budget <= 0.0:
+			break
+		var to := pos.move_toward(Vector2(p[0], p[1]), budget)
+		if world.region_at(to) == WorldDef.REGION_OUTPOST:
+			break
+		budget -= pos.distance_to(to)
+		pos = to
+		via.append(_xz(pos))
+	if pos == start:
+		return
+	var last := Vector2(via[via.size() - 2][0], via[via.size() - 2][1])
+	e["pos"] = _xz(pos)
+	e["facing"] = _xz((pos - last).normalized())
+	_emit({
+		"kind": SimVocab.EV_ENEMY_MOVED, "enemy_id": id, "from": _xz(start), "to": _xz(pos),
+		"path": via, "facing": e["facing"],
+	})
+
+
+## An enemy's health ran out: its loot drops where it fell and it comes back home later.
+func _kill_enemy(id: String) -> void:
+	var e: Dictionary = state["enemies"][id]
+	var def := CombatTable.enemy(e["kind"])
+	var at := _pos(e)
+	e["mode"] = MODE_DEAD
+	e["next"] = {}
+	e["respawn_tick"] = int(state["tick"]) + int(def["respawn_ticks"])
+	_emit({"kind": SimVocab.EV_ENEMY_DIED, "enemy_id": id, "enemy_kind": e["kind"], "pos": _xz(at)})
+	var drops: Array = (def["loot"] as Array).duplicate(true)
+	if _roll(int(def["rare_percent"])):
+		drops.append({"item": CombatTable.RARE_LOOT[_rand(CombatTable.RARE_LOOT.size())], "count": 1})
+	for i in drops.size():
+		_drop_loot(drops[i]["item"], int(drops[i]["count"]), at + Vector2(0.45 * i, 0.0))
+	if _attack_target() == id:
+		_stop_activity(SimVocab.REASON_TARGET_DEAD)
+
+
+func _home(id: String) -> Vector2:
+	var home: Array = world.enemies[id]["home"]
+	return Vector2(home[0], home[1])
+
+
+# --- Loot -----------------------------------------------------------------------------
+
+func _drop_loot(item: String, count: int, at: Vector2) -> void:
+	state["loot_seq"] = int(state["loot_seq"]) + 1
+	var id := "loot_%d" % int(state["loot_seq"])
+	state["loot"][id] = {
+		"item": item, "count": count, "pos": _xz(at), "expires_tick": int(state["tick"]) + LOOT_TICKS,
+	}
+	_emit({"kind": SimVocab.EV_LOOT_DROPPED, "loot_id": id, "item": item, "count": count, "pos": _xz(at)})
+
+
+## Picks up as much of a loot pile as the pack has room for; the rest stays on the ground.
+func _pick_up(id: String) -> void:
+	var pile: Dictionary = state["loot"][id]
+	var kind: String = pile["item"]
+	var pack: Array = state["inventory"]["pack"]
+	var n := mini(int(pile["count"]), Inventory.room_for(pack, kind))
+	if n <= 0:
+		_reject(SimVocab.INTERACT, {"object_id": id}, SimVocab.REASON_PACK_FULL)
+		return
+	Inventory.add(pack, kind, n)
+	pile["count"] = int(pile["count"]) - n
+	if int(pile["count"]) <= 0:
+		(state["loot"] as Dictionary).erase(id)
+	_emit({"kind": SimVocab.EV_PICKED_UP, "loot_id": id, "item": kind, "count": n})
+
+
+func _step_loot() -> void:
+	var tick := int(state["tick"])
+	var loot: Dictionary = state["loot"]
+	for id in loot.keys():
+		if tick >= int(loot[id]["expires_tick"]):
+			loot.erase(id)
+			_emit({"kind": SimVocab.EV_LOOT_GONE, "loot_id": id})
 
 
 # --- Skills ---------------------------------------------------------------------------
@@ -516,6 +1003,12 @@ func _grant_xp(skill: String, amount: int) -> void:
 func _step_survival() -> void:
 	var warmth := int(state["warmth"])
 	var health := int(state["health"])
+	var healing: Array = state["healing"]
+	if not healing.is_empty():
+		var healed := mini(HEALTH_MAX, health + int(healing.pop_front())) - health
+		if healed > 0:
+			health += healed
+			_emit({"kind": SimVocab.EV_HEALED, "amount": healed, "health": health})
 	if near_fire():
 		warmth = mini(WARMTH_MAX, warmth + FIRE_WARMTH)
 		health = mini(HEALTH_MAX, health + FIRE_HEALTH)
@@ -530,29 +1023,96 @@ func _step_survival() -> void:
 	state["warmth"] = warmth
 	state["health"] = health
 	if health <= 0:
-		_collapse("cold")
+		_die("cold")
 
 
-## Health ran out. In this slice that wakes the player beside the outpost fire with the pack
-## intact and full health; the real death rule arrives with combat.
-func _collapse(cause: String) -> void:
+## Health ran out, to a blow or to the cold. Everything carried or worn is lost for good except
+## the DEATH_KEEPS most valuable, which stay where they were: a stack counts as one thing,
+## valued at its whole count, and ties go to what is worn, then to the earlier pack slot. The
+## player wakes beside the outpost fire, warm and healed; skills, stash and upgrades are
+## untouched, every enemy breaks off, and a spare axe waits if the last one was lost. Always a
+## save point.
+func _die(cause: String) -> void:
 	var player: Dictionary = state["player"]
-	_stop_activity(SimVocab.REASON_COLLAPSED)
+	var inventory: Dictionary = state["inventory"]
+	_stop_activity(SimVocab.REASON_DIED)
+	var held := _held_by_value()
+	var kept: Array = []
+	var lost: Array = []
+	for i in held.size():
+		var h: Dictionary = held[i]
+		var entry := {"item": h["item"], "count": h["count"]}
+		if i < DEATH_KEEPS:
+			kept.append(entry)
+			continue
+		lost.append(entry)
+		if h["slot"] is String:
+			inventory["equipment"][h["slot"]] = ""
+		else:
+			inventory["pack"][h["slot"]] = null
+	var spare := _spare_axe()
 	var to := Vector2(world.rescue[0], world.rescue[1])
 	player["pos"] = _xz(to)
 	player["path"] = []
 	player["target_object"] = ""
+	player["ready_tick"] = 0
 	state["health"] = HEALTH_MAX
-	_emit({"kind": SimVocab.EV_COLLAPSED, "cause": cause, "pos": _xz(to)})
+	state["warmth"] = WARMTH_MAX
+	state["healing"] = []
+	state["pending"] = []
+	_emit({
+		"kind": SimVocab.EV_DIED, "cause": cause, "kept": kept, "lost": lost, "spare": spare, "pos": _xz(to),
+	})
 	var region := world.region_at(to)
 	if region != player["region"]:
 		_emit({"kind": SimVocab.EV_REGION_CHANGED, "from": player["region"], "to": region})
 		player["region"] = region
+	for id in state["enemies"]:
+		if state["enemies"][id]["mode"] == MODE_ENGAGED:
+			_disengage(id)
+	_save_due = "death"
+
+
+## Nothing makes an axe yet, so a death that took the last one would end woodcutting for good.
+## When no axe is worn, carried or stashed, a spare wooden axe waits by the fire: in the tool
+## slot when it is empty, else in the pack. Returns the item given, or "" when none was needed.
+func _spare_axe() -> String:
+	if has_tool("axe"):
+		return ""
+	for s in state["stash"]["slots"]:
+		if s != null and ItemTable.tool(s["item"]) == "axe":
+			return ""
+	var inventory: Dictionary = state["inventory"]
+	if inventory["equipment"][ItemTable.SLOT_TOOL] == "":
+		inventory["equipment"][ItemTable.SLOT_TOOL] = STARTING_TOOL
+	else:
+		Inventory.add(inventory["pack"], STARTING_TOOL, 1)
+	return STARTING_TOOL
+
+
+## Everything carried or worn, most valuable first: {item, count, value, slot}, where `slot`
+## is the equipment slot name or the pack index. Worn things come before the pack on a tie.
+func _held_by_value() -> Array:
+	var inventory: Dictionary = state["inventory"]
+	var held: Array = []
+	for slot in ItemTable.EQUIPMENT_SLOTS:
+		var item: String = inventory["equipment"][slot]
+		if item != "":
+			held.append({"item": item, "count": 1, "value": ItemTable.value(item), "slot": slot, "order": held.size()})
+	var pack: Array = inventory["pack"]
+	for i in pack.size():
+		if pack[i] != null:
+			var kind: String = pack[i]["item"]
+			var count := int(pack[i]["count"])
+			held.append({"item": kind, "count": count, "value": ItemTable.value(kind) * count, "slot": i, "order": held.size()})
+	held.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return a["value"] > b["value"] or (a["value"] == b["value"] and a["order"] < b["order"]))
+	return held
 
 
 # --- Inventory and outpost actions ----------------------------------------------------
 
-## Why a queued command (deposit, withdraw, drop, equip, smith) would be refused right now,
+## Why a queued command (deposit, withdraw, drop, equip, eat, smith) would be refused right now,
 ## or "" when it would be accepted. Read-only: the presentation uses it to grey out buttons.
 func check(kind: String, args: Dictionary) -> String:
 	if not QUEUED_COMMANDS.has(kind):
@@ -572,6 +1132,8 @@ func _apply(kind: String, args: Dictionary, commit: bool) -> String:
 			return _drop(args, commit)
 		SimVocab.EQUIP:
 			return _equip(args, commit)
+		SimVocab.EAT:
+			return _eat(args, commit)
 		SimVocab.SMITH:
 			return _smith(args, commit)
 	return SimVocab.REASON_NOT_IMPLEMENTED
@@ -677,6 +1239,44 @@ func _equip(args: Dictionary, commit: bool) -> String:
 	return ""
 
 
+## Eats one item of food from a pack slot. The meal costs the tick it lands on (the player
+## neither steps nor swings) and heals the food's `heal` spread evenly over its `heal_ticks`,
+## starting that tick; meals overlap by adding up. One meal per tick.
+func _eat(args: Dictionary, commit: bool) -> String:
+	var pack: Array = state["inventory"]["pack"]
+	var i := _arg_index(args, pack)
+	if i < 0:
+		return SimVocab.REASON_BAD_ARGS
+	if pack[i] == null:
+		return SimVocab.REASON_EMPTY_SLOT
+	var kind: String = pack[i]["item"]
+	var heal := ItemTable.heal(kind)
+	if heal <= 0:
+		return SimVocab.REASON_NOT_FOOD
+	if (_ate if commit else _eat_pending()):
+		return SimVocab.REASON_ALREADY_EATING
+	if commit:
+		Inventory.take(pack, i, 1)
+		var ticks := maxi(1, int(ItemTable.ITEMS[kind]["heal_ticks"]))
+		var healing: Array = state["healing"]
+		for t in ticks:
+			var share := heal / ticks + (1 if t < heal % ticks else 0)
+			if t < healing.size():
+				healing[t] = int(healing[t]) + share
+			else:
+				healing.append(share)
+		_ate = true
+		_emit({"kind": SimVocab.EV_ATE, "item": kind, "heal": heal, "ticks": ticks})
+	return ""
+
+
+func _eat_pending() -> bool:
+	for p in state["pending"]:
+		if p["kind"] == SimVocab.EAT:
+			return true
+	return false
+
+
 ## Crafts a recipe at the workbench: consumes its inputs from the pack, adds its output.
 func _smith(args: Dictionary, commit: bool) -> String:
 	var id := str(args.get("recipe", ""))
@@ -760,12 +1360,21 @@ func restore(snap: Dictionary) -> bool:
 		if _is_xz(p):
 			path.append(_xz(Vector2(p[0], p[1])))
 	player["path"] = path
+	copy["enemies"] = _restored_enemies(copy.get("enemies"))
+	copy["loot"] = _restored_loot(copy.get("loot"))
+	copy["loot_seq"] = maxi(0, int(copy["loot_seq"])) if _is_number(copy.get("loot_seq")) else 0
 	var target := str(player.get("target_object", ""))
-	player["target_object"] = target if world.objects.has(target) else ""
+	player["target_object"] = target if world.objects.has(target) or copy["loot"].has(target) else ""
 	player["region"] = world.region_at(player_pos_of(player))
-	player["activity"] = _restored_activity(player.get("activity"))
+	player["activity"] = _restored_activity(player.get("activity"), copy["enemies"])
+	player["ready_tick"] = int(player["ready_tick"]) if _is_number(player.get("ready_tick")) else 0
 	copy["warmth"] = clampi(int(copy["warmth"]) if _is_number(copy.get("warmth")) else WARMTH_MAX, 0, WARMTH_MAX)
 	copy["health"] = clampi(int(copy["health"]) if _is_number(copy.get("health")) else HEALTH_MAX, 1, HEALTH_MAX)
+	var healing: Array = []
+	if copy.get("healing") is Array:
+		for h in copy["healing"]:
+			healing.append(maxi(0, int(h)) if _is_number(h) else 0)
+	copy["healing"] = healing
 
 	var inventory: Variant = copy.get("inventory")
 	if not (inventory is Dictionary):
@@ -837,12 +1446,65 @@ func _restored_slots(saved: Variant, size: int) -> Array:
 	return out
 
 
-func _restored_activity(saved: Variant) -> Dictionary:
-	if saved is Dictionary and str(saved.get("kind", "")) == SimVocab.GATHER:
-		var id := str(saved.get("object_id", ""))
-		if is_node(id) and _is_number(saved.get("progress")):
-			return {"kind": SimVocab.GATHER, "object_id": id, "progress": int(saved["progress"])}
+func _restored_activity(saved: Variant, enemies: Dictionary) -> Dictionary:
+	if not (saved is Dictionary):
+		return {}
+	var id := str(saved.get("object_id", ""))
+	match str(saved.get("kind", "")):
+		SimVocab.GATHER:
+			if is_node(id) and _is_number(saved.get("progress")):
+				return {"kind": SimVocab.GATHER, "object_id": id, "progress": int(saved["progress"])}
+		SimVocab.ATTACK:
+			if enemies.has(id) and enemies[id]["mode"] != MODE_DEAD:
+				return {"kind": SimVocab.ATTACK, "object_id": id}
 	return {}
+
+
+## Every placed enemy, from saved data where it is readable and at home, unhurt and idle
+## where it is not (which is also how a save from before combat loads).
+func _restored_enemies(saved: Variant) -> Dictionary:
+	var out := _fresh_enemies()
+	for id in out:
+		var entry: Variant = saved.get(id) if saved is Dictionary else null
+		if not (entry is Dictionary) or not _is_xz(entry.get("pos")) or not _is_number(entry.get("health")):
+			continue
+		var mode := str(entry.get("mode", ""))
+		if not ENEMY_MODES.has(mode):
+			continue
+		var e: Dictionary = out[id]
+		var facing: Variant = entry.get("facing")
+		var next: Variant = entry.get("next")
+		e["pos"] = _xz(Vector2(entry["pos"][0], entry["pos"][1]))
+		e["facing"] = _xz(Vector2(facing[0], facing[1])) if _is_xz(facing) else e["facing"]
+		e["health"] = clampi(int(entry["health"]), 0, int(CombatTable.enemy(e["kind"])["health"]))
+		e["mode"] = mode
+		if next is Dictionary and CombatTable.ACTIONS.has(str(next.get("action", ""))) and _is_number(next.get("at")):
+			e["next"] = {"action": str(next["action"]), "at": int(next["at"])}
+		var cycle: int = (CombatTable.enemy(e["kind"])["actions"] as Array).size()
+		e["step"] = posmod(int(entry["step"]), cycle) if _is_number(entry.get("step")) else 0
+		e["respawn_tick"] = int(entry["respawn_tick"]) if _is_number(entry.get("respawn_tick")) else 0
+	return out
+
+
+## Loot piles from saved data: known items, counts within a stack, readable positions.
+func _restored_loot(saved: Variant) -> Dictionary:
+	var out := {}
+	if not (saved is Dictionary):
+		return out
+	for id in saved:
+		var pile: Variant = saved[id]
+		if not (pile is Dictionary) or not ItemTable.has(str(pile.get("item", ""))):
+			continue
+		if not _is_number(pile.get("count")) or not _is_xz(pile.get("pos")) or not _is_number(pile.get("expires_tick")):
+			continue
+		var kind := str(pile["item"])
+		var count := clampi(int(pile["count"]), 0, ItemTable.stack_size(kind))
+		if count > 0:
+			out[str(id)] = {
+				"item": kind, "count": count, "pos": _xz(Vector2(pile["pos"][0], pile["pos"][1])),
+				"expires_tick": int(pile["expires_tick"]),
+			}
+	return out
 
 
 static func _is_number(v: Variant) -> bool:
@@ -863,6 +1525,11 @@ static func player_pos_of(player: Dictionary) -> Vector2:
 	return Vector2(player["pos"][0], player["pos"][1])
 
 
+## The position of anything stored with a `pos` of [x, z]: an enemy, a loot pile.
+static func _pos(entry: Dictionary) -> Vector2:
+	return Vector2(entry["pos"][0], entry["pos"][1])
+
+
 func player_facing() -> Vector2:
 	return Vector2(state["player"]["facing"][0], state["player"]["facing"][1])
 
@@ -872,7 +1539,11 @@ func is_moving() -> bool:
 
 
 func is_gathering() -> bool:
-	return not (state["player"]["activity"] as Dictionary).is_empty()
+	return state["player"]["activity"].get("kind", "") == SimVocab.GATHER
+
+
+func is_attacking() -> bool:
+	return state["player"]["activity"].get("kind", "") == SimVocab.ATTACK
 
 
 func in_outpost() -> bool:
