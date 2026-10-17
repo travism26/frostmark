@@ -1,0 +1,15 @@
+Icons in this folder come from game-icons.net and are licensed under the Creative Commons
+Attribution 3.0 Unported licence (CC BY 3.0): https://creativecommons.org/licenses/by/3.0/
+
+Each subfolder is one author, as on https://game-icons.net/about.html:
+  lorc        - Lorc        https://lorcblog.blogspot.com
+  delapouite  - Delapouite  https://delapouite.com
+  faithtoken  - Faithtoken
+  darkzaitzev - DarkZaitzev https://www.deviantart.com/darkzaitzev
+  sbed        - sbed        https://opengameart.org/content/95-game-icons
+
+Credit line, per author: "Icons made by {author}. Available on https://game-icons.net"
+
+Changes: the files are the originals from https://github.com/game-icons/icons with the black
+512x512 background rectangle removed, so each is a white glyph on a transparent ground that
+the game tints at runtime. No other changes.
