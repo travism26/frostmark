@@ -672,7 +672,13 @@ func _set_block_alpha(block: MeshInstance3D, alpha: float) -> void:
 
 ## A see-through copy of a mesh's material, kept for the session so it is compiled once.
 func _add_fade_twin(mesh: MeshInstance3D) -> void:
-	var twin := (mesh.mesh.material as StandardMaterial3D).duplicate() as StandardMaterial3D
+	# Primitive and array meshes alike keep their material on surface 0; skip any without one.
+	if mesh.mesh == null or mesh.mesh.get_surface_count() == 0:
+		return
+	var material := mesh.mesh.surface_get_material(0) as StandardMaterial3D
+	if material == null:
+		return
+	var twin := material.duplicate() as StandardMaterial3D
 	twin.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	twin.albedo_color.a = OCCLUDER_ALPHA
 	_fade_twins[mesh] = twin
@@ -833,6 +839,10 @@ func _build_world(world: WorldDef) -> void:
 				_add_box_body(tent, _box_size(s["min"], s["max"], s["height"]), Vector3(0, s["height"] * 0.5, 0))
 			_:
 				var box := _add_block(str(s["id"]), s["min"], s["max"], s["height"], COLOR_BY_SOLID.get(s["kind"], Color.MAGENTA))
+				var look := WorldDressing.solid_mesh(s["kind"], s["min"], s["max"], s["height"])
+				if look != null:
+					box.mesh = look  # a palisade or an ice ridge over the same footprint
+					_add_fade_twin(box)  # the twin follows the new look
 				_add_box_body(box, _box_size(s["min"], s["max"], s["height"]), Vector3.ZERO)
 	_add_cliff_forest(world)
 
@@ -861,13 +871,15 @@ func _build_world(world: WorldDef) -> void:
 			WorldDef.KIND_WAYSTONE:
 				prop = Props.waystone(o["max"][0] - o["min"][0], o["height"])
 		if prop == null:
-			# The outpost gate: a flat threshold block, clickable through a taller volume.
-			var gate := _add_block(str(id), o["min"], o["max"], o["height"], COLOR_GATE)
+			# The outpost gate: a timber gateway over the threshold, clickable through a taller volume.
+			var gate := WorldDressing.gateway(o["min"], o["max"])
+			gate.name = str(id)
+			_place_prop(gate, o["min"], o["max"])
 			var click_size := _box_size(o["min"], o["max"], maxf(o["height"], 1.0))
-			var gate_body := _add_box_body(gate, click_size, Vector3(0, (click_size.y - o["height"]) * 0.5, 0))
+			var gate_body := _add_box_body(gate, click_size, Vector3(0, click_size.y * 0.5, 0))
 			gate_body.set_meta("object_id", id)
 			var gate_label := _label3d(o["label"], 64)
-			gate_label.position = Vector3(0, o["height"] * 0.5 + 1.0, 0)
+			gate_label.position = Vector3(0, WorldDressing.GATEWAY_HEIGHT + 0.9, 0)
 			gate.add_child(gate_label)
 			continue
 		prop.name = str(id)
