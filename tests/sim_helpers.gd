@@ -71,3 +71,50 @@ static func pack_count(sim: Sim, kind: String) -> int:
 
 static func stash_count(sim: Sim, kind: String) -> int:
 	return Inventory.count_of(sim.state["stash"]["slots"], kind)
+
+
+## Puts the player at `pos` through restore(), standing still with nothing to do.
+static func place(sim: Sim, pos: Array) -> void:
+	var snap := sim.snapshot()
+	snap["player"]["pos"] = pos
+	snap["player"]["path"] = []
+	snap["player"]["target_object"] = ""
+	snap["player"]["activity"] = {}
+	sim.restore(snap)
+
+
+## Puts `weapon` in the weapon slot ("" for bare hands) and `entries` in the pack, through
+## restore(), so a fight can start this tick without waiting for a queued equip.
+static func arm(sim: Sim, weapon: String, entries: Array = []) -> void:
+	set_pack(sim, entries)
+	var snap := sim.snapshot()
+	snap["inventory"]["equipment"]["weapon"] = weapon
+	sim.restore(snap)
+
+
+## Overrides fields of one enemy's state through restore(), e.g. {"health": 1}.
+static func patch_enemy(sim: Sim, id: String, changes: Dictionary) -> void:
+	var snap := sim.snapshot()
+	snap["enemies"][id].merge(changes, true)
+	sim.restore(snap)
+
+
+## Steps one tick at a time for `ticks` ticks, stamping every event with the `tick` it
+## happened on.
+static func run_stamped(sim: Sim, ticks: int) -> Array[Dictionary]:
+	var events: Array[Dictionary] = []
+	for i in ticks:
+		sim.step()
+		for e in sim.drain_events():
+			e["tick"] = int(sim.state["tick"])
+			events.append(e)
+	return events
+
+
+## Events of `kind` whose `field` equals `value`.
+static func where(events: Array[Dictionary], kind: String, field: String, value: Variant) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for e in of_kind(events, kind):
+		if e.get(field) == value:
+			out.append(e)
+	return out

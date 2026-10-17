@@ -1030,7 +1030,8 @@ func _step_survival() -> void:
 ## the DEATH_KEEPS most valuable, which stay where they were: a stack counts as one thing,
 ## valued at its whole count, and ties go to what is worn, then to the earlier pack slot. The
 ## player wakes beside the outpost fire, warm and healed; skills, stash and upgrades are
-## untouched and every enemy breaks off. Always a save point.
+## untouched, every enemy breaks off, and a spare axe waits if the last one was lost. Always a
+## save point.
 func _die(cause: String) -> void:
 	var player: Dictionary = state["player"]
 	var inventory: Dictionary = state["inventory"]
@@ -1049,6 +1050,7 @@ func _die(cause: String) -> void:
 			inventory["equipment"][h["slot"]] = ""
 		else:
 			inventory["pack"][h["slot"]] = null
+	var spare := _spare_axe()
 	var to := Vector2(world.rescue[0], world.rescue[1])
 	player["pos"] = _xz(to)
 	player["path"] = []
@@ -1058,7 +1060,9 @@ func _die(cause: String) -> void:
 	state["warmth"] = WARMTH_MAX
 	state["healing"] = []
 	state["pending"] = []
-	_emit({"kind": SimVocab.EV_DIED, "cause": cause, "kept": kept, "lost": lost, "pos": _xz(to)})
+	_emit({
+		"kind": SimVocab.EV_DIED, "cause": cause, "kept": kept, "lost": lost, "spare": spare, "pos": _xz(to),
+	})
 	var region := world.region_at(to)
 	if region != player["region"]:
 		_emit({"kind": SimVocab.EV_REGION_CHANGED, "from": player["region"], "to": region})
@@ -1067,6 +1071,23 @@ func _die(cause: String) -> void:
 		if state["enemies"][id]["mode"] == MODE_ENGAGED:
 			_disengage(id)
 	_save_due = "death"
+
+
+## Nothing makes an axe yet, so a death that took the last one would end woodcutting for good.
+## When no axe is worn, carried or stashed, a spare wooden axe waits by the fire: in the tool
+## slot when it is empty, else in the pack. Returns the item given, or "" when none was needed.
+func _spare_axe() -> String:
+	if has_tool("axe"):
+		return ""
+	for s in state["stash"]["slots"]:
+		if s != null and ItemTable.tool(s["item"]) == "axe":
+			return ""
+	var inventory: Dictionary = state["inventory"]
+	if inventory["equipment"][ItemTable.SLOT_TOOL] == "":
+		inventory["equipment"][ItemTable.SLOT_TOOL] = STARTING_TOOL
+	else:
+		Inventory.add(inventory["pack"], STARTING_TOOL, 1)
+	return STARTING_TOOL
 
 
 ## Everything carried or worn, most valuable first: {item, count, value, slot}, where `slot`

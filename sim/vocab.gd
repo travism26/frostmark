@@ -62,7 +62,7 @@ const EV_WARMTH_CHANGED := "warmth_changed"      # {warmth, max}
 const EV_TOOK_DAMAGE := "took_damage"            # {amount, cause, health}  cause: "cold" or an enemy kind
 const EV_HEALED := "healed"                      # {amount, health}
 const EV_ATE := "ate"                            # {item, heal, ticks}
-const EV_DIED := "died"                          # {cause, kept, lost, pos}  kept/lost: lists of {item, count}
+const EV_DIED := "died"                          # {cause, kept, lost, spare, pos}  kept/lost: lists of {item, count}; spare: item given back or ""
 const EV_SAVED := "saved"                        # {reason, tick}  a save point: persist sim.export_code()
 const EV_SAVE_REJECTED := "save_rejected"        # {reason}
 # Combat

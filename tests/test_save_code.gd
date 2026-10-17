@@ -125,6 +125,65 @@ func test_a_version_1_snapshot_migrates() -> void:
 	assert_true(sim.command(Vocab.GATHER, {"object_id": "tree_1"})["ok"])
 
 
+func test_a_version_2_snapshot_migrates() -> void:
+	# What slice 3 could snapshot: no enemies, loot, healing or swing timer, and a stash with
+	# room for the slice-4 starter kit after its banked logs.
+	var stash: Array = [{"item": "logs", "count": 7}, null, null, {"item": "wooden_club", "count": 1}, null, null, null, null]
+	var pack: Array = []
+	pack.resize(12)
+	pack[0] = {"item": "logs", "count": 2}
+	var skills := {}
+	for name in SkillTable.NAMES:
+		skills[name] = {"xp": 0, "level": 1}
+	skills["woodcutting"] = {"xp": 120, "level": 2}
+	var v2 := {
+		"version": 2, "tick": 300, "rng": 77,
+		"player": {
+			"pos": [0.5, 12.5], "facing": [0.0, 1.0], "path": [], "target_object": "",
+			"region": "inner_ring", "activity": {},
+		},
+		"warmth": 200, "health": 90,
+		"inventory": {"pack": pack, "equipment": {"weapon": "wooden_club", "armour": "", "tool": "wooden_axe"}},
+		"stash": {"capacity": 8, "slots": stash},
+		"skills": skills,
+		"nodes": {}, "upgrades": [], "pending": [],
+	}
+	var sim := SimScript.new()
+	assert_true(sim.restore(v2), "restore migrates a version-2 snapshot")
+	assert_eq(sim.state["version"], Sim.STATE_VERSION)
+	assert_eq(sim.state["tick"], 300)
+	assert_eq(int(sim.state["health"]), 90, "keeps what it had")
+	assert_eq(sim.state["skills"]["woodcutting"]["xp"], 120)
+	assert_eq(H.pack_count(sim, "logs"), 2)
+	assert_eq(sim.state["inventory"]["equipment"]["weapon"], "wooden_club")
+	var slots: Array = sim.state["stash"]["slots"]
+	assert_eq(slots[0], {"item": "logs", "count": 7}, "banked logs stay put")
+	assert_eq(slots[1], {"item": "wooden_bow", "count": 1}, "the starter kit fills empty slots")
+	assert_eq(slots[2], {"item": "arrows", "count": 30})
+	assert_eq(slots[3], {"item": "wooden_club", "count": 1})
+	assert_eq(slots[4], {"item": "cooked_fish", "count": 5})
+	assert_eq(sim.state["enemies"].size(), sim.world.enemies.size(), "every enemy placed")
+	for id in sim.state["enemies"]:
+		assert_eq(sim.state["enemies"][id]["mode"], Sim.MODE_IDLE, "%s at home and idle" % id)
+	assert_eq(sim.state["loot"], {})
+	assert_eq(sim.state["healing"], [])
+	assert_eq(sim.state["player"]["ready_tick"], 0)
+	# The same through a save code, and the migrated character can fight.
+	var imported := SimScript.new()
+	assert_true(imported.command(Vocab.IMPORT_SAVE, {"code": SaveCode.encode(v2)})["ok"])
+	assert_eq(imported.snapshot(), sim.snapshot())
+	H.place(sim, [8.5, 23.5])
+	assert_true(sim.command(Vocab.ATTACK, {"enemy_id": "archer_1"})["ok"])
+
+
+func test_a_full_version_2_stash_gets_no_kit() -> void:
+	var full: Array = []
+	for i in 8:
+		full.append({"item": "logs", "count": 10})
+	var migrated: Dictionary = SaveCode.migrate({"version": 2, "tick": 1, "stash": {"capacity": 8, "slots": full}}, 3)
+	assert_eq(migrated["stash"]["slots"], full, "nothing is squeezed in")
+
+
 func test_migrate_refuses_unknown_versions() -> void:
 	assert_eq(SaveCode.migrate({}, Sim.STATE_VERSION), null)
 	assert_eq(SaveCode.migrate({"version": 0}, Sim.STATE_VERSION), null)

@@ -26,7 +26,7 @@ var cols := 64
 var rows := 64
 var origin: Array = [-32.0, -32.0]
 var spawn: Array = [0.5, 4.5]
-## Where a player who collapses from the cold wakes: beside the outpost fire.
+## Where a player wakes after dying: beside the outpost fire.
 var rescue: Array = [0.5, 1.5]
 
 ## Gatherable node kinds: the skill they train, the tool they need, what one success yields,
