@@ -6,14 +6,18 @@ extends MultiMeshInstance3D
 ## Prints in the pool; the oldest is reused for the next step.
 const POOL := 24
 ## Metres walked between prints, and how far each print sits off the line of travel.
-const STRIDE := 0.7
-const SIDE := 0.12
-const PRINT_SIZE := Vector2(0.14, 0.27)
+const STRIDE := 0.8
+const SIDE := 0.13
+const PRINT_SIZE := Vector2(0.16, 0.3)
 ## Just above the yard floor, which sits at 1 cm.
 const LIFT := 0.035
-## The print's shade at its darkest (the newest print).
-const COLOR_PRINT := Color(0.20, 0.17, 0.30, 0.42)
-const PRINT_TEXTURE := preload("res://assets/particles/kenney_particle_pack/circle_05.png")
+## Metres from the outpost's centre that bound every print.
+const YARD_REACH := 30.0
+## The newest print: snow packed off the boots onto the yard's earth, lit by the dusk and
+## the fire like the ground under it.
+const COLOR_PRINT := Color(0.86, 0.88, 1.0, 0.55)
+## Sides of the low-poly oval each print is.
+const PRINT_SIDES := 8
 
 var _character: Node3D
 var _world: WorldDef
@@ -29,21 +33,25 @@ func setup(character: Node3D, world: WorldDef) -> void:
 	_character = character
 	_world = world
 	cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	var plane := PlaneMesh.new()
-	plane.size = PRINT_SIZE
 	var m := StandardMaterial3D.new()
-	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.roughness = 1.0
 	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	m.vertex_color_use_as_albedo = true
-	m.albedo_texture = PRINT_TEXTURE
-	plane.material = m
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
 	mm.use_colors = true
-	mm.mesh = plane
+	mm.mesh = _oval(m)
 	mm.instance_count = POOL
 	mm.visible_instance_count = 0
 	multimesh = mm
+	# Prints only ever lie in the yard: a fixed box round it saves recomputing the bounds.
+	custom_aabb = AABB(Vector3(-YARD_REACH, -1.0, -YARD_REACH), Vector3(YARD_REACH * 2.0, 2.0, YARD_REACH * 2.0))
+
+
+## Prints laid and still showing.
+func count() -> int:
+	return multimesh.visible_instance_count
 
 
 ## Clears every print, for a new or imported game.
@@ -58,7 +66,11 @@ func _process(_delta: float) -> void:
 	if _character == null:
 		return
 	var p := _character.global_position
-	var pos := Vector2(p.x, p.z)
+	track(Vector2(p.x, p.z))
+
+
+## Follows the character to `pos` on the ground, laying a print each stride inside the yard.
+func track(pos: Vector2) -> void:
 	if _last.x == INF:
 		_last = pos
 		return
@@ -69,6 +81,22 @@ func _process(_delta: float) -> void:
 	if step.length() > STRIDE * 4.0 or _world.region_at(pos) != WorldDef.REGION_OUTPOST:
 		return  # a jump (travel, a new game) or out in the rings: no print
 	_lay(pos, step.normalized())
+
+
+## A flat oval, PRINT_SIZE across, lying face up, its long axis along z.
+static func _oval(material: Material) -> ArrayMesh:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	st.set_normal(Vector3.UP)
+	var r := PRINT_SIZE * 0.5
+	for i in PRINT_SIDES:
+		var a := TAU * i / PRINT_SIDES
+		var b := TAU * (i + 1) / PRINT_SIDES
+		st.add_vertex(Vector3.ZERO)
+		st.add_vertex(Vector3(cos(b) * r.x, 0.0, sin(b) * r.y))
+		st.add_vertex(Vector3(cos(a) * r.x, 0.0, sin(a) * r.y))
+	st.set_material(material)
+	return st.commit()
 
 
 func _lay(pos: Vector2, heading: Vector2) -> void:
