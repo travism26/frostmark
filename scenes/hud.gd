@@ -10,7 +10,7 @@ signal export_requested
 
 ## Skills the compact readout lists. The full seven-skill panel comes later; adding names
 ## here is all it takes to list more.
-const READOUT_SKILLS: Array[String] = [SkillTable.WOODCUTTING]
+const READOUT_SKILLS: Array[String] = [SkillTable.WOODCUTTING, SkillTable.MELEE, SkillTable.RANGED]
 
 const PANEL_NONE := ""
 const PANEL_STASH := "stash"
@@ -30,6 +30,7 @@ var _skill_rows := {}  # skill name -> {label, bar}
 var _pack_buttons: Array[Button] = []
 var _equip_buttons := {}  # slot -> Button
 var _weight_label: Label
+var _style_label: Label
 var _stash_panel: PanelContainer
 var _stash_title: Label
 var _stash_grid: GridContainer
@@ -76,7 +77,7 @@ func _process(delta: float) -> void:
 		_saved_label.modulate.a = maxf(0.0, _saved_label.modulate.a - delta * 0.5)
 
 
-## A big line across the top of the screen that fades out: banking, level-ups, collapse.
+## A big line across the top of the screen that fades out: banking, level-ups, crafting.
 func banner(text: String) -> void:
 	_banner.text = text
 	_banner_left = BANNER_SECONDS
@@ -135,6 +136,7 @@ func refresh() -> void:
 		sim.carry_weight(), Sim.CARRY_LIMIT, "  (slowed)" if sim.is_overweight() else "",
 	]
 	_weight_label.add_theme_color_override("font_color", COLOR_HEALTH if sim.is_overweight() else COLOR_TEXT)
+	_style_label.text = _style_text()
 
 	if _panel == PANEL_STASH:
 		_refresh_stash()
@@ -197,6 +199,16 @@ func _add_craft_row(id: String) -> void:
 	_craft_rows[id] = {"text": text, "button": craft}
 
 
+## "Melee (wooden club)", or for a ranged weapon "Ranged (wooden bow), 12 arrows".
+func _style_text() -> String:
+	var weapon := CombatTable.weapon(sim.player_weapon())
+	var text := "Style: %s (%s)" % [str(weapon["style"]).capitalize(), str(weapon["label"]).to_lower()]
+	if weapon["ammo"] != "":
+		var ammo := Inventory.count_of(sim.state["inventory"]["pack"], weapon["ammo"])
+		text += ", %d %s" % [ammo, ItemTable.label(weapon["ammo"]).to_lower()]
+	return text
+
+
 static func _slot_text(slot: Variant) -> String:
 	if slot == null:
 		return ""
@@ -209,7 +221,13 @@ func _pack_tooltip(slot: Variant) -> String:
 	if slot == null:
 		return ""
 	var kind: String = slot["item"]
-	var verb := "Click to deposit" if _panel == PANEL_STASH else ("Click to equip" if ItemTable.slot(kind) != "" else "")
+	var verb := ""
+	if _panel == PANEL_STASH:
+		verb = "Click to deposit"
+	elif ItemTable.slot(kind) != "":
+		verb = "Click to equip (lands next tick)"
+	elif ItemTable.heal(kind) > 0:
+		verb = "Click to eat (heals %d, costs a tick)" % ItemTable.heal(kind)
 	return "%s. %d kg, worth %d each. %sRight-click to drop." % [
 		ItemTable.label(kind), ItemTable.weight(kind), ItemTable.value(kind),
 		verb + ". " if verb != "" else "",
@@ -224,6 +242,8 @@ func _on_pack_pressed(index: int) -> void:
 		command_requested.emit(SimVocab.DEPOSIT, {"index": index})
 	elif ItemTable.slot(slot["item"]) != "":
 		command_requested.emit(SimVocab.EQUIP, {"index": index})
+	elif ItemTable.heal(slot["item"]) > 0:
+		command_requested.emit(SimVocab.EAT, {"index": index})
 
 
 func _on_pack_input(event: InputEvent, index: int) -> void:
@@ -278,6 +298,8 @@ func _build_pack() -> void:
 		_pack_buttons.append(b)
 	_weight_label = _text("", 13)
 	box.add_child(_weight_label)
+	_style_label = _text("", 13)
+	box.add_child(_style_label)
 	var worn := HBoxContainer.new()
 	box.add_child(worn)
 	for slot in ItemTable.EQUIPMENT_SLOTS:
