@@ -1012,9 +1012,10 @@ func _step_enemy(id: String) -> void:
 			# A pack mate that noticed earlier this tick has already declared its next action.
 			if int(e["next"].get("at", 0)) > tick:
 				return
-			if _enemy_act(id) != CombatTable.ACTION_MOVE:
+			var acted := _enemy_act(id)
+			if acted != CombatTable.ACTION_MOVE:
 				_kite(id)
-			_enemy_declare(id)
+			_enemy_declare(id, acted)
 		MODE_RETURNING:
 			var home := _home(id)
 			_walk_enemy(id, home)
@@ -1106,13 +1107,14 @@ func _kite(id: String) -> void:
 
 
 ## Declares what the enemy does next tick: the next action of its cycle while the player is in
-## its reach, else closing in. An attack is telegraphed now, exactly one tick before it lands.
-func _enemy_declare(id: String) -> void:
+## its reach, or straight after a wind-up (`acted` is what it did this tick), else closing in.
+## An attack is telegraphed now, exactly one tick before it lands.
+func _enemy_declare(id: String, acted := "") -> void:
 	var e: Dictionary = state["enemies"][id]
 	var me := combatant(id)
 	var action := CombatTable.ACTION_MOVE
 	var style: String = me["style"]
-	if (me["pos"] as Vector2).distance_to(player_pos()) <= float(me["reach"]):
+	if (me["pos"] as Vector2).distance_to(player_pos()) <= float(me["reach"]) or CombatTable.is_windup(acted):
 		var actions: Array = CombatTable.enemy(e["kind"])["actions"]
 		var index := int(e["step"]) % actions.size()
 		action = actions[index]

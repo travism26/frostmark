@@ -79,7 +79,8 @@ const NOTICE_HIT := "hit"
 ## the style edge. `heavy` marks the hits worth countering. A `stance` action is a rest that
 ## is announced a tick ahead like an attack: the captain changing weapon, so the change of
 ## style can be read and countered, or a troll winding up, so its crush can be seen coming
-## two ticks out.
+## two ticks out. A `windup` commits the enemy: the next action of its cycle is declared even
+## if the player has stepped out of reach, and a blow that finds nobody misses.
 const ACTION_MOVE := "move"
 const ACTION_REST := "rest"
 const ACTIONS := {
@@ -101,7 +102,7 @@ const ACTIONS := {
 	"frost_bolt": {"label": "Frost bolt", "damage": 4},
 	"ice_lance": {"label": "Ice lance", "damage": 9, "heavy": true},
 	"smash": {"label": "Smash", "damage": 10},
-	"wind_up": {"label": "Winds up", "damage": 0, "stance": true},
+	"wind_up": {"label": "Winds up", "damage": 0, "stance": true, "windup": true},
 	"crush": {"label": "Crush", "damage": 26, "heavy": true},
 	"dart": {"label": "Dart", "damage": 5},
 	"barbed_volley": {"label": "Barbed volley", "damage": 14, "heavy": true},
@@ -199,6 +200,10 @@ static func action_damage(action: String) -> int:
 
 static func is_stance(action: String) -> bool:
 	return ACTIONS.has(action) and bool(ACTIONS[action].get("stance", false))
+
+
+static func is_windup(action: String) -> bool:
+	return ACTIONS.has(action) and bool(ACTIONS[action].get("windup", false))
 
 
 ## The weapon an enemy of `kind` holds for the action at `index` of its cycle.
