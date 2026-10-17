@@ -16,8 +16,20 @@ uniform float sparkle_strength = 0.35;
 // How much of the surface the drift colour covers (0 = none; the yard uses it for snow
 // blown into the corners).
 uniform float drift_cover = 0.0;
-// The ring look's palette tint over everything (the atmosphere node sets it).
+// The ring look's palette tint over everything (the atmosphere node sets it from the look
+// at the character), used when the ground is not painted by ring.
 uniform vec4 tint : source_color = vec4(1.0);
+// Painted by ring instead: the snow tone steps from one ring's to the next across a band
+// `edge_band` wide at each ring edge (the outpost wall, the safe ring's edge, the cliffs),
+// so a player sees the moment they cross. Edges are how far from the world's centre each
+// ring reaches, outpost then safe ring then ring one; past the last lies ring two.
+uniform bool ring_tones = false;
+uniform vec3 ring_edges = vec3(10.0, 24.0, 60.0);
+uniform float edge_band = 2.5;
+uniform vec4 tone_outpost : source_color = vec4(1.0);
+uniform vec4 tone_inner : source_color = vec4(1.0);
+uniform vec4 tone_one : source_color = vec4(1.0);
+uniform vec4 tone_two : source_color = vec4(1.0);
 
 varying vec3 world_pos;
 
@@ -36,7 +48,16 @@ void fragment() {
 		col = mix(col, drift_color.rgb, drift);
 	}
 	float sparkle = smoothstep(0.94, 0.995, texture(sparkle_tex, p / sparkle_metres).r);
-	ALBEDO = (col + sparkle * sparkle_strength) * tint.rgb;
+	vec3 tone = tint.rgb;
+	if (ring_tones) {
+		float reach = max(abs(p.x), abs(p.y));
+		float half_band = edge_band * 0.5;
+		tone = tone_outpost.rgb;
+		tone = mix(tone, tone_inner.rgb, smoothstep(ring_edges.x - half_band, ring_edges.x + half_band, reach));
+		tone = mix(tone, tone_one.rgb, smoothstep(ring_edges.y - half_band, ring_edges.y + half_band, reach));
+		tone = mix(tone, tone_two.rgb, smoothstep(ring_edges.z - half_band, ring_edges.z + half_band, reach));
+	}
+	ALBEDO = (col + sparkle * sparkle_strength) * tone;
 	ROUGHNESS = 0.9;
 	SPECULAR = 0.15;
 }

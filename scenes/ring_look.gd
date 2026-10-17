@@ -27,9 +27,17 @@ const BLEND_METRES := 8.0
 ##   wind            float  0 (still) to 1 (the blizzard's wind)
 ##   aurora          float  0 (none) to 1 (full) in the sky
 ##   ambience        String the ambience cue for the ring
+##   snow_tone       Color  the ground's snow, painted by position so the tone steps at a
+##                          ring edge (the tint above follows the character and blends)
+##   stone           Color  the ring's stone: its standing stones, cairns and ruins
+##   foliage         Color  the ring's needles and bushes, greener in than out
+##   density         float  0 (bare) to 1 (the most cluttered ring): how much dressing
+##                          the scatter pass lays down
+##   drift           float  0 (flat) to 1 (deep): how high the snow drifts lie
 const FIELDS := [
 	"tint", "sky", "fog_color", "fog_distance", "sun_color", "sun_energy",
 	"ambient_color", "ambient_energy", "snow_density", "wind", "aurora", "ambience",
+	"snow_tone", "stone", "foliage", "density", "drift",
 ]
 
 ## The looks, by region name.
@@ -40,6 +48,8 @@ const LOOKS := {
 		"sun_color": Color(1.00, 0.80, 0.60), "sun_energy": 1.05,
 		"ambient_color": Color(0.52, 0.47, 0.70), "ambient_energy": 0.55,
 		"snow_density": 0.2, "wind": 0.1, "aurora": 0.0, "ambience": "hearth",
+		"snow_tone": Color(1.00, 0.95, 0.88), "stone": Color(0.58, 0.54, 0.52),
+		"foliage": Color(0.38, 0.54, 0.42), "density": 0.3, "drift": 0.2,
 	},
 	WorldDef.REGION_INNER_RING: {
 		"tint": Color(0.93, 0.94, 1.00), "sky": Color(0.29, 0.29, 0.46),
@@ -47,6 +57,8 @@ const LOOKS := {
 		"sun_color": Color(1.00, 0.76, 0.58), "sun_energy": 0.95,
 		"ambient_color": Color(0.46, 0.45, 0.72), "ambient_energy": 0.58,
 		"snow_density": 0.4, "wind": 0.25, "aurora": 0.2, "ambience": "calm",
+		"snow_tone": Color(0.95, 0.96, 1.00), "stone": Color(0.58, 0.61, 0.70),
+		"foliage": Color(0.40, 0.56, 0.48), "density": 0.45, "drift": 0.3,
 	},
 	WorldDef.REGION_RING_ONE: {
 		"tint": Color(0.82, 0.86, 0.97), "sky": Color(0.21, 0.24, 0.40),
@@ -54,6 +66,8 @@ const LOOKS := {
 		"sun_color": Color(0.96, 0.70, 0.56), "sun_energy": 0.8,
 		"ambient_color": Color(0.38, 0.42, 0.70), "ambient_energy": 0.6,
 		"snow_density": 0.65, "wind": 0.6, "aurora": 0.6, "ambience": "wind",
+		"snow_tone": Color(0.80, 0.85, 0.97), "stone": Color(0.46, 0.50, 0.62),
+		"foliage": Color(0.30, 0.44, 0.44), "density": 0.8, "drift": 0.7,
 	},
 	WorldDef.REGION_RING_TWO: {
 		"tint": Color(0.60, 0.63, 0.78), "sky": Color(0.07, 0.08, 0.16),
@@ -61,6 +75,8 @@ const LOOKS := {
 		"sun_color": Color(0.80, 0.60, 0.58), "sun_energy": 0.5,
 		"ambient_color": Color(0.28, 0.30, 0.50), "ambient_energy": 0.56,
 		"snow_density": 1.0, "wind": 1.0, "aurora": 1.0, "ambience": "blizzard",
+		"snow_tone": Color(0.56, 0.60, 0.78), "stone": Color(0.34, 0.37, 0.50),
+		"foliage": Color(0.22, 0.28, 0.36), "density": 1.0, "drift": 1.0,
 	},
 }
 

@@ -28,9 +28,6 @@ const COLOR_BY_ENEMY := {
 	"bandit_captain": Color(0.30, 0.10, 0.12), "frost_witch": Color(0.40, 0.48, 0.66),
 	"ice_troll": Color(0.58, 0.70, 0.78), "ruin_stalker": Color(0.24, 0.26, 0.30),
 }
-## Stakes mark where the inner ring ends and ring one's danger begins.
-const RING_STAKE_SPACING := 6.0
-const COLOR_STAKE := Color(0.75, 0.18, 0.15)
 ## Telegraph cues are coloured by the style of the blow coming, so the counter reads at a glance.
 const COLOR_BY_STYLE := {
 	CombatTable.STYLE_MELEE: Color(0.95, 0.35, 0.2),
@@ -827,6 +824,7 @@ func _build_world(world: WorldDef) -> void:
 	var plane := PlaneMesh.new()
 	plane.size = Vector2(width, depth) * 2.5  # snow runs on past the cliffs; only the world is clickable
 	plane.material = WorldDressing.snowfield_material()
+	WorldDressing.paint_rings(plane.material, world)
 	ground.mesh = plane
 	ground.position = centre
 	_world.add_child(ground)
@@ -835,8 +833,7 @@ func _build_world(world: WorldDef) -> void:
 	for r in world.regions:
 		if r["name"] == WorldDef.REGION_OUTPOST:
 			_add_floor(r["polygon"], COLOR_OUTPOST_FLOOR)
-		elif r["name"] == WorldDef.REGION_INNER_RING:
-			_add_ring_stakes(r["polygon"])
+	_world.add_child(WorldDressing.boundaries(world))
 
 	for s in world.solids:
 		match s["kind"]:
@@ -851,9 +848,9 @@ func _build_world(world: WorldDef) -> void:
 				_add_box_body(tent, _box_size(s["min"], s["max"], s["height"]), Vector3(0, s["height"] * 0.5, 0))
 			_:
 				var box := _add_block(str(s["id"]), s["min"], s["max"], s["height"], COLOR_BY_SOLID.get(s["kind"], Color.MAGENTA))
-				var look := WorldDressing.solid_mesh(s["kind"], s["min"], s["max"], s["height"])
+				var look := WorldDressing.solid_mesh(world, s)
 				if look != null:
-					box.mesh = look  # a palisade or an ice ridge over the same footprint
+					box.mesh = look  # a palisade, an ice ridge or a ruin over the same footprint
 					_add_fade_twin(box)  # the twin follows the new look
 				_add_box_body(box, _box_size(s["min"], s["max"], s["height"]), Vector3.ZERO)
 	_add_cliff_forest(world)
@@ -882,7 +879,8 @@ func _build_world(world: WorldDef) -> void:
 			WorldDef.KIND_RING_GATE:
 				prop = Props.ring_gate(o["max"][0] - o["min"][0], o["height"])
 			WorldDef.KIND_WAYSTONE:
-				prop = Props.waystone(o["max"][0] - o["min"][0], o["height"])
+				var stone_at := Vector2((o["min"][0] + o["max"][0]) * 0.5, (o["min"][1] + o["max"][1]) * 0.5)
+				prop = Props.waystone(o["height"], stone_at, RingLook.at(world, stone_at)["stone"])
 		if prop == null:
 			# The outpost gate: a timber gateway over the threshold, clickable through a taller volume.
 			var gate := WorldDressing.gateway(o["min"], o["max"])
@@ -919,26 +917,6 @@ func _build_world(world: WorldDef) -> void:
 func _place_prop(prop: Node3D, min_xz: Array, max_xz: Array) -> void:
 	prop.position = Vector3((min_xz[0] + max_xz[0]) * 0.5, 0.0, (min_xz[1] + max_xz[1]) * 0.5)
 	_world.add_child(prop)
-
-
-## Red-topped stakes along the inner ring's edge: past them, ring one's enemies roam.
-func _add_ring_stakes(polygon: Array) -> void:
-	var points: Array[Vector3] = []
-	for i in polygon.size():
-		var a := Vector2(polygon[i][0], polygon[i][1])
-		var b := Vector2(polygon[(i + 1) % polygon.size()][0], polygon[(i + 1) % polygon.size()][1])
-		var steps := int(a.distance_to(b) / RING_STAKE_SPACING)
-		for k in steps:
-			var p := a.lerp(b, float(k) / steps)
-			if sim.world.is_walkable(p):
-				points.append(Vector3(p.x, 0.0, p.y))
-	var mesh := CylinderMesh.new()
-	mesh.top_radius = 0.06
-	mesh.bottom_radius = 0.08
-	mesh.height = 1.1
-	mesh.radial_segments = 5
-	mesh.material = _flat_material(COLOR_STAKE)
-	_world.add_child(_multimesh(mesh, points, Vector3(0, 0.55, 0)))
 
 
 ## A forest of pines over the cliffs at ring one's edge, drawn as one multimesh per surface.

@@ -190,28 +190,49 @@ static func ring_gate(width: float, height: float) -> Node3D:
 	return root
 
 
-## A waystone: a standing stone `height` tall on a low plinth, `width` across, with frost runes
-## (`Glow`) that light once the outpost has woken it.
-static func waystone(width: float, height: float) -> Node3D:
+## A waystone: a carved standing stone `height` tall from the ruin kit, in the stone of the
+## ring it stands in (older hands than the outpost's), on a ring of fallen blocks, with frost
+## runes and a cold light (`Glow`) that wake once the outpost has woken it.
+static func waystone(height: float, at: Vector2, stone: Color) -> Node3D:
 	var root := Node3D.new()
-	var plinth := MeshInstance3D.new()
-	plinth.mesh = box(Vector3(width * 1.3, 0.25, width * 1.3), COLOR_STONE)
-	plinth.position.y = 0.125
-	root.add_child(plinth)
-	var stone := MeshInstance3D.new()
-	stone.mesh = box(Vector3(width * 0.7, height, width * 0.5), COLOR_STONE)
-	stone.position.y = 0.25 + height * 0.5
-	root.add_child(stone)
+	var menhir := MeshInstance3D.new()
+	menhir.mesh = RuinKit.standing_stone(height, at, stone, true, Vector2(0.02, -0.03))
+	root.add_child(menhir)
 	var glow := Node3D.new()
 	glow.name = "Glow"
 	root.add_child(glow)
-	for side in [-1, 1]:
+	# The carved marks fill with frost light: a rune on each face at the band's height.
+	var r := height * 0.14
+	for face in 6:
+		var a := (face + 0.5) * TAU / 6.0
 		var rune := MeshInstance3D.new()
 		rune.mesh = BoxMesh.new()
-		(rune.mesh as BoxMesh).size = Vector3(width * 0.25, height * 0.45, 0.04)
-		(rune.mesh as BoxMesh).material = flat(COLOR_FROST, 1.5)
-		rune.position = Vector3(0, 0.25 + height * 0.55, side * (width * 0.25 + 0.02))
+		(rune.mesh as BoxMesh).size = Vector3(0.05, height * 0.42, 0.05 + r * 0.3)
+		(rune.mesh as BoxMesh).material = flat(COLOR_FROST, 1.8)
+		var y := height * 0.5
+		rune.position = Vector3(0.02 * y + cos(a) * (r * cos(PI / 6.0) + 0.02), y, -0.03 * y + sin(a) * (r * cos(PI / 6.0) + 0.02))
+		rune.rotation.y = -a
 		glow.add_child(rune)
+	var light := OmniLight3D.new()
+	light.light_color = COLOR_FROST
+	light.light_energy = 1.4
+	light.omni_range = 7.0
+	light.omni_attenuation = 1.3
+	light.position.y = height * 0.6
+	glow.add_child(light)
+	var halo := MeshInstance3D.new()
+	var disc := CylinderMesh.new()
+	disc.top_radius = height * 0.55
+	disc.bottom_radius = height * 0.55
+	disc.height = 0.02
+	disc.radial_segments = 12
+	var halo_material := flat(Color(COLOR_FROST, 0.35), 1.0)
+	halo_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	halo_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	disc.material = halo_material
+	halo.mesh = disc
+	halo.position.y = 0.03
+	glow.add_child(halo)
 	return root
 
 
