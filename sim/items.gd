@@ -7,7 +7,8 @@
 ## the gear tier the brief shows on the character (wooden, bronze, iron); a better tool
 ## gathers faster and surer. A weapon carries its combat `style`, `power` (damage per hit
 ## before the style edge), `speed` (ticks between swings), `reach` (metres) and, for a ranged
-## weapon, the `ammo` item each shot uses. Armour carries `defence`, taken off every hit. Food
+## weapon, the `ammo` item each shot uses (arrows for a bow, frost shards for a staff's cast).
+## Armour carries `defence`, taken off every hit. Food
 ## carries `heal`, the health it restores spread over `heal_ticks` ticks. Engine-free like sim/.
 class_name ItemTable
 extends RefCounted
@@ -53,6 +54,14 @@ const ITEMS := {
 	},
 	"arrows": {
 		"label": "Arrows", "stack": 100, "weight": 0, "value": 1, "slot": "",
+	},
+	# Mined from ice crystals in the inner ring, refined into frost shards at the workbench.
+	"ice_crystal": {
+		"label": "Ice crystal", "stack": 10, "weight": 1, "value": 4, "slot": "",
+	},
+	# A staff's charge: one shard per cast, as a bow spends an arrow per shot.
+	"frost_shards": {
+		"label": "Frost shards", "stack": 100, "weight": 0, "value": 1, "slot": "",
 	},
 	# Food: raw is edible but poor; cooking at a fire makes it worth carrying.
 	"raw_fish": {
@@ -124,6 +133,18 @@ const ITEMS := {
 	"iron_bow": {
 		"label": "Iron bow", "stack": 1, "weight": 2, "value": 84, "slot": SLOT_WEAPON,
 		"style": "ranged", "power": 8, "speed": 2, "reach": 8.0, "ammo": "arrows", "tier": TIER_IRON,
+	},
+	"wooden_staff": {
+		"label": "Wooden staff", "stack": 1, "weight": 2, "value": 22, "slot": SLOT_WEAPON,
+		"style": "magic", "power": 4, "speed": 2, "reach": 6.0, "ammo": "frost_shards", "tier": TIER_WOODEN,
+	},
+	"bronze_staff": {
+		"label": "Bronze staff", "stack": 1, "weight": 2, "value": 46, "slot": SLOT_WEAPON,
+		"style": "magic", "power": 6, "speed": 2, "reach": 6.0, "ammo": "frost_shards", "tier": TIER_BRONZE,
+	},
+	"iron_staff": {
+		"label": "Iron staff", "stack": 1, "weight": 2, "value": 86, "slot": SLOT_WEAPON,
+		"style": "magic", "power": 8, "speed": 2, "reach": 6.0, "ammo": "frost_shards", "tier": TIER_IRON,
 	},
 	# Armour
 	"wooden_armour": {

@@ -1,4 +1,4 @@
-## The seven skills: mining and fishing gather with their tools, cooking works at any fire and
+## The skills: mining and fishing gather with their tools, cooking works at any fire and
 ## burns less with level, smithing turns ore into bronze and refuses iron.
 extends "res://tests/run.gd".TestCase
 
@@ -28,10 +28,10 @@ func _gather_all(sim: Sim, id: String) -> Array[Dictionary]:
 	return H.run_until_idle(sim, 400)
 
 
-func test_the_skills_panel_has_all_seven() -> void:
+func test_the_skills_panel_has_all_eight() -> void:
 	assert_eq(SkillTable.NAMES, [
 		SkillTable.WOODCUTTING, SkillTable.MINING, SkillTable.FISHING, SkillTable.COOKING,
-		SkillTable.SMITHING, SkillTable.MELEE, SkillTable.RANGED,
+		SkillTable.SMITHING, SkillTable.MELEE, SkillTable.RANGED, SkillTable.MAGIC,
 	])
 
 

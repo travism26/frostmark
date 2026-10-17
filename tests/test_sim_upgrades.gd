@@ -143,7 +143,7 @@ func test_three_visible_gear_tiers_for_every_slot_and_style() -> void:
 		elif slot == ItemTable.SLOT_TOOL:
 			group = ItemTable.tool(kind)
 		seen["%s/%s" % [group, tier]] = true
-	for group in ["melee", "ranged", ItemTable.SLOT_ARMOUR, ItemTable.TOOL_AXE, ItemTable.TOOL_PICKAXE]:
+	for group in ["melee", "ranged", "magic", ItemTable.SLOT_ARMOUR, ItemTable.TOOL_AXE, ItemTable.TOOL_PICKAXE]:
 		for tier in ItemTable.TIERS:
 			assert_true(seen.has("%s/%s" % [group, tier]), "a %s %s" % [tier, group])
 
@@ -151,7 +151,7 @@ func test_three_visible_gear_tiers_for_every_slot_and_style() -> void:
 func test_higher_tiers_are_stronger_and_worth_more() -> void:
 	var lines := [
 		["wooden_club", "bronze_sword", "iron_sword"], ["wooden_bow", "bronze_bow", "iron_bow"],
-		["wooden_armour", "bronze_armour", "iron_armour"],
+		["wooden_staff", "bronze_staff", "iron_staff"], ["wooden_armour", "bronze_armour", "iron_armour"],
 	]
 	for line in lines:
 		for i in range(1, line.size()):

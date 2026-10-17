@@ -24,7 +24,7 @@ const COLOR_BY_SOLID := {
 const COLOR_GATE := Color(0.45, 0.32, 0.20)
 const COLOR_BY_ENEMY := {
 	"wolf": Color(0.42, 0.40, 0.40), "bandit_archer": Color(0.55, 0.24, 0.20),
-	"bandit_captain": Color(0.30, 0.10, 0.12),
+	"bandit_captain": Color(0.30, 0.10, 0.12), "frost_witch": Color(0.40, 0.48, 0.66),
 }
 ## Stakes mark where the inner ring ends and ring one's danger begins.
 const RING_STAKE_SPACING := 6.0
@@ -33,6 +33,7 @@ const COLOR_STAKE := Color(0.75, 0.18, 0.15)
 const COLOR_BY_STYLE := {
 	CombatTable.STYLE_MELEE: Color(0.95, 0.35, 0.2),
 	CombatTable.STYLE_RANGED: Color(0.2, 0.55, 1.0),
+	CombatTable.STYLE_MAGIC: Color(0.75, 0.4, 1.0),
 }
 const COLOR_LOOT := Color(0.85, 0.68, 0.2)
 const CUE_FONT := 72
@@ -58,7 +59,7 @@ const REASON_TEXT := {
 	SimVocab.REASON_MISSING_INPUTS: "You don't have the materials for that.",
 	SimVocab.REASON_LEVEL_TOO_LOW: "Your skill level is too low.",
 	SimVocab.REASON_NOT_EQUIPPABLE: "That can't be equipped.",
-	SimVocab.REASON_NO_AMMO: "You have no arrows. Swap to a melee weapon or bare hands.",
+	SimVocab.REASON_NO_AMMO: "You're out of ammunition: a bow needs arrows, a staff frost shards. Swap weapons or use bare hands.",
 	SimVocab.REASON_IN_OUTPOST: "Nothing can be fought from inside the outpost.",
 	SimVocab.REASON_TARGET_DEAD: "It is already dead.",
 	SimVocab.REASON_NOT_FOOD: "You can't eat that.",
@@ -824,7 +825,7 @@ func _build_world(world: WorldDef) -> void:
 			WorldDef.KIND_TREE, WorldDef.KIND_FROST_PINE:
 				prop = Props.pine(kind)
 				label_text = "" if kind == WorldDef.KIND_TREE else label_text
-			WorldDef.KIND_COPPER_ROCK, WorldDef.KIND_TIN_ROCK, WorldDef.KIND_IRON_ROCK:
+			WorldDef.KIND_COPPER_ROCK, WorldDef.KIND_TIN_ROCK, WorldDef.KIND_IRON_ROCK, WorldDef.KIND_ICE_CRYSTAL:
 				prop = Props.ore_rock(kind, o["max"][0] - o["min"][0])
 			WorldDef.KIND_FISHING_HOLE, WorldDef.KIND_ICE_HOLE:
 				prop = Props.ice_hole(o["max"][0] - o["min"][0], kind == WorldDef.KIND_ICE_HOLE)
@@ -1010,8 +1011,8 @@ func _flicker() -> void:
 # --- Enemies and loot -----------------------------------------------------------------
 
 ## One figure per placed enemy: a low box for a wolf, an upright capsule with a bow stave for
-## an archer, a bigger caped capsule carrying both a sabre and a bow for the captain (the one
-## in his hand follows his stance), a click volume that becomes `attack`, a name-and-health
+## an archer or a frost-tipped staff for a witch, a bigger caped capsule carrying a sabre, a bow
+## and a staff for the captain (the one in his hand follows his stance), a click volume that becomes `attack`, a name-and-health
 ## label and a telegraph cue above it.
 func _build_enemies(world: WorldDef) -> void:
 	for id in world.enemies:
@@ -1042,13 +1043,19 @@ func _build_enemies(world: WorldDef) -> void:
 			hood.rings = 3
 			hood.material = _flat_material(colour.darkened(0.35))
 			_add_part(root, hood, Vector3(0, 1.45 * size, 0))
-			var bow := _add_part(root, _box_mesh(Vector3(0.06, 1.1 * size, 0.06), Props.COLOR_WOOD), Vector3(-0.42 * size, 0.9 * size, -0.2))
-			weapons["captain_bow"] = bow
+			if kind == "frost_witch":
+				_add_part(root, _box_mesh(Vector3(0.06, 1.6, 0.06), Props.COLOR_WOOD), Vector3(0.42, 0.85, -0.2))
+				_add_part(root, _box_mesh(Vector3(0.16, 0.16, 0.16), Props.COLOR_FROST), Vector3(0.42, 1.7, -0.2))
+			else:
+				var bow := _add_part(root, _box_mesh(Vector3(0.06, 1.1 * size, 0.06), Props.COLOR_WOOD), Vector3(-0.42 * size, 0.9 * size, -0.2))
+				weapons["captain_bow"] = bow
 			if boss:
 				_add_part(root, _box_mesh(Vector3(0.9, 1.2, 0.06), Color(0.55, 0.08, 0.08)), Vector3(0, 1.05, 0.42))  # cape
 				var sabre := _add_part(root, _box_mesh(Vector3(0.08, 0.9, 0.03), CharacterGear.TIER_COLORS[ItemTable.TIER_IRON]), Vector3(0.5, 1.0, -0.25))
 				sabre.rotation.x = -0.4
 				weapons["captain_sabre"] = sabre
+				var staff := _add_part(root, _box_mesh(Vector3(0.07, 1.8, 0.07), Props.COLOR_FROST), Vector3(0.5, 1.0, -0.25))
+				weapons["captain_staff"] = staff
 		var click := _add_box_body(root, Vector3(1.1, height, 1.3), Vector3(0, height * 0.5, 0))
 		click.set_meta("enemy_id", id)
 		var label := _label3d("", 48)

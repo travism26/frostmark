@@ -1,4 +1,4 @@
-## The bandit captain at the ring-two gate: he alternates sabre and bow on a readable
+## The bandit captain at the ring-two gate: he cycles sabre, bow and staff on a readable
 ## pattern, drops iron, and the gate opens only once he has fallen and the outpost has built
 ## the gate upgrade. Walking through is the first playable's ending.
 extends "res://tests/run.gd".TestCase
@@ -18,11 +18,11 @@ func _sturdy(sim: Sim) -> void:
 	sim.restore(snap)
 
 
-func test_the_captain_alternates_sabre_and_bow_on_his_pattern() -> void:
+func test_the_captain_cycles_sabre_bow_and_staff_on_his_pattern() -> void:
 	var sim := SimScript.new()
 	_sturdy(sim)
 	H.place(sim, BESIDE_CAPTAIN)
-	var events := H.run_stamped(sim, 21)
+	var events := H.run_stamped(sim, 32)
 	var cues: Array = []
 	for e in events:
 		if e.get("enemy_id", "") != "captain":
@@ -31,12 +31,17 @@ func test_the_captain_alternates_sabre_and_bow_on_his_pattern() -> void:
 			cues.append("%s:%s" % [e["action"], e["style"]])
 		elif e["kind"] == Vocab.EV_ENEMY_STANCE:
 			cues.append("%s:%s" % [e["action"], e["style"]])
-	assert_eq(cues.slice(0, 8), [
+	assert_eq(cues.slice(0, 11), [
 		"slash:melee", "cleave:melee", "draw_bow:ranged", "loose:ranged", "volley:ranged",
+		"draw_staff:magic", "rime_bolt:magic", "blizzard:magic",
 		"draw_sabre:melee", "slash:melee", "cleave:melee",
 	])
+	for action in ["cleave", "volley", "blizzard"]:
+		var heavy := H.where(events, Vocab.EV_ENEMY_TELEGRAPHED, "action", action)
+		assert_true(heavy[0]["heavy"], "%s, the second blow of its stance, is the heavy one" % action)
+	for action in ["slash", "loose", "rime_bolt"]:
+		assert_false(H.where(events, Vocab.EV_ENEMY_TELEGRAPHED, "action", action)[0]["heavy"], "%s is the light one" % action)
 	var heavy := H.where(events, Vocab.EV_ENEMY_TELEGRAPHED, "action", "cleave")
-	assert_true(heavy[0]["heavy"], "the second blow of a stance is the heavy one")
 	assert_true(int(heavy[0]["damage"]) > int(CombatTable.ACTIONS["lunge"]["damage"]), "he hits harder than a wolf")
 
 
@@ -45,11 +50,12 @@ func test_his_style_follows_his_stance() -> void:
 	_sturdy(sim)
 	H.place(sim, BESIDE_CAPTAIN)
 	var styles := {}
-	for i in 12:
+	for i in 20:
 		sim.step()
 		sim.drain_events()
 		styles[sim.combatant("captain")["style"]] = true
-	assert_true(styles.has(CombatTable.STYLE_MELEE) and styles.has(CombatTable.STYLE_RANGED), "both styles in one cycle")
+	for style in [CombatTable.STYLE_MELEE, CombatTable.STYLE_RANGED, CombatTable.STYLE_MAGIC]:
+		assert_true(styles.has(style), "%s in one cycle" % style)
 
 
 func test_he_is_a_boss() -> void:

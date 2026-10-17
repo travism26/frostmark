@@ -21,7 +21,7 @@ const WALK_PER_TICK := WALK_SPEED * TICK_SECONDS
 const SNAP_RADIUS_CELLS := 2
 ## Bumped whenever the state shape changes. `restore()` migrates older snapshots forward
 ## (SaveCode.migrate) and refuses ones it cannot read.
-const STATE_VERSION := 5
+const STATE_VERSION := 6
 
 ## The pack: a fixed number of slots, and a carried weight (pack plus equipment, in kg)
 ## above which walking slows to OVERWEIGHT_SPEED of normal.
@@ -322,7 +322,7 @@ func _cmd_new_character(args: Dictionary) -> Dictionary:
 
 
 ## Targets an enemy: the player closes to the weapon's reach and strikes on every ready tick
-## until the enemy dies, the player walks away, or a ranged weapon runs out of ammunition.
+## until the enemy dies, the player walks away, or a bow or staff runs out of ammunition.
 func _cmd_attack(args: Dictionary) -> Dictionary:
 	var id: String = str(args.get("enemy_id", ""))
 	var enemies: Dictionary = state["enemies"]
@@ -861,7 +861,8 @@ func player_style() -> String:
 	return CombatTable.weapon(player_weapon())["style"]
 
 
-## False only for a ranged weapon with no ammunition left in the pack.
+## False only for a weapon that spends ammunition (a bow's arrows, a staff's frost shards) with
+## none left in the pack.
 func _has_ammo() -> bool:
 	var ammo: String = CombatTable.weapon(player_weapon())["ammo"]
 	return ammo == "" or Inventory.count_of(state["inventory"]["pack"], ammo) > 0
@@ -906,9 +907,9 @@ func _step_combat() -> void:
 		_die(_dead_cause)
 
 
-## The player strikes on a ready tick, outside the outpost, with the target in reach. A
-## ranged weapon spends one arrow per shot and refuses to fire with none. Hits train the
-## style's skill.
+## The player strikes on a ready tick, outside the outpost, with the target in reach. A bow
+## spends one arrow per shot and a staff one frost shard per cast, and neither fires with none
+## left. Hits train the style's skill.
 func _step_player_attack() -> void:
 	var target := _attack_target()
 	var tick := int(state["tick"])

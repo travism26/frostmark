@@ -1,4 +1,4 @@
-## The seven skills and the one experience curve they all share.
+## The eight skills and the one experience curve they all share.
 ##
 ## A skill is `{xp: int, level: int}` in the state. Experience only ever goes up, and the
 ## stored level is the highest the curve has granted, so a level never decreases even if
@@ -13,9 +13,10 @@ const COOKING := "cooking"
 const SMITHING := "smithing"
 const MELEE := "melee"
 const RANGED := "ranged"
+const MAGIC := "magic"
 
 ## Every skill, in the brief's order: gathering, crafting, combat.
-const NAMES: Array[String] = [WOODCUTTING, MINING, FISHING, COOKING, SMITHING, MELEE, RANGED]
+const NAMES: Array[String] = [WOODCUTTING, MINING, FISHING, COOKING, SMITHING, MELEE, RANGED, MAGIC]
 
 const MAX_LEVEL := 99
 ## Total experience to reach level L is XP_STEP * L * (L - 1) / 2: level 2 needs 50,

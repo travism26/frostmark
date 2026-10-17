@@ -30,6 +30,15 @@ const RECIPES := {
 		"label": "Fishing rod", "inputs": {"logs": 3}, "output": {"item": "fishing_rod", "count": 1},
 		"skill": SkillTable.SMITHING, "level": 1, "upgrade": "", "xp": 10, "tier": ItemTable.TIER_WOODEN,
 	},
+	# One ice crystal refines into a pouch of frost shards, a staff's charges.
+	"frost_shards": {
+		"label": "Frost shards", "inputs": {"ice_crystal": 1}, "output": {"item": "frost_shards", "count": 10},
+		"skill": SkillTable.SMITHING, "level": 1, "upgrade": "", "xp": 8, "tier": ItemTable.TIER_WOODEN,
+	},
+	"wooden_staff": {
+		"label": "Wooden staff", "inputs": {"logs": 3, "ice_crystal": 1}, "output": {"item": "wooden_staff", "count": 1},
+		"skill": SkillTable.SMITHING, "level": 1, "upgrade": "", "xp": 12, "tier": ItemTable.TIER_WOODEN,
+	},
 	"wooden_armour": {
 		"label": "Wooden armour", "inputs": {"logs": 8}, "output": {"item": "wooden_armour", "count": 1},
 		"skill": SkillTable.SMITHING, "level": 2, "upgrade": "", "xp": 20, "tier": ItemTable.TIER_WOODEN,
@@ -56,6 +65,10 @@ const RECIPES := {
 	},
 	"bronze_bow": {
 		"label": "Bronze bow", "inputs": {"bronze_bar": 2, "logs": 3}, "output": {"item": "bronze_bow", "count": 1},
+		"skill": SkillTable.SMITHING, "level": 2, "upgrade": "forge", "xp": 25, "tier": ItemTable.TIER_BRONZE,
+	},
+	"bronze_staff": {
+		"label": "Bronze staff", "inputs": {"bronze_bar": 2, "logs": 2, "ice_crystal": 1}, "output": {"item": "bronze_staff", "count": 1},
 		"skill": SkillTable.SMITHING, "level": 2, "upgrade": "forge", "xp": 25, "tier": ItemTable.TIER_BRONZE,
 	},
 	"bronze_armour": {

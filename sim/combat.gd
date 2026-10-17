@@ -10,11 +10,10 @@ extends RefCounted
 
 const STYLE_MELEE := "melee"
 const STYLE_RANGED := "ranged"
-## Reserved: magic arrives with ring two and widens the edge table into the full triangle.
 const STYLE_MAGIC := "magic"
 
 ## The combat skill each style trains.
-const STYLE_SKILLS := {STYLE_MELEE: SkillTable.MELEE, STYLE_RANGED: SkillTable.RANGED}
+const STYLE_SKILLS := {STYLE_MELEE: SkillTable.MELEE, STYLE_RANGED: SkillTable.RANGED, STYLE_MAGIC: SkillTable.MAGIC}
 
 ## Two combatants stand close when they are at most this far apart, centre to centre. A melee
 ## weapon reaches exactly this far; anything farther is distance.
@@ -29,13 +28,16 @@ const RANGE_ANY := "any"
 ## deals back, while the two stand at `range` ("close", "far" or "any"). Pairs not listed, and
 ## listed pairs at the wrong range, are neutral both ways.
 ##
-## At launch the rule is two-way: melee up close has the edge on a ranged defender, ranged at
-## distance has the edge on a melee defender, the same style is neutral. Magic turns this into
-## the full triangle (melee beats ranged, ranged beats magic, magic beats melee) by adding
-## rows, not by changing the arithmetic.
+## The full triangle: melee beats ranged, ranged beats magic, magic beats melee, and the same
+## style is neutral. Melee's edge on ranged holds up close, where a blade reaches; at distance
+## the bow keeps its slice-4 edge on a melee defender. Magic's two edges hold at any range.
 const EDGES := {
 	STYLE_MELEE: {STYLE_RANGED: {"dealt": 1.5, "taken": 0.5, "range": RANGE_CLOSE}},
-	STYLE_RANGED: {STYLE_MELEE: {"dealt": 1.5, "taken": 0.5, "range": RANGE_FAR}},
+	STYLE_RANGED: {
+		STYLE_MELEE: {"dealt": 1.5, "taken": 0.5, "range": RANGE_FAR},
+		STYLE_MAGIC: {"dealt": 1.5, "taken": 0.5, "range": RANGE_ANY},
+	},
+	STYLE_MAGIC: {STYLE_MELEE: {"dealt": 1.5, "taken": 0.5, "range": RANGE_ANY}},
 }
 
 ## Weapons that are not items: a player with nothing in the weapon slot fights with fists,
@@ -45,6 +47,7 @@ const NATURAL_WEAPONS := {
 	"fangs": {"label": "Fangs", "style": STYLE_MELEE, "power": 0, "speed": 1, "reach": CLOSE_RANGE},
 	"captain_sabre": {"label": "Sabre", "style": STYLE_MELEE, "power": 0, "speed": 1, "reach": CLOSE_RANGE},
 	"captain_bow": {"label": "War bow", "style": STYLE_RANGED, "power": 0, "speed": 1, "reach": 8.0},
+	"captain_staff": {"label": "Rime staff", "style": STYLE_MAGIC, "power": 0, "speed": 1, "reach": 6.0},
 }
 const UNARMED := "fists"
 
@@ -88,7 +91,12 @@ const ACTIONS := {
 	"draw_bow": {"label": "Draws his bow", "damage": 0, "stance": true},
 	"loose": {"label": "Loose", "damage": 7},
 	"volley": {"label": "Volley", "damage": 16, "heavy": true},
+	"draw_staff": {"label": "Raises his staff", "damage": 0, "stance": true},
+	"rime_bolt": {"label": "Rime bolt", "damage": 7},
+	"blizzard": {"label": "Blizzard", "damage": 16, "heavy": true},
 	"draw_sabre": {"label": "Draws his sabre", "damage": 0, "stance": true},
+	"frost_bolt": {"label": "Frost bolt", "damage": 4},
+	"ice_lance": {"label": "Ice lance", "damage": 9, "heavy": true},
 }
 
 ## Enemy kinds. `weapon` sets the style and reach. `speed` is metres per tick (the player walks
@@ -112,24 +120,36 @@ const ENEMIES := {
 		"actions": ["shot", ACTION_REST, ACTION_REST, "aimed_shot", ACTION_REST],
 		"loot": [{"item": "arrows", "count": 8}], "rare_percent": 10, "respawn_ticks": 100,
 	},
-	# Sabre for two blows, then he draws his bow for two shots, then back: the second blow of
-	# each stance is the heavy one, and each change of stance is announced a tick ahead.
+	# A hedge witch who throws the cold itself: magic at a staff's reach, so a bow beats her
+	# and a blade walks into her edge.
+	"frost_witch": {
+		"label": "Frost witch", "health": 18, "weapon": "wooden_staff", "speed": 1.5, "sight": 8.0,
+		"actions": ["frost_bolt", ACTION_REST, ACTION_REST, "ice_lance", ACTION_REST],
+		"loot": [{"item": "frost_shards", "count": 10}], "rare_percent": 10, "respawn_ticks": 100,
+	},
+	# Sabre for two blows, then he draws his bow for two shots, then raises his staff for two
+	# casts, then back: the second blow of each stance is the heavy one, each change of stance
+	# is announced a tick ahead, and each stance has its own counter (magic or a bow at distance
+	# for the sabre, a blade up close for the bow, a bow for the staff).
 	"bandit_captain": {
 		"label": "Bandit captain", "health": 240, "weapon": "captain_sabre", "speed": 2.0, "sight": 7.0,
 		"actions": [
 			"slash", ACTION_REST, "cleave", ACTION_REST, "draw_bow",
-			"loose", ACTION_REST, "volley", ACTION_REST, "draw_sabre",
+			"loose", ACTION_REST, "volley", ACTION_REST, "draw_staff",
+			"rime_bolt", ACTION_REST, "blizzard", ACTION_REST, "draw_sabre",
 		],
 		"stances": [
 			"captain_sabre", "captain_sabre", "captain_sabre", "captain_sabre", "captain_bow",
-			"captain_bow", "captain_bow", "captain_bow", "captain_bow", "captain_sabre",
+			"captain_bow", "captain_bow", "captain_bow", "captain_bow", "captain_staff",
+			"captain_staff", "captain_staff", "captain_staff", "captain_staff", "captain_sabre",
 		],
-		"loot": [{"item": "arrows", "count": 20}], "boss_loot": ["iron_sword", "iron_bow", "iron_armour"],
+		"loot": [{"item": "arrows", "count": 20}],
+		"boss_loot": ["iron_sword", "iron_bow", "iron_staff", "iron_armour"],
 		"rare_percent": 25, "respawn_ticks": 600, "boss": true,
 	},
 }
 ## Ring one's rare drop: one piece of iron gear. Iron is found, never smithed.
-const RARE_LOOT: Array[String] = ["iron_sword", "iron_armour", "iron_bow", "iron_axe", "iron_pickaxe"]
+const RARE_LOOT: Array[String] = ["iron_sword", "iron_armour", "iron_bow", "iron_axe", "iron_pickaxe", "iron_staff"]
 
 
 static func is_enemy_kind(kind: String) -> bool:

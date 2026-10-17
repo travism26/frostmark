@@ -15,6 +15,8 @@ const SNOW_SHADER := preload("res://scenes/shaders/snow_cap.gdshader")
 const COLOR_WOOD := Color(0.42, 0.30, 0.20)
 const COLOR_DARK_WOOD := Color(0.30, 0.21, 0.14)
 const COLOR_ICE := Color(0.72, 0.86, 0.95)
+## Ice crystal and frost shard: the cold a staff casts with.
+const COLOR_FROST := Color(0.55, 0.85, 1.0)
 const COLOR_WATER := Color(0.10, 0.20, 0.30)
 const COLOR_FLAME := Color(1.0, 0.55, 0.15)
 const COLOR_FLAME_CORE := Color(1.0, 0.85, 0.35)
@@ -23,6 +25,7 @@ const ORE_COLORS := {
 	WorldDef.KIND_COPPER_ROCK: Color(0.85, 0.45, 0.20),
 	WorldDef.KIND_TIN_ROCK: Color(0.78, 0.80, 0.84),
 	WorldDef.KIND_IRON_ROCK: Color(0.45, 0.28, 0.22),
+	WorldDef.KIND_ICE_CRYSTAL: COLOR_FROST,
 }
 
 static var _snow_materials := {}  # "colour|texture|snow_from" -> ShaderMaterial

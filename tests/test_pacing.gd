@@ -1,6 +1,6 @@
 ## Pacing: a scripted new character plays the whole first playable through the command
 ## interface, from an empty pack to the bandit captain and through the ring-two gate, using
-## all seven skills. It plays a plain, sensible route, not a perfect one; a person reading the
+## all eight skills. It plays a plain, sensible route, not a perfect one; a person reading the
 ## world and clicking takes longer, so the bot's time is held well under thirty minutes.
 extends "res://tests/run.gd".TestCase
 
@@ -17,6 +17,7 @@ const NORTH_TREES := ["tree_7", "tree_8", "tree_9", "tree_10"]
 const COPPER := ["copper_1", "copper_2", "copper_3"]
 const TIN := ["tin_1", "tin_2", "tin_3"]
 const IRON := ["iron_1", "iron_2", "iron_3"]
+const CRYSTALS := ["ice_crystal_2", "ice_crystal_1"]
 const FOOD := ["cooked_trout", "cooked_fish"]
 
 var sim: Sim
@@ -46,6 +47,7 @@ func test_a_new_character_reaches_and_beats_the_captain_in_time() -> void:
 	_kit(["wooden_pickaxe"])
 	_head_out()
 	_gather(TIN, "tin_ore", 10)
+	_gather(CRYSTALS, "ice_crystal", 3)
 	_gather(SOUTH_TREES, "logs", 20)
 	_home()
 	_build("forge")
@@ -58,18 +60,27 @@ func test_a_new_character_reaches_and_beats_the_captain_in_time() -> void:
 		_smith("bronze_bar")
 	_smith("bronze_pickaxe")
 	_smith("bronze_sword")
-	_note("forge, food and bronze")
-	# 3. Ring one: the bow against the archer, the sword against the wolves.
+	_withdraw("ice_crystal")
+	_withdraw("logs", 3)
+	_smith("wooden_staff")
+	_smith("frost_shards")
+	_smith("frost_shards")
+	_note("forge, food, bronze and a staff")
+	# 3. Ring one: the bow against the archer, the sword and then the staff against the wolves.
 	_withdraw("wooden_bow", 1)
 	_withdraw("arrows", 30)
-	_withdraw("cooked_fish", 10)
+	_withdraw("wooden_staff", 1)
+	_withdraw("frost_shards", 20)
+	_withdraw("cooked_fish")
 	_equip("wooden_bow")
 	_head_out()
 	_fight(["archer_1"])
 	_equip("bronze_sword")
 	_fight(["wolf_1", "wolf_2"])
 	_fight(["wolf_3", "wolf_4", "wolf_5"])
+	_equip("wooden_staff")
 	_fight(["wolf_6", "wolf_7"])
+	_equip("bronze_sword")
 	_home()
 	_note("first fights")
 	# 4. More ore, iron from ring one, then the armoury, armour and the gate winch.
@@ -94,7 +105,7 @@ func test_a_new_character_reaches_and_beats_the_captain_in_time() -> void:
 	_build("ring_two_gate")
 	_withdraw("raw_fish")
 	_cook_all()
-	_withdraw("cooked_fish", 10)
+	_withdraw("cooked_fish")
 	_note("armour and the winch")
 	assert_true((sim.state["upgrades"] as Array).has("ring_two_gate"), "the winch is built")
 	# 5. The captain, then through the gate.

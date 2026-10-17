@@ -89,6 +89,8 @@ static func migrate(snapshot: Dictionary, target: int) -> Variant:
 				snap = _v3_to_v4(snap)
 			4:
 				snap = _v4_to_v5(snap)
+			5:
+				snap = _v5_to_v6(snap)
 			_:
 				return null
 		version = int(snap["version"])
@@ -166,4 +168,16 @@ static func _v3_to_v4(snap: Dictionary) -> Dictionary:
 static func _v4_to_v5(snap: Dictionary) -> Dictionary:
 	snap["version"] = 5
 	snap["guide"] = {"on": false, "step": 4, "tips": {}}
+	return snap
+
+
+## Version 5 had seven skills and a two-way style edge. Version 6 adds the eighth
+## skill, magic, at level 1 with no experience, keeping a magic entry already there. Nothing
+## else changes: the ice crystals and the frost witches load full and at home, and the
+## captain's longer cycle carries on from the step he was on.
+static func _v5_to_v6(snap: Dictionary) -> Dictionary:
+	snap["version"] = 6
+	var skills: Variant = snap.get("skills")
+	if skills is Dictionary and not skills.has("magic"):
+		skills["magic"] = {"xp": 0, "level": 1}
 	return snap
