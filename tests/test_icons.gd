@@ -91,8 +91,11 @@ func test_ui_settings_persist_and_keep_the_sound_section() -> void:
 	assert_true(UiSettings.reduced_motion_on(SETTINGS_PATH), "the accessor sees it")
 	assert_almost_eq(AudioSettings.load_from(SETTINGS_PATH).volume, 0.35, 0.0001, "the sound section survives the interface write")
 	sound.volume = 0.5
+	sound.reduced_motion = true  # the director's copy, kept in step by GameRoot
 	sound.save_to(SETTINGS_PATH)
-	assert_true(UiSettings.load_from(SETTINGS_PATH).reduced_motion, "the interface section survives the sound write")
+	assert_almost_eq(UiSettings.load_from(SETTINGS_PATH).ui_scale, 1.25, 0.0001, "the interface section survives the sound write")
+	assert_true(UiSettings.load_from(SETTINGS_PATH).reduced_motion, "reduced motion is one key both stores read")
+	assert_true(AudioSettings.load_from(SETTINGS_PATH).reduced_motion, "the sound store sees the same key")
 	DirAccess.remove_absolute(SETTINGS_PATH)
 
 
