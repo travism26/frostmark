@@ -97,6 +97,10 @@ const RECIPES := {
 		"label": "Steel bow", "inputs": {"steel_bar": 2, "logs": 3}, "output": {"item": "steel_bow", "count": 1},
 		"skill": SkillTable.SMITHING, "level": 5, "upgrade": "blast_furnace", "xp": 50, "tier": ItemTable.TIER_STEEL,
 	},
+	"steel_staff": {
+		"label": "Steel staff", "inputs": {"steel_bar": 2, "logs": 2, "ice_crystal": 1}, "output": {"item": "steel_staff", "count": 1},
+		"skill": SkillTable.SMITHING, "level": 5, "upgrade": "blast_furnace", "xp": 50, "tier": ItemTable.TIER_STEEL,
+	},
 	"steel_armour": {
 		"label": "Steel armour", "inputs": {"steel_bar": 3, "troll_hide": 1}, "output": {"item": "steel_armour", "count": 1},
 		"skill": SkillTable.SMITHING, "level": 5, "upgrade": "blast_furnace", "xp": 80, "tier": ItemTable.TIER_STEEL,

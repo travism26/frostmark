@@ -355,7 +355,8 @@ func test_the_blast_furnace_needs_the_winch_and_ring_two() -> void:
 
 func test_steel_gear_steps_above_iron() -> void:
 	var lines := [
-		["iron_sword", "steel_sword"], ["iron_bow", "steel_bow"], ["iron_armour", "steel_armour"],
+		["iron_sword", "steel_sword"], ["iron_bow", "steel_bow"], ["iron_staff", "steel_staff"],
+		["iron_armour", "steel_armour"],
 		["iron_axe", "steel_axe"], ["iron_pickaxe", "steel_pickaxe"],
 	]
 	for line in lines:

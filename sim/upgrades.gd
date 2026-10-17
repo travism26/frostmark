@@ -37,7 +37,7 @@ const UPGRADES := {
 		"label": "Blast furnace", "cost": {"logs": 12, "bronze_bar": 4, "coal": 6, "troll_hide": 2},
 		"requires": ["ring_two_gate"],
 		"effects": {
-			"recipes": ["steel_bar", "steel_axe", "steel_pickaxe", "steel_sword", "steel_bow", "steel_armour"],
+			"recipes": ["steel_bar", "steel_axe", "steel_pickaxe", "steel_sword", "steel_bow", "steel_staff", "steel_armour"],
 			"smithing_tier": ItemTable.TIER_STEEL,
 		},
 		"locked": "",

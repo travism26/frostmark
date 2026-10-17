@@ -177,6 +177,10 @@ const ITEMS := {
 		"label": "Steel bow", "stack": 1, "weight": 2, "value": 168, "slot": SLOT_WEAPON,
 		"style": "ranged", "power": 10, "speed": 2, "reach": 8.0, "ammo": "arrows", "tier": TIER_STEEL,
 	},
+	"steel_staff": {
+		"label": "Steel staff", "stack": 1, "weight": 2, "value": 172, "slot": SLOT_WEAPON,
+		"style": "magic", "power": 10, "speed": 2, "reach": 6.0, "ammo": "frost_shards", "tier": TIER_STEEL,
+	},
 	# Armour
 	"wooden_armour": {
 		"label": "Wooden armour", "stack": 1, "weight": 4, "value": 16, "slot": SLOT_ARMOUR,
