@@ -14,6 +14,7 @@ const KIND_WALL := "wall"
 const KIND_CLIFF := "cliff"
 const KIND_OUTCROP := "outcrop"
 const KIND_DECOR := "decor"
+const KIND_RUIN := "ruin"
 const KIND_GATE := "gate"
 const KIND_FIRE := "fire"
 const KIND_STASH := "stash"
@@ -26,6 +27,9 @@ const KIND_IRON_ROCK := "iron_rock"
 const KIND_ICE_CRYSTAL := "ice_crystal"
 const KIND_FISHING_HOLE := "fishing_hole"
 const KIND_ICE_HOLE := "ice_hole"
+const KIND_COAL_ROCK := "coal_rock"
+const KIND_RICH_IRON_ROCK := "rich_iron_rock"
+const KIND_DEEP_HOLE := "deep_hole"
 const KIND_RING_GATE := "ring_gate"
 
 const REGION_OUTPOST := "outpost"
@@ -35,7 +39,7 @@ const REGION_RING_TWO := "ring_two"
 
 var cell_size := 1.0
 var cols := 128
-var rows := 128
+var rows := 192
 var origin: Array = [-64.0, -64.0]
 var spawn: Array = [0.5, 4.5]
 ## Where a player wakes after dying: beside the outpost fire.
@@ -45,7 +49,8 @@ var rescue: Array = [0.5, 1.5]
 ## the lowest tool tier that works, "" for any), what one success yields, how many yields a
 ## node holds before it is depleted, the ticks until it regrows, and the experience per
 ## success. `tier` 1 nodes are the inner ring's; `tier` 2 nodes grow in ring one, need more
-## skill and pay more. Placed objects of these kinds get a matching entry in the state.
+## skill and pay more; `tier` 3 nodes lie in ring two's ruins and pay more again. Placed
+## objects of these kinds get a matching entry in the state.
 const NODE_KINDS := {
 	KIND_TREE: {
 		"tier": 1, "skill": "woodcutting", "level": 1, "tool": "axe", "tool_tier": "", "item": "logs",
@@ -80,11 +85,23 @@ const NODE_KINDS := {
 		"tier": 2, "skill": "fishing", "level": 3, "tool": "rod", "tool_tier": "", "item": "raw_trout",
 		"yield": 5, "respawn_ticks": 120, "xp": 16,
 	},
+	KIND_COAL_ROCK: {
+		"tier": 3, "skill": "mining", "level": 5, "tool": "pickaxe", "tool_tier": "bronze", "item": "coal",
+		"yield": 4, "respawn_ticks": 150, "xp": 22,
+	},
+	KIND_RICH_IRON_ROCK: {
+		"tier": 3, "skill": "mining", "level": 6, "tool": "pickaxe", "tool_tier": "bronze", "item": "iron_ore",
+		"yield": 5, "respawn_ticks": 160, "xp": 24,
+	},
+	KIND_DEEP_HOLE: {
+		"tier": 3, "skill": "fishing", "level": 5, "tool": "rod", "tool_tier": "", "item": "raw_char",
+		"yield": 5, "respawn_ticks": 140, "xp": 22,
+	},
 }
 
 ## Blocking geometry: {id, kind, min: [x, z], max: [x, z], height}. `kind` is a wall (the
-## outpost palisade), a cliff (ring one's outer edge), an outcrop (a rock in the field) or
-## decor (the tent in the yard).
+## outpost palisade), a cliff (the world's ice edges), an outcrop (a rock in the field), a
+## ruin (ring two's broken walls and pillars) or decor (the tent in the yard).
 var solids: Array = []
 ## Interactable placements by id: {kind, label, min, max, height, blocks}.
 var objects: Dictionary = {}
@@ -99,13 +116,15 @@ var _blocked := PackedByteArray()
 var path_grid: AStarGrid2D = null
 
 
-## The first-playable world, as rings around the outpost. The walled outpost has one gate on
-## its south side, the fire, the stash and the workbench. The inner ring (out to 24 m) is safe
-## but cold: pines south and north of the walls, copper rocks to the east, tin to the west, one
-## fishing hole to the north and two ice crystals north-east and north-west. Ring one (out to the cliffs at 60 m) holds the wolf packs and
-## bandit archers and two frost witches, the better nodes (frost pines west, iron east, an ice hole north) and, at
-## its far southern edge, the barred gate to ring two with the bandit captain standing at it.
-## Ring one is only reached by walking through the inner ring.
+## The world, as rings around the outpost. The walled outpost has one gate on its south side,
+## the fire, the stash and the workbench. The inner ring (out to 24 m) is safe but cold: pines
+## south and north of the walls, copper rocks to the east, tin to the west, one fishing hole to
+## the north and two ice crystals north-east and north-west. Ring one (out to the cliffs at
+## 60 m) holds the wolf packs, bandit archers and two frost witches, the better nodes (frost
+## pines west, iron east, an ice hole north) and, at its far southern edge, the gate to ring two
+## with the bandit captain standing at it. Ring two lies beyond that gate and nowhere else: a
+## band of ruins south of the cliffs (see `_ring_two`). Ring one is only reached by walking
+## through the inner ring.
 static func outpost() -> WorldDef:
 	var w := WorldDef.new()
 	var half := 10.0
@@ -120,8 +139,8 @@ static func outpost() -> WorldDef:
 		# The keeper's tent in the south-east corner of the yard.
 		_solid("tent", [6.0, 6.0], [9.0, 9.0], 1.6, KIND_DECOR),
 	]
-	# Ring one's outer edge: ice cliffs on all four sides out to the end of the grid, open only
-	# at the ring-two gate, so no ground in the world is walkable but unreachable.
+	# Ring one's outer edge: ice cliffs on all four sides, open only at the ring-two gate, so the
+	# only way between ring one and ring two is through it.
 	var edge := 60.0
 	var c := 4.0  # cliff thickness
 	w.solids.append_array([
@@ -130,7 +149,6 @@ static func outpost() -> WorldDef:
 		_solid("cliff_west", [-edge - c, -edge - c], [-edge, edge + c], 3.0, KIND_CLIFF),
 		_solid("cliff_south_west", [-edge - c, edge], [-gate_half_width, edge + c], 3.0, KIND_CLIFF),
 		_solid("cliff_south_east", [gate_half_width, edge], [edge + c, edge + c], 3.0, KIND_CLIFF),
-		_solid("cliff_beyond_gate", [-gate_half_width, edge + 2.0], [gate_half_width, edge + c], 3.0, KIND_CLIFF),
 	])
 	# Rock outcrops in ring one, so the walk out is a route and not a straight line.
 	var outcrops := [
@@ -159,11 +177,12 @@ static func outpost() -> WorldDef:
 			"kind": KIND_WORKBENCH, "label": "Workbench", "blocks": true, "height": 1.0,
 			"min": [5.0, -7.0], "max": [7.0, -6.0],
 		},
-		# Barred until the captain has fallen and the outpost has built its winch.
+		# Barred until the captain has fallen and the outpost has built its winch. It always
+		# blocks the walkability grid: an open gate is passed by walking up to it (see Sim).
 		"ring_two_gate": {
 			"kind": KIND_RING_GATE, "label": "Gate to ring two", "blocks": true, "height": 3.5,
 			"min": [-gate_half_width, edge], "max": [gate_half_width, edge + 2.0],
-			"guardian": "captain", "upgrade": "ring_two_gate",
+			"guardian": "captain", "upgrade": "ring_two_gate", "outward": [0.0, 1.0],
 		},
 	}
 	# Pines, one metre square: six between 4 m and 12 m south of the gate, four north of the walls.
@@ -218,14 +237,76 @@ static func outpost() -> WorldDef:
 	]
 	for p in placements:
 		w.enemies[p[0]] = {"kind": p[1], "home": p[2], "pack": p[3]}
+	_ring_two(w)
+	var far: Array = [w.origin[0] + w.cols * w.cell_size, w.origin[1] + w.rows * w.cell_size]
 	w.regions = [
 		{"name": REGION_OUTPOST, "polygon": _rect_polygon([-half, -half], [half, half])},
 		{"name": REGION_INNER_RING, "polygon": _rect_polygon([-24.0, -24.0], [24.0, 24.0])},
 		{"name": REGION_RING_ONE, "polygon": _rect_polygon([-edge, -edge], [edge, edge])},
-		{"name": REGION_RING_TWO, "polygon": _rect_polygon([-64.0, -64.0], [64.0, 64.0])},
+		{"name": REGION_RING_TWO, "polygon": _rect_polygon(w.origin, far)},
 	]
 	w.bake()
 	return w
+
+
+## Ring two: the ruins south of the ring-two gate, from the cliffs at 64 m to the cliffs at
+## 124 m, walled in on every side. A yard with an old brazier opens behind the gate. A broken
+## outer wall crosses the ring with three gaps, the chokepoints. Past it a frozen lake with deep
+## holes lies west under a troll, coal seams and ruined pillars lie east among ruin stalkers, and
+## a roofless keep in the middle holds rich iron and a pair of trolls. Farther south, past the
+## keep, a troll and a stalker keep the far ruins. No group sits within a fight's noise of the
+## next.
+static func _ring_two(w: WorldDef) -> void:
+	var near := 64.0
+	var far := 124.0
+	var side := 60.0
+	var c := 4.0
+	w.solids.append_array([
+		_solid("cliff_ring_two_west", [-side - c, near], [-side, far + c], 3.0, KIND_CLIFF),
+		_solid("cliff_ring_two_east", [side, near], [side + c, far + c], 3.0, KIND_CLIFF),
+		_solid("cliff_ring_two_south", [-side, far], [side, far + c], 3.0, KIND_CLIFF),
+	])
+	# The broken outer wall at 78 m, open at x -34 to -30, -3 to 3 and 30 to 34; then the keep,
+	# a square from x -16 to 16 and z 92 to 112, with a door north, west and south-east.
+	var ruins := [
+		[[-side, 78.0], [-34.0, 79.0]], [[-30.0, 78.0], [-3.0, 79.0]],
+		[[3.0, 78.0], [30.0, 79.0]], [[34.0, 78.0], [side, 79.0]],
+		[[-16.0, 92.0], [-2.0, 93.0]], [[2.0, 92.0], [16.0, 93.0]],
+		[[-16.0, 93.0], [-15.0, 100.0]], [[-16.0, 103.0], [-15.0, 112.0]],
+		[[15.0, 93.0], [16.0, 112.0]],
+		[[-16.0, 111.0], [6.0, 112.0]], [[10.0, 111.0], [15.0, 112.0]],
+		# Pillars among the coal seams east, to corner a stalker against.
+		[[31.0, 92.0], [32.5, 93.5]], [[48.0, 82.0], [49.5, 83.5]],
+		[[33.0, 108.0], [34.5, 109.5]], [[53.0, 96.0], [54.5, 97.5]],
+	]
+	for i in ruins.size():
+		w.solids.append(_solid("ruin_%d" % (i + 1), ruins[i][0], ruins[i][1], 2.2, KIND_RUIN))
+	w.objects["brazier"] = {
+		"kind": KIND_FIRE, "label": "Brazier", "blocks": true, "height": 0.6,
+		"min": [5.0, 68.0], "max": [6.5, 69.5],
+	}
+	var holes := [[-47.0, 86.0], [-41.0, 97.0], [-52.0, 104.0]]
+	for i in holes.size():
+		_place(w, "deep_hole_%d" % (i + 1), KIND_DEEP_HOLE, "Deep hole", holes[i], [2.0, 2.0], 0.1)
+	var coal := [[38.0, 84.0], [46.0, 90.0], [40.0, 98.0], [50.0, 104.0], [20.0, 116.0]]
+	for i in coal.size():
+		_place(w, "coal_%d" % (i + 1), KIND_COAL_ROCK, "Coal seam", coal[i], [2.0, 2.0], 1.2)
+	var rich := [[-9.0, 97.0], [6.0, 98.0], [-2.0, 106.0]]
+	for i in rich.size():
+		_place(w, "rich_iron_%d" % (i + 1), KIND_RICH_IRON_ROCK, "Rich iron vein", rich[i], [2.0, 2.0], 1.4)
+	var placements := [
+		["stalker_1", "ruin_stalker", [-32.5, 72.5], "stalker_1"],
+		["troll_1", "ice_troll", [-44.5, 94.5], "troll_1"],
+		["stalker_2", "ruin_stalker", [0.5, 86.5], "stalker_2"],
+		["troll_2", "ice_troll", [-5.5, 103.5], "keep"],
+		["troll_3", "ice_troll", [4.5, 105.5], "keep"],
+		["stalker_3", "ruin_stalker", [44.5, 94.5], "east_ruins"],
+		["stalker_4", "ruin_stalker", [36.5, 104.5], "east_ruins"],
+		["troll_4", "ice_troll", [-30.5, 116.5], "troll_4"],
+		["stalker_5", "ruin_stalker", [28.5, 117.5], "stalker_5"],
+	]
+	for p in placements:
+		w.enemies[p[0]] = {"kind": p[1], "home": p[2], "pack": p[3]}
 
 
 static func _place(w: WorldDef, id: String, kind: String, label: String, at: Array, size: Array, height: float) -> void:

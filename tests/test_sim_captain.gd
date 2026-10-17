@@ -1,6 +1,6 @@
 ## The bandit captain at the ring-two gate: he cycles sabre, bow and staff on a readable
 ## pattern, drops iron, and the gate opens only once he has fallen and the outpost has built
-## the gate upgrade. Walking through is the first playable's ending.
+## the gate upgrade. Walking through it leads into ring two.
 extends "res://tests/run.gd".TestCase
 
 const H := preload("res://tests/sim_helpers.gd")
@@ -152,7 +152,7 @@ func test_the_gate_stays_barred_until_the_upgrade_is_built() -> void:
 	assert_true(sim.ring_gate_open("ring_two_gate"))
 
 
-func test_walking_through_the_open_gate_ends_the_first_playable_and_comes_home() -> void:
+func test_walking_through_the_open_gate_leads_into_ring_two() -> void:
 	var sim := SimScript.new()
 	_build_gate_upgrade(sim)
 	var killed := _kill_captain(sim)
@@ -161,13 +161,12 @@ func test_walking_through_the_open_gate_ends_the_first_playable_and_comes_home()
 	var skills_before: Dictionary = sim.state["skills"].duplicate(true)
 	var events := _walk_through(sim)
 	var reached := H.of_kind(events, Vocab.EV_RING_TWO_REACHED)
-	assert_eq(reached.size(), 1, "the ending")
-	assert_eq(sim.state["player"]["region"], WorldDef.REGION_OUTPOST, "back at the outpost")
-	assert_true(sim.near_fire(), "beside the fire")
-	assert_eq(Inventory.contents(sim.state["inventory"]["pack"]), [], "the haul is banked")
-	assert_eq(H.stash_count(sim, "iron_ore"), 3)
+	assert_eq(reached.size(), 1, "the first arrival is marked")
+	assert_eq(reached[0]["object_id"], "ring_two_gate")
+	assert_eq(sim.state["player"]["region"], WorldDef.REGION_RING_TWO, "on the far side")
+	assert_eq(H.pack_count(sim, "iron_ore"), 3, "nothing is banked: the haul is still at risk")
+	assert_eq(H.of_kind(events, Vocab.EV_BANKED).size(), 0)
 	assert_eq(sim.state["skills"], skills_before, "the character is intact")
-	assert_eq(int(sim.state["health"]) > 0, true)
 	assert_eq(H.of_kind(events, Vocab.EV_DIED).size(), 0)
 	assert_eq(H.of_kind(events, Vocab.EV_SAVED)[-1]["reason"], "ring_two")
 

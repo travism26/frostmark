@@ -1,4 +1,4 @@
-## The command and event vocabulary of the simulation, for the whole first playable.
+## The command and event vocabulary of the simulation.
 ##
 ## Every command the presentation can issue and every event the simulation can emit
 ## is named here once, so later slices extend this list instead of inventing strings.
@@ -88,7 +88,7 @@ const EV_FIRE_LIT := "fire_lit"                  # {fire_id, pos, expires_tick}
 const EV_FIRE_OUT := "fire_out"                  # {fire_id}
 const EV_BUILT := "built"                        # {upgrade, effects}
 const EV_RING_GATE_OPENED := "ring_gate_opened"  # {object_id}  its guardian is dead and its upgrade built
-const EV_RING_TWO_REACHED := "ring_two_reached"  # {object_id}  walked through the open gate; the first playable's ending
+const EV_RING_TWO_REACHED := "ring_two_reached"  # {object_id}  first walked into ring two, through that gate; once per character
 # The first-outing guide (text in GuideTable)
 const EV_HINT := "hint"                          # {hint}  the guide's current hint step: a GuideTable id, "" once the path is walked
 const EV_TIP := "tip"                            # {tip}   a contextual tip fired: a GuideTable.TIPS id

@@ -21,7 +21,7 @@ const WALK_PER_TICK := WALK_SPEED * TICK_SECONDS
 const SNAP_RADIUS_CELLS := 2
 ## Bumped whenever the state shape changes. `restore()` migrates older snapshots forward
 ## (SaveCode.migrate) and refuses ones it cannot read.
-const STATE_VERSION := 6
+const STATE_VERSION := 7
 
 ## The pack: a fixed number of slots, and a carried weight (pack plus equipment, in kg)
 ## above which walking slows to OVERWEIGHT_SPEED of normal.
@@ -73,8 +73,11 @@ const TOOL_CHANCE_PER_TIER := 10
 ## `burn` percent at the level it needs, less BURN_DROP_PER_LEVEL for every level above.
 const COOK_TICKS := 2
 const BURN_DROP_PER_LEVEL := 5
-## Smithing works no metal above this tier in the first playable: iron is found, not made.
+## Smithing works no metal above this tier until an upgrade raises it (see `smithing_cap()`).
+## No recipe works iron at all: iron is found, not made.
 const SMITHING_TIER_CAP := ItemTable.TIER_BRONZE
+## Passing an open ring gate walks the player this far past the gate's centre on the far side.
+const RING_GATE_STEP := 3.0
 
 ## Death keeps this many of the most valuable things carried or worn (a stack is one thing).
 const DEATH_KEEPS := 3
@@ -153,6 +156,7 @@ func new_state() -> Dictionary:
 		"fires": {},
 		"fire_seq": 0,
 		"bosses_defeated": [],
+		"rings_reached": [],
 		"upgrades": [],
 		"pending": [],
 		"guide": {"on": true, "step": 0, "tips": {}},
@@ -332,6 +336,8 @@ func _cmd_attack(args: Dictionary) -> Dictionary:
 		return _reject(SimVocab.ATTACK, args, SimVocab.REASON_TARGET_DEAD)
 	if in_outpost():
 		return _reject(SimVocab.ATTACK, args, SimVocab.REASON_IN_OUTPOST)
+	if not _same_side(id):
+		return _reject(SimVocab.ATTACK, args, SimVocab.REASON_UNREACHABLE)
 	if not _has_ammo():
 		return _reject(SimVocab.ATTACK, args, SimVocab.REASON_NO_AMMO)
 	var player: Dictionary = state["player"]
@@ -518,6 +524,10 @@ func _step_movement() -> void:
 		# Walls leave the gate as the only way in, so walking into the outpost is crossing it.
 		if region == WorldDef.REGION_OUTPOST:
 			_bank()
+		elif region == WorldDef.REGION_RING_TWO and not (state["rings_reached"] as Array).has(region):
+			(state["rings_reached"] as Array).append(region)
+			_emit({"kind": SimVocab.EV_RING_TWO_REACHED, "object_id": _nearest_ring_gate(pos)})
+			_save_due = "ring_two"
 	if path.is_empty():
 		var object_id: String = player["target_object"]
 		player["target_object"] = ""
@@ -542,7 +552,7 @@ func _step_movement() -> void:
 			if action == SimVocab.ACTION_GATHER:
 				_start_gathering(object_id)
 			elif action == SimVocab.ACTION_RING_GATE and ring_gate_open(object_id):
-				_reach_ring_two(object_id)
+				_pass_ring_gate(object_id)
 
 
 func _action_for(object_id: String) -> String:
@@ -613,23 +623,39 @@ func _announce_ring_gates(before: Array[String]) -> void:
 			_emit({"kind": SimVocab.EV_RING_GATE_OPENED, "object_id": id})
 
 
-## The player walked through the open gate to ring two: the first playable ends here. The
-## presentation shows the ending; the character comes home intact, beside the outpost fire,
-## and what they carried is banked as if they had walked in through the outpost gate.
-func _reach_ring_two(object_id: String) -> void:
-	_emit({"kind": SimVocab.EV_RING_TWO_REACHED, "object_id": object_id})
+## The player reached an open ring gate: they walk straight through it to RING_GATE_STEP metres
+## past its centre on the other side, either way. The gate itself always blocks the grid, so no
+## route crosses it and no enemy follows; the walk through is the only way between the rings.
+## Nothing is banked: the haul is still at risk until the outpost gate.
+func _pass_ring_gate(object_id: String) -> void:
+	var gate: Dictionary = world.objects[object_id]
+	var outward := Vector2(gate["outward"][0], gate["outward"][1])
+	var centre := world.object_center(object_id)
+	var here := player_pos()
+	var side := 1.0 if (here - centre).dot(outward) < 0.0 else -1.0
+	var to := centre + outward * side * RING_GATE_STEP
 	var player: Dictionary = state["player"]
-	var to := Vector2(world.rescue[0], world.rescue[1])
-	player["pos"] = _xz(to)
-	player["path"] = []
+	player["path"] = [_xz(to)]
 	player["target_object"] = ""
-	_stop_activity(SimVocab.REASON_MOVED)
-	var region := world.region_at(to)
-	if region != player["region"]:
-		_emit({"kind": SimVocab.EV_REGION_CHANGED, "from": player["region"], "to": region})
-		player["region"] = region
-	_bank()
-	_save_due = "ring_two"
+	_emit({
+		"kind": SimVocab.EV_PATH_SET, "from": _xz(here), "to": _xz(to), "length": here.distance_to(to),
+		"object_id": "",
+	})
+
+
+func _nearest_ring_gate(pos: Vector2) -> String:
+	var best := ""
+	for id in world.objects_of_kind(WorldDef.KIND_RING_GATE):
+		if best == "" or world.object_center(id).distance_to(pos) < world.object_center(best).distance_to(pos):
+			best = id
+	return best
+
+
+## Whether the player and an enemy's home lie on the same side of the ring gates: both in ring
+## two or both nearer the outpost. Nothing fights, notices or chases across a ring gate.
+func _same_side(enemy_id: String) -> bool:
+	var home_beyond := world.region_at(_home(enemy_id)) == WorldDef.REGION_RING_TWO
+	return home_beyond == (state["player"]["region"] == WorldDef.REGION_RING_TWO)
 
 
 static func _merged(entries: Array) -> Array:
@@ -980,13 +1006,14 @@ func _step_enemy(id: String) -> void:
 		MODE_ENGAGED:
 			if _dead_cause != "":
 				return
-			if in_outpost():
+			if in_outpost() or not _same_side(id):
 				_disengage(id)
 				return
 			# A pack mate that noticed earlier this tick has already declared its next action.
 			if int(e["next"].get("at", 0)) > tick:
 				return
-			_enemy_act(id)
+			if _enemy_act(id) != CombatTable.ACTION_MOVE:
+				_kite(id)
 			_enemy_declare(id)
 		MODE_RETURNING:
 			var home := _home(id)
@@ -998,9 +1025,9 @@ func _step_enemy(id: String) -> void:
 
 
 ## Why an idle enemy notices the player this tick ("sight" or "noise"), or "" when it does not.
-## Nothing outside notices a player inside the outpost.
+## Nothing outside notices a player inside the outpost, or on the other side of a ring gate.
 func _notice_cause(id: String) -> String:
-	if in_outpost() or _dead_cause != "":
+	if in_outpost() or _dead_cause != "" or not _same_side(id):
 		return ""
 	var e: Dictionary = state["enemies"][id]
 	var d := _pos(e).distance_to(player_pos())
@@ -1034,8 +1061,8 @@ func _disengage(id: String) -> void:
 
 
 ## Carries out what the enemy declared last tick: closes in, rests, or strikes. A strike whose
-## target has stepped out of reach since it was telegraphed is a miss.
-func _enemy_act(id: String) -> void:
+## target has stepped out of reach since it was telegraphed is a miss. Returns the action.
+func _enemy_act(id: String) -> String:
 	var e: Dictionary = state["enemies"][id]
 	var next: Dictionary = e["next"]
 	var action := CombatTable.ACTION_MOVE
@@ -1044,19 +1071,38 @@ func _enemy_act(id: String) -> void:
 	e["next"] = {}
 	if action == CombatTable.ACTION_MOVE:
 		_chase(id)
-		return
+		return action
 	if not CombatTable.is_attack(action):
-		return
+		return action
 	var me := combatant(id)
 	var toward := player_pos() - (me["pos"] as Vector2)
 	if toward != Vector2.ZERO:
 		e["facing"] = _xz(toward.normalized())
 	if toward.length() > float(me["reach"]):
 		_emit({"kind": SimVocab.EV_MISSED, "attacker": id, "target": SimVocab.PLAYER, "action": action})
-		return
+		return action
 	_strike(id, SimVocab.PLAYER, CombatTable.action_damage(action))
 	if int(state["health"]) <= 0:
 		_dead_cause = e["kind"]
+	return action
+
+
+## An enemy of a kind that kites backs one step straight away from a player who has come within
+## its `kite` distance, still facing them. A wall behind it stops it, so it can be cornered.
+func _kite(id: String) -> void:
+	var e: Dictionary = state["enemies"][id]
+	var def := CombatTable.enemy(e["kind"])
+	var here := _pos(e)
+	var away := here - player_pos()
+	if _dead_cause != "" or away.length() >= float(def.get("kite", 0.0)):
+		return
+	if away == Vector2.ZERO:
+		away = Vector2(0, 1)
+	var step := here + away.normalized() * float(def["speed"])
+	if not world.is_walkable(step) or not GridPath.has_line_of_sight(world, here, step):
+		return
+	_walk_enemy(id, step)
+	e["facing"] = _xz(-away.normalized())
 
 
 ## Declares what the enemy does next tick: the next action of its cycle while the player is in
@@ -1574,7 +1620,7 @@ func _smith(args: Dictionary, commit: bool) -> String:
 	if not RecipeTable.has(id):
 		return SimVocab.REASON_UNKNOWN_RECIPE
 	var recipe := RecipeTable.get_recipe(id)
-	if ItemTable.tier_rank(recipe["tier"]) > ItemTable.tier_rank(SMITHING_TIER_CAP):
+	if ItemTable.tier_rank(recipe["tier"]) > ItemTable.tier_rank(smithing_cap()):
 		return SimVocab.REASON_TIER_CAPPED
 	if not in_outpost() or not near_kind(WorldDef.KIND_WORKBENCH, USE_REACH):
 		return SimVocab.REASON_NOT_AT_WORKBENCH
@@ -1715,6 +1761,12 @@ func restore(snap: Dictionary) -> bool:
 			if world.enemies.has(str(id)) and not defeated.has(str(id)):
 				defeated.append(str(id))
 	copy["bosses_defeated"] = defeated
+	var reached: Array = []
+	if copy.get("rings_reached") is Array:
+		for r in copy["rings_reached"]:
+			if r == WorldDef.REGION_RING_TWO and not reached.has(r):
+				reached.append(r)
+	copy["rings_reached"] = reached
 	var target := str(player.get("target_object", ""))
 	var known_target: bool = world.objects.has(target) or copy["loot"].has(target) or copy["fires"].has(target)
 	player["target_object"] = target if known_target else ""
@@ -2001,6 +2053,17 @@ func carry_weight() -> int:
 
 func is_overweight() -> bool:
 	return carry_weight() > CARRY_LIMIT
+
+
+## The highest metal tier the workbench works: SMITHING_TIER_CAP, raised by any built upgrade
+## with a `smithing_tier` effect (the blast furnace lifts it to steel).
+func smithing_cap() -> String:
+	var cap := SMITHING_TIER_CAP
+	for id in state["upgrades"]:
+		var tier: String = UpgradeTable.get_upgrade(id).get("effects", {}).get("smithing_tier", "")
+		if ItemTable.tier_rank(tier) > ItemTable.tier_rank(cap):
+			cap = tier
+	return cap
 
 
 func skill_level(skill: String) -> int:

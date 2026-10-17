@@ -48,6 +48,8 @@ const NATURAL_WEAPONS := {
 	"captain_sabre": {"label": "Sabre", "style": STYLE_MELEE, "power": 0, "speed": 1, "reach": CLOSE_RANGE},
 	"captain_bow": {"label": "War bow", "style": STYLE_RANGED, "power": 0, "speed": 1, "reach": 8.0},
 	"captain_staff": {"label": "Rime staff", "style": STYLE_MAGIC, "power": 0, "speed": 1, "reach": 6.0},
+	"troll_club": {"label": "Ice club", "style": STYLE_MELEE, "power": 0, "speed": 1, "reach": CLOSE_RANGE},
+	"stalker_bow": {"label": "Bone bow", "style": STYLE_RANGED, "power": 0, "speed": 1, "reach": 8.0},
 }
 const UNARMED := "fists"
 
@@ -74,9 +76,10 @@ const NOTICE_HIT := "hit"
 
 ## What an enemy can do on a tick. `move` (close in) and `rest` are not attacks and are not
 ## telegraphed; every other action with a `damage` is an attack with that base damage before
-## the style edge. `heavy` marks the hits worth countering. A `stance` action is a rest in
-## which the enemy changes weapon (the captain drawing his bow); it is announced a tick ahead
-## like an attack, so the change of style can be read and countered.
+## the style edge. `heavy` marks the hits worth countering. A `stance` action is a rest that
+## is announced a tick ahead like an attack: the captain changing weapon, so the change of
+## style can be read and countered, or a troll winding up, so its crush can be seen coming
+## two ticks out.
 const ACTION_MOVE := "move"
 const ACTION_REST := "rest"
 const ACTIONS := {
@@ -97,6 +100,11 @@ const ACTIONS := {
 	"draw_sabre": {"label": "Draws his sabre", "damage": 0, "stance": true},
 	"frost_bolt": {"label": "Frost bolt", "damage": 4},
 	"ice_lance": {"label": "Ice lance", "damage": 9, "heavy": true},
+	"smash": {"label": "Smash", "damage": 10},
+	"wind_up": {"label": "Winds up", "damage": 0, "stance": true},
+	"crush": {"label": "Crush", "damage": 26, "heavy": true},
+	"dart": {"label": "Dart", "damage": 5},
+	"barbed_volley": {"label": "Barbed volley", "damage": 14, "heavy": true},
 }
 
 ## Enemy kinds. `weapon` sets the style and reach. `speed` is metres per tick (the player walks
@@ -104,6 +112,9 @@ const ACTIONS := {
 ## an enemy works through while the player is in its reach, one per tick. `loot` always drops;
 ## `rare_percent` is the chance of one piece of RARE_LOOT on top. A dead enemy comes back at
 ## home `respawn_ticks` later.
+##
+## A kind with `kite` keeps its distance: after acting on a tick with the player closer than
+## `kite` metres, it backs off a step, so it has to be cornered against a wall to be caught.
 ##
 ## A kind with `stances` fights with more than one weapon: `stances[i]` is the weapon it holds
 ## for `actions[i]`, so its style and reach follow its place in the cycle. `boss_loot` is a
@@ -147,8 +158,22 @@ const ENEMIES := {
 		"boss_loot": ["iron_sword", "iron_bow", "iron_staff", "iron_armour"],
 		"rare_percent": 25, "respawn_ticks": 600, "boss": true,
 	},
+	# Ring two. A troll smashes, rests, then winds up a tick before its crush: the longest
+	# warning in the game, for the hardest blow. Slow, so it can be stepped away from.
+	"ice_troll": {
+		"label": "Ice troll", "health": 90, "weapon": "troll_club", "speed": 1.5, "sight": 6.0,
+		"actions": ["smash", ACTION_REST, "wind_up", "crush", ACTION_REST, ACTION_REST],
+		"loot": [{"item": "troll_hide", "count": 1}], "rare_percent": 15, "respawn_ticks": 200,
+	},
+	# Two darts, a breath, then a barbed volley; it backs away from anyone who closes in.
+	"ruin_stalker": {
+		"label": "Ruin stalker", "health": 35, "weapon": "stalker_bow", "speed": 1.5, "sight": 10.0,
+		"kite": 4.0, "actions": ["dart", "dart", ACTION_REST, "barbed_volley", ACTION_REST, ACTION_REST],
+		"loot": [{"item": "arrows", "count": 12}, {"item": "coal", "count": 1}], "rare_percent": 10,
+		"respawn_ticks": 150,
+	},
 }
-## Ring one's rare drop: one piece of iron gear. Iron is found, never smithed.
+## The rare drop in both rings: one piece of iron gear. Iron is found, never smithed.
 const RARE_LOOT: Array[String] = ["iron_sword", "iron_armour", "iron_bow", "iron_axe", "iron_pickaxe", "iron_staff"]
 
 

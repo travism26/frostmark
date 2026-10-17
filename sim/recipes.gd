@@ -5,7 +5,8 @@
 ## and `level` are the skill level required; `upgrade` is an outpost upgrade id that must be
 ## built first, or "" when none is needed. `xp` is experience granted to `skill` per craft.
 ## `tier` is the metal tier the recipe works; the simulation refuses any recipe above its
-## smithing cap (bronze in the first playable), so iron stays a thing found, not made.
+## smithing cap (bronze until the blast furnace raises it to steel). No recipe works iron:
+## iron stays a thing found, not made.
 ##
 ## A cooking entry is keyed by the raw item and gives the cooked `output`, the cooking
 ## `level` required, the `xp` per success, and the `burn` percent at that level, which falls
@@ -75,16 +76,37 @@ const RECIPES := {
 		"label": "Bronze armour", "inputs": {"bronze_bar": 4}, "output": {"item": "bronze_armour", "count": 1},
 		"skill": SkillTable.SMITHING, "level": 3, "upgrade": "armoury", "xp": 40, "tier": ItemTable.TIER_BRONZE,
 	},
-	# Listed so the workbench shows where the cap is: iron is found in ring one, never smelted.
-	"iron_bar": {
-		"label": "Iron bar", "inputs": {"iron_ore": 2}, "output": {"item": "iron_bar", "count": 1},
-		"skill": SkillTable.SMITHING, "level": 5, "upgrade": "forge", "xp": 0, "tier": ItemTable.TIER_IRON,
+	# Steel: iron ore from both rings and coal from ring two, once the blast furnace is built.
+	"steel_bar": {
+		"label": "Steel bar", "inputs": {"iron_ore": 1, "coal": 2}, "output": {"item": "steel_bar", "count": 1},
+		"skill": SkillTable.SMITHING, "level": 4, "upgrade": "blast_furnace", "xp": 20, "tier": ItemTable.TIER_STEEL,
+	},
+	"steel_axe": {
+		"label": "Steel axe", "inputs": {"steel_bar": 1, "logs": 2}, "output": {"item": "steel_axe", "count": 1},
+		"skill": SkillTable.SMITHING, "level": 5, "upgrade": "blast_furnace", "xp": 30, "tier": ItemTable.TIER_STEEL,
+	},
+	"steel_pickaxe": {
+		"label": "Steel pickaxe", "inputs": {"steel_bar": 1, "logs": 2}, "output": {"item": "steel_pickaxe", "count": 1},
+		"skill": SkillTable.SMITHING, "level": 5, "upgrade": "blast_furnace", "xp": 30, "tier": ItemTable.TIER_STEEL,
+	},
+	"steel_sword": {
+		"label": "Steel sword", "inputs": {"steel_bar": 2, "logs": 1}, "output": {"item": "steel_sword", "count": 1},
+		"skill": SkillTable.SMITHING, "level": 5, "upgrade": "blast_furnace", "xp": 50, "tier": ItemTable.TIER_STEEL,
+	},
+	"steel_bow": {
+		"label": "Steel bow", "inputs": {"steel_bar": 2, "logs": 3}, "output": {"item": "steel_bow", "count": 1},
+		"skill": SkillTable.SMITHING, "level": 5, "upgrade": "blast_furnace", "xp": 50, "tier": ItemTable.TIER_STEEL,
+	},
+	"steel_armour": {
+		"label": "Steel armour", "inputs": {"steel_bar": 3, "troll_hide": 1}, "output": {"item": "steel_armour", "count": 1},
+		"skill": SkillTable.SMITHING, "level": 6, "upgrade": "blast_furnace", "xp": 80, "tier": ItemTable.TIER_STEEL,
 	},
 }
 
 const COOKING := {
 	"raw_fish": {"output": "cooked_fish", "level": 1, "xp": 10, "burn": 40},
 	"raw_trout": {"output": "cooked_trout", "level": 3, "xp": 18, "burn": 50},
+	"raw_char": {"output": "cooked_char", "level": 5, "xp": 26, "burn": 50},
 }
 
 
