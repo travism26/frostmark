@@ -316,7 +316,7 @@ func _apply_events(events: Array[Dictionary]) -> void:
 				_death_screen.show_death(e)
 			SimVocab.EV_ENEMY_NOTICED:
 				if e["cause"] != CombatTable.NOTICE_PACK:
-					_last_event = "%s has noticed you!" % _enemy_name(e["enemy_id"]).capitalize()
+					_last_event = "%s has noticed you!" % _sentence(_enemy_name(e["enemy_id"]))
 			SimVocab.EV_ENEMY_MOVED:
 				var walked: Array = []
 				for p in e["path"]:
@@ -331,11 +331,11 @@ func _apply_events(events: Array[Dictionary]) -> void:
 					_sync_enemy(e["target"])
 			SimVocab.EV_MISSED:
 				_last_event = "%s's %s misses. You stepped clear." % [
-					_enemy_name(e["attacker"]).capitalize(), CombatTable.action_label(e["action"]).to_lower(),
+					_sentence(_enemy_name(e["attacker"])), CombatTable.action_label(e["action"]).to_lower(),
 				]
 			SimVocab.EV_ENEMY_DIED:
 				_sync_enemy(e["enemy_id"])
-				_last_event = "%s falls." % _enemy_name(e["enemy_id"]).capitalize()
+				_last_event = "%s falls." % _sentence(_enemy_name(e["enemy_id"]))
 			SimVocab.EV_ENEMY_DISENGAGED, SimVocab.EV_ENEMY_RESPAWNED:
 				_sync_enemy(e["enemy_id"])
 			SimVocab.EV_LOOT_DROPPED:
@@ -618,6 +618,10 @@ func _enemy_name(id: String) -> String:
 	return "the %s" % str(CombatTable.enemy(sim.state["enemies"][id]["kind"])["label"]).to_lower()
 
 
+static func _sentence(text: String) -> String:
+	return text.substr(0, 1).to_upper() + text.substr(1)
+
+
 func _hit_text(e: Dictionary) -> String:
 	var edge := ""
 	if float(e["multiplier"]) > 1.0:
@@ -626,7 +630,7 @@ func _hit_text(e: Dictionary) -> String:
 		edge = " Their style has the edge on it." if e["attacker"] == SimVocab.PLAYER else " Your style blunts it."
 	if e["attacker"] == SimVocab.PLAYER:
 		return "You hit %s for %d.%s" % [_enemy_name(e["target"]), e["amount"], edge]
-	return "%s hits you for %d.%s" % [_enemy_name(e["attacker"]).capitalize(), e["amount"], edge]
+	return "%s hits you for %d.%s" % [_sentence(_enemy_name(e["attacker"])), e["amount"], edge]
 
 
 ## A loot pile: a small crate with its contents written over it and a click volume that

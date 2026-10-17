@@ -172,7 +172,7 @@ func test_a_version_2_snapshot_migrates() -> void:
 	var imported := SimScript.new()
 	assert_true(imported.command(Vocab.IMPORT_SAVE, {"code": SaveCode.encode(v2)})["ok"])
 	assert_eq(imported.snapshot(), sim.snapshot())
-	H.place(sim, [8.5, 23.5])
+	H.place(sim, [14.5, 23.5])
 	assert_true(sim.command(Vocab.ATTACK, {"enemy_id": "archer_1"})["ok"])
 
 

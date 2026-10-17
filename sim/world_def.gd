@@ -105,7 +105,7 @@ static func outpost() -> WorldDef:
 		["wolf_3", "wolf", [-25.5, 27.5], "far_pack"],
 		["wolf_4", "wolf", [-27.5, 28.5], "far_pack"],
 		["wolf_5", "wolf", [-24.5, 29.5], "far_pack"],
-		["archer_1", "bandit_archer", [8.5, 28.5], "archer_1"],
+		["archer_1", "bandit_archer", [14.5, 28.5], "archer_1"],
 	]
 	for p in placements:
 		w.enemies[p[0]] = {"kind": p[1], "home": p[2], "pack": p[3]}

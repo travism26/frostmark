@@ -8,9 +8,9 @@ const Vocab := preload("res://sim/vocab.gd")
 
 ## Five metres north of the bandit archer: inside its sight and its bow's reach, and well
 ## away from both wolf packs.
-const NEAR_ARCHER := [8.5, 23.5]
+const NEAR_ARCHER := [14.5, 23.5]
 ## One metre north of the archer: close range.
-const BESIDE_ARCHER := [8.5, 27.5]
+const BESIDE_ARCHER := [14.5, 27.5]
 
 
 func test_the_style_table_gives_the_edge_both_ways() -> void:
@@ -251,10 +251,10 @@ func test_attack_is_refused_in_the_outpost_and_on_the_dead() -> void:
 
 func test_an_enemy_notices_by_sight() -> void:
 	var sim := SimScript.new()
-	H.place(sim, [8.5, 18.0])  # 10.5 m from the archer: just out of its sight
+	H.place(sim, [14.5, 18.0])  # 10.5 m from the archer: just out of its sight
 	var events := H.run(sim, 5)
 	assert_eq(H.of_kind(events, Vocab.EV_ENEMY_NOTICED).size(), 0, "too far to be seen")
-	H.place(sim, [8.5, 20.5])  # 8 m: inside its 9 m sight
+	H.place(sim, [14.5, 20.5])  # 8 m: inside its 9 m sight
 	events = H.run(sim, 1)
 	var noticed := H.of_kind(events, Vocab.EV_ENEMY_NOTICED)
 	assert_eq(noticed.size(), 1)
@@ -441,4 +441,18 @@ func test_fighting_one_pack_does_not_wake_the_other() -> void:
 	assert_eq(sim.state["enemies"]["wolf_1"]["mode"], Sim.MODE_DEAD)
 	assert_eq(sim.state["enemies"]["wolf_2"]["mode"], Sim.MODE_DEAD, "a club wins against the near pack")
 	for id in ["wolf_3", "wolf_4", "wolf_5", "archer_1"]:
+		assert_eq(sim.state["enemies"][id]["mode"], Sim.MODE_IDLE, "%s heard nothing" % id)
+
+
+func test_shooting_the_archer_from_the_west_does_not_wake_the_wolves() -> void:
+	var sim := SimScript.new()
+	H.place(sim, [7.0, 26.0])  # just inside bow reach of the archer, on the wolves' side
+	H.arm(sim, "wooden_bow", [{"item": "arrows", "count": 30}])
+	sim.command(Vocab.ATTACK, {"enemy_id": "archer_1"})
+	for i in 40:
+		H.run(sim, 1)
+		if sim.state["enemies"]["archer_1"]["mode"] == Sim.MODE_DEAD:
+			break
+	assert_eq(sim.state["enemies"]["archer_1"]["mode"], Sim.MODE_DEAD, "a bow duel with the archer is winnable")
+	for id in ["wolf_1", "wolf_2", "wolf_3"]:
 		assert_eq(sim.state["enemies"][id]["mode"], Sim.MODE_IDLE, "%s heard nothing" % id)
