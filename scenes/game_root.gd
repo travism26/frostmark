@@ -1,8 +1,8 @@
 ## Presentation glue for Frostmark. Owns one Sim, ticks it on a fixed accumulator, turns
 ## ground clicks into `move_to`, marker, field-fire and loot clicks into `interact` (the
 ## outpost gate into `cross_gate`) and enemy clicks into `attack`, and plays the simulation's
-## events back as motion, telegraph cues, HUD, banners, the death screen and the ring-two
-## ending. The world is built from the Sim's WorldDef (props from scenes/props.gd) so the
+## events back as motion, telegraph cues, sound, HUD, banners, the death screen and the
+## ring-two ending. The world is built from the Sim's WorldDef (props from scenes/props.gd) so the
 ## drawing and the walkability grid can never disagree. It starts on the title screen and
 ## writes the browser save whenever the simulation reports a save point, nudging the player
 ## to keep their save code after a long stretch of play or when the browser stops keeping saves.
@@ -85,6 +85,8 @@ const EndingScreen := preload("res://scenes/ending_screen.gd")
 const SaveNotice := preload("res://scenes/save_notice.gd")
 const CharacterGear := preload("res://scenes/character_gear.gd")
 const Atmosphere := preload("res://scenes/atmosphere.gd")
+const AudioDirector := preload("res://scenes/audio_director.gd")
+const SoundPanel := preload("res://scenes/sound_panel.gd")
 
 var sim: Sim
 var _accumulator := 0.0
@@ -114,6 +116,8 @@ var _save_notice: Control
 var _save_watch := SaveWatch.new()
 var _gear: Node3D
 var _atmosphere: Node
+var _audio: Node
+var _sound_panel: Control
 var _clock := 0.0  # seconds of play, for flicker
 ## Enemy id -> {root, body, label, cue, cue_at, segment, length}: its drawing, its telegraph
 ## cue (shown until the tick `cue_at` resolves) and the polyline it walked last tick.
@@ -158,6 +162,16 @@ func _ready() -> void:
 	_guide_panel = GuidePanel.new()
 	_guide_panel.dismissed.connect(_on_hints_set.bind(false))
 	_hud.add_child(_guide_panel)
+	_hud.sound_requested.connect(func() -> void: _sound_panel.open(_audio.settings))
+	_audio = AudioDirector.new()
+	add_child(_audio)
+	var sound_layer := Node3D.new()
+	add_child(sound_layer)
+	_audio.setup(_camera, sound_layer)
+	_sound_panel = SoundPanel.new()
+	_sound_panel.changed.connect(_audio.change_settings)
+	$HUD.add_child(_sound_panel)
+	_sound_panel.visible = false
 	_title_screen = TitleScreen.new()
 	_title_screen.help_requested.connect(func() -> void: _help_panel.open(false))
 	_title_screen.new_character.connect(_on_new_character)
@@ -308,6 +322,9 @@ func _show_sim() -> void:
 		_add_field_fire(id)
 	_gear.show_equipment(sim.state["inventory"]["equipment"])
 	_atmosphere.set_outside(not sim.in_outpost())
+	_audio.sim = sim
+	_audio.set_region(sim.state["player"]["region"])
+	_audio.sync_fires(_world.get_node("fire").position, sim.state["fires"])
 	for id in _enemies:
 		_sync_enemy(id)
 	for id in _loot:
@@ -379,6 +396,7 @@ static func _reason_text(reason: String) -> String:
 # --- Events to motion and text --------------------------------------------------------
 
 func _apply_events(events: Array[Dictionary]) -> void:
+	_audio.handle(events)
 	for e in events:
 		match e["kind"]:
 			SimVocab.EV_MOVED:
@@ -560,6 +578,7 @@ func _animate(delta: float) -> void:
 		_facing = sim.player_facing()
 	_place_character(pos, _facing, delta)
 	_camera_rig.global_position = _character.global_position
+	_audio.follow(_character.global_position)
 	for id in _enemies:
 		var drawn: Dictionary = _enemies[id]
 		var e: Dictionary = sim.state["enemies"][id]
