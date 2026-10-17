@@ -26,3 +26,10 @@ window/stretch/mode="canvas_items"
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 lights_and_shadows/directional_shadow/soft_shadow_filter_quality=0
+
+[shader_globals]
+
+wind={
+"type": "vec4",
+"value": Vector4(1, 0, 0, 1)
+}

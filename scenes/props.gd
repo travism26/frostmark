@@ -29,15 +29,16 @@ const ORE_COLORS := {
 	WorldDef.KIND_RICH_IRON_ROCK: Color(0.62, 0.30, 0.18),
 }
 
-static var _snow_materials := {}  # "colour|texture|snow_from" -> ShaderMaterial
+static var _snow_materials := {}  # "colour|texture|snow_from|sway" -> ShaderMaterial
 ## Fresh snow on the props, before the ring look tints it.
 const COLOR_SNOW_CAP := Color(0.93, 0.96, 1.0)
 
 
 ## A model scaled uniformly to `height` metres, standing on the ground at the origin, with its
 ## materials snow-capped (snow from faces whose normal's y exceeds `snow_from`) and its colours
-## multiplied by `tint`.
-static func model(path: String, height: float, snow_from := 0.55, tint := Color.WHITE) -> Node3D:
+## multiplied by `tint`. It bends `sway` far in the wind (1 for a pine); a negative sway takes
+## the model's own (see `sway_for`), so every tree model sways without opting in.
+static func model(path: String, height: float, snow_from := 0.55, tint := Color.WHITE, sway := -1.0) -> Node3D:
 	var holder := Node3D.new()
 	var scene: PackedScene = load(path)
 	var inner: Node3D = scene.instantiate()
@@ -45,7 +46,7 @@ static func model(path: String, height: float, snow_from := 0.55, tint := Color.
 	var s := height / maxf(box.size.y, 0.001)
 	inner.scale = Vector3.ONE * s
 	inner.position = Vector3(-(box.position.x + box.size.x * 0.5) * s, -box.position.y * s, -(box.position.z + box.size.z * 0.5) * s)
-	_snow(inner, snow_from, tint)
+	_snow(inner, snow_from, tint, sway if sway >= 0.0 else sway_for(path))
 	holder.add_child(inner)
 	return holder
 
@@ -295,6 +296,12 @@ static func _relative_transform(root: Node3D, node: Node3D) -> Transform3D:
 	return t
 
 
+## How far the model at `path` bends in the wind by default: Kenney trees sway, everything
+## else (rocks, stumps, logs, buildings) stands still.
+static func sway_for(path: String) -> float:
+	return 1.0 if path.get_file().begins_with("tree_") else 0.0
+
+
 ## The ring look's palette tint over the snow on every prop (the atmosphere node calls this
 ## whenever the tint at the character changes).
 static func apply_tint(tint: Color) -> void:
@@ -303,14 +310,14 @@ static func apply_tint(tint: Color) -> void:
 
 
 ## Swaps every surface of every mesh under `root` for a snow-capped copy of its material.
-static func _snow(root: Node3D, snow_from: float, tint := Color.WHITE) -> void:
+static func _snow(root: Node3D, snow_from: float, tint := Color.WHITE, sway := 0.0) -> void:
 	for node in root.find_children("*", "MeshInstance3D", true, false):
 		var mi := node as MeshInstance3D
 		for i in mi.mesh.get_surface_count():
 			var src := mi.mesh.surface_get_material(i) as StandardMaterial3D
 			var colour := (src.albedo_color if src != null else Color.WHITE) * tint
 			var tex: Texture2D = src.albedo_texture if src != null else null
-			var key := "%s|%s|%.2f" % [colour.to_html(), tex.resource_path if tex != null else "", snow_from]
+			var key := "%s|%s|%.2f|%.2f" % [colour.to_html(), tex.resource_path if tex != null else "", snow_from, sway]
 			if not _snow_materials.has(key):
 				var m := ShaderMaterial.new()
 				m.shader = SNOW_SHADER
@@ -319,5 +326,6 @@ static func _snow(root: Node3D, snow_from: float, tint := Color.WHITE) -> void:
 				if tex != null:
 					m.set_shader_parameter("albedo_texture", tex)
 				m.set_shader_parameter("snow_from", snow_from)
+				m.set_shader_parameter("sway", sway)
 				_snow_materials[key] = m
 			mi.set_surface_override_material(i, _snow_materials[key])
