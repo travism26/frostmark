@@ -3,9 +3,10 @@
 ## browser) under their own section, so they survive a reload and never travel inside a save
 ## code: they are browser preferences, not progress. `apply()` scales the window's content.
 ##
-## Other presentation systems read `reduced_motion()` from here (snowfall density, screen
-## shake, the frost vignette's pulse) and change no rule. Presentation-side on purpose: the
-## simulation never hears about either setting.
+## `reduced_motion` is the one key the atmosphere (snowfall density, the frost vignette's
+## pulse, the pines' sway) reads through AudioSettings as well, so it lives in that section
+## and both stores see the same value. Presentation-side on purpose: the simulation never
+## hears about either setting.
 class_name UiSettings
 extends RefCounted
 
@@ -30,7 +31,7 @@ static func load_from(path := PATH) -> UiSettings:
 	if cfg.load(path) != OK:
 		return settings
 	settings.ui_scale = nearest_scale(float(cfg.get_value(SECTION, KEY_SCALE, DEFAULT_SCALE)))
-	settings.reduced_motion = bool(cfg.get_value(SECTION, KEY_REDUCED_MOTION, false))
+	settings.reduced_motion = bool(cfg.get_value(AudioSettings.SECTION, KEY_REDUCED_MOTION, false))
 	return settings
 
 
@@ -39,7 +40,7 @@ func save_to(path := PATH) -> bool:
 	var cfg := ConfigFile.new()
 	cfg.load(path)  # a missing or unreadable file starts fresh
 	cfg.set_value(SECTION, KEY_SCALE, ui_scale)
-	cfg.set_value(SECTION, KEY_REDUCED_MOTION, reduced_motion)
+	cfg.set_value(AudioSettings.SECTION, KEY_REDUCED_MOTION, reduced_motion)
 	return cfg.save(path) == OK
 
 

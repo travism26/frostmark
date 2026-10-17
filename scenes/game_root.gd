@@ -303,6 +303,8 @@ func _hover_label(screen: Vector2) -> void:
 func _on_ui_settings(settings: UiSettings) -> void:
 	_ui_settings = settings
 	settings.apply(get_window())
+	_atmosphere.set_reduced_motion(settings.reduced_motion)
+	_audio.settings.reduced_motion = settings.reduced_motion  # the director's copy, saved with the sound
 	settings.save_to()
 
 
