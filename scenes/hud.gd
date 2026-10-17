@@ -1,6 +1,6 @@
 ## The in-game HUD: warmth and health gauges, the seven-skill panel, the pack and equipment,
-## the stash, workbench and upgrades panels, the field-fire button, the save-code panel and
-## the banner for big moments.
+## the stash, workbench and upgrades panels, the field-fire button, the save-code panel, the
+## button that opens the sound panel and the banner for big moments.
 ##
 ## Glue only. It reads `sim.state` to draw and turns button presses into commands through
 ## `command_requested`; whether a command is allowed is always the simulation's answer.
@@ -9,6 +9,7 @@ extends Control
 signal command_requested(kind: String, args: Dictionary)
 signal export_requested
 signal help_requested
+signal sound_requested
 
 ## The skills panel lists all seven, gathering, crafting, combat.
 const READOUT_SKILLS: Array[String] = SkillTable.NAMES
@@ -532,6 +533,10 @@ func _build_save() -> void:
 	help.text = "Help"
 	help.pressed.connect(func() -> void: help_requested.emit())
 	buttons_row.add_child(help)
+	var sound := Button.new()
+	sound.text = "Sound"
+	sound.pressed.connect(func() -> void: sound_requested.emit())
+	buttons_row.add_child(sound)
 	_saved_label = _text("Saved", 14)
 	_saved_label.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	_saved_label.grow_horizontal = Control.GROW_DIRECTION_BEGIN
