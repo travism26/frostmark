@@ -74,6 +74,9 @@ const REASON_TEXT := {
 	SimVocab.REASON_UPGRADE_MISSING: "Build the upgrade that unlocks it first.",
 	SimVocab.REASON_ALREADY_BUILT: "Already built.",
 	SimVocab.REASON_UPGRADE_LOCKED: "That isn't open yet.",
+	SimVocab.REASON_NOT_ATTUNED: "Walk up to the waystone first to attune it.",
+	SimVocab.REASON_NOT_AT_WAYSTONE: "Stand by the waystone to travel.",
+	SimVocab.REASON_INTERRUPTED: "The blow breaks your travel. Win the fight, or get clear, and try again.",
 	SimVocab.REASON_BAD_CODE: "That is not a Frostmark save code. Check that you copied all of it.",
 	SimVocab.REASON_BAD_CHECKSUM: "That save code has been changed or damaged (its checksum does not match).",
 	SimVocab.REASON_UNSUPPORTED_VERSION: "That save code comes from a newer version of Frostmark.",
@@ -90,6 +93,7 @@ const CharacterGear := preload("res://scenes/character_gear.gd")
 const Atmosphere := preload("res://scenes/atmosphere.gd")
 const AudioDirector := preload("res://scenes/audio_director.gd")
 const SoundPanel := preload("res://scenes/sound_panel.gd")
+const WaystonePanel := preload("res://scenes/waystone_panel.gd")
 
 var sim: Sim
 var _accumulator := 0.0
@@ -108,10 +112,12 @@ var _warmup_until := 0
 var _playing := false
 var _node_looks := {}  # node object id -> its prop, whose Full/Spent children show its state
 var _ring_gates := {}  # ring gate object id -> {bars, label}
+var _waystones := {}  # waystone object id -> {glow, label}
 var _fires := {}  # field fire id -> its prop
 var _placed_fires: Array = []  # the props of the fires placed in the world: the outpost's, the brazier
 var _title_screen: Control
 var _guide_panel: Control
+var _waystone_panel: Control
 var _help_panel: Control
 var _hud: Control
 var _death_screen: Control
@@ -165,6 +171,9 @@ func _ready() -> void:
 	_guide_panel = GuidePanel.new()
 	_guide_panel.dismissed.connect(_on_hints_set.bind(false))
 	_hud.add_child(_guide_panel)
+	_waystone_panel = WaystonePanel.new()
+	_waystone_panel.travel_requested.connect(func(id: String) -> void: _on_hud_command(SimVocab.TRAVEL, {"object_id": id}))
+	_hud.add_child(_waystone_panel)
 	_hud.sound_requested.connect(func() -> void: _sound_panel.open(_audio.settings))
 	_audio = AudioDirector.new()
 	add_child(_audio)
@@ -313,6 +322,7 @@ func _show_sim() -> void:
 	for id in _node_looks:
 		_set_node_look(id, int(sim.state["nodes"][id]["left"]) > 0)
 	_sync_ring_gates()
+	_sync_waystones()
 	for id in _fires:
 		(_fires[id] as Node).queue_free()
 	_fires.clear()
@@ -332,6 +342,7 @@ func _show_sim() -> void:
 		_add_loot(id)
 	_hud.refresh()
 	_guide_panel.show_sim(sim)
+	_waystone_panel.show_sim(sim)
 	_refresh_status()
 
 
@@ -419,6 +430,11 @@ func _apply_events(events: Array[Dictionary]) -> void:
 							_last_event = "You pass through the gate."
 						else:
 							_last_event = _ring_gate_text(e["object_id"])
+					SimVocab.ACTION_WAYSTONE:
+						if sim.waystone_awake(e["object_id"]):
+							_last_event = "The waystone hums. It can take you home."
+						else:
+							_last_event = "The waystone sleeps. Build Waystones at the outpost to wake it."
 			SimVocab.EV_REGION_CHANGED:
 				_last_event = "Entered the %s." % str(e["to"]).replace("_", " ")
 				if e["from"] == WorldDef.REGION_OUTPOST:
@@ -451,9 +467,20 @@ func _apply_events(events: Array[Dictionary]) -> void:
 				var label: String = UpgradeTable.get_upgrade(e["upgrade"])["label"]
 				_hud.banner("Built: %s." % label)
 				_last_event = "Built the %s." % label.to_lower()
+				_sync_waystones()
 			SimVocab.EV_RING_GATE_OPENED:
 				_sync_ring_gates()
 				_hud.banner("The gate to ring two is open.")
+			SimVocab.EV_WAYSTONE_ATTUNED:
+				_sync_waystones()
+				_hud.banner("You lay a hand on the waystone. It will remember you.")
+			SimVocab.EV_TRAVEL_STARTED:
+				_last_event = "Travelling home. Hold still: a blow will break it."
+			SimVocab.EV_TRAVELLED:
+				_segment = []
+				_place_character(sim.player_pos(), sim.player_facing(), 0.0)
+				_camera_rig.global_position = _character.global_position
+				_hud.banner("The waystone sets you down outside the outpost gate. Walk through it to bank your pack.")
 			SimVocab.EV_RING_TWO_REACHED:
 				_hud.banner("Ring two. The snow lies over broken walls older than the outpost, and the tracks in it are not wolves'. An old brazier still burns past the gate.")
 			SimVocab.EV_ENEMY_STANCE:
@@ -536,6 +563,7 @@ func _apply_events(events: Array[Dictionary]) -> void:
 				else:
 					_last_event = "Can't do that (%s)." % reason.replace("_", " ")
 	_hud.refresh()
+	_waystone_panel.show_sim(sim)
 	_refresh_status()
 
 
@@ -830,6 +858,8 @@ func _build_world(world: WorldDef) -> void:
 				prop = Props.anvil(1.1)
 			WorldDef.KIND_RING_GATE:
 				prop = Props.ring_gate(o["max"][0] - o["min"][0], o["height"])
+			WorldDef.KIND_WAYSTONE:
+				prop = Props.waystone(o["max"][0] - o["min"][0], o["height"])
 		if prop == null:
 			# The outpost gate: a flat threshold block, clickable through a taller volume.
 			var gate := _add_block(str(id), o["min"], o["max"], o["height"], COLOR_GATE)
@@ -856,6 +886,8 @@ func _build_world(world: WorldDef) -> void:
 			prop.add_child(label)
 			if kind == WorldDef.KIND_RING_GATE:
 				_ring_gates[id] = {"bars": prop.get_node("Bars"), "label": label}
+			elif kind == WorldDef.KIND_WAYSTONE:
+				_waystones[id] = {"glow": prop.get_node("Glow"), "label": label}
 
 
 ## Stands a prop on the centre of a footprint.
@@ -944,6 +976,15 @@ func _sync_ring_gates() -> void:
 		var open := sim.ring_gate_open(id)
 		(_ring_gates[id]["bars"] as Node3D).visible = not open
 		(_ring_gates[id]["label"] as Label3D).text = "Gate to ring two (open)" if open else "Gate to ring two (barred)"
+
+
+## A waystone's runes glow once the outpost has woken it; its label says whether it knows you.
+func _sync_waystones() -> void:
+	for id in _waystones:
+		var awake := sim.waystone_awake(id)
+		(_waystones[id]["glow"] as Node3D).visible = awake
+		var state := "asleep" if not awake else "attuned" if sim.waystone_attuned(id) else "visit to attune"
+		(_waystones[id]["label"] as Label3D).text = "Waystone (%s)" % state
 
 
 func _ring_gate_text(id: String) -> String:

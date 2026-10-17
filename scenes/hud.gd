@@ -292,8 +292,8 @@ static func _effect_text(effects: Dictionary) -> String:
 		parts.append("smithing works up to %s" % effects["smithing_tier"])
 	if effects.has("ring_gate"):
 		parts.append("works the gate to ring two once its captain falls")
-	if effects.has("waystone"):
-		parts.append("a waystone home from ring one")
+	if effects.has("waystones"):
+		parts.append("wakes the waystones in ring one and ring two: visit one, then travel home from it")
 	return "; ".join(parts)
 
 
