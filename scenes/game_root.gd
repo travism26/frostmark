@@ -341,6 +341,8 @@ func _show_sim() -> void:
 	_gear.show_equipment(sim.state["inventory"]["equipment"])
 	_character_view.set_sim(sim)
 	_audio.sim = sim
+	_atmosphere.sim = sim
+	_atmosphere.clear_footprints()
 	_audio.set_region(sim.state["player"]["region"])
 	_audio.sync_fires(_world.get_node("fire").position, sim.state["fires"])
 	for id in _enemies:

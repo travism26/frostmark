@@ -99,15 +99,18 @@ func test_settings_persist_volume_music_and_mute() -> void:
 	assert_almost_eq(fresh.volume, AudioSettings.DEFAULT_VOLUME, 0.0001, "no file: the default volume")
 	assert_almost_eq(fresh.music, AudioSettings.DEFAULT_MUSIC, 0.0001, "no file: the default music volume")
 	assert_false(fresh.muted, "no file: not muted")
+	assert_false(fresh.reduced_motion, "no file: full motion")
 	var settings := AudioSettings.new()
 	settings.volume = 0.35
 	settings.music = 0.1
 	settings.muted = true
+	settings.reduced_motion = true
 	assert_true(settings.save_to(SETTINGS_PATH), "the settings are written")
 	var back := AudioSettings.load_from(SETTINGS_PATH)
 	assert_almost_eq(back.volume, 0.35, 0.0001, "volume persists")
 	assert_almost_eq(back.music, 0.1, 0.0001, "music volume persists")
 	assert_true(back.muted, "mute persists")
+	assert_true(back.reduced_motion, "reduced motion persists")
 	DirAccess.remove_absolute(SETTINGS_PATH)
 
 

@@ -1,5 +1,5 @@
-## The player's sound settings: overall volume, music volume and mute, kept in their own
-## file beside the save (`user://` is IndexedDB in the browser) so they survive a reload
+## The player's sound settings: overall volume, music volume and mute, and reduced motion,
+## kept in their own file beside the save (`user://` is IndexedDB in the browser) so they survive a reload
 ## and never travel inside a save code. `apply()` sets the audio buses to match.
 ##
 ## Presentation-side on purpose: the simulation never hears about sound.
@@ -20,6 +20,7 @@ const DEFAULT_MUSIC := 0.6
 var volume := DEFAULT_VOLUME  # 0..1, everything
 var music := DEFAULT_MUSIC    # 0..1, the music under everything else
 var muted := false
+var reduced_motion := false  # less snow, no frost pulse, gentler sway
 
 
 ## The settings stored at `path`, or the defaults when there are none or they are unreadable.
@@ -31,6 +32,7 @@ static func load_from(path := PATH) -> AudioSettings:
 	settings.volume = clampf(float(cfg.get_value(SECTION, "volume", DEFAULT_VOLUME)), 0.0, 1.0)
 	settings.music = clampf(float(cfg.get_value(SECTION, "music", DEFAULT_MUSIC)), 0.0, 1.0)
 	settings.muted = bool(cfg.get_value(SECTION, "muted", false))
+	settings.reduced_motion = bool(cfg.get_value(SECTION, "reduced_motion", false))
 	return settings
 
 
@@ -39,6 +41,7 @@ func save_to(path := PATH) -> bool:
 	cfg.set_value(SECTION, "volume", volume)
 	cfg.set_value(SECTION, "music", music)
 	cfg.set_value(SECTION, "muted", muted)
+	cfg.set_value(SECTION, "reduced_motion", reduced_motion)
 	return cfg.save(path) == OK
 
 

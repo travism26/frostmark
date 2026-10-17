@@ -28,6 +28,8 @@ func test_every_ring_and_the_outpost_has_a_complete_look() -> void:
 			assert_true(look[field] is float, "%s.%s is a number" % [ring, field])
 		for field in ["tint", "sky", "fog_color", "sun_color", "ambient_color"]:
 			assert_true(look[field] is Color, "%s.%s is a colour" % [ring, field])
+		assert_true(look["wind_direction"] is Vector2, "%s.wind_direction is a vector" % ring)
+		assert_almost_eq((look["wind_direction"] as Vector2).length(), 1.0, 0.02, "%s.wind_direction is a heading" % ring)
 
 
 func test_looks_get_colder_and_darker_outward() -> void:
@@ -107,6 +109,7 @@ func test_blend_lerps_numbers_and_colours_and_picks_the_nearer_cue() -> void:
 	var mid := RingLookScript.blend(a, b, 0.5)
 	assert_almost_eq(float(mid["fog_distance"]), (float(a["fog_distance"]) + float(b["fog_distance"])) * 0.5)
 	assert_almost_eq(float(mid["snow_density"]), (float(a["snow_density"]) + float(b["snow_density"])) * 0.5)
+	assert_true((mid["wind_direction"] as Vector2).is_equal_approx((a["wind_direction"] as Vector2).lerp(b["wind_direction"], 0.5)), "the wind turns across the band")
 	assert_true((mid["tint"] as Color).is_equal_approx((a["tint"] as Color).lerp(b["tint"], 0.5)))
 	assert_eq(RingLookScript.blend(a, b, 0.49)["ambience"], a["ambience"])
 	assert_eq(RingLookScript.blend(a, b, 0.51)["ambience"], b["ambience"])
