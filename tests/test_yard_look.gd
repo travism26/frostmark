@@ -117,6 +117,64 @@ func test_the_winch_stands_inside_the_south_gate_to_one_side_of_the_path() -> vo
 		assert_true(absf(c.x - gate.get_center().x) < 7.0, "the winch's corner %s stands near the gate" % c)
 
 
+func test_the_smithing_line_builds_up_one_spot_beside_the_workbench() -> void:
+	var w := WorldDefScript.outpost()
+	var forge := YardLookScript.pieces(["forge"])
+	assert_eq(forge.size(), 1)
+	var both := YardLookScript.pieces(["blast_furnace", "forge"])
+	assert_eq(both.size(), 2)
+	assert_eq(both[0]["upgrade"], "forge")
+	assert_eq(both[1]["upgrade"], "blast_furnace")
+	assert_eq(both[0], forge[0], "the blast furnace adds to the forge and leaves it where it was")
+	for i in both.size():
+		assert_eq(both[i]["line"], "smithing")
+		assert_eq(both[i]["step"], i + 1)
+		assert_eq(both[i]["spot"], "smithy", "%s builds in the smithy" % both[i]["upgrade"])
+	var bench := _box(w.objects["workbench"])
+	var forge_at: Vector2 = both[0]["at"]
+	var furnace_at: Vector2 = both[1]["at"]
+	assert_true(forge_at.distance_to(bench.get_center()) < 3.5, "the forge stands beside the workbench")
+	assert_true(furnace_at.y < forge_at.y and absf(furnace_at.x - forge_at.x) < 0.5, "the furnace stands behind the forge")
+	assert_true(Geometry2D.intersect_polygons(YardLookScript.footprint(both[0]), YardLookScript.footprint(both[1])).is_empty(), "the furnace leaves the forge its ground")
+	# Against the north wall: nothing the player can stand on lies north of the tower.
+	var north_face := _yard_interior(w).position.y
+	var deepest := INF
+	for c in YardLookScript.footprint(both[1]):
+		deepest = minf(deepest, c.y)
+	assert_true(deepest - north_face < 0.2, "the furnace's back is at the wall: %s" % deepest)
+
+
+func test_the_blast_furnace_is_the_tallest_thing_in_the_yard() -> void:
+	var furnace := 0.0
+	var others := 0.0
+	for piece in YardLookScript.pieces(UpgradeTable.ids()):
+		for part in piece["parts"]:
+			var top: float = part.get("y", 0.0) + (part["height"] if part.has("model") else part["size"][1])
+			if piece["upgrade"] == "blast_furnace":
+				furnace = maxf(furnace, top)
+			else:
+				others = maxf(others, top)
+	for s in WorldDefScript.outpost().solids:
+		if s["kind"] in [WorldDef.KIND_WALL, WorldDef.KIND_DECOR]:
+			others = maxf(others, s["height"])
+	# The banners on the north wall hang to 3 m.
+	others = maxf(others, 3.0)
+	assert_true(furnace > others + 0.5, "the furnace (%.2f m) stands well above everything else (%.2f m)" % [furnace, others])
+
+
+func test_the_smithy_glows_with_emissive_materials_and_no_lights() -> void:
+	for piece in YardLookScript.pieces(["forge", "blast_furnace"]):
+		var node := WorldDressing.yard_piece(piece)
+		assert_true(node.find_children("*", "Light3D", true, false).is_empty(), "%s adds no light" % piece["upgrade"])
+		var glows := false
+		for mi: MeshInstance3D in node.find_children("*", "MeshInstance3D", true, false):
+			for i in mi.mesh.get_surface_count():
+				var m := mi.mesh.surface_get_material(i) as BaseMaterial3D
+				glows = glows or (m != null and m.emission_enabled)
+		assert_true(glows, "%s glows" % piece["upgrade"])
+		node.free()
+
+
 func test_only_built_upgrades_draw() -> void:
 	for id in UpgradeTable.ids():
 		for piece in YardLookScript.pieces([id]):
