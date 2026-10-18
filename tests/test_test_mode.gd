@@ -99,4 +99,8 @@ func test_any_other_code_passes_through_untouched() -> void:
 
 func test_the_query_pair_matches_its_hash() -> void:
 	assert_eq(QUERY_PAIR.sha256_text(), FieldKit.QUERY_HASH)
-	assert_false(FieldKit.asked_by_page(), "off the web no page asks for it")
+	assert_eq(FieldKit.page_code(), "", "off the web no page asks for it")
+	var full := FileAccess.get_file_as_string(CODE_PATH).strip_edges()
+	assert_eq(FieldKit.for_query("?" + QUERY_PAIR), full, "the query pair asks for the test-mode code")
+	assert_eq(FieldKit.for_query("?x=1&" + QUERY_PAIR), full, "beside other parameters too")
+	assert_eq(FieldKit.for_query("?hearth=wax"), "", "any other query asks for nothing")

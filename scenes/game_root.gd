@@ -220,8 +220,9 @@ func _ready() -> void:
 	_hud.visible = false
 	_show_sim()
 	_build_warmup()
-	if FieldKit.asked_by_page():
-		_on_import(FieldKit.code(sim.world))
+	var asked := FieldKit.page_code(sim.world)
+	if asked != "":
+		_on_import(asked)
 
 
 func _process(delta: float) -> void:
