@@ -319,6 +319,7 @@ func _on_ui_settings(settings: UiSettings) -> void:
 	_atmosphere.set_reduced_motion(settings.reduced_motion)
 	_audio.settings.reduced_motion = settings.reduced_motion  # the director's copy, saved with the sound
 	_build_beat.moves_camera = not settings.reduced_motion
+	sim.command(SimVocab.SET_AUTO_RETALIATE, {"on": settings.auto_retaliate})
 	settings.save_to()
 
 
@@ -371,6 +372,7 @@ func _start() -> void:
 
 ## Redraws everything that depends on the state after a new, continued or imported sim.
 func _show_sim() -> void:
+	sim.command(SimVocab.SET_AUTO_RETALIATE, {"on": _ui_settings.auto_retaliate})  # a browser preference, not in the save
 	_hud.sim = sim
 	_hud.close_panels()
 	_facing = sim.player_facing()

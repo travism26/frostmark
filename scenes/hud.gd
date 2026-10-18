@@ -76,6 +76,7 @@ var _flash_upgrade := ""  # the upgrade whose row is flashing, "" for none
 var _flash_left := 0.0
 var _scale_buttons := {}  # scale -> Button
 var _motion: CheckBox
+var _retaliate: CheckBox
 var _volume: HSlider
 var _music: HSlider
 var _mute: CheckBox
@@ -203,6 +204,7 @@ func set_settings(audio: AudioSettings, ui: UiSettings) -> void:
 	_music.set_value_no_signal(audio.music)
 	_mute.set_pressed_no_signal(audio.muted)
 	_motion.set_pressed_no_signal(ui.reduced_motion)
+	_retaliate.set_pressed_no_signal(ui.auto_retaliate)
 	for s in _scale_buttons:
 		(_scale_buttons[s] as Button).set_pressed_no_signal(is_equal_approx(float(s), ui.ui_scale))
 
@@ -779,6 +781,12 @@ func _build_settings_page() -> Control:
 	_motion.tooltip_text = "No screen shake, no frost pulse at the edges of the screen, and lighter snowfall."
 	_motion.toggled.connect(func(_on: bool) -> void: _emit_ui())
 	box.add_child(_motion)
+	_retaliate = CheckBox.new()
+	_retaliate.text = "Auto-retaliate"
+	_retaliate.tooltip_text = "Fight back with the weapon in hand when hit while standing still. A move click always wins, and it never switches style for you."
+	_retaliate.button_pressed = true
+	_retaliate.toggled.connect(func(_on: bool) -> void: _emit_ui())
+	box.add_child(_retaliate)
 	box.add_child(HSeparator.new())
 	_volume = _slider(box, "Volume")
 	_music = _slider(box, "Music")
@@ -849,6 +857,7 @@ func _emit_ui() -> void:
 		if (_scale_buttons[s] as Button).button_pressed:
 			settings.ui_scale = float(s)
 	settings.reduced_motion = _motion.button_pressed
+	settings.auto_retaliate = _retaliate.button_pressed
 	ui_changed.emit(settings)
 
 
