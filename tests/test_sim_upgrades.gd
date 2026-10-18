@@ -100,6 +100,60 @@ func test_waystones_need_the_gate_winch_first() -> void:
 	assert_true(sim.command(Vocab.BUILD, {"upgrade": "waystone"})["ok"])
 
 
+func test_the_vault_is_the_stash_lines_third_step() -> void:
+	var u := UpgradeTable.get_upgrade("stash_vault")
+	assert_eq(u["label"], "Stash vault")
+	assert_eq(u["effects"], {"stash": 4})
+	assert_eq(u["requires"], ["stash_cellar", "ring_two_gate"], "needs the cellar and the winch")
+	assert_true(int(u["cost"].get("iron_ore", 0)) > 0, "costs iron ore")
+	for kind in u["cost"]:
+		assert_eq(RecipeTable.ids().has(kind), false, "%s is gathered, not smithed" % kind)
+	assert_eq(u["locked"], "")
+
+
+## The vault's cost as stash entries, split into full stacks.
+func _vault_cost() -> Array:
+	var cost: Dictionary = UpgradeTable.get_upgrade("stash_vault")["cost"]
+	var entries: Array = []
+	for kind in cost:
+		var left := int(cost[kind])
+		while left > 0:
+			var n := mini(left, ItemTable.stack_size(kind))
+			entries.append({"item": kind, "count": n})
+			left -= n
+	return entries
+
+
+func test_the_vault_needs_the_cellar_and_the_winch() -> void:
+	var cost: Dictionary = UpgradeTable.get_upgrade("stash_vault")["cost"]
+	var entries := _vault_cost()
+	var winch_no_cellar := ["stash_shelves", "forge", "armoury", "ring_two_gate"]
+	var cellar_no_winch := ["stash_shelves", "stash_cellar", "forge", "armoury"]
+	for built in [winch_no_cellar, cellar_no_winch]:
+		var sim := _with_stash(entries, built, 16)
+		assert_eq(sim.command(Vocab.BUILD, {"upgrade": "stash_vault"})["reason"], Vocab.REASON_UPGRADE_MISSING)
+		H.run(sim, 1)
+		assert_false((sim.state["upgrades"] as Array).has("stash_vault"), "not built from %s" % str(built))
+		for kind in cost:
+			assert_eq(H.stash_count(sim, kind), int(cost[kind]), "nothing paid")
+
+
+func test_the_vault_pays_from_the_stash_and_grows_it_to_20() -> void:
+	var cost: Dictionary = UpgradeTable.get_upgrade("stash_vault")["cost"]
+	var entries := _vault_cost()
+	entries.append({"item": "wooden_bow", "count": 1})
+	var built := ["stash_shelves", "stash_cellar", "forge", "armoury", "ring_two_gate"]
+	var sim := _with_stash(entries, built, 16)
+	assert_true(sim.command(Vocab.BUILD, {"upgrade": "stash_vault"})["ok"])
+	var events := H.run(sim, 1)
+	assert_eq(H.of_kind(events, Vocab.EV_BUILT)[0]["upgrade"], "stash_vault")
+	assert_eq(int(sim.state["stash"]["capacity"]), 20)
+	assert_eq((sim.state["stash"]["slots"] as Array).size(), 20, "the new slots are there")
+	for kind in cost:
+		assert_eq(H.stash_count(sim, kind), 0, "the vault took its %s" % kind)
+	assert_eq(H.stash_count(sim, "wooden_bow"), 1, "the rest untouched")
+
+
 func test_the_forge_unlocks_bronze_recipes() -> void:
 	var cost: Dictionary = UpgradeTable.get_upgrade("forge")["cost"]
 	var entries: Array = []
