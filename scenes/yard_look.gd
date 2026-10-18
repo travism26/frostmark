@@ -11,13 +11,14 @@ extends RefCounted
 
 ## Where each line builds, in the yard: `at` [x, z] on the ground and `turn` about the up axis.
 ## A spot's own frame runs x along the wall and z out into the yard.
-## The stash corner: along the west wall, south of the stash.
+## The stash corner: along the west wall, south of the stash, each step of the line south
+## of the one before (a spot's +x runs north here).
 const SPOTS := {
 	"stash_corner": {"at": [-8.55, -4.4], "turn": PI * 0.5},
 }
 
 ## The hand-made meshes a part can name (WorldDressing builds them), beside the kit models.
-const MESHES := ["shelf_rack"]
+const MESHES := ["shelf_rack", "hatch", "iron_chest"]
 
 ## Each upgrade's look: its `line` and `step` in that line, the `spot` it builds in, its
 ## `offset` [x, z] in the spot's frame, its `size` [along, out] on the ground, and its
@@ -38,6 +39,26 @@ const LOOKS := {
 			{"model": Props.SURVIVAL + "box.glb", "height": 0.46, "snow_from": 1.1, "at": [-0.5, 0.0], "y": 1.23, "turn": 0.12},
 			{"model": Props.SURVIVAL + "box.glb", "height": 0.36, "snow_from": 1.1, "at": [0.15, 0.03], "y": 1.23, "turn": -0.25},
 			{"model": Props.SURVIVAL + "box.glb", "height": 0.3, "snow_from": 1.1, "at": [0.7, -0.02], "y": 1.23, "turn": 0.35},
+		],
+	},
+	# A trapdoor to the cellar in the yard floor, south of the shelves, with a stack of casks
+	# against the wall between them: the stores have gone below ground.
+	"stash_cellar": {
+		"line": "stash", "step": 2, "spot": "stash_corner", "offset": [-2.3, 0.3], "size": [2.0, 1.3],
+		"parts": [
+			{"mesh": "hatch", "size": [1.0, 0.1, 0.9], "at": [-0.42, 0.15], "y": 0.0, "turn": 0.0},
+			{"model": Props.SURVIVAL + "barrel.glb", "height": 0.62, "snow_from": 0.8, "at": [0.3, -0.36], "y": 0.0, "turn": 0.3},
+			{"model": Props.SURVIVAL + "barrel.glb", "height": 0.62, "snow_from": 0.8, "at": [0.74, -0.36], "y": 0.0, "turn": 1.1},
+			{"model": Props.SURVIVAL + "barrel.glb", "height": 0.6, "snow_from": 0.8, "at": [0.55, 0.1], "y": 0.0, "turn": 2.0},
+			{"model": Props.SURVIVAL + "barrel.glb", "height": 0.58, "snow_from": 0.7, "at": [0.52, -0.3], "y": 0.62, "turn": 0.6},
+		],
+	},
+	# An iron-bound chest, longer and darker than the stash, south of the cellar: the last
+	# step of the corner, its lock facing the yard.
+	"stash_vault": {
+		"line": "stash", "step": 3, "spot": "stash_corner", "offset": [-4.4, 0.12], "size": [1.4, 0.95],
+		"parts": [
+			{"mesh": "iron_chest", "size": [1.2, 0.72, 0.78], "at": [0.0, 0.0], "y": 0.0, "turn": 0.0},
 		],
 	},
 }

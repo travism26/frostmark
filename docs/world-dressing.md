@@ -34,8 +34,10 @@ What the outpost has built stands in its yard, specified in [#47](https://github
 | Upgrade | Spot | Piece |
 |---------|------|-------|
 | Stash shelves | The stash corner, along the west wall south of the stash | A timber shelf rack with crates and a keg on its boards |
+| Stash cellar | The stash corner, south of the shelves | A plank hatch in the yard floor with iron hinge straps, and a stack of casks against the wall |
+| Stash vault | The stash corner, south of the cellar | An iron-bound chest: timber body, plank lid, iron straps and a brass lock plate facing the yard |
 
-A later step of a line builds beside the earlier step in the same spot. Every piece stays inside the palisade and clear of the stations, the tent and the gate path (`tests/test_yard_look.gd`), and every piece's materials are sampled in the shader warm-up, built or not. `tools/spot_shots.gd` shows a spot with upgrades built.
+A later step of a line builds beside the earlier step in the same spot, so the stash corner grows south along the west wall one step at a time (the woodpile's log stacks stand further south to leave it room). Every piece stays inside the palisade and clear of the stations, the tent and the gate path (`tests/test_yard_look.gd`), and every piece's materials are sampled in the shader warm-up, built or not. `tools/spot_shots.gd` shows a spot with upgrades built.
 
 ## The ruin kit
 
