@@ -31,6 +31,56 @@ func test_a_built_upgrade_yields_its_piece() -> void:
 	assert_true((shelves["at"] as Vector2).distance_to(stash.get_center()) < 4.0, "the shelves stand beside the stash")
 
 
+func test_the_cellar_and_the_vault_yield_their_pieces() -> void:
+	for id in ["stash_cellar", "stash_vault"]:
+		var pieces := YardLookScript.pieces([id])
+		assert_eq(pieces.size(), 1, "building %s draws one piece" % id)
+		assert_eq(pieces[0]["upgrade"], id)
+		assert_eq(pieces[0]["line"], "stash")
+		assert_true(not (pieces[0]["parts"] as Array).is_empty(), "%s is made of something" % id)
+	var cellar_parts: Array = YardLookScript.pieces(["stash_cellar"])[0]["parts"]
+	assert_true(cellar_parts.any(func(p: Dictionary) -> bool: return p.get("mesh", "") == "hatch"), "the cellar has a hatch")
+	assert_true(cellar_parts.filter(func(p: Dictionary) -> bool: return str(p.get("model", "")).ends_with("barrel.glb")).size() >= 3, "the cellar has a stack of casks")
+	var vault_parts: Array = YardLookScript.pieces(["stash_vault"])[0]["parts"]
+	assert_true(vault_parts.any(func(p: Dictionary) -> bool: return p.get("mesh", "") == "iron_chest"), "the vault is an iron-bound chest")
+
+
+func test_the_steps_of_a_line_share_one_spot() -> void:
+	var spots := {}  # line -> its spot
+	for piece in YardLookScript.pieces(UpgradeTable.ids()):
+		var line: String = piece["line"]
+		if spots.has(line):
+			assert_eq(piece["spot"], spots[line], "%s builds in the %s line's spot" % [piece["upgrade"], line])
+		else:
+			spots[line] = piece["spot"]
+
+
+func test_the_stash_corner_grows_along_the_west_wall_one_step_beside_the_last() -> void:
+	var line := YardLookScript.pieces(["stash_shelves", "stash_cellar", "stash_vault"])
+	assert_eq(line.size(), 3, "all three steps of the stash line have a piece")
+	var west_face := _yard_interior(WorldDefScript.outpost()).position.x
+	for i in line.size():
+		var piece := line[i]
+		assert_eq(int(piece["step"]), i + 1, "the stash line's pieces come in step order")
+		var here := _bounds(piece)
+		assert_true(here.position.x - west_face < 0.2, "%s stands against the west wall" % piece["upgrade"])
+		if i == 0:
+			continue
+		var before := _bounds(line[i - 1])
+		assert_true(not here.intersects(before), "%s stands beside %s, not on it" % [piece["upgrade"], line[i - 1]["upgrade"]])
+		assert_true(here.position.y > before.position.y, "%s stands south of %s" % [piece["upgrade"], line[i - 1]["upgrade"]])
+		assert_true(here.position.y - before.end.y < 0.6, "%s stands close beside %s" % [piece["upgrade"], line[i - 1]["upgrade"]])
+
+
+func test_no_two_pieces_overlap() -> void:
+	var pieces := YardLookScript.pieces(UpgradeTable.ids())
+	for i in pieces.size():
+		for j in range(i + 1, pieces.size()):
+			var a := YardLookScript.footprint(pieces[i])
+			var b := YardLookScript.footprint(pieces[j])
+			assert_true(Geometry2D.intersect_polygons(a, b).is_empty(), "%s and %s do not overlap" % [pieces[i]["upgrade"], pieces[j]["upgrade"]])
+
+
 func test_only_built_upgrades_draw() -> void:
 	for id in UpgradeTable.ids():
 		for piece in YardLookScript.pieces([id]):
@@ -98,6 +148,15 @@ func test_every_look_is_for_a_real_upgrade_in_a_real_spot() -> void:
 static func _box(thing: Dictionary) -> Rect2:
 	var lo := Vector2(thing["min"][0], thing["min"][1])
 	return Rect2(lo, Vector2(thing["max"][0], thing["max"][1]) - lo)
+
+
+## A piece's footprint as a box on the ground.
+static func _bounds(piece: Dictionary) -> Rect2:
+	var corners := YardLookScript.footprint(piece)
+	var r := Rect2(corners[0], Vector2.ZERO)
+	for c in corners:
+		r = r.expand(c)
+	return r
 
 
 ## The outpost's floor inside the palisade.
