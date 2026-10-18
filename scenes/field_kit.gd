@@ -32,6 +32,8 @@ const STASH := [
 	{"item": "troll_hide", "count": 5}, {"item": "ice_crystal", "count": 10},
 	{"item": "cooked_char", "count": 10}, {"item": "cooked_char", "count": 10},
 	{"item": "arrows", "count": 100}, {"item": "frost_shards", "count": 100},
+	{"item": "iron_ore", "count": 10}, {"item": "coal", "count": 10},
+	{"item": "steel_bar", "count": 10}, {"item": "logs", "count": 10},
 ]
 
 
