@@ -29,19 +29,22 @@ const LIGHT_FIRE := "light_fire"    # {}                       burn logs from th
 const SET_HINTS := "set_hints"      # {on: bool}               turn the first-outing guide off (dismiss) or back on
 const NEW_CHARACTER := "new_character"  # {previous: String}   start over; a previous save code turns the guide off
 const TRAVEL := "travel"            # {object_id}              channel at a waystone, then stand at the outpost gate
+const SET_AUTO_RETALIATE := "set_auto_retaliate"  # {on: bool}  fight back when hit while idle (on) or not
 
 ## Every command kind: the spec's fifteen in spec order, then the brief's field fire, then the
-## first-outing guide's two, then waystone travel. `Sim.command()` rejects anything else as
+## first-outing guide's two, then waystone travel, then auto-retaliate. `Sim.command()` rejects anything else as
 ## `unknown_command`.
 const COMMANDS: Array[String] = [
 	MOVE_TO, INTERACT, GATHER, COOK, SMITH, EQUIP, EAT, DROP, DEPOSIT, WITHDRAW,
 	BUILD, ATTACK, CROSS_GATE, EXPORT_SAVE, IMPORT_SAVE, LIGHT_FIRE, SET_HINTS, NEW_CHARACTER, TRAVEL,
+	SET_AUTO_RETALIATE,
 ]
 
 ## Commands that do something in this slice. The rest answer `not_implemented`.
 const IMPLEMENTED: Array[String] = [
 	MOVE_TO, INTERACT, GATHER, COOK, SMITH, EQUIP, EAT, DROP, DEPOSIT, WITHDRAW, BUILD, ATTACK,
 	CROSS_GATE, EXPORT_SAVE, IMPORT_SAVE, LIGHT_FIRE, SET_HINTS, NEW_CHARACTER, TRAVEL,
+	SET_AUTO_RETALIATE,
 ]
 
 # --- Events ---------------------------------------------------------------------

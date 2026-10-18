@@ -115,6 +115,9 @@ var _save_due := ""
 var _ate := false
 var _noise := 0.0
 var _dead_cause := ""
+## Whether a player standing idle fights back when hit. A browser preference set with
+## `set_auto_retaliate`, not progress, so it lives outside `state` and never enters a save.
+var auto_retaliate := true
 
 
 func _init(world_def: WorldDef = null) -> void:
@@ -235,6 +238,8 @@ func command(kind: String, args: Dictionary = {}) -> Dictionary:
 			return _cmd_new_character(args)
 		SimVocab.TRAVEL:
 			return _cmd_travel(args)
+		SimVocab.SET_AUTO_RETALIATE:
+			return _cmd_set_auto_retaliate(args)
 	return _reject(kind, args, SimVocab.REASON_NOT_IMPLEMENTED)
 
 
@@ -319,6 +324,14 @@ func _cmd_set_hints(args: Dictionary) -> Dictionary:
 		return _reject(SimVocab.SET_HINTS, args, SimVocab.REASON_BAD_ARGS)
 	state["guide"]["on"] = args["on"]
 	_emit({"kind": SimVocab.EV_HINTS_SET, "on": args["on"]})
+	return {"ok": true, "reason": ""}
+
+
+## Turns auto-retaliate on or off. It outlives a new character or a loaded save.
+func _cmd_set_auto_retaliate(args: Dictionary) -> Dictionary:
+	if not (args.get("on") is bool):
+		return _reject(SimVocab.SET_AUTO_RETALIATE, args, SimVocab.REASON_BAD_ARGS)
+	auto_retaliate = args["on"]
 	return {"ok": true, "reason": ""}
 
 
@@ -1126,10 +1139,28 @@ func _strike(attacker: String, defender: String, base: int) -> int:
 	})
 	if defender == SimVocab.PLAYER:
 		_emit({"kind": SimVocab.EV_TOOK_DAMAGE, "amount": amount, "cause": a["kind"], "health": health})
+		_retaliate(attacker)
 		if is_travelling():
 			_stop_activity(SimVocab.REASON_INTERRUPTED)
 	_noise = maxf(_noise, CombatTable.NOISE_FIGHT)
 	return amount
+
+
+## Auto-retaliate: a player standing idle (not walking, and doing nothing else) who is hit
+## attacks the enemy that hit them, with whatever weapon is in hand, from the next tick. It
+## never swaps style, and anything the player asked for, a walk above all, wins: a walking or
+## busy player is left alone, and any later command replaces the attack as usual. It holds
+## back wherever `attack` would refuse.
+func _retaliate(attacker: String) -> void:
+	var player: Dictionary = state["player"]
+	if not auto_retaliate or int(state["health"]) <= 0:
+		return
+	if not (player["activity"] as Dictionary).is_empty() or not (player["path"] as Array).is_empty():
+		return
+	if in_outpost() or not _same_side(attacker) or not _has_ammo():
+		return
+	player["target_object"] = ""
+	player["activity"] = {"kind": SimVocab.ATTACK, "object_id": attacker}
 
 
 func _step_enemy(id: String) -> void:

@@ -229,6 +229,7 @@ func test_the_ruin_stalker_shoots_on_its_pattern() -> void:
 func test_the_ruin_stalker_backs_away_from_anyone_who_closes_in() -> void:
 	var sim := _gate_open()
 	_sturdy(sim)
+	sim.command(Vocab.SET_AUTO_RETALIATE, {"on": false})  # the player stands still throughout
 	H.place(sim, [-32.5, 69.5])  # 3 m off, inside its kiting distance
 	var before := Vector2(-32.5, 72.5)
 	H.run(sim, 2)
