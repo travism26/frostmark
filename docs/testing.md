@@ -2,7 +2,13 @@
 
 ## The test-mode code
 
-To check something deep in the rings without playing up to it, import the test-mode code: on the title screen choose **Import code** and paste the whole of `tools/test_mode_code.txt`. It works on the live site and in a local build.
+To check something deep in the rings without playing up to it, load the test-mode character. There are three ways, all giving the same save:
+
+- **Short code:** on the title screen type `PELTKEG7` into **Import code** (case and spaces do not matter).
+- **Link:** open <https://travism26.github.io/frostmark/?hearth=tallow> (or `?hearth=tallow` on a local build). The game skips the title screen and loads the character on startup, every time the page loads with that parameter.
+- **Full code:** paste the whole of `tools/test_mode_code.txt` into **Import code**.
+
+They work on the live site and in a local build. The short code and the link are obscurity, not security: the repo is public, so anyone reading this file can use them, and the game only keeps their sha256 hashes (`scenes/field_kit.gd`) so they do not turn up in a search of the code. Nothing in the game's interface mentions them.
 
 It is an ordinary save code of the current save version, not a cheat: the rules are unchanged, so the character can still freeze, be hit and die. It loads a character in the outpost with:
 
@@ -13,15 +19,15 @@ It is an ordinary save code of the current save version, not a cheat: the rules 
 - both waystones attuned and awake, so `travel` home works from either
 - full warmth and health, and the hints off
 
-Importing replaces the browser save, so export your own code first if you want it back.
+Loading it replaces the browser save, so export your own code first if you want it back.
 
-`tools/test_mode_code.gd` builds it from a new character through `restore()` and writes the file:
+`scenes/field_kit.gd` builds it from a new character through `restore()`, so the short code and the link always give a save of the current version. `tools/test_mode_code.gd` writes the same code to the file:
 
 ```
 godot --headless -s tools/test_mode_code.gd
 ```
 
-`tests/test_test_mode.gd` imports the file and checks every point above. An older code still migrates forward, but regenerate it when the save version moves on or a test there fails (a new skill would load at level 1, for example).
+`tests/test_test_mode.gd` imports the file and checks every point above, and that the short code loads the same character. An older code still migrates forward, but regenerate it when the save version moves on or a test there fails (a new skill would load at level 1, for example).
 
 ## Other codes
 

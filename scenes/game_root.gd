@@ -213,6 +213,8 @@ func _ready() -> void:
 	_hud.visible = false
 	_show_sim()
 	_build_warmup()
+	if FieldKit.asked_by_page():
+		_on_import(FieldKit.code(sim.world))
 
 
 func _process(delta: float) -> void:
@@ -330,7 +332,7 @@ func _on_continue() -> void:
 
 func _on_import(code: String) -> void:
 	var fresh := Sim.new(sim.world)
-	var result := fresh.command(SimVocab.IMPORT_SAVE, {"code": code})
+	var result := fresh.command(SimVocab.IMPORT_SAVE, {"code": FieldKit.expand(code, sim.world)})
 	if not result["ok"]:
 		_title_screen.show_error(_reason_text(result["reason"]))
 		return
