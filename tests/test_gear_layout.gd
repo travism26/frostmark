@@ -14,8 +14,11 @@ const BODY_PARTS := [
 ]
 
 
-func _gear(weapon: String, tool: String, armour := "") -> Dictionary:
-	return {ItemTable.SLOT_WEAPON: weapon, ItemTable.SLOT_TOOL: tool, ItemTable.SLOT_ARMOUR: armour}
+func _gear(weapon: String, tool: String, body := "", helm := "", legs := "") -> Dictionary:
+	return {
+		ItemTable.SLOT_WEAPON: weapon, ItemTable.SLOT_TOOL: tool,
+		ItemTable.SLOT_HELM: helm, ItemTable.SLOT_BODY: body, ItemTable.SLOT_LEGS: legs,
+	}
 
 
 func test_nothing_equipped_draws_nothing() -> void:
@@ -26,17 +29,31 @@ func test_nothing_equipped_draws_nothing() -> void:
 
 
 func test_at_rest_the_weapon_is_in_the_hand_and_the_tool_on_the_back() -> void:
-	var layout := GearLayoutScript.place(_gear("steel_bow", "steel_pickaxe", "iron_armour"), false)
+	var layout := GearLayoutScript.place(_gear("steel_bow", "steel_pickaxe", "iron_body"), false)
 	assert_eq(layout[GearLayoutScript.HAND], "steel_bow")
 	assert_eq(layout[GearLayoutScript.BACK], "steel_pickaxe")
-	assert_eq(layout[GearLayoutScript.BODY], "iron_armour")
+	assert_eq(layout[GearLayoutScript.BODY], "iron_body")
 
 
 func test_at_work_the_tool_is_in_the_hand_and_the_weapon_put_away() -> void:
-	var layout := GearLayoutScript.place(_gear("steel_sword", "steel_axe", "iron_armour"), true)
+	var layout := GearLayoutScript.place(_gear("steel_sword", "steel_axe", "iron_body"), true)
 	assert_eq(layout[GearLayoutScript.HAND], "steel_axe")
 	assert_eq(layout[GearLayoutScript.BACK], "", "nothing on the back while the tool is out")
-	assert_eq(layout[GearLayoutScript.BODY], "iron_armour", "armour stays on at work")
+	assert_eq(layout[GearLayoutScript.BODY], "iron_body", "the body piece stays on at work")
+
+
+func test_each_armour_piece_has_its_own_place_and_shows_only_when_worn() -> void:
+	var full := GearLayoutScript.place(_gear("", "", "wooden_body", "wooden_helm", "wooden_legs"), false)
+	assert_eq(full[GearLayoutScript.HEAD], "wooden_helm")
+	assert_eq(full[GearLayoutScript.BODY], "wooden_body")
+	assert_eq(full[GearLayoutScript.LEGS], "wooden_legs")
+	var helm_only := GearLayoutScript.place(_gear("", "", "", "iron_helm"), false)
+	assert_eq(helm_only[GearLayoutScript.HEAD], "iron_helm")
+	assert_eq(helm_only[GearLayoutScript.BODY], "", "no body drawn when none is worn, whatever the helm's tier")
+	assert_eq(helm_only[GearLayoutScript.LEGS], "")
+	var legs_only := GearLayoutScript.place(_gear("", "", "", "", "steel_legs"), true)
+	assert_eq(legs_only[GearLayoutScript.HEAD], "", "no helm drawn when none is worn")
+	assert_eq(legs_only[GearLayoutScript.LEGS], "steel_legs", "the legs stay on at work")
 
 
 func test_bare_handed_with_a_tool() -> void:
@@ -58,7 +75,7 @@ func test_every_item_drawn_is_one_equipped() -> void:
 	for weapon in ["", "wooden_club", "steel_sword", "iron_bow", "bronze_staff"]:
 		for tool in ["", "wooden_axe", "steel_pickaxe", "fishing_rod"]:
 			for working in [false, true]:
-				var gear := _gear(weapon, tool, "steel_armour")
+				var gear := _gear(weapon, tool, "steel_body", "steel_helm", "steel_legs")
 				var layout := GearLayoutScript.place(gear, working)
 				var drawn: Array = []
 				for place in GearLayoutScript.PLACES:

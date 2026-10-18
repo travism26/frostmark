@@ -1,11 +1,13 @@
 ## The character's visible gear, placed by GearLayout from the equipment slots: the item in use
 ## in the hand (a bow in the left, a staff upright in the right), the tool slung on the back
-## while the hands are free of it and the armour on the chest, each in its tier's colour
+## while the hands are free of it, and each worn armour piece in its place (the helm on the
+## head, the body on the chest, the legs on the hips and shins), each in its tier's colour
 ## (wood, bronze, iron, steel) and hung on the CharacterView's bone slots so it swings with the
 ## animation. While the view chops, mines or fishes, the tool moves to the right hand (the rod
-## tipped forward over the water) and the weapon is put away. Armour also changes the
-## silhouette by tier (a vest, then pauldrons, then a helm), so progress reads at a glance
-## from the top-down camera.
+## tipped forward over the water) and the weapon is put away. A piece shows because it is worn,
+## whatever its tier; the tier changes its shape (pauldrons on a body from bronze, a band on a
+## helm from bronze and a nose guard from iron, greaves under the kilt from iron), so progress
+## reads at a glance from the top-down camera.
 ##
 ## Presentation only: GameRoot hands it the equipment slots from the state after every
 ## `equipped` event and on load. The slots come lazily from a sibling CharacterView, so the
@@ -70,8 +72,12 @@ func _redraw() -> void:
 					_build_held_tool(view, place, item)
 				else:
 					_build_weapon(view, place, item)
+			GearLayout.HEAD:
+				_build_helm(view, place, item)
 			GearLayout.BODY:
-				_build_armour(view, place, item)
+				_build_body(view, place, item)
+			GearLayout.LEGS:
+				_build_legs(view, place, item)
 			GearLayout.BACK:
 				_build_slung_tool(view, place, item)
 	set_process(_equipment.get(ItemTable.SLOT_TOOL, "") != "")
@@ -118,10 +124,9 @@ func _build_weapon(view: CharacterView, place: String, item: String) -> void:
 	_pieces[place].append(sword)
 
 
-## A vest round the chest; from bronze, pauldrons on the shoulders; from iron, a helm.
-func _build_armour(view: CharacterView, place: String, item: String) -> void:
+## A vest round the chest; from bronze, pauldrons on the shoulders.
+func _build_body(view: CharacterView, place: String, item: String) -> void:
 	var colour := _tier_colour(item)
-	var rank := ItemTable.tier_rank(ItemTable.tier(item))
 	var chest := _mount(view, place, "chest")
 	var vest := CylinderMesh.new()
 	vest.top_radius = 0.34
@@ -130,20 +135,26 @@ func _build_armour(view: CharacterView, place: String, item: String) -> void:
 	vest.radial_segments = 8
 	vest.material = Props.flat(colour)
 	Figures.part(chest, vest, Vector3(0, -0.06, 0))
-	if rank >= 1:
+	if _rank(item) >= 1:
 		for side in [-1, 1]:
 			var pad := Figures.part(chest, Props.box(Vector3(0.26, 0.1, 0.32), colour.lightened(0.1)), Vector3(side * 0.4, 0.16, 0))
 			pad.rotation.z = side * -0.35
-	if rank >= 2:
-		var head := _mount(view, place, "head")
-		var helm := SphereMesh.new()
-		helm.radius = 0.47
-		helm.height = 0.42
-		helm.radial_segments = 8
-		helm.rings = 3
-		helm.is_hemisphere = true
-		helm.material = Props.flat(colour)
-		Figures.part(head, helm, Vector3(0, 0.4, 0))
+
+
+## A dome over the crown; from bronze, a band round its rim; from iron, a nose guard.
+func _build_helm(view: CharacterView, place: String, item: String) -> void:
+	var colour := _tier_colour(item)
+	var rank := _rank(item)
+	var head := _mount(view, place, "head")
+	var helm := SphereMesh.new()
+	helm.radius = 0.47
+	helm.height = 0.42
+	helm.radial_segments = 8
+	helm.rings = 3
+	helm.is_hemisphere = true
+	helm.material = Props.flat(colour)
+	Figures.part(head, helm, Vector3(0, 0.4, 0))
+	if rank >= 1:
 		var band := CylinderMesh.new()
 		band.top_radius = 0.48
 		band.bottom_radius = 0.48
@@ -151,6 +162,32 @@ func _build_armour(view: CharacterView, place: String, item: String) -> void:
 		band.radial_segments = 8
 		band.material = Props.flat(colour.darkened(0.2))
 		Figures.part(head, band, Vector3(0, 0.42, 0))
+	if rank >= 2:
+		Figures.part(head, Props.box(Vector3(0.07, 0.2, 0.06), colour.darkened(0.2)), Vector3(0, 0.34, -0.47))
+
+
+## A kilt round the hips; from iron, greaves on both shins as well.
+func _build_legs(view: CharacterView, place: String, item: String) -> void:
+	var colour := _tier_colour(item)
+	var hips := _mount(view, place, "hips")
+	var kilt := CylinderMesh.new()
+	kilt.top_radius = 0.33
+	kilt.bottom_radius = 0.38
+	kilt.height = 0.22
+	kilt.radial_segments = 8
+	kilt.material = Props.flat(colour.darkened(0.1))
+	Figures.part(hips, kilt, Vector3(0, -0.02, 0))
+	if _rank(item) < 2:
+		return
+	for side in ["l", "r"]:
+		var shin := _mount(view, place, "lowerleg_" + side)
+		var greave := CylinderMesh.new()
+		greave.top_radius = 0.13
+		greave.bottom_radius = 0.11
+		greave.height = 0.22
+		greave.radial_segments = 8
+		greave.material = Props.flat(colour)
+		Figures.part(shin, greave, Vector3(0, -0.12, 0))
 
 
 ## The tool slung across the back: Kenney's axe or pickaxe, or the fishing rod.
@@ -190,6 +227,10 @@ func _build_held_tool(view: CharacterView, place: String, item: String) -> void:
 	var tool := Figures.tool(ItemTable.tool(item), colour, height)
 	tool.position.y = -height * TOOL_GRIP
 	grip.add_child(tool)
+
+
+static func _rank(item: String) -> int:
+	return ItemTable.tier_rank(ItemTable.tier(item))
 
 
 static func _tier_colour(item: String) -> Color:
