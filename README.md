@@ -12,6 +12,7 @@ Gathered resources pay for outpost upgrades, which work as a tech tree and push 
 - [Game brief](docs/game-brief.md): what the game is and why.
 - [Roadmap](docs/roadmap.md): the five slices, in ship order.
 - [Simulation](docs/simulation.md): the tick, the command and event vocabulary, the state shape, and how the scene glues to it.
+- [Testing by hand](docs/testing.md): the test-mode code that loads a maxed character, for checking the rings.
 
 ## Playing it
 
