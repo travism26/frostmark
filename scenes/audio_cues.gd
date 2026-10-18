@@ -1,7 +1,7 @@
 ## Which sound plays for which simulation event, as data. Every cue key names one or more
 ## clips under assets/audio/ (one is picked at random each time, so repeats vary), and
 ## `event_cues()` maps an event to the cue keys it sounds, reading only the event's own
-## fields. Loops (the wind and snow beds, the fire, the music) are keyed here too so a test
+## fields (and, for a build, the material YardLook declares for the upgrade). Loops (the wind and snow beds, the fire, the music) are keyed here too so a test
 ## can check that every key the director uses resolves to a file.
 ##
 ## Presentation-side on purpose: no rule lives here, and nothing here changes the state.
@@ -30,6 +30,7 @@ const FALL := "fall"
 const STING_DEATH := "sting_death"
 const STING_BANK := "sting_bank"
 const STING_LEVEL := "sting_level"
+const BUILT := "built"
 const WIND := "wind"
 const FIRE := "fire"
 const MUSIC_OUTPOST := "music_outpost"
@@ -53,6 +54,7 @@ const SOUNDS := {
 	STING_DEATH: ["sting_death"],
 	STING_BANK: ["sting_bank"],
 	STING_LEVEL: ["sting_level"],
+	BUILT: ["chop_2", "mine_2", "smith_2"],
 	WIND: ["amb_wind"],
 	FIRE: ["amb_fire"],
 	MUSIC_OUTPOST: ["music_outpost"],
@@ -70,7 +72,7 @@ const GAIN := {
 	CATCH: -5.0, SMITH: -5.0, COOK: -8.0, HIT: -4.0,
 	HIT_TAKEN: -2.0, BOW: -5.0, CUE_MELEE: -3.0,
 	CUE_RANGED: -3.0, FALL: -6.0, STING_DEATH: -4.0,
-	STING_BANK: -6.0, STING_LEVEL: -6.0,
+	STING_BANK: -6.0, STING_LEVEL: -6.0, BUILT: -5.0,
 }
 ## Per region: the wind's level and pitch, and the snow's level (the same wind pitched up
 ## into the hiss of driven snow). Gentle behind the walls, a gale in ring one.
@@ -82,6 +84,11 @@ const BEDS := {
 ## The strike a gathering skill makes while it works, and the sound of its success.
 const GATHER_STRIKE := {SkillTable.WOODCUTTING: CHOP, SkillTable.MINING: MINE}
 const GATHER_SUCCESS := {SkillTable.FISHING: CATCH}
+
+## The sound of a build, by what the upgrade is built of: an axe on timber, a pick on stone,
+## a hammer on iron. An upgrade with no material sounds the shared BUILT cue. The level
+## sting rises on top of either, so a build sounds like a milestone and not like crafting.
+const BUILT_BY_MATERIAL := {YardLook.TIMBER: CHOP, YardLook.STONE: MINE, YardLook.IRON: SMITH}
 
 ## The telegraph cue for each style, so the counter can be heard as well as read.
 const CUE_BY_STYLE := {CombatTable.STYLE_MELEE: CUE_MELEE, CombatTable.STYLE_RANGED: CUE_RANGED}
@@ -122,8 +129,11 @@ static func event_cues(e: Dictionary) -> Array[String]:
 				out.append(GATHER_SUCCESS[e["skill"]])
 		SimVocab.EV_COOKED:
 			out.append(COOK)
-		SimVocab.EV_CRAFTED, SimVocab.EV_BUILT:
+		SimVocab.EV_CRAFTED:
 			out.append(SMITH)
+		SimVocab.EV_BUILT:
+			out.append(BUILT_BY_MATERIAL.get(YardLook.material(e.get("upgrade", "")), BUILT))
+			out.append(STING_LEVEL)
 		SimVocab.EV_HIT:
 			if e.get("style", "") == CombatTable.STYLE_RANGED:
 				out.append(BOW)
