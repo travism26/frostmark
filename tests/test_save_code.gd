@@ -391,6 +391,30 @@ func test_a_version_7_snapshot_migrates() -> void:
 	assert_eq(sim.command(Vocab.TRAVEL, {"object_id": "ring_two_waystone"})["reason"], Vocab.REASON_NOT_ATTUNED)
 
 
+func test_a_version_8_snapshot_migrates_with_only_its_version_raised() -> void:
+	# Every upgrade a version-8 build could have, the stash grown to 16 and full.
+	var v8 := SimScript.new().snapshot()
+	v8["version"] = 8
+	v8["tick"] = 9000
+	v8["upgrades"] = ["stash_shelves", "forge", "stash_cellar", "armoury", "ring_two_gate", "blast_furnace", "waystone"]
+	var slots: Array = []
+	for i in 16:
+		slots.append({"item": "logs", "count": 10})
+	v8["stash"] = {"capacity": 16, "slots": slots}
+	v8["waystones"] = ["ring_one_waystone"]
+	var migrated: Dictionary = SaveCode.migrate(v8, 9)
+	var expected := v8.duplicate(true)
+	expected["version"] = 9
+	assert_eq(migrated, expected, "nothing changes but the version")
+	var sim := SimScript.new()
+	assert_true(sim.restore(v8), "restore migrates a version-8 snapshot")
+	assert_eq(sim.state["upgrades"], v8["upgrades"], "the same upgrades, the vault not among them")
+	assert_eq(int(sim.state["stash"]["capacity"]), 16, "no vault slots are added")
+	var imported := SimScript.new()
+	assert_true(imported.command(Vocab.IMPORT_SAVE, {"code": SaveCode.encode(v8)})["ok"])
+	assert_eq(imported.snapshot(), sim.snapshot())
+
+
 func test_a_full_version_2_stash_gets_no_kit() -> void:
 	var full: Array = []
 	for i in 8:
