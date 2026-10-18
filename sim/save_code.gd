@@ -95,6 +95,8 @@ static func migrate(snapshot: Dictionary, target: int) -> Variant:
 				snap = _v6_to_v7(snap)
 			7:
 				snap = _v7_to_v8(snap)
+			8:
+				snap = _v8_to_v9(snap)
 			_:
 				return null
 		version = int(snap["version"])
@@ -204,4 +206,11 @@ static func _v6_to_v7(snap: Dictionary) -> Dictionary:
 static func _v7_to_v8(snap: Dictionary) -> Dictionary:
 	snap["version"] = 8
 	snap["waystones"] = []
+	return snap
+
+
+## Version 8 had no Stash vault. Version 9 adds it to the tree; a version-8 save cannot hold it,
+## so only the version number changes: the upgrades and the stash stay exactly as they were.
+static func _v8_to_v9(snap: Dictionary) -> Dictionary:
+	snap["version"] = 9
 	return snap

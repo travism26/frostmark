@@ -79,3 +79,20 @@ func test_the_version_8_fixture_is_attuned_by_ring_ones_waystone() -> void:
 	assert_true(sim.waystone_awake("ring_one_waystone"), "its waystone upgrade is built")
 	assert_eq(sim.travel_check("ring_one_waystone"), "", "it can travel home from where it stands")
 	assert_eq(sim.state["inventory"]["pack"][0], {"item": "iron_ore", "count": 3}, "with its haul")
+
+
+func test_the_version_8_fixture_imports_with_the_same_upgrades_and_nothing_added() -> void:
+	var old: Dictionary = SaveCode.decode(_fixture(8), Sim.STATE_VERSION)["snapshot"]
+	var sim := SimScript.new()
+	assert_true(sim.command(Vocab.IMPORT_SAVE, {"code": _fixture(8)})["ok"])
+	assert_eq(sim.state["upgrades"], old["upgrades"], "the upgrades it was saved with, and no others")
+	assert_false((sim.state["upgrades"] as Array).has("stash_vault"), "no vault appears")
+	assert_eq(int(sim.state["stash"]["capacity"]), int(old["stash"]["capacity"]), "the stash keeps its size")
+
+
+func test_the_version_9_fixture_has_its_vault() -> void:
+	var sim := SimScript.new()
+	assert_true(sim.command(Vocab.IMPORT_SAVE, {"code": _fixture(9)})["ok"])
+	assert_true((sim.state["upgrades"] as Array).has("stash_vault"), "the vault it built")
+	assert_eq(int(sim.state["stash"]["capacity"]), 20, "the stash it grew to 20")
+	assert_eq(sim.state["stash"]["slots"][19], {"item": "iron_ore", "count": 4}, "with its last slot in use")

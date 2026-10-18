@@ -50,6 +50,11 @@ const UPGRADES := {
 		"requires": ["ring_two_gate"], "effects": {"waystones": ["ring_one_waystone", "ring_two_waystone"]},
 		"locked": "",
 	},
+	# The stash line's last step, a reward for ring two: it needs the winch and ring two's coal.
+	"stash_vault": {
+		"label": "Stash vault", "cost": {"logs": 12, "iron_ore": 10, "coal": 4},
+		"requires": ["stash_cellar", "ring_two_gate"], "effects": {"stash": 4}, "locked": "",
+	},
 }
 
 

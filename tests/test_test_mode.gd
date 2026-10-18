@@ -54,7 +54,7 @@ func test_every_upgrade_is_built_and_the_stash_is_full() -> void:
 	var sim := _imported()
 	for id in UpgradeTable.ids():
 		assert_true((sim.state["upgrades"] as Array).has(id), "%s is built" % id)
-	assert_eq(sim.state["stash"]["capacity"], 16)
+	assert_eq(sim.state["stash"]["capacity"], 20)
 	for slot in sim.state["stash"]["slots"]:
 		assert_true(slot != null, "no stash slot is empty")
 

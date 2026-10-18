@@ -14,7 +14,7 @@ It is an ordinary save code of the current save version, not a cheat: the rules 
 
 - every skill at level 99
 - steel sword, steel armour and steel pickaxe worn; a steel axe, fishing rod, steel bow, steel staff, 100 arrows, 100 frost shards and 5 cooked char in the pack, under the carry limit
-- every upgrade built, so the stash has 16 slots, all holding full stacks of every material, food and ammunition
+- every upgrade built, so the stash has 20 slots, all holding full stacks of every material, food and ammunition
 - the captain down and the ring-two gate open, ring two already reached
 - both waystones attuned and awake, so `travel` home works from either
 - full warmth and health, and the hints off
