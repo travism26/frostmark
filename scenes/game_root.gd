@@ -635,6 +635,8 @@ func _apply_events(events: Array[Dictionary]) -> void:
 	_refresh_status()
 
 
+## The banner for a `banked` event: what went in, what stayed for a full stash, and the
+## upgrades this bank made affordable.
 static func _banked_text(e: Dictionary) -> String:
 	var parts: PackedStringArray = []
 	for item in e["items"]:
@@ -645,6 +647,13 @@ static func _banked_text(e: Dictionary) -> String:
 		for item in e["overflow"]:
 			left.append("%d %s" % [item["count"], ItemTable.label(item["item"])])
 		text += "\nStash full: %s stayed in your pack." % ", ".join(left)
+	# Only when this bank made something buildable, so it does not nag on every trip.
+	var newly: Array = e.get("newly_affordable", [])
+	if not newly.is_empty():
+		var names: PackedStringArray = []
+		for id in newly:
+			names.append(UpgradeTable.get_upgrade(id)["label"])
+		text += "\nYou can now build: %s." % ", ".join(names)
 	return text
 
 

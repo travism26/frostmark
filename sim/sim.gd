@@ -602,8 +602,10 @@ func _action_for(object_id: String) -> String:
 # --- Banking --------------------------------------------------------------------------
 
 ## Moves the whole pack into the stash. What does not fit stays in the pack and is
-## reported as overflow. Always a save point, even with an empty pack.
+## reported as overflow. `newly_affordable` lists, in table order, the upgrades that can be
+## built now and could not before this bank. Always a save point, even with an empty pack.
 func _bank() -> void:
+	var before := _buildable_now()
 	var pack: Array = state["inventory"]["pack"]
 	var stash: Array = state["stash"]["slots"]
 	var banked: Array = []
@@ -622,8 +624,25 @@ func _bank() -> void:
 			s["count"] = left
 		else:
 			pack[i] = null
-	_emit({"kind": SimVocab.EV_BANKED, "items": _merged(banked), "overflow": _merged(overflow)})
+	var newly: Array[String] = []
+	for id in _buildable_now():
+		if not before.has(id):
+			newly.append(id)
+	_emit({
+		"kind": SimVocab.EV_BANKED, "items": _merged(banked), "overflow": _merged(overflow),
+		"newly_affordable": newly,
+	})
 	_save_due = "gate"
+
+
+## The ids `upgrade_status()` reports as can build now, in table order.
+func _buildable_now() -> Array[String]:
+	var out: Array[String] = []
+	var statuses := upgrade_status()
+	for id in statuses:
+		if statuses[id]["status"] == SimVocab.UPGRADE_CAN_BUILD:
+			out.append(id)
+	return out
 
 
 # --- The ring gate ----------------------------------------------------------------------
