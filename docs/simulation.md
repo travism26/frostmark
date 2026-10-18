@@ -168,6 +168,8 @@ Any other kind is `unknown_command`. Rejection reasons for movement: `bad_args`,
 
 ## Rules and their numbers
 
+How these numbers were measured against the brief's thirty minutes to the captain, and which ones were tuned for it, is in [balance.md](balance.md).
+
 | Rule | Value |
 |------|-------|
 | Pack | 12 slots; logs, ore, bars, ice crystals and fish stack to 10, arrows and frost shards to 100, gear never stacks |
