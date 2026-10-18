@@ -145,6 +145,8 @@ var _loot_layer := Node3D.new()
 var _fire_layer := Node3D.new()
 var _yard_layer := Node3D.new()  # the pieces the built upgrades put in the yard
 var _yard_built: Array = []  # the built upgrades the yard layer was last drawn for
+var _yard_pieces := {}  # built upgrade id -> {node, piece}: its piece in the yard layer
+var _build_beat := BuildBeat.new()  # the camera ease, rise and puff when an upgrade is built
 
 @onready var _world: Node3D = $World
 @onready var _character: Node3D = $Character
@@ -161,6 +163,7 @@ func _ready() -> void:
 	add_child(_loot_layer)
 	add_child(_fire_layer)
 	add_child(_yard_layer)
+	add_child(_build_beat)
 	_build_enemies(sim.world)
 	_gear = CharacterGear.new()
 	_character_view = CharacterView.new()
@@ -197,6 +200,7 @@ func _ready() -> void:
 	_hud.ui_changed.connect(_on_ui_settings)
 	_ui_settings = UiSettings.load_from()
 	_ui_settings.apply(get_window())
+	_build_beat.moves_camera = not _ui_settings.reduced_motion
 	_hud.set_settings(_audio.settings, _ui_settings)
 	_title_screen = TitleScreen.new()
 	_title_screen.help_requested.connect(func() -> void: _help_panel.open(false))
@@ -261,6 +265,9 @@ func _physics_process(_delta: float) -> void:
 	var from := _camera.project_ray_origin(screen)
 	var to := from + _camera.project_ray_normal(screen) * RAY_LENGTH
 	var hit := get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(from, to))
+	# A click sends the character somewhere, so it ends the build beat; the ray above was cast
+	# from where the beat had the camera, which is the view the player clicked on.
+	_build_beat.cancel()
 	if hit.is_empty():
 		return
 	var collider: Object = hit["collider"]
@@ -310,6 +317,7 @@ func _on_ui_settings(settings: UiSettings) -> void:
 	settings.apply(get_window())
 	_atmosphere.set_reduced_motion(settings.reduced_motion)
 	_audio.settings.reduced_motion = settings.reduced_motion  # the director's copy, saved with the sound
+	_build_beat.moves_camera = not settings.reduced_motion
 	settings.save_to()
 
 
@@ -366,6 +374,7 @@ func _show_sim() -> void:
 	_hud.close_panels()
 	_facing = sim.player_facing()
 	_place_character(sim.player_pos(), _facing, 0.0)
+	_build_beat.cancel()  # a loaded yard stands as it is, with no beat
 	_camera_rig.global_position = _character.global_position
 	for id in _node_looks:
 		_set_node_look(id, int(sim.state["nodes"][id]["left"]) > 0)
@@ -459,6 +468,7 @@ func _apply_events(events: Array[Dictionary]) -> void:
 				_segment_length = _polyline_length(_segment)
 			SimVocab.EV_PATH_SET:
 				_hud.close_panels()
+				_build_beat.cancel()  # moving, by any command, ends the build beat
 			SimVocab.EV_ARRIVED:
 				if e["object_id"] == "":
 					_last_event = "Arrived."
@@ -519,6 +529,8 @@ func _apply_events(events: Array[Dictionary]) -> void:
 				_last_event = "Built the %s." % label.to_lower()
 				_sync_waystones()
 				_sync_yard()
+				if _yard_pieces.has(e["upgrade"]):
+					_build_beat.start(_yard_pieces[e["upgrade"]]["node"], _yard_pieces[e["upgrade"]]["piece"])
 			SimVocab.EV_RING_GATE_OPENED:
 				_sync_ring_gates()
 				_hud.banner("The gate to ring two is open.")
@@ -654,7 +666,7 @@ func _animate(delta: float) -> void:
 	else:
 		_facing = sim.player_facing()
 	_place_character(pos, _facing, delta)
-	_camera_rig.global_position = _character.global_position
+	_camera_rig.global_position = _build_beat.camera_point(_character.global_position)
 	_audio.follow(_character.global_position)
 	for id in _enemies:
 		var drawn: Dictionary = _enemies[id]
@@ -748,13 +760,14 @@ func _add_fade_twin(mesh: MeshInstance3D) -> void:
 ## instanced, beside and away from a fire's light (both change the compiled shader), plus
 ## the see-through fade twins and every label size with every glyph it can print. The yard
 ## pieces of every upgrade are sampled too, built or not, so none freezes the game when it
-## first appears. The HUD is drawn under the title too, so its text is rasterised before the
+## first appears, and so is the build beat's puff, with the particles of every fire. The HUD is drawn under the title too, so its text is rasterised before the
 ## first click.
 func _build_warmup() -> void:
 	var looks := {}  # shader key -> [a mesh, a material with that key]
 	var every_piece := Node3D.new()
 	for piece in YardLook.pieces(UpgradeTable.ids()):
 		every_piece.add_child(WorldDressing.yard_piece(piece))
+		every_piece.add_child(BuildBeat.puff(piece))
 	for root: Node in [_world, _enemy_layer, _character, every_piece]:
 		for node in root.find_children("*", "GeometryInstance3D", true, false):
 			var mesh: Mesh = null
@@ -762,6 +775,8 @@ func _build_warmup() -> void:
 				mesh = (node as MeshInstance3D).mesh
 			elif node is MultiMeshInstance3D:
 				mesh = (node as MultiMeshInstance3D).multimesh.mesh
+			elif node is CPUParticles3D:
+				mesh = (node as CPUParticles3D).mesh
 			if mesh == null:
 				continue
 			for i in mesh.get_surface_count():
@@ -1048,14 +1063,19 @@ func _sync_waystones() -> void:
 
 
 ## The yard shows a piece for every built upgrade (YardLook), redrawn when the list changes.
+## Redrawing ends any build beat: its piece is replaced, standing in place.
 func _sync_yard() -> void:
 	var built: Array = sim.state["upgrades"]
 	if built == _yard_built:
 		return
+	_build_beat.cancel()
+	_yard_pieces.clear()
 	for child in _yard_layer.get_children():
 		child.queue_free()
 	for piece in YardLook.pieces(built):
-		_yard_layer.add_child(WorldDressing.yard_piece(piece))
+		var node := WorldDressing.yard_piece(piece)
+		_yard_layer.add_child(node)
+		_yard_pieces[piece["upgrade"]] = {"node": node, "piece": piece}
 	_yard_built = built.duplicate()
 
 
