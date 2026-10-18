@@ -31,7 +31,7 @@ const UPGRADES := {
 		"effects": {"recipes": ["bronze_helm", "bronze_body", "bronze_legs"]}, "locked": "",
 	},
 	"ring_two_gate": {
-		"label": "Ring-two gate winch", "cost": {"logs": 12, "iron_ore": 8, "bronze_bar": 3, "wolf_pelt": 3},
+		"label": "Ring-two gate winch", "cost": {"logs": 12, "iron_ore": 12, "bronze_bar": 3, "wolf_pelt": 5},
 		"requires": ["armoury"], "effects": {"ring_gate": "ring_two_gate"}, "locked": "",
 	},
 	# Ring two's coal and troll hides build it; it lifts the smithing cap from bronze to steel.

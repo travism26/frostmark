@@ -64,7 +64,7 @@ func test_an_unmet_row_says_what_is_missing() -> void:
 	assert_true(forge["lines"].has("Short of 2 copper ore and 3 tin ore."), "how much more of each short item")
 	var winch := UpgradeRowsScript.view("ring_two_gate", sim.upgrade_status()["ring_two_gate"])
 	assert_true(winch["lines"].has("Needs the Armoury first."), "the prerequisite by name")
-	assert_true(winch["lines"].has("Short of 2 logs, 8 iron ore, 3 bronze bar and 3 wolf pelt."), "and the short items beside it")
+	assert_true(winch["lines"].has("Short of 2 logs, 12 iron ore, 3 bronze bar and 5 wolf pelt."), "and the short items beside it")
 
 
 func test_a_row_whose_cost_is_met_but_needs_an_upgrade_names_only_that() -> void:

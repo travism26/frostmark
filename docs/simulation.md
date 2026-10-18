@@ -228,7 +228,7 @@ Any other kind is `unknown_command`. Rejection reasons for movement: `bad_args`,
 | Forge | 6 logs, 3 copper ore, 3 tin ore | none | Unlocks bronze bars, arrows, bronze tools and weapons |
 | Stash cellar | 10 logs, 2 bronze bars | Stash shelves | +4 stash slots |
 | Armoury | 6 logs, 2 bronze bars, 3 wolf pelts | Forge | Unlocks the bronze helm, body and legs |
-| Ring-two gate winch | 12 logs, 8 iron ore, 3 bronze bars, 3 wolf pelts | Armoury | Readies the gate to ring two; it opens once the captain has fallen |
+| Ring-two gate winch | 12 logs, 12 iron ore, 3 bronze bars, 5 wolf pelts | Armoury | Readies the gate to ring two; it opens once the captain has fallen |
 | Blast furnace | 12 logs, 4 bronze bars, 6 coal, 2 troll hides | Ring-two gate winch | Unlocks steel bars, tools, weapons and armour, and lifts the smithing cap to steel |
 | Waystones | 10 iron ore, 6 bronze bars, 10 logs | Ring-two gate winch | Wakes the waystones in ring one and ring two |
 | Stash vault | 12 logs, 10 iron ore, 4 coal | Stash cellar, Ring-two gate winch | +4 stash slots |

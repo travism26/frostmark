@@ -132,7 +132,7 @@ func test_an_unmet_prerequisite_is_named() -> void:
 	var winch: Dictionary = sim.upgrade_status()["ring_two_gate"]
 	assert_eq(winch["requires"], ["armoury"])
 	assert_eq(winch["short"], [
-		{"item": "iron_ore", "have": 0, "need": 8}, {"item": "wolf_pelt", "have": 0, "need": 3},
+		{"item": "iron_ore", "have": 0, "need": 12}, {"item": "wolf_pelt", "have": 0, "need": 5},
 	], "missing prerequisites and short items together")
 	var built := _with_stash(lots, ["stash_shelves"], Sim.STASH_START_SLOTS + 4)
 	assert_eq(built.upgrade_status()["stash_cellar"]["status"], Vocab.UPGRADE_CAN_BUILD, "once the shelves stand")

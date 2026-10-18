@@ -3,7 +3,8 @@
 ## all eight skills. It plays a plain, sensible route, not a perfect one; a person reading the
 ## world and clicking takes longer, so the bot's time is held well under thirty minutes.
 ## Then it plays on through ring two to a smithed steel kit, which a person should manage in
-## one or two evening sessions (thirty to forty-five minutes).
+## one or two evening sessions (thirty to forty-five minutes). The balance run
+## (test_balance.gd) plays a first-timer instead and adds a person's time to the bot's.
 extends "res://tests/run.gd".TestCase
 
 const H := preload("res://tests/sim_helpers.gd")
@@ -105,17 +106,20 @@ func _play_to_the_captain() -> int:
 	bot.equip("bronze_sword")
 	bot.home()
 	bot.note("first fights")
-	# 4. More ore, iron from ring one, then the armoury, armour and the gate winch.
+	# 4. More ore, iron from ring one and the north pack's pelts, then the armoury, armour and
+	# the gate winch.
 	bot.kit(["bronze_pickaxe"])
 	bot.head_out()
 	bot.gather(COPPER, "copper_ore", 9)
-	bot.gather(IRON, "iron_ore", 8)
+	bot.gather(IRON, "iron_ore", 12)
 	bot.home()
 	bot.kit(["bronze_pickaxe", "fishing_rod"])
+	bot.withdraw("cooked_fish")
 	bot.head_out()
 	bot.gather(TIN, "tin_ore", 9)
 	bot.gather(NORTH_TREES, "logs", 10)
 	bot.gather(["fishing_hole"], "raw_fish", 6)
+	bot.fight(["wolf_8", "wolf_9", "wolf_10"])
 	bot.home()
 	bot.withdraw("copper_ore")
 	bot.withdraw("tin_ore")
@@ -152,7 +156,8 @@ func test_ring_two_to_a_steel_kit_takes_an_evening() -> void:
 	# 6. Home first, to bank the captain's iron and clear out the gear it outgrew, then fish
 	# and bronze bars for the furnace.
 	bot.home()
-	bot.discard(["wooden_pickaxe", "wooden_bow", "wolf_pelt"])
+	# The wooden bow goes only when the captain's iron gear was a better bow.
+	bot.discard(["wooden_pickaxe", "wolf_pelt"] + (["wooden_bow"] if bot.best_weapon(RANGED) != "wooden_bow" else []))
 	bot.kit(["fishing_rod", "bronze_pickaxe"])
 	bot.head_out()
 	bot.gather(["fishing_hole"], "raw_fish", 10)
