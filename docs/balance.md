@@ -1,0 +1,105 @@
+# Balance: reaching the bandit captain
+
+The brief's first playable ends at the bandit captain, and a new character should reach him in about thirty minutes, inside one evening session ([game-brief.md](game-brief.md#first-playable), [roadmap.md](roadmap.md) section 5). This file records how that was measured and what was tuned to get there, in [#26](https://github.com/travism26/frostmark/issues/26). The rules and every number live in [simulation.md](simulation.md).
+
+## How it is measured
+
+A person cannot be timed here, so a script plays a new character through the simulation's command interface, as a first-time player would, and adds an allowance for what a person does that the character does not. The run is `tests/test_balance.gd`, on the moves in `tests/play_bot.gd`. Re-measure with:
+
+```
+godot --headless -s tests/run.gd -- balance
+```
+
+It prints the phase table below and fails when the estimate leaves 26 to 34 minutes. When a cost, a node or an enemy changes, run it again and update this file.
+
+### The player it plays
+
+It plays sensibly but not perfectly, the way someone new to the game would:
+
+- It follows the guide: cut pines, walk the logs home through the gate, craft at the workbench.
+- It turns home when the cold tip shows (warmth 90), not at the last moment.
+- It gathers whole stacks of ten rather than the exact cost.
+- It makes a wooden helm, body and legs before its first fight, then drops them once the bronze set is on, because by then the stash is full.
+- It cooks every fish it catches, eats below half health, and takes its food, bow, arrows, staff and shards out before each trip into ring one.
+- It gathers for each upgrade from the cost the Upgrades tab shows, so a repriced upgrade changes the route instead of breaking it, and builds the Stash cellar when the stash runs out of room.
+- It uses all eight skills: woodcutting, mining, fishing, cooking, smithing, melee (bronze sword), ranged (the starting bow) and magic (a wooden staff).
+
+### The phases
+
+| Phase | From | To |
+|-------|------|----|
+| First tools | A new character in the outpost | A wooden pickaxe and a fishing rod crafted |
+| Inner ring | Heading out with them | The stash shelves and the forge built |
+| Bronze and a wooden set | The forge | Bronze bars, a bronze pickaxe and sword, a wooden staff and shards, a wooden set worn |
+| First fights | Heading into ring one | Home from the near archer and three wolf packs |
+| Iron, armour and the winch | Home again | The armoury, a bronze set worn and the ring-two gate winch built |
+| To the captain | Kitted for the road south | The captain turns to fight |
+| Captain fight | He turns to fight | He falls (reported, not counted in the thirty minutes) |
+
+The clock stops when the captain is engaged, because the brief's target is reaching him. The fight is still played out, to check that the kit is enough to win.
+
+### The allowance for a person
+
+The simulation only counts what the character does: walking, gathering, cooking, fighting, standing by a fire. A person also chooses where to click, reads panels and plans trips. The run counts each of these and charges a fixed time for it:
+
+| What | Allowance | Why |
+|------|-----------|-----|
+| A click in the world (a node, an enemy, a door, a fire) | 2 s | Spotting the next target after the last one runs out, turning the camera, aiming the click |
+| A click in a panel (withdraw, deposit, smith, build, equip, eat, cook, drop) | 3 s | Opening the stash or workbench, finding the item in the grid, reading its tooltip |
+| An outing | 20 s | Deciding where to go and what to bring, and watching the cold on the way |
+| A recipe smithed or an upgrade built for the first time | 15 s | Reading its cost and what it unlocks |
+
+These are a first-time player's numbers, not a practised one's, because the brief's target is a new character. The allowance comes to slightly more than the sim time. That is a big share, so the run also prints the estimate with half the allowance and with half as much again. The tuned route lands at 21:36 and 36:50 on those, so the target holds for a quicker or slower player, though not for a speedrunner.
+
+## The measured run
+
+Before tuning (the numbers on main before #26):
+
+| Phase | Sim time | World clicks | Panel clicks | Outings | Firsts | Allowance | Estimate |
+|-------|----------|--------------|--------------|---------|--------|-----------|----------|
+| first tools | 0:37 | 8 | 3 | 1 | 2 | 1:15 | 1:52 |
+| inner ring | 4:09 | 24 | 7 | 2 | 2 | 2:19 | 6:28 |
+| bronze and a wooden set | 0:54 | 8 | 23 | 1 | 8 | 3:45 | 4:39 |
+| first fights | 1:37 | 15 | 9 | 1 | 0 | 1:17 | 2:54 |
+| iron, armour and the winch | 5:05 | 32 | 33 | 3 | 6 | 5:13 | 10:18 |
+| to the captain | 0:26 | 2 | 5 | 1 | 0 | 0:39 | 1:05 |
+| captain fight | 0:30 | 2 | 7 | 0 | 0 | 0:25 | 0:55 |
+| **to the captain** | **12:47** | | | | | **14:28** | **27:15** |
+
+After tuning:
+
+| Phase | Sim time | World clicks | Panel clicks | Outings | Firsts | Allowance | Estimate |
+|-------|----------|--------------|--------------|---------|--------|-----------|----------|
+| first tools | 0:37 | 8 | 3 | 1 | 2 | 1:15 | 1:52 |
+| inner ring | 4:09 | 24 | 7 | 2 | 2 | 2:19 | 6:28 |
+| bronze and a wooden set | 0:54 | 8 | 23 | 1 | 8 | 3:45 | 4:39 |
+| first fights | 1:37 | 15 | 9 | 1 | 0 | 1:17 | 2:54 |
+| iron, armour and the winch | 6:26 | 36 | 39 | 4 | 6 | 5:59 | 12:25 |
+| to the captain | 0:17 | 2 | 5 | 1 | 0 | 0:39 | 0:56 |
+| captain fight | 0:30 | 2 | 7 | 0 | 0 | 0:25 | 0:55 |
+| **to the captain** | **13:59** | | | | | **15:14** | **29:13** |
+
+The run dies no times and beats the captain in 30 seconds of sim time.
+
+## What was tuned
+
+Before tuning the run came in at 27:15, nearly three minutes short, and only 1:37 of its 12:47 of sim time was spent in ring one, where the risk to carried loot is. So the time was added in ring one, by changing the price of the gate the captain guards:
+
+| Number | Before | After | Effect on the estimate |
+|--------|--------|-------|------------------------|
+| Ring-two gate winch: iron ore | 8 | 12 | +0:47 alone. Three iron rocks give 9 a visit, so the twelve take a regrowth or a second visit by the archer camp |
+| Ring-two gate winch: wolf pelts | 3 | 5 | +1:08 alone. The first three packs give 7 pelts and the armoury takes 3, so 5 more takes a trip to the pack by the ice hole |
+
+Together they bring the run to 29:13. Both are ring-one loot carried home past the wolves and archers, so the extra minutes come with the tension the brief asks for, not with more chopping in the safe ring.
+
+### Levers measured and left alone
+
+Each was tried on its own against the same run:
+
+- **Enemy stats.** Wolves at 24 health instead of 15 added 0:12, and archers at 28 instead of 20 added 0:02. Fights in ring one are a small part of the clock either way, so health is not the lever for the target.
+- **Experience curve, node regrowth, recipe costs and warmth drain.** The safe ring already holds most of the sim time (gathering for the first tools, the forge and the bars). Slowing any of these would add minutes where nothing is at risk. Changing the curve or the drain would also retune every skill and every trip in both rings. Armour recipes keep the prices [#38](https://github.com/travism26/frostmark/issues/38) gave them.
+
+### Knock-on numbers
+
+- The build-from-scratch character's stash (docs/testing.md) needs one more slot for the summed upgrade costs: 23 instead of 22.
+- `tests/test_pacing.gd`, the planner's route, fights the pack by the ice hole and mines 12 iron for the winch. It reaches the fallen captain at tick 1789 (14.9 minutes), up from 1602 (13.3 minutes), still inside its window of 1200 to 2700 ticks. Its ring-two half keeps the wooden bow unless the captain dropped a better one: it used to rely on a lucky drop. It takes 1776 ticks, inside its window.
