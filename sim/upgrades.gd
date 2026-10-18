@@ -28,7 +28,7 @@ const UPGRADES := {
 	},
 	"armoury": {
 		"label": "Armoury", "cost": {"logs": 6, "bronze_bar": 2, "wolf_pelt": 3}, "requires": ["forge"],
-		"effects": {"recipes": ["bronze_armour"]}, "locked": "",
+		"effects": {"recipes": ["bronze_helm", "bronze_body", "bronze_legs"]}, "locked": "",
 	},
 	"ring_two_gate": {
 		"label": "Ring-two gate winch", "cost": {"logs": 12, "iron_ore": 8, "bronze_bar": 3, "wolf_pelt": 3},
@@ -39,7 +39,7 @@ const UPGRADES := {
 		"label": "Blast furnace", "cost": {"logs": 12, "bronze_bar": 4, "coal": 6, "troll_hide": 2},
 		"requires": ["ring_two_gate"],
 		"effects": {
-			"recipes": ["steel_bar", "steel_axe", "steel_pickaxe", "steel_sword", "steel_bow", "steel_staff", "steel_armour"],
+			"recipes": ["steel_bar", "steel_axe", "steel_pickaxe", "steel_sword", "steel_bow", "steel_staff", "steel_helm", "steel_body", "steel_legs"],
 			"smithing_tier": ItemTable.TIER_STEEL,
 		},
 		"locked": "",

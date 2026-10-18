@@ -1,9 +1,10 @@
 ## Board-only, not shipped: renders the character's visible gear from the game's default camera,
 ## with the real game loop running, for the equipped-gear PR's before and after evidence. A new
 ## character stands south of the gate with one set of gear worn per scene: an axe, a pickaxe, a
-## sword, a bow and a staff, and the axe again while chopping a pine.
+## sword, a bow and a staff, the axe again while chopping a pine, and the armour sets (a full
+## wooden, bronze, iron and steel set, a helm alone and legs alone).
 ##
-##   godot --resolution 1280x720 -s tools/gear_shots.gd -- <out_dir>
+##   godot --resolution 1280x720 -s tools/gear_shots.gd -- <out_dir> [scene ...]
 ##
 ## Writes <scene>.png from the default camera, <scene>_close.png from the nearest zoom and
 ## <scene>_back.png from the nearest zoom turned round behind the character.
@@ -15,16 +16,24 @@ const OrbitCamera := preload("res://scenes/orbit_camera.gd")
 const SETTLE_FRAMES := 60
 const WAIT_FRAMES := 900
 const SPOT := [0.5, 3.5]
+## Each scene's equipment; a slot it does not name is empty.
 const SCENES := [
-	{"name": "axe", "weapon": "", "tool": "steel_axe", "armour": ""},
-	{"name": "pickaxe", "weapon": "", "tool": "steel_pickaxe", "armour": ""},
-	{"name": "sword", "weapon": "steel_sword", "tool": "steel_pickaxe", "armour": "steel_armour"},
-	{"name": "bow", "weapon": "steel_bow", "tool": "steel_axe", "armour": ""},
-	{"name": "staff", "weapon": "steel_staff", "tool": "steel_axe", "armour": ""},
-	{"name": "chopping", "weapon": "steel_sword", "tool": "steel_axe", "armour": "", "gather": "tree_3"},
+	{"name": "axe", "tool": "steel_axe"},
+	{"name": "pickaxe", "tool": "steel_pickaxe"},
+	{"name": "sword", "weapon": "steel_sword", "tool": "steel_pickaxe", "body": "steel_body"},
+	{"name": "bow", "weapon": "steel_bow", "tool": "steel_axe"},
+	{"name": "staff", "weapon": "steel_staff", "tool": "steel_axe"},
+	{"name": "chopping", "weapon": "steel_sword", "tool": "steel_axe", "gather": "tree_3"},
+	{"name": "wooden_set", "weapon": "wooden_club", "tool": "wooden_axe", "helm": "wooden_helm", "body": "wooden_body", "legs": "wooden_legs"},
+	{"name": "bronze_set", "weapon": "bronze_sword", "tool": "bronze_axe", "helm": "bronze_helm", "body": "bronze_body", "legs": "bronze_legs"},
+	{"name": "iron_set", "weapon": "iron_sword", "tool": "iron_pickaxe", "helm": "iron_helm", "body": "iron_body", "legs": "iron_legs"},
+	{"name": "steel_set", "weapon": "steel_sword", "tool": "steel_pickaxe", "helm": "steel_helm", "body": "steel_body", "legs": "steel_legs"},
+	{"name": "helm_only", "weapon": "iron_sword", "tool": "iron_axe", "helm": "iron_helm"},
+	{"name": "legs_only", "weapon": "iron_sword", "tool": "iron_axe", "legs": "iron_legs"},
 ]
 
 var _out_dir := ""
+var _only: Array = []  # scene names to render; empty for all
 var _saved_game := PackedByteArray()
 var _had_save := false
 
@@ -36,6 +45,7 @@ func _init() -> void:
 		quit(2)
 		return
 	_out_dir = args[0]
+	_only = args.slice(1)
 	DirAccess.make_dir_recursive_absolute(_out_dir)
 	if FileAccess.file_exists("user://frostmark.save"):
 		_had_save = true
@@ -50,6 +60,8 @@ func _run() -> void:
 	var main: Node = current_scene
 	var rig: Node3D = main._camera_rig
 	for scene in SCENES:
+		if not _only.is_empty() and not _only.has(scene["name"]):
+			continue
 		main._on_import(_wearer(main.sim.world, scene).export_code())
 		_quiet(main)
 		if scene.has("gather"):
@@ -108,7 +120,7 @@ static func _wearer(world: WorldDef, scene: Dictionary) -> Sim:
 	H.set_pack(sim, [{"item": "cooked_fish", "count": 5}])
 	var snap := sim.snapshot()
 	for slot in ItemTable.EQUIPMENT_SLOTS:
-		snap["inventory"]["equipment"][slot] = scene[slot]
+		snap["inventory"]["equipment"][slot] = scene.get(slot, "")
 	sim.restore(snap)
 	H.place(sim, SPOT)
 	return sim

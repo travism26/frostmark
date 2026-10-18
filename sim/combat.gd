@@ -157,7 +157,7 @@ const ENEMIES := {
 			"captain_staff", "captain_staff", "captain_staff", "captain_staff", "captain_sabre",
 		],
 		"loot": [{"item": "arrows", "count": 20}],
-		"boss_loot": ["iron_sword", "iron_bow", "iron_staff", "iron_armour"],
+		"boss_loot": ["iron_sword", "iron_bow", "iron_staff", "iron_helm", "iron_body", "iron_legs"],
 		"rare_percent": 25, "respawn_ticks": 600, "boss": true,
 	},
 	# Ring two. A troll smashes, rests, then winds up a tick before its crush: the longest
@@ -176,7 +176,9 @@ const ENEMIES := {
 	},
 }
 ## The rare drop in both rings: one piece of iron gear. Iron is found, never smithed.
-const RARE_LOOT: Array[String] = ["iron_sword", "iron_armour", "iron_bow", "iron_axe", "iron_pickaxe", "iron_staff"]
+const RARE_LOOT: Array[String] = [
+	"iron_sword", "iron_helm", "iron_body", "iron_legs", "iron_bow", "iron_axe", "iron_pickaxe", "iron_staff",
+]
 
 
 static func is_enemy_kind(kind: String) -> bool:

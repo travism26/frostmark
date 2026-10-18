@@ -21,7 +21,7 @@ const WALK_PER_TICK := WALK_SPEED * TICK_SECONDS
 const SNAP_RADIUS_CELLS := 2
 ## Bumped whenever the state shape changes. `restore()` migrates older snapshots forward
 ## (SaveCode.migrate) and refuses ones it cannot read.
-const STATE_VERSION := 9
+const STATE_VERSION := 10
 
 ## The pack: a fixed number of slots, and a carried weight (pack plus equipment, in kg)
 ## above which walking slows to OVERWEIGHT_SPEED of normal.
@@ -84,8 +84,9 @@ const RING_GATE_STEP := 3.0
 const TRAVEL_TICKS := 6
 const TRAVEL_GATE_STEP := 2.5
 
-## Death keeps this many of the most valuable things carried or worn (a stack is one thing).
-const DEATH_KEEPS := 3
+## Death keeps this many of the most valuable things carried or worn (a stack is one thing):
+## one for each equipment slot, so a full kit with nothing better carried comes home whole.
+const DEATH_KEEPS := 5
 ## Ground loot lies this many ticks (five minutes) before the snow takes it.
 const LOOT_TICKS := 600
 
@@ -152,7 +153,8 @@ func new_state() -> Dictionary:
 		"inventory": {
 			"pack": Inventory.empty_slots(PACK_SLOTS),
 			"equipment": {
-				ItemTable.SLOT_WEAPON: "", ItemTable.SLOT_ARMOUR: "", ItemTable.SLOT_TOOL: STARTING_TOOL,
+				ItemTable.SLOT_WEAPON: "", ItemTable.SLOT_HELM: "", ItemTable.SLOT_BODY: "",
+				ItemTable.SLOT_LEGS: "", ItemTable.SLOT_TOOL: STARTING_TOOL,
 			},
 		},
 		"stash": {"capacity": STASH_START_SLOTS, "slots": stash},
@@ -1014,7 +1016,7 @@ func combatant(id: String) -> Dictionary:
 		return {
 			"id": id, "kind": SimVocab.PLAYER, "pos": player_pos(), "health": int(state["health"]),
 			"health_max": HEALTH_MAX, "weapon": weapon, "style": stats["style"], "reach": stats["reach"],
-			"defence": ItemTable.defence(state["inventory"]["equipment"][ItemTable.SLOT_ARMOUR]),
+			"defence": ItemTable.worn_defence(state["inventory"]["equipment"]),
 			"next": next,
 		}
 	var e: Dictionary = state["enemies"][id]

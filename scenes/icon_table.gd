@@ -39,7 +39,9 @@ const UI_ACTIONS: Array[String] = [UI_FIRE, UI_HELP, UI_SAVE, UI_SOUND]
 ## Equipment slot (ItemTable) -> the icon key an empty slot shows.
 const SLOT_KEYS := {
 	ItemTable.SLOT_WEAPON: STYLE_MELEE,
-	ItemTable.SLOT_ARMOUR: "steel_armour",
+	ItemTable.SLOT_HELM: "steel_helm",
+	ItemTable.SLOT_BODY: "steel_body",
+	ItemTable.SLOT_LEGS: "steel_legs",
 	ItemTable.SLOT_TOOL: "wooden_pickaxe",
 }
 
@@ -120,10 +122,18 @@ const ICONS := {
 	"iron_staff": {"icon": "lorc/wizard-staff"},
 	"steel_staff": {"icon": "lorc/wizard-staff"},
 	# Armour, tinted by tier.
-	"wooden_armour": {"icon": "lorc/breastplate"},
-	"bronze_armour": {"icon": "lorc/breastplate"},
-	"iron_armour": {"icon": "lorc/breastplate"},
-	"steel_armour": {"icon": "lorc/breastplate"},
+	"wooden_helm": {"icon": "lorc/visored-helm"},
+	"bronze_helm": {"icon": "lorc/visored-helm"},
+	"iron_helm": {"icon": "lorc/visored-helm"},
+	"steel_helm": {"icon": "lorc/visored-helm"},
+	"wooden_body": {"icon": "lorc/breastplate"},
+	"bronze_body": {"icon": "lorc/breastplate"},
+	"iron_body": {"icon": "lorc/breastplate"},
+	"steel_body": {"icon": "lorc/breastplate"},
+	"wooden_legs": {"icon": "delapouite/leg-armor"},
+	"bronze_legs": {"icon": "delapouite/leg-armor"},
+	"iron_legs": {"icon": "delapouite/leg-armor"},
+	"steel_legs": {"icon": "delapouite/leg-armor"},
 	# The side panel's tabs.
 	TAB_PACK: {"icon": "lorc/knapsack", "tint": TINT_TAB},
 	TAB_EQUIPMENT: {"icon": "lorc/battle-gear", "tint": TINT_TAB},

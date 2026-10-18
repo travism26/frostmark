@@ -8,15 +8,20 @@
 ## gathers faster and surer. A weapon carries its combat `style`, `power` (damage per hit
 ## before the style edge), `speed` (ticks between swings), `reach` (metres) and, for a ranged
 ## weapon, the `ammo` item each shot uses (arrows for a bow, frost shards for a staff's cast).
-## Armour carries `defence`, taken off every hit. Food
+## Armour (a helm, a body and legs, each worn in its own slot) carries `defence`, and the
+## worn pieces' defence added up is taken off every hit. Food
 ## carries `heal`, the health it restores spread over `heal_ticks` ticks. Engine-free like sim/.
 class_name ItemTable
 extends RefCounted
 
 const SLOT_WEAPON := "weapon"
-const SLOT_ARMOUR := "armour"
+const SLOT_HELM := "helm"
+const SLOT_BODY := "body"
+const SLOT_LEGS := "legs"
 const SLOT_TOOL := "tool"
-const EQUIPMENT_SLOTS: Array[String] = [SLOT_WEAPON, SLOT_ARMOUR, SLOT_TOOL]
+const EQUIPMENT_SLOTS: Array[String] = [SLOT_WEAPON, SLOT_HELM, SLOT_BODY, SLOT_LEGS, SLOT_TOOL]
+## The three armour slots, head to foot.
+const ARMOUR_SLOTS: Array[String] = [SLOT_HELM, SLOT_BODY, SLOT_LEGS]
 
 const TOOL_AXE := "axe"
 const TOOL_PICKAXE := "pickaxe"
@@ -181,22 +186,55 @@ const ITEMS := {
 		"label": "Steel staff", "stack": 1, "weight": 2, "value": 172, "slot": SLOT_WEAPON,
 		"style": "magic", "power": 10, "speed": 2, "reach": 6.0, "ammo": "frost_shards", "tier": TIER_STEEL,
 	},
-	# Armour
-	"wooden_armour": {
-		"label": "Wooden armour", "stack": 1, "weight": 4, "value": 16, "slot": SLOT_ARMOUR,
+	# Armour: a full set of a tier adds up to the single armour it replaced (#38), in defence,
+	# weight and value; the body carries the most.
+	"wooden_helm": {
+		"label": "Wooden helm", "stack": 1, "weight": 1, "value": 3, "slot": SLOT_HELM,
+		"defence": 0, "tier": TIER_WOODEN,
+	},
+	"wooden_body": {
+		"label": "Wooden body", "stack": 1, "weight": 2, "value": 8, "slot": SLOT_BODY,
 		"defence": 1, "tier": TIER_WOODEN,
 	},
-	"bronze_armour": {
-		"label": "Bronze armour", "stack": 1, "weight": 5, "value": 50, "slot": SLOT_ARMOUR,
-		"defence": 2, "tier": TIER_BRONZE,
+	"wooden_legs": {
+		"label": "Wooden legs", "stack": 1, "weight": 1, "value": 5, "slot": SLOT_LEGS,
+		"defence": 0, "tier": TIER_WOODEN,
 	},
-	"iron_armour": {
-		"label": "Iron armour", "stack": 1, "weight": 6, "value": 90, "slot": SLOT_ARMOUR,
-		"defence": 3, "tier": TIER_IRON,
+	"bronze_helm": {
+		"label": "Bronze helm", "stack": 1, "weight": 1, "value": 10, "slot": SLOT_HELM,
+		"defence": 0, "tier": TIER_BRONZE,
 	},
-	"steel_armour": {
-		"label": "Steel armour", "stack": 1, "weight": 7, "value": 180, "slot": SLOT_ARMOUR,
-		"defence": 4, "tier": TIER_STEEL,
+	"bronze_body": {
+		"label": "Bronze body", "stack": 1, "weight": 3, "value": 24, "slot": SLOT_BODY,
+		"defence": 1, "tier": TIER_BRONZE,
+	},
+	"bronze_legs": {
+		"label": "Bronze legs", "stack": 1, "weight": 1, "value": 16, "slot": SLOT_LEGS,
+		"defence": 1, "tier": TIER_BRONZE,
+	},
+	"iron_helm": {
+		"label": "Iron helm", "stack": 1, "weight": 1, "value": 20, "slot": SLOT_HELM,
+		"defence": 1, "tier": TIER_IRON,
+	},
+	"iron_body": {
+		"label": "Iron body", "stack": 1, "weight": 3, "value": 40, "slot": SLOT_BODY,
+		"defence": 1, "tier": TIER_IRON,
+	},
+	"iron_legs": {
+		"label": "Iron legs", "stack": 1, "weight": 2, "value": 30, "slot": SLOT_LEGS,
+		"defence": 1, "tier": TIER_IRON,
+	},
+	"steel_helm": {
+		"label": "Steel helm", "stack": 1, "weight": 2, "value": 40, "slot": SLOT_HELM,
+		"defence": 1, "tier": TIER_STEEL,
+	},
+	"steel_body": {
+		"label": "Steel body", "stack": 1, "weight": 3, "value": 80, "slot": SLOT_BODY,
+		"defence": 2, "tier": TIER_STEEL,
+	},
+	"steel_legs": {
+		"label": "Steel legs", "stack": 1, "weight": 2, "value": 60, "slot": SLOT_LEGS,
+		"defence": 1, "tier": TIER_STEEL,
 	},
 }
 
@@ -247,3 +285,11 @@ static func heal(kind: String) -> int:
 ## Health taken off every hit while the item is worn, or 0.
 static func defence(kind: String) -> int:
 	return int(ITEMS[kind].get("defence", 0)) if ITEMS.has(kind) else 0
+
+
+## Health taken off every hit by everything worn: the armour pieces' defence added up.
+static func worn_defence(equipment: Dictionary) -> int:
+	var total := 0
+	for slot in ARMOUR_SLOTS:
+		total += defence(str(equipment.get(slot, "")))
+	return total

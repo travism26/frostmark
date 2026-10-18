@@ -20,7 +20,9 @@ const QUERY_HASH := "3b56c406c45b0c8a43371bdeda47567153511ba1521c1d895ce31d94d84
 const BARE_SHORT_HASH := "b17b2820c6322457ba8198b77384821ace5a35a605b42c418ea23194d9d70053"
 const BARE_QUERY_HASH := "fd4d2de984044370d48fd4dbd8d7211f4794441f55d6c268e446755046e43309"
 
-const EQUIPMENT := {"weapon": "steel_sword", "armour": "steel_armour", "tool": "steel_pickaxe"}
+const EQUIPMENT := {
+	"weapon": "steel_sword", "helm": "steel_helm", "body": "steel_body", "legs": "steel_legs", "tool": "steel_pickaxe",
+}
 ## A tool and a weapon for every skill and style, with ammunition and food, under the carry limit.
 const PACK := [
 	{"item": "steel_axe", "count": 1}, {"item": "fishing_rod", "count": 1},

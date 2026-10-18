@@ -303,7 +303,7 @@ func test_enemies_break_off_at_the_outpost() -> void:
 		assert_eq(int(e["health"]), 15, "and healed")
 
 
-func test_death_keeps_the_three_most_valuable_things() -> void:
+func test_death_keeps_the_five_most_valuable_things() -> void:
 	var sim := SimScript.new()
 	var snap := sim.snapshot()
 	snap["skills"]["woodcutting"] = {"xp": 500, "level": SkillTable.level_for_xp(500)}
@@ -315,9 +315,10 @@ func test_death_keeps_the_three_most_valuable_things() -> void:
 		{"item": "logs", "count": 3},           # 6
 		{"item": "arrows", "count": 30},        # 30, one stack is one thing
 		{"item": "cooked_fish", "count": 2},    # 12, ties with the worn club
+		{"item": "bronze_bar", "count": 2},     # 16
 	])
 	snap = sim.snapshot()
-	snap["inventory"]["equipment"]["armour"] = "iron_armour"  # 90
+	snap["inventory"]["equipment"]["body"] = "iron_body"  # 40
 	snap["health"] = 1
 	sim.restore(snap)
 	var stash_before: Array = sim.state["stash"]["slots"].duplicate(true)
@@ -327,15 +328,15 @@ func test_death_keeps_the_three_most_valuable_things() -> void:
 	assert_eq(died.size(), 1)
 	assert_eq(died[0]["cause"], "bandit_archer")
 	assert_eq(died[0]["kept"], [
-		{"item": "iron_armour", "count": 1}, {"item": "iron_sword", "count": 1}, {"item": "arrows", "count": 30},
-	])
-	assert_eq(died[0]["lost"], [
-		{"item": "wooden_club", "count": 1}, {"item": "cooked_fish", "count": 2},
-		{"item": "logs", "count": 3}, {"item": "wooden_axe", "count": 1},
+		{"item": "iron_sword", "count": 1}, {"item": "iron_body", "count": 1}, {"item": "arrows", "count": 30},
+		{"item": "bronze_bar", "count": 2}, {"item": "wooden_club", "count": 1},
 	], "worn beats the pack on a tie")
+	assert_eq(died[0]["lost"], [
+		{"item": "cooked_fish", "count": 2}, {"item": "logs", "count": 3}, {"item": "wooden_axe", "count": 1},
+	])
 	var equipment: Dictionary = sim.state["inventory"]["equipment"]
-	assert_eq(equipment["armour"], "iron_armour", "kept things stay where they were")
-	assert_eq(equipment["weapon"], "")
+	assert_eq(equipment["body"], "iron_body", "kept things stay where they were")
+	assert_eq(equipment["weapon"], "wooden_club")
 	assert_eq(H.pack_count(sim, "iron_sword"), 1)
 	assert_eq(H.pack_count(sim, "arrows"), 30)
 	assert_eq(H.pack_count(sim, "logs"), 0, "lost for good")
@@ -359,17 +360,63 @@ func test_death_keeps_the_three_most_valuable_things() -> void:
 	assert_eq(saved[0]["tick"], died[0]["tick"])
 
 
+## The death-rule check from #38: a death in full iron, five pieces worn, with and without a
+## ring-two haul in the pack.
+func _die_in_full_iron(pack: Array) -> Dictionary:
+	var sim := SimScript.new()
+	H.place(sim, NEAR_ARCHER)
+	H.arm(sim, "iron_sword", pack)
+	var snap := sim.snapshot()
+	snap["inventory"]["equipment"].merge({
+		"helm": "iron_helm", "body": "iron_body", "legs": "iron_legs", "tool": "iron_pickaxe",
+	}, true)
+	snap["health"] = 1
+	sim.restore(snap)
+	var died := H.of_kind(H.run_stamped(sim, 10), Vocab.EV_DIED)
+	assert_eq(died.size(), 1, "the archer finishes the iron-clad character")
+	return died[0] if died.size() == 1 else {"kept": [], "lost": []}
+
+
+func test_a_death_in_full_iron_with_nothing_carried_keeps_the_whole_kit() -> void:
+	var died := _die_in_full_iron([])
+	assert_eq(died["kept"], [
+		{"item": "iron_sword", "count": 1}, {"item": "iron_pickaxe", "count": 1}, {"item": "iron_body", "count": 1},
+		{"item": "iron_legs", "count": 1}, {"item": "iron_helm", "count": 1},
+	], "five worn pieces, five kept")
+	assert_eq(died["lost"], [])
+
+
+func test_a_death_in_full_iron_with_a_haul_loses_the_lesser_pieces_and_the_rest_of_the_haul() -> void:
+	var died := _die_in_full_iron([
+		{"item": "iron_ore", "count": 10},      # 80
+		{"item": "cooked_trout", "count": 3},   # 36
+		{"item": "coal", "count": 4},           # 24
+		{"item": "wolf_pelt", "count": 2},      # 16
+	])
+	assert_eq(died["kept"], [
+		{"item": "iron_sword", "count": 1}, {"item": "iron_ore", "count": 10}, {"item": "iron_pickaxe", "count": 1},
+		{"item": "iron_body", "count": 1}, {"item": "cooked_trout", "count": 3},
+	])
+	assert_eq(died["lost"], [
+		{"item": "iron_legs", "count": 1}, {"item": "coal", "count": 4}, {"item": "iron_helm", "count": 1},
+		{"item": "wolf_pelt", "count": 2},
+	], "worn armour is at risk beside the haul, valued the same way")
+
+
 func test_no_spare_axe_when_one_is_stashed() -> void:
 	var sim := SimScript.new()
 	var snap := sim.snapshot()
 	snap["stash"]["slots"][5] = {"item": "wooden_axe", "count": 1}
 	sim.restore(snap)
 	H.place(sim, H.OUTSIDE)
-	H.arm(sim, "", [{"item": "logs", "count": 4}, {"item": "cooked_fish", "count": 1}, {"item": "arrows", "count": 9}])
+	H.arm(sim, "", [
+		{"item": "logs", "count": 4}, {"item": "cooked_fish", "count": 1}, {"item": "arrows", "count": 9},
+		{"item": "copper_ore", "count": 2}, {"item": "tin_ore", "count": 2},
+	])
 	H.patch(sim, {"warmth": 0, "health": 1})
 	var died := H.of_kind(H.run(sim, 2), Vocab.EV_DIED)
 	assert_eq(died.size(), 1)
-	assert_eq(died[0]["lost"], [{"item": "wooden_axe", "count": 1}], "the cheapest of four things")
+	assert_eq(died[0]["lost"], [{"item": "wooden_axe", "count": 1}], "the cheapest of six things")
 	assert_eq(died[0]["spare"], "")
 	assert_eq(sim.state["inventory"]["equipment"]["tool"], "")
 

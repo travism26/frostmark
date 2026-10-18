@@ -125,8 +125,9 @@ func _play_to_the_captain() -> int:
 	for i in 9:
 		_smith("bronze_bar")
 	_build("armoury")
-	_smith("bronze_armour")
-	_equip("bronze_armour")
+	for piece in ["bronze_helm", "bronze_body", "bronze_legs"]:
+		_smith(piece)
+		_equip(piece)
 	_build("ring_two_gate")
 	_withdraw("raw_fish")
 	_cook_all()
@@ -206,9 +207,11 @@ func test_ring_two_to_a_steel_kit_takes_an_evening() -> void:
 	_smith("steel_pickaxe")
 	_smith("steel_axe")
 	_smith("steel_sword")
-	_smith("steel_armour")
+	for piece in ["steel_helm", "steel_body", "steel_legs"]:
+		_smith(piece)
 	_equip("steel_sword")
-	_equip("steel_armour")
+	for piece in ["steel_helm", "steel_body", "steel_legs"]:
+		_equip(piece)
 	var done := int(sim.state["tick"])
 	_note("a steel kit")
 	print("pacing: %s" % " | ".join(log_lines))
@@ -362,11 +365,12 @@ func _ready_for_ring_two(tools: Array) -> void:
 		var w := _best_weapon(style)
 		if w != "" and sim.state["inventory"]["equipment"]["weapon"] != w and H.pack_count(sim, w) == 0:
 			_withdraw(w, 1)
-	var armour := _best_of_slot(ItemTable.SLOT_ARMOUR)
-	if armour != "" and sim.state["inventory"]["equipment"]["armour"] != armour:
-		if H.pack_count(sim, armour) == 0:
-			_withdraw(armour, 1)
-		_equip(armour)
+	for slot in ItemTable.ARMOUR_SLOTS:
+		var armour := _best_of_slot(slot)
+		if armour != "" and sim.state["inventory"]["equipment"][slot] != armour:
+			if H.pack_count(sim, armour) == 0:
+				_withdraw(armour, 1)
+			_equip(armour)
 	if H.stash_count(sim, "arrows") > 0:
 		_withdraw("arrows")
 	_to_ring_two()

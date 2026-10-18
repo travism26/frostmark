@@ -13,7 +13,7 @@ They work on the live site and in a local build. The short code and the link are
 It is an ordinary save code of the current save version, not a cheat: the rules are unchanged, so the character can still freeze, be hit and die. It loads a character in the outpost with:
 
 - every skill at level 99
-- steel sword, steel armour and steel pickaxe worn; a steel axe, fishing rod, steel bow, steel staff, 100 arrows, 100 frost shards and 5 cooked char in the pack, under the carry limit
+- steel sword, steel helm, steel body, steel legs and steel pickaxe worn; a steel axe, fishing rod, steel bow, steel staff, 100 arrows, 100 frost shards and 5 cooked char in the pack, under the carry limit
 - every upgrade built, so the stash has 20 slots, all holding full stacks of every material, food and ammunition
 - the captain down and the ring-two gate open, ring two already reached
 - both waystones attuned and awake, so `travel` home works from either
