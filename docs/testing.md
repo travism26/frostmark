@@ -29,6 +29,23 @@ godot --headless -s tools/test_mode_code.gd
 
 `tests/test_test_mode.gd` imports the file and checks every point above, and that the short code loads the same character. An older code still migrates forward, but regenerate it when the save version moves on or a test there fails (a new skill would load at level 1, for example).
 
+## The build-from-scratch code
+
+To build the outpost up by hand (the build moment, the yard pieces, the build sounds and the "You can now build" line), load the build-from-scratch character instead. Two ways, both giving the same save:
+
+- **Short code:** on the title screen type `RIMEKNOT` into **Import code** (case and spaces do not matter).
+- **Link:** open <https://travism26.github.io/frostmark/?hearth=kindling> (or `?hearth=kindling` on a local build). Like the test-mode link, it loads the character on every page load with that parameter.
+
+The same note holds: obscurity, not security, only their sha256 hashes are in `scenes/field_kit.gd`, and nothing in the game mentions them. It is an ordinary save of the current version, with the rules unchanged. It loads a new character in the outpost with:
+
+- every skill at its starting level, the starting pack and axe, full warmth and health, and the hints as a new character has them
+- nothing built, the captain standing, no ring reached and no waystone attuned
+- the stash holding the starting kit and, beside it, every upgrade's cost added up
+
+The summed cost is worked out from `sim/upgrades.gd` each time the code is loaded, so a new or repriced upgrade is covered without touching it. It fills more slots than a new stash has, so this save alone starts with as many stash slots as it fills (22 today rather than 8); the shelves, cellar and vault still add their slots when built. Built in the table's order, every upgrade goes up and the materials run out together.
+
+`tests/test_bare_mode.gd` checks each point and builds every upgrade from it in turn.
+
 ## Other codes
 
 `tools/ring_codes.gd` prints a new character standing in each ring (and one in ring one with the warmth run low), for screenshots. Its output is in `tools/ring_codes.txt`.
