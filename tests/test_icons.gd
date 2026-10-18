@@ -77,6 +77,7 @@ func test_ui_settings_persist_and_keep_the_sound_section() -> void:
 	var fresh := UiSettings.load_from(SETTINGS_PATH)
 	assert_almost_eq(fresh.ui_scale, UiSettings.DEFAULT_SCALE, 0.0001, "no file: 100% scale")
 	assert_false(fresh.reduced_motion, "no file: full motion")
+	assert_true(fresh.auto_retaliate, "no file: auto-retaliate is on")
 	assert_false(UiSettings.reduced_motion_on(SETTINGS_PATH), "the accessor reads the default")
 	var sound := AudioSettings.new()
 	sound.volume = 0.35
@@ -84,8 +85,10 @@ func test_ui_settings_persist_and_keep_the_sound_section() -> void:
 	var ui := UiSettings.new()
 	ui.ui_scale = 1.25
 	ui.reduced_motion = true
+	ui.auto_retaliate = false
 	assert_true(ui.save_to(SETTINGS_PATH), "interface settings write")
 	var back := UiSettings.load_from(SETTINGS_PATH)
+	assert_false(back.auto_retaliate, "auto-retaliate off persists")
 	assert_almost_eq(back.ui_scale, 1.25, 0.0001, "scale persists")
 	assert_true(back.reduced_motion, "reduced motion persists")
 	assert_true(UiSettings.reduced_motion_on(SETTINGS_PATH), "the accessor sees it")
@@ -95,6 +98,7 @@ func test_ui_settings_persist_and_keep_the_sound_section() -> void:
 	sound.save_to(SETTINGS_PATH)
 	assert_almost_eq(UiSettings.load_from(SETTINGS_PATH).ui_scale, 1.25, 0.0001, "the interface section survives the sound write")
 	assert_true(UiSettings.load_from(SETTINGS_PATH).reduced_motion, "reduced motion is one key both stores read")
+	assert_false(UiSettings.load_from(SETTINGS_PATH).auto_retaliate, "auto-retaliate survives the sound write")
 	assert_true(AudioSettings.load_from(SETTINGS_PATH).reduced_motion, "the sound store sees the same key")
 	DirAccess.remove_absolute(SETTINGS_PATH)
 
