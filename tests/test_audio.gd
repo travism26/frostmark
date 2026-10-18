@@ -1,6 +1,7 @@
 ## The sound pass's data: every cue key the event mapping and the audio director can ask for
 ## resolves to a clip that exists, every shipped clip is used, the events a real walk and
-## chop produce map only to known cues, and the sound settings persist.
+## chop produce map only to known cues, a build sounds its upgrade's material under the level
+## sting, and the sound settings persist.
 extends "res://tests/run.gd".TestCase
 
 const H := preload("res://tests/sim_helpers.gd")
@@ -63,6 +64,46 @@ func test_the_combat_and_milestone_events_each_sound() -> void:
 	assert_eq(ranged_cue, [AudioCues.CUE_RANGED], "a ranged telegraph has its own cue")
 	var fish := AudioCues.event_cues({"kind": Vocab.EV_GATHERED, "skill": SkillTable.FISHING})
 	assert_eq(fish, [AudioCues.CATCH], "a caught fish splashes")
+
+
+func test_every_upgrade_declares_a_material() -> void:
+	var materials := [YardLook.TIMBER, YardLook.STONE, YardLook.IRON]
+	for id in UpgradeTable.ids():
+		assert_true(materials.has(YardLook.material(id)), "%s is built of timber, stone or iron" % id)
+	for id in YardLook.MATERIALS:
+		assert_true(UpgradeTable.has(id), "material for %s names a real upgrade" % id)
+	for material in materials:
+		assert_true(AudioCues.all_keys().has(AudioCues.BUILT_BY_MATERIAL[material]), "%s has a known build cue" % material)
+
+
+func test_a_build_sounds_its_material_with_the_sting_on_top() -> void:
+	var by_material := {YardLook.TIMBER: AudioCues.CHOP, YardLook.STONE: AudioCues.MINE, YardLook.IRON: AudioCues.SMITH}
+	for id in UpgradeTable.ids():
+		var cues := AudioCues.event_cues({"kind": Vocab.EV_BUILT, "upgrade": id, "effects": {}})
+		assert_eq(cues, [by_material[YardLook.material(id)], AudioCues.STING_LEVEL], "%s sounds its %s, then the sting" % [id, YardLook.material(id)])
+	assert_eq(AudioCues.event_cues({"kind": Vocab.EV_CRAFTED}), [AudioCues.SMITH], "crafting still strikes the anvil, with no sting")
+
+
+func test_a_build_with_no_material_falls_back_to_the_shared_cue() -> void:
+	assert_eq(YardLook.material("a_later_upgrade"), "", "an undeclared upgrade has no material")
+	var cues := AudioCues.event_cues({"kind": Vocab.EV_BUILT, "upgrade": "a_later_upgrade", "effects": {}})
+	assert_eq(cues, [AudioCues.BUILT, AudioCues.STING_LEVEL], "no material: the shared built cue, then the sting")
+
+
+func test_a_real_build_sounds_its_material() -> void:
+	var sim := SimScript.new()
+	var slots: Array = []
+	slots.resize(Sim.STASH_START_SLOTS)
+	slots[0] = {"item": "logs", "count": 10}
+	H.patch(sim, {"stash": {"capacity": Sim.STASH_START_SLOTS, "slots": slots}, "upgrades": []})
+	sim.drain_events()
+	assert_true(sim.command(Vocab.BUILD, {"upgrade": "stash_shelves"})["ok"], "the shelves build")
+	var heard: Array[String] = []
+	for e in H.run(sim, 1):
+		heard.append_array(AudioCues.event_cues(e))
+	assert_true(heard.has(AudioCues.CHOP), "timber shelves sound the axe")
+	assert_true(heard.has(AudioCues.STING_LEVEL), "with the sting on top")
+	assert_false(heard.has(AudioCues.SMITH), "and no smithing strike")
 
 
 func test_the_levels_strikes_loops_and_beds_resolve() -> void:
