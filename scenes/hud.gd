@@ -876,7 +876,7 @@ func _build_orbs() -> void:
 	_warmth.tooltip_text = "Warmth. It drains outside the outpost; only a fire restores it, and at zero your health drains instead."
 	column.add_child(_warmth)
 	_health = Orb.new(UiTheme.BLOOD, UiTheme.BLOOD_DEEP, "Health")
-	_health.tooltip_text = "Health. Food heals it. At zero you wake by the outpost fire with your three most valuable things."
+	_health.tooltip_text = "Health. Food heals it. At zero you wake by the outpost fire with your five most valuable things."
 	column.add_child(_health)
 	_fire_button = Button.new()
 	_fire_button.text = "Light fire"
