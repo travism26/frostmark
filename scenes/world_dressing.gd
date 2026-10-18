@@ -617,8 +617,8 @@ static func yard_props() -> Node3D:
 		[Props.SURVIVAL + "box.glb", 0.7, Vector2(8.3, -8.2), 0.2],
 		[Props.SURVIVAL + "box.glb", 0.6, Vector2(8.1, -7.3), 0.9],
 		[Props.NATURE + "log_stackLarge.glb", 0.55, Vector2(-8.4, 1.5), PI * 0.5],
-		[Props.NATURE + "log_stack.glb", 0.5, Vector2(-8.4, 0.2), PI * 0.5],
-		[Props.NATURE + "log_stack.glb", 0.5, Vector2(-8.3, -2.6), PI * 0.5],
+		[Props.NATURE + "log_stack.glb", 0.5, Vector2(-8.4, 4.6), PI * 0.5],
+		[Props.NATURE + "log_stack.glb", 0.5, Vector2(-8.3, 2.8), PI * 0.5],
 		[Props.NATURE + "log_stack.glb", 0.45, Vector2(2.2, -8.4), 0.0],
 		[Props.SURVIVAL + "resource-planks.glb", 0.5, Vector2(8.3, -3.0), PI * 0.5],
 		[Props.SURVIVAL + "resource-wood.glb", 0.45, Vector2(8.3, -1.4), PI * 0.5],
@@ -658,6 +658,10 @@ static func yard_props() -> Node3D:
 const COLOR_PLANK := Color(0.66, 0.49, 0.31)
 ## A shelf rack's boards, as fractions of its height: YardLook stands crates on their tops.
 const YARD_RACK_BOARDS := [0.1, 0.48, 0.86]
+## Wrought iron for the straps and hinges on the yard pieces, and the brass of a lock plate.
+const COLOR_IRON := Color(0.22, 0.23, 0.26)
+const COLOR_IRON_EDGE := Color(0.36, 0.37, 0.41)
+const COLOR_BRASS := Color(0.66, 0.52, 0.26)
 
 ## One piece from YardLook, standing where the piece says: kit models and hand-made meshes in
 ## the outpost's timber. Nothing clickable, so a click falls through to the yard floor.
@@ -683,6 +687,11 @@ static func yard_piece(piece: Dictionary) -> Node3D:
 ## A hand-made yard mesh YardLook names, `size` long (x), high (y) and deep (z).
 static func yard_mesh(kind: String, size: Vector3) -> ArrayMesh:
 	assert(kind in YardLook.MESHES, "no yard mesh %s" % kind)
+	match kind:
+		"hatch":
+			return _hatch(size)
+		"iron_chest":
+			return _iron_chest(size)
 	return _shelf_rack(size)
 
 
@@ -700,6 +709,50 @@ static func _shelf_rack(size: Vector3) -> ArrayMesh:
 		plank.a = 1.0
 		MeshKit.box(st, Vector3(0.0, YARD_RACK_BOARDS[i] * size.y, 0.0), Vector3(size.x - 0.04, 0.06, size.z - 0.04), plank, plank)
 	MeshKit.box(st, Vector3(0.0, size.y * 0.62, -size.z * 0.5 + 0.03), Vector3(size.x - 0.1, 0.08, 0.04), COLOR_TIMBER_DARK, COLOR_TIMBER_DARK)
+	return MeshKit.finish(st)
+
+
+## A cellar hatch lying in the yard floor: a dark timber frame, a door of fresh-sawn planks
+## running along x, two iron hinge straps across them from the back (-z) and an iron ring at
+## the front, all within `size.y` of the ground.
+static func _hatch(size: Vector3) -> ArrayMesh:
+	var st := MeshKit.begin()
+	var rim := 0.12
+	var h := size.y
+	for z in [-1.0, 1.0]:
+		MeshKit.box(st, Vector3(0.0, h * 0.4, z * (size.z - rim) * 0.5), Vector3(size.x, h * 0.8, rim), COLOR_TIMBER_DARK, COLOR_TIMBER_DARK)
+	for x in [-1.0, 1.0]:
+		MeshKit.box(st, Vector3(x * (size.x - rim) * 0.5, h * 0.4, 0.0), Vector3(rim, h * 0.8, size.z - rim * 2.0), COLOR_TIMBER_DARK, COLOR_TIMBER_DARK)
+	var planks := 4
+	var inner := size.z - rim * 2.0
+	for i in planks:
+		var plank := COLOR_PLANK * (0.9 + 0.1 * (i % 2))
+		plank.a = 1.0
+		var z := -inner * 0.5 + inner * (i + 0.5) / planks
+		MeshKit.box(st, Vector3(0.0, h * 0.3, z), Vector3(size.x - rim * 2.0, h * 0.6, inner / planks - 0.02), plank, plank)
+	for x in [-0.28, 0.28]:
+		MeshKit.box(st, Vector3(x * size.x, h * 0.65, -size.z * 0.12), Vector3(0.07, h * 0.1, size.z * 0.66), COLOR_IRON, COLOR_IRON_EDGE)
+	MeshKit.box(st, Vector3(0.0, h * 0.65, size.z * 0.5 - rim - 0.08), Vector3(0.16, h * 0.1, 0.05), COLOR_IRON, COLOR_IRON_EDGE)
+	MeshKit.box(st, Vector3(0.0, h * 0.65, size.z * 0.5 - rim - 0.17), Vector3(0.05, h * 0.1, 0.13), COLOR_IRON, COLOR_IRON_EDGE)
+	return MeshKit.finish(st)
+
+
+## An iron-bound chest: a dark timber body, a lid of fresh-sawn plank with a little snow along
+## its back, two iron straps over body and lid, iron caps on its ends, an iron rim at the seam and a brass lock
+## plate on the front (+z).
+static func _iron_chest(size: Vector3) -> ArrayMesh:
+	var st := MeshKit.begin()
+	var body := size.y * 0.62
+	var lid := size.y - body
+	MeshKit.box(st, Vector3(0.0, body * 0.5, 0.0), Vector3(size.x - 0.04, body, size.z - 0.04), COLOR_TIMBER, COLOR_TIMBER)
+	MeshKit.box(st, Vector3(0.0, body + lid * 0.5, 0.0), Vector3(size.x, lid, size.z), COLOR_PLANK, COLOR_PLANK)
+	MeshKit.box(st, Vector3(0.0, size.y + 0.01, -size.z * 0.36), Vector3(size.x - 0.06, 0.03, size.z * 0.24), MeshKit.SNOW, MeshKit.SNOW)
+	for x in [-0.3, 0.3]:
+		MeshKit.box(st, Vector3(x * size.x, size.y * 0.5 + 0.005, 0.0), Vector3(0.08, size.y + 0.03, size.z + 0.03), COLOR_IRON, COLOR_IRON_EDGE)
+	MeshKit.box(st, Vector3(0.0, body, 0.0), Vector3(size.x + 0.03, 0.05, size.z + 0.03), COLOR_IRON, COLOR_IRON_EDGE)
+	for x in [-1.0, 1.0]:
+		MeshKit.box(st, Vector3(x * (size.x * 0.5 - 0.03), size.y * 0.5, 0.0), Vector3(0.08, size.y + 0.02, size.z + 0.02), COLOR_IRON, COLOR_IRON_EDGE)
+	MeshKit.box(st, Vector3(0.0, body - 0.02, size.z * 0.5 + 0.025), Vector3(0.16, 0.2, 0.03), COLOR_BRASS, COLOR_BRASS)
 	return MeshKit.finish(st)
 
 
