@@ -126,7 +126,7 @@ Any other kind is `unknown_command`. Rejection reasons for movement: `bad_args`,
 
 ```
 {
-  "version": 8,
+  "version": 9,
   "tick": 0,
   "rng": 1,                      # 31-bit generator state for gathering and drop rolls
   "player": {
@@ -171,7 +171,7 @@ Any other kind is `unknown_command`. Rejection reasons for movement: `bad_args`,
 |------|-------|
 | Pack | 12 slots; logs, ore, bars, ice crystals and fish stack to 10, arrows and frost shards to 100, gear never stacks |
 | Carry limit | 30 kg (logs, copper, tin, coal and bronze bars 1 kg, iron ore, steel bars and troll hides 2 kg, tools 1 to 3 kg, weapons 2 to 4 kg, armour 4 to 7 kg, arrows and frost shards 0 kg); above it walking is 60% speed |
-| Stash | 8 slots to start; the shelves and cellar upgrades add 4 each. A new character's stash holds a wooden bow, 30 arrows and 5 cooked fish |
+| Stash | 8 slots to start; the shelves, cellar and vault upgrades add 4 each, up to 20. A new character's stash holds a wooden bow, 30 arrows and 5 cooked fish |
 | Experience curve | Shared by all eight skills: level L needs `50 * L * (L - 1) / 2` total xp (50, 150, 300, 500, ...), capped at 99. Levels never decrease |
 | Gathering | One attempt takes `max(2, 4 - (level - 1) / 4 - tool)` ticks and succeeds with `min(95, 60 + 4 * (level - 1) + 10 * tool)` percent, where `tool` is the best carried tool's tier rank (wooden 0, bronze 1, iron 2, steel 3). Needs the node's tool (axe, pickaxe, rod) in the pack or the tool slot |
 | Warmth | 360 points, draining 1 per tick outside the outpost (three minutes), in every ring. No drain inside the outpost. Within 3 m of any fire (the outpost's, the brazier past the ring-two gate, a field fire) it refills 24 per tick and health refills 2 per tick |
@@ -229,6 +229,7 @@ Any other kind is `unknown_command`. Rejection reasons for movement: `bad_args`,
 | Ring-two gate winch | 12 logs, 8 iron ore, 3 bronze bars, 3 wolf pelts | Armoury | Readies the gate to ring two; it opens once the captain has fallen |
 | Blast furnace | 12 logs, 4 bronze bars, 6 coal, 2 troll hides | Ring-two gate winch | Unlocks steel bars, tools, weapons and armour, and lifts the smithing cap to steel |
 | Waystones | 10 iron ore, 6 bronze bars, 10 logs | Ring-two gate winch | Wakes the waystones in ring one and ring two |
+| Stash vault | 12 logs, 10 iron ore, 4 coal | Stash cellar, Ring-two gate winch | +4 stash slots |
 
 **Gear tiers** (every weapon, armour and tool has one, and it shows on the character):
 
@@ -332,7 +333,7 @@ The simulation never touches the filesystem. It reports save points with `saved`
 
 A save code is base64 of `FM|<version>|<checksum>|<snapshot JSON>`. The JSON is compact with sorted keys. The checksum is the first 16 hex digits of SHA-256 over `<version>|<snapshot JSON>`: it catches typos, truncation and hand edits, and is not meant to stop a determined cheat. Decoding accepts only the canonical base64 of the decoded bytes, so every changed character is caught. It ignores whitespace from wrapped pastes, refuses codes from a newer build, and never raises an engine error.
 
-`SaveCode.migrate(snap, target)` applies one step per version. Each step hard-codes the defaults of its own version, so retuning a constant later never changes what an old save migrates into. `1 -> 2` keeps the slice-2 tick and position and adds a new character's inventory, stash, skills, warmth, health and nodes. `2 -> 3` adds the swing timer, an empty healing queue, enemies (empty, so every enemy loads at home and idle) and ground loot, and puts the slice-4 starter kit (a wooden bow, 30 arrows, 5 cooked fish) into empty stash slots so a slice-3 character can fight too. What does not fit is not added. `3 -> 4` adds no field fires and no fallen guardians and changes nothing else: the stash keeps its capacity, known nodes and enemies keep their state, and the new ring-one nodes, enemies and the captain load full and at home. `4 -> 5` adds the first-outing guide switched off with its four steps walked, since a version-4 character has already been played. `5 -> 6` adds the magic skill at level 1 with no experience (an entry already there is kept) and changes nothing else: the ice crystals and frost witches load full and at home, and the captain carries on from the step of his cycle he was on. `6 -> 7` adds no rings reached and changes nothing else: ring two's nodes and monsters load full and at home, and a character who saw the old ending finds the gate open, with its first walk through still announced. `7 -> 8` adds no waystones visited and changes nothing else: the upgrade could not be built before, so every waystone sleeps until it is built and must be walked to once.
+`SaveCode.migrate(snap, target)` applies one step per version. Each step hard-codes the defaults of its own version, so retuning a constant later never changes what an old save migrates into. `1 -> 2` keeps the slice-2 tick and position and adds a new character's inventory, stash, skills, warmth, health and nodes. `2 -> 3` adds the swing timer, an empty healing queue, enemies (empty, so every enemy loads at home and idle) and ground loot, and puts the slice-4 starter kit (a wooden bow, 30 arrows, 5 cooked fish) into empty stash slots so a slice-3 character can fight too. What does not fit is not added. `3 -> 4` adds no field fires and no fallen guardians and changes nothing else: the stash keeps its capacity, known nodes and enemies keep their state, and the new ring-one nodes, enemies and the captain load full and at home. `4 -> 5` adds the first-outing guide switched off with its four steps walked, since a version-4 character has already been played. `5 -> 6` adds the magic skill at level 1 with no experience (an entry already there is kept) and changes nothing else: the ice crystals and frost witches load full and at home, and the captain carries on from the step of his cycle he was on. `6 -> 7` adds no rings reached and changes nothing else: ring two's nodes and monsters load full and at home, and a character who saw the old ending finds the gate open, with its first walk through still announced. `7 -> 8` adds no waystones visited and changes nothing else: the upgrade could not be built before, so every waystone sleeps until it is built and must be walked to once. `8 -> 9` only raises the version: a version-8 save cannot hold the Stash vault, so its upgrades and stash stay exactly as they were.
 
 Every version ever shipped keeps a real save code in `tests/fixtures/save_v<N>.txt`, and `tests/test_save_fixtures.gd` imports each into the current build. **Each future version bump adds its fixture** (a code exported from the build that introduces the version) along with its migration step; old fixtures are never edited. The test fails when a version has no fixture.
 
