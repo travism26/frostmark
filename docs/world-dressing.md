@@ -1,6 +1,6 @@
 # World dressing
 
-What stands on the ground in each ring, and why. Decided in the graphics grill ([#35](https://github.com/travism26/frostmark/issues/35)), specified in [#40](https://github.com/travism26/frostmark/issues/40) and built in #16 and #20. Colour, fog, snow and wind per ring come from the ring-look table (`scenes/ring_look.gd`); what stands on the ground comes from the dressing table (`scenes/ring_dressing.gd`); the meshes are built by `scenes/world_dressing.gd` and `scenes/ruin_kit.gd`. None of it has collision or changes the world definition: dressing is presentation, and a path may pass through it.
+What stands on the ground in each ring, and why. Decided in the graphics grill ([#35](https://github.com/travism26/frostmark/issues/35)), specified in [#40](https://github.com/travism26/frostmark/issues/40) and built in #16 and #20. Colour, fog, snow and wind per ring come from the ring-look table (`scenes/ring_look.gd`); what stands on the ground comes from the dressing table (`scenes/ring_dressing.gd`) and, in the yard, from the yard-look table (`scenes/yard_look.gd`); the meshes are built by `scenes/world_dressing.gd` and `scenes/ruin_kit.gd`. None of it has collision or changes the world definition: dressing is presentation, and a path may pass through it.
 
 ## One look per ring
 
@@ -26,6 +26,16 @@ The snowfield is painted by ring: the ring look's `snow_tone` holds out to each 
 | Ring two | A collapsed tower in the gate yard | A fallen arch over the east gap in the outer wall | A ring of old stones around the waystone | A spire of ice on the frozen lake |
 
 Every landmark's foot is reachable by click-to-move (`tests/test_dressing.gd` routes to each), and every one stands where paths rarely run.
+
+## The yard: upgrades you can see
+
+What the outpost has built stands in its yard, specified in [#47](https://github.com/travism26/frostmark/issues/47). The yard-look table (`scenes/yard_look.gd`) declares each upgrade's look as data by its id: its upgrade line and step, the spot it builds in, and the kit models and hand-made meshes it is assembled from. A pure function maps the list of built upgrades to the pieces to draw; WorldDressing builds them and GameRoot redraws them whenever the list changes, so a loaded save shows its yard with nothing extra saved. An unbuilt upgrade draws nothing. Like the rest of the dressing, a piece has no collision.
+
+| Upgrade | Spot | Piece |
+|---------|------|-------|
+| Stash shelves | The stash corner, along the west wall south of the stash | A timber shelf rack with crates and a keg on its boards |
+
+A later step of a line builds beside the earlier step in the same spot. Every piece stays inside the palisade and clear of the stations, the tent and the gate path (`tests/test_yard_look.gd`), and every piece's materials are sampled in the shader warm-up, built or not. `tools/spot_shots.gd` shows a spot with upgrades built.
 
 ## The ruin kit
 
