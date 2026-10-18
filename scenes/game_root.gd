@@ -112,6 +112,7 @@ var _faded: Array[MeshInstance3D] = []  # blocks made see-through because they h
 var _fade_twins := {}
 var _warmup: Node3D  # samples of every look, drawn behind the title screen, then freed
 var _warmup_until := 0
+var _page_code := ""  # the character the page link asks for, loaded once the warm-up is drawn
 var _playing := false
 var _node_looks := {}  # node object id -> its prop, whose Full/Spent children show its state
 var _ring_gates := {}  # ring gate object id -> {bars, label}
@@ -225,15 +226,19 @@ func _ready() -> void:
 	_hud.visible = false
 	_show_sim()
 	_build_warmup()
-	var asked := FieldKit.page_code(sim.world)
-	if asked != "":
-		_on_import(asked)
+	_page_code = FieldKit.page_code(sim.world)
 
 
 func _process(delta: float) -> void:
 	_clock += delta
 	_flicker()
 	_end_warmup(false)
+	if _warmup == null and _page_code != "":
+		# Loading at once would free the warm-up before it was drawn, leaving every look to
+		# compile on first sight in play: each arrow, puff and fire the first time it shows.
+		var code := _page_code
+		_page_code = ""
+		_on_import(code)
 	var shadow_reach: float = _camera_rig.distance * SHADOW_REACH
 	if _sun.directional_shadow_max_distance != shadow_reach:
 		_sun.directional_shadow_max_distance = shadow_reach
@@ -782,13 +787,16 @@ func _add_fade_twin(mesh: MeshInstance3D) -> void:
 # --- Shader warm-up -------------------------------------------------------------------
 
 ## The browser compiles a shader the first time something draws with it, freezing the game
-## for 50 to 275 ms. So behind the title screen a tiny sample of every look the world can
-## show is drawn in front of the camera for a few frames: each material once plain and once
-## instanced, beside and away from a fire's light (both change the compiled shader), plus
-## the see-through fade twins and every label size with every glyph it can print. The yard
-## pieces of every upgrade are sampled too, built or not, so none freezes the game when it
-## first appears, and so is the build beat's puff, with the particles of every fire. The HUD is drawn under the title too, so its text is rasterised before the
-## first click.
+## for 50 to 275 ms (seconds in Firefox). So behind the title screen a tiny sample of every
+## look the world can show is drawn in front of the camera for a few frames: each material
+## once plain and once instanced, beside and away from a fire's light (both change the
+## compiled shader), plus the see-through fade twins and every label size with every glyph
+## it can print. The yard pieces of every upgrade are sampled too, built or not, so none
+## freezes the game when it first appears, and so is the build beat's puff, with the
+## particles of every fire, and a fight's shots and puffs. A look only stays compiled while
+## a material of its kind lives, so the shots made during play share materials held for the
+## session (Projectiles). The HUD is drawn under the title too, so its text is
+## rasterised before the first click.
 func _build_warmup() -> void:
 	var looks := {}  # shader key -> [a mesh, a material with that key]
 	var every_piece := Node3D.new()
