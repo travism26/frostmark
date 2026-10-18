@@ -427,6 +427,13 @@ static func badge_style(colour: Color, px: int) -> StyleBoxFlat:
 	return s
 
 
+## A list row's own backing, clear until the caller colours its `bg_color` and
+## `border_color` (the Upgrades tab's can-build-now highlight and its flash). A fresh box per
+## row, so recolouring one row leaves the rest alone.
+static func row_style() -> StyleBoxFlat:
+	return _flat(Color(TIMBER, 0.0), Color(IRON_DARK, 0.0), 1, 6, Vector2(8, 6))
+
+
 ## A Kenney game icon (white, 2x) scaled down to `px` for a button.
 static func icon(name: String, px: int = 16) -> Texture2D:
 	var key := "%s:%d" % [name, px]

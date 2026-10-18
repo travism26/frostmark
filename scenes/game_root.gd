@@ -526,6 +526,7 @@ func _apply_events(events: Array[Dictionary]) -> void:
 			SimVocab.EV_BUILT:
 				var label: String = UpgradeTable.get_upgrade(e["upgrade"])["label"]
 				_hud.banner("Built: %s." % label)
+				_hud.flash_upgrade(e["upgrade"])
 				_last_event = "Built the %s." % label.to_lower()
 				_sync_waystones()
 				_sync_yard()
