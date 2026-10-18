@@ -96,6 +96,7 @@ static func _stocked(world: WorldDef) -> Sim:
 		{"item": "ice_crystal", "count": 2},
 	])
 	var snap := sim.snapshot()
+	snap["inventory"]["equipment"]["helm"] = "bronze_helm"
 	snap["inventory"]["equipment"]["body"] = "bronze_body"
 	snap["inventory"]["equipment"]["tool"] = "bronze_pickaxe"
 	snap["warmth"] = int(Sim.WARMTH_MAX * 0.62)

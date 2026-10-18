@@ -171,19 +171,19 @@ func _build_legs(view: CharacterView, place: String, item: String) -> void:
 	var colour := _tier_colour(item)
 	var hips := _mount(view, place, "hips")
 	var kilt := CylinderMesh.new()
-	kilt.top_radius = 0.33
-	kilt.bottom_radius = 0.38
-	kilt.height = 0.22
+	kilt.top_radius = 0.38
+	kilt.bottom_radius = 0.46
+	kilt.height = 0.26
 	kilt.radial_segments = 8
 	kilt.material = Props.flat(colour.darkened(0.1))
-	Figures.part(hips, kilt, Vector3(0, -0.02, 0))
+	Figures.part(hips, kilt, Vector3(0, -0.08, 0))
 	if _rank(item) < 2:
 		return
 	for side in ["l", "r"]:
 		var shin := _mount(view, place, "lowerleg_" + side)
 		var greave := CylinderMesh.new()
-		greave.top_radius = 0.13
-		greave.bottom_radius = 0.11
+		greave.top_radius = 0.16
+		greave.bottom_radius = 0.14
 		greave.height = 0.22
 		greave.radial_segments = 8
 		greave.material = Props.flat(colour)
