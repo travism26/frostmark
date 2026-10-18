@@ -114,6 +114,12 @@ const ACTION_PICK_UP := "pick_up"
 const ACTION_RING_GATE := "ring_gate"
 const ACTION_WAYSTONE := "waystone"
 
+# --- Upgrade status (the `status` of each `Sim.upgrade_status()` entry) ----------
+
+const UPGRADE_BUILT := "built"
+const UPGRADE_CAN_BUILD := "can_build"   # unlocked, prerequisites built, the stash holds the cost
+const UPGRADE_NOT_YET := "not_yet"       # locked, a prerequisite unbuilt, or a cost item short
+
 # --- Rejection reasons ------------------------------------------------------------
 
 const REASON_UNKNOWN_COMMAND := "unknown_command"
