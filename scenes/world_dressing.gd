@@ -652,6 +652,57 @@ static func yard_props() -> Node3D:
 	return yard
 
 
+# --- Upgrade pieces in the yard -----------------------------------------------------------
+
+## Fresh-sawn plank for the yard pieces, paler than the palisade's weathered timber.
+const COLOR_PLANK := Color(0.66, 0.49, 0.31)
+## A shelf rack's boards, as fractions of its height: YardLook stands crates on their tops.
+const YARD_RACK_BOARDS := [0.1, 0.48, 0.86]
+
+## One piece from YardLook, standing where the piece says: kit models and hand-made meshes in
+## the outpost's timber. Nothing clickable, so a click falls through to the yard floor.
+static func yard_piece(piece: Dictionary) -> Node3D:
+	var node := Node3D.new()
+	node.name = piece["upgrade"]
+	node.position = Vector3(piece["at"].x, 0.0, piece["at"].y)
+	node.rotation.y = piece["turn"]
+	for part in piece["parts"]:
+		var built: Node3D
+		if part.has("model"):
+			built = Props.model(part["model"], part["height"], part.get("snow_from", 0.55))
+		else:
+			var mi := MeshInstance3D.new()
+			mi.mesh = yard_mesh(part["mesh"], Vector3(part["size"][0], part["size"][1], part["size"][2]))
+			built = mi
+		built.position = Vector3(part["at"][0], part.get("y", 0.0), part["at"][1])
+		built.rotation.y = part.get("turn", 0.0)
+		node.add_child(built)
+	return node
+
+
+## A hand-made yard mesh YardLook names, `size` long (x), high (y) and deep (z).
+static func yard_mesh(kind: String, size: Vector3) -> ArrayMesh:
+	assert(kind in YardLook.MESHES, "no yard mesh %s" % kind)
+	return _shelf_rack(size)
+
+
+## A shelf rack in the gateway's hand: four log uprights with snowy points, three boards in
+## fresh-sawn plank (light enough to read in the wall's shadow) and a back rail, standing on
+## the ground with its back to -z. The boards sit at YARD_RACK_BOARDS of its height.
+static func _shelf_rack(size: Vector3) -> ArrayMesh:
+	var st := MeshKit.begin()
+	var r := 0.06
+	for x in [-1.0, 1.0]:
+		for z in [-1.0, 1.0]:
+			MeshKit.log_post(st, Vector3(x * (size.x * 0.5 - r), 0.0, z * (size.z * 0.5 - r)), -0.05, size.y - 0.1, r, 0.1, Vector2.ZERO, COLOR_TIMBER)
+	for i in YARD_RACK_BOARDS.size():
+		var plank := COLOR_PLANK * (0.94 + 0.06 * (i % 2))
+		plank.a = 1.0
+		MeshKit.box(st, Vector3(0.0, YARD_RACK_BOARDS[i] * size.y, 0.0), Vector3(size.x - 0.04, 0.06, size.z - 0.04), plank, plank)
+	MeshKit.box(st, Vector3(0.0, size.y * 0.62, -size.z * 0.5 + 0.03), Vector3(size.x - 0.1, 0.08, 0.04), COLOR_TIMBER_DARK, COLOR_TIMBER_DARK)
+	return MeshKit.finish(st)
+
+
 ## Draws one Kenney model, scaled to `height` and snow-capped like a prop, once per transform:
 ## one multimesh per mesh, carrying the prop's materials.
 static func _scatter_model(parent: Node3D, path: String, height: float, snow_from: float, tint: Color, transforms: Array[Transform3D]) -> void:
