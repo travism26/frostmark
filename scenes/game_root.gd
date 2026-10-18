@@ -95,6 +95,7 @@ const CharacterGear := preload("res://scenes/character_gear.gd")
 const Atmosphere := preload("res://scenes/atmosphere.gd")
 const AudioDirector := preload("res://scenes/audio_director.gd")
 const CombatCues := preload("res://scenes/combat_cues.gd")
+const Projectiles := preload("res://scenes/projectiles.gd")
 const WaystonePanel := preload("res://scenes/waystone_panel.gd")
 
 var sim: Sim
@@ -132,6 +133,7 @@ var _character_view: CharacterView
 var _atmosphere: Node
 var _audio: Node
 var _cues: CombatCues
+var _projectiles: Projectiles  # arrows and frost shards in flight
 var _ui_settings: UiSettings
 var _hover_point: Variant = null  # mouse position whose world label to show, or null
 var _hovered_label: Label3D
@@ -172,6 +174,8 @@ func _ready() -> void:
 	UiTheme.style_hud_label($HUD/Status, "status")
 	_cues = CombatCues.new()
 	add_child(_cues)
+	_projectiles = Projectiles.new()
+	add_child(_projectiles)
 	_atmosphere = Atmosphere.new()
 	add_child(_atmosphere)
 	_atmosphere.setup($Sun, $WorldEnvironment.environment, _camera_rig, _character, sim.world)
@@ -201,6 +205,7 @@ func _ready() -> void:
 	_ui_settings = UiSettings.load_from()
 	_ui_settings.apply(get_window())
 	_build_beat.moves_camera = not _ui_settings.reduced_motion
+	_projectiles.reduced_motion = _ui_settings.reduced_motion
 	_hud.set_settings(_audio.settings, _ui_settings)
 	_title_screen = TitleScreen.new()
 	_title_screen.help_requested.connect(func() -> void: _help_panel.open(false))
@@ -319,6 +324,7 @@ func _on_ui_settings(settings: UiSettings) -> void:
 	_atmosphere.set_reduced_motion(settings.reduced_motion)
 	_audio.settings.reduced_motion = settings.reduced_motion  # the director's copy, saved with the sound
 	_build_beat.moves_camera = not settings.reduced_motion
+	_projectiles.reduced_motion = settings.reduced_motion
 	sim.command(SimVocab.SET_AUTO_RETALIATE, {"on": settings.auto_retaliate})
 	settings.save_to()
 
@@ -378,6 +384,7 @@ func _show_sim() -> void:
 	_facing = sim.player_facing()
 	_place_character(sim.player_pos(), _facing, 0.0)
 	_build_beat.cancel()  # a loaded yard stands as it is, with no beat
+	_projectiles.clear()
 	_camera_rig.global_position = _character.global_position
 	for id in _node_looks:
 		_set_node_look(id, int(sim.state["nodes"][id]["left"]) > 0)
@@ -594,13 +601,20 @@ func _apply_events(events: Array[Dictionary]) -> void:
 				_last_event = _hit_text(e)
 				if e["attacker"] != SimVocab.PLAYER:
 					_swing(e["attacker"])
-				_flinch(e["target"])
+					_projectiles.resolve(e["attacker"], true)
+					_flinch(e["target"])
+				elif _enemies.has(e["target"]):
+					# The player's arrow or shard flies now and the enemy recoils when it lands.
+					_projectiles.loose(_character, _enemies[e["target"]]["root"], e["style"], 0.0, -1.0, "", true, _flinch.bind(e["target"]))
+				else:
+					_flinch(e["target"])
 			SimVocab.EV_MISSED:
 				_last_event = "%s's %s misses. You stepped clear." % [
 					_sentence(_enemy_name(e["attacker"])), CombatTable.action_label(e["action"]).to_lower(),
 				]
 				if e["attacker"] != SimVocab.PLAYER:
 					_swing(e["attacker"])
+					_projectiles.resolve(e["attacker"], false)
 			SimVocab.EV_ENEMY_DIED:
 				_last_event = "%s falls." % _sentence(_enemy_name(e["enemy_id"]))
 				if e["enemy_kind"] == "bandit_captain" and not sim.ring_gate_open("ring_two_gate"):
@@ -781,6 +795,7 @@ func _build_warmup() -> void:
 	for piece in YardLook.pieces(UpgradeTable.ids()):
 		every_piece.add_child(WorldDressing.yard_piece(piece))
 		every_piece.add_child(BuildBeat.puff(piece))
+	every_piece.add_child(Projectiles.samples())
 	for root: Node in [_world, _enemy_layer, _character, every_piece]:
 		for node in root.find_children("*", "GeometryInstance3D", true, false):
 			var mesh: Mesh = null
@@ -1250,6 +1265,8 @@ func _show_cue(e: Dictionary) -> void:
 	var figure := (drawn["root"] as Node3D).get_node("Figure") as FigureBody
 	if CombatTable.is_attack(e["action"]):
 		figure.strike(e["style"])
+		# A bow or staff looses its shot so it arrives as this blow lands, on the next tick.
+		_projectiles.loose(drawn["root"], _character, e["style"], 0.0, Sim.TICK_SECONDS - _accumulator, e["enemy_id"], false)
 	elif CombatTable.is_windup(e["action"]):
 		figure.wind_up(e["style"])
 
