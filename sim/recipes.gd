@@ -40,9 +40,18 @@ const RECIPES := {
 		"label": "Wooden staff", "inputs": {"logs": 3, "ice_crystal": 1}, "output": {"item": "wooden_staff", "count": 1},
 		"skill": SkillTable.SMITHING, "level": 1, "upgrade": "", "xp": 12, "tier": ItemTable.TIER_WOODEN,
 	},
-	"wooden_armour": {
-		"label": "Wooden armour", "inputs": {"logs": 8}, "output": {"item": "wooden_armour", "count": 1},
-		"skill": SkillTable.SMITHING, "level": 2, "upgrade": "", "xp": 20, "tier": ItemTable.TIER_WOODEN,
+	# Armour comes in three pieces; a tier's full set costs what its single armour did (#38).
+	"wooden_helm": {
+		"label": "Wooden helm", "inputs": {"logs": 2}, "output": {"item": "wooden_helm", "count": 1},
+		"skill": SkillTable.SMITHING, "level": 2, "upgrade": "", "xp": 5, "tier": ItemTable.TIER_WOODEN,
+	},
+	"wooden_body": {
+		"label": "Wooden body", "inputs": {"logs": 4}, "output": {"item": "wooden_body", "count": 1},
+		"skill": SkillTable.SMITHING, "level": 2, "upgrade": "", "xp": 10, "tier": ItemTable.TIER_WOODEN,
+	},
+	"wooden_legs": {
+		"label": "Wooden legs", "inputs": {"logs": 2}, "output": {"item": "wooden_legs", "count": 1},
+		"skill": SkillTable.SMITHING, "level": 2, "upgrade": "", "xp": 5, "tier": ItemTable.TIER_WOODEN,
 	},
 	"bronze_bar": {
 		"label": "Bronze bar", "inputs": {"copper_ore": 1, "tin_ore": 1}, "output": {"item": "bronze_bar", "count": 1},
@@ -72,9 +81,17 @@ const RECIPES := {
 		"label": "Bronze staff", "inputs": {"bronze_bar": 2, "logs": 2, "ice_crystal": 1}, "output": {"item": "bronze_staff", "count": 1},
 		"skill": SkillTable.SMITHING, "level": 2, "upgrade": "forge", "xp": 25, "tier": ItemTable.TIER_BRONZE,
 	},
-	"bronze_armour": {
-		"label": "Bronze armour", "inputs": {"bronze_bar": 4}, "output": {"item": "bronze_armour", "count": 1},
-		"skill": SkillTable.SMITHING, "level": 3, "upgrade": "armoury", "xp": 40, "tier": ItemTable.TIER_BRONZE,
+	"bronze_helm": {
+		"label": "Bronze helm", "inputs": {"bronze_bar": 1}, "output": {"item": "bronze_helm", "count": 1},
+		"skill": SkillTable.SMITHING, "level": 3, "upgrade": "armoury", "xp": 10, "tier": ItemTable.TIER_BRONZE,
+	},
+	"bronze_body": {
+		"label": "Bronze body", "inputs": {"bronze_bar": 2}, "output": {"item": "bronze_body", "count": 1},
+		"skill": SkillTable.SMITHING, "level": 3, "upgrade": "armoury", "xp": 20, "tier": ItemTable.TIER_BRONZE,
+	},
+	"bronze_legs": {
+		"label": "Bronze legs", "inputs": {"bronze_bar": 1}, "output": {"item": "bronze_legs", "count": 1},
+		"skill": SkillTable.SMITHING, "level": 3, "upgrade": "armoury", "xp": 10, "tier": ItemTable.TIER_BRONZE,
 	},
 	# Steel: iron ore from both rings and coal from ring two, once the blast furnace is built.
 	"steel_bar": {
@@ -101,9 +118,17 @@ const RECIPES := {
 		"label": "Steel staff", "inputs": {"steel_bar": 2, "logs": 2, "ice_crystal": 1}, "output": {"item": "steel_staff", "count": 1},
 		"skill": SkillTable.SMITHING, "level": 5, "upgrade": "blast_furnace", "xp": 50, "tier": ItemTable.TIER_STEEL,
 	},
-	"steel_armour": {
-		"label": "Steel armour", "inputs": {"steel_bar": 3, "troll_hide": 1}, "output": {"item": "steel_armour", "count": 1},
-		"skill": SkillTable.SMITHING, "level": 5, "upgrade": "blast_furnace", "xp": 80, "tier": ItemTable.TIER_STEEL,
+	"steel_helm": {
+		"label": "Steel helm", "inputs": {"steel_bar": 1}, "output": {"item": "steel_helm", "count": 1},
+		"skill": SkillTable.SMITHING, "level": 5, "upgrade": "blast_furnace", "xp": 20, "tier": ItemTable.TIER_STEEL,
+	},
+	"steel_body": {
+		"label": "Steel body", "inputs": {"steel_bar": 1, "troll_hide": 1}, "output": {"item": "steel_body", "count": 1},
+		"skill": SkillTable.SMITHING, "level": 5, "upgrade": "blast_furnace", "xp": 40, "tier": ItemTable.TIER_STEEL,
+	},
+	"steel_legs": {
+		"label": "Steel legs", "inputs": {"steel_bar": 1}, "output": {"item": "steel_legs", "count": 1},
+		"skill": SkillTable.SMITHING, "level": 5, "upgrade": "blast_furnace", "xp": 20, "tier": ItemTable.TIER_STEEL,
 	},
 }
 

@@ -14,7 +14,7 @@ const NORTH_OF_GATE := [0.5, 50.5]
 
 func _sturdy(sim: Sim) -> void:
 	var snap := sim.snapshot()
-	snap["inventory"]["equipment"]["armour"] = "iron_armour"
+	snap["inventory"]["equipment"].merge({"helm": "iron_helm", "body": "iron_body", "legs": "iron_legs"}, true)
 	sim.restore(snap)
 
 

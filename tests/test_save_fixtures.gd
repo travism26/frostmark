@@ -96,3 +96,11 @@ func test_the_version_9_fixture_has_its_vault() -> void:
 	assert_true((sim.state["upgrades"] as Array).has("stash_vault"), "the vault it built")
 	assert_eq(int(sim.state["stash"]["capacity"]), 20, "the stash it grew to 20")
 	assert_eq(sim.state["stash"]["slots"][19], {"item": "iron_ore", "count": 4}, "with its last slot in use")
+
+
+func test_the_version_10_fixture_wears_the_wooden_set_it_made() -> void:
+	var sim := SimScript.new()
+	assert_true(sim.command(Vocab.IMPORT_SAVE, {"code": _fixture(10)})["ok"])
+	var worn: Dictionary = sim.state["inventory"]["equipment"]
+	assert_eq([worn["helm"], worn["body"], worn["legs"]], ["wooden_helm", "wooden_body", "wooden_legs"], "the helm, body and legs it made")
+	assert_eq(sim.state["inventory"]["pack"][0], {"item": "logs", "count": 2}, "with the logs it had left")

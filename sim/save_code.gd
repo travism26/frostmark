@@ -97,6 +97,8 @@ static func migrate(snapshot: Dictionary, target: int) -> Variant:
 				snap = _v7_to_v8(snap)
 			8:
 				snap = _v8_to_v9(snap)
+			9:
+				snap = _v9_to_v10(snap)
 			_:
 				return null
 		version = int(snap["version"])
@@ -214,3 +216,50 @@ static func _v7_to_v8(snap: Dictionary) -> Dictionary:
 static func _v8_to_v9(snap: Dictionary) -> Dictionary:
 	snap["version"] = 9
 	return snap
+
+
+## Version 9 had one armour slot. Version 10 splits it into helm, body and legs, and each tier's
+## single armour becomes that tier's body piece wherever it is: worn, in the pack, in the stash,
+## lying as loot or named by a queued command. The helm and legs slots start empty.
+static func _v9_to_v10(snap: Dictionary) -> Dictionary:
+	snap["version"] = 10
+	var inventory: Variant = snap.get("inventory")
+	if inventory is Dictionary:
+		var worn: Variant = inventory.get("equipment")
+		if worn is Dictionary:
+			var armour := _as_body(str(worn.get("armour", "")))
+			worn.erase("armour")
+			worn["helm"] = ""
+			worn["body"] = armour
+			worn["legs"] = ""
+		_bodies_in(inventory.get("pack"))
+	var stash: Variant = snap.get("stash")
+	if stash is Dictionary:
+		_bodies_in(stash.get("slots"))
+	var loot: Variant = snap.get("loot")
+	if loot is Dictionary:
+		_bodies_in(loot.values())
+	var pending: Variant = snap.get("pending")
+	if pending is Array:
+		for p in pending:
+			var args: Variant = p.get("args") if p is Dictionary else null
+			if args is Dictionary:
+				if args.has("item"):
+					args["item"] = _as_body(str(args["item"]))
+				if str(args.get("unequip", "")) == "armour":
+					args["unequip"] = "body"
+	return snap
+
+
+## `<tier>_armour` as `<tier>_body`; any other kind unchanged.
+static func _as_body(kind: String) -> String:
+	return kind.trim_suffix("_armour") + "_body" if kind.ends_with("_armour") else kind
+
+
+## Renames every `<tier>_armour` among `entries` (slot or loot dictionaries) to its body piece.
+static func _bodies_in(entries: Variant) -> void:
+	if not (entries is Array):
+		return
+	for e in entries:
+		if e is Dictionary and e.has("item"):
+			e["item"] = _as_body(str(e["item"]))

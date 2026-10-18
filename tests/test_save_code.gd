@@ -415,6 +415,49 @@ func test_a_version_8_snapshot_migrates_with_only_its_version_raised() -> void:
 	assert_eq(imported.snapshot(), sim.snapshot())
 
 
+## A version-9 snapshot: iron armour worn, another carried, steel armour stashed and bronze
+## armour lying as loot.
+func _v9_in_iron() -> Dictionary:
+	var v9 := SimScript.new().snapshot()
+	v9["version"] = 9
+	v9["tick"] = 4200
+	v9["inventory"]["equipment"] = {"weapon": "iron_sword", "armour": "iron_armour", "tool": "wooden_axe"}
+	v9["inventory"]["pack"][0] = {"item": "iron_armour", "count": 1}
+	v9["inventory"]["pack"][1] = {"item": "logs", "count": 4}
+	v9["stash"]["slots"][7] = {"item": "steel_armour", "count": 1}
+	v9["loot"] = {"loot_1": {"item": "bronze_armour", "count": 1, "pos": [0.5, 20.5], "expires_tick": 4500}}
+	v9["loot_seq"] = 1
+	return v9
+
+
+func test_a_version_9_snapshot_wears_its_armour_as_a_body_piece() -> void:
+	var v9 := _v9_in_iron()
+	var migrated: Dictionary = SaveCode.migrate(v9, 10)
+	assert_eq(migrated["version"], 10)
+	assert_eq(migrated["inventory"]["equipment"], {
+		"weapon": "iron_sword", "helm": "", "body": "iron_body", "legs": "", "tool": "wooden_axe",
+	}, "the armour slot becomes the body slot; helm and legs start empty")
+	assert_eq(migrated["inventory"]["pack"][0], {"item": "iron_body", "count": 1}, "carried armour too")
+	assert_eq(migrated["inventory"]["pack"][1], {"item": "logs", "count": 4}, "everything else as it was")
+	assert_eq(migrated["stash"]["slots"][7], {"item": "steel_body", "count": 1}, "stashed armour too")
+	assert_eq(migrated["loot"]["loot_1"]["item"], "bronze_body", "and armour lying in the snow")
+
+
+func test_a_version_9_code_in_iron_armour_imports_with_an_iron_body_worn_and_carried() -> void:
+	var sim := SimScript.new()
+	var result := sim.command(Vocab.IMPORT_SAVE, {"code": SaveCode.encode(_v9_in_iron())})
+	assert_true(result["ok"], "the version-9 code imports: %s" % result["reason"])
+	assert_eq(sim.state["version"], Sim.STATE_VERSION)
+	var worn: Dictionary = sim.state["inventory"]["equipment"]
+	assert_eq(worn["body"], "iron_body", "the iron armour worn is an iron body piece worn")
+	assert_eq(worn["helm"], "")
+	assert_eq(worn["legs"], "")
+	assert_false(worn.has("armour"), "no armour slot is left")
+	assert_eq(H.pack_count(sim, "iron_body"), 1, "the iron armour carried is an iron body piece carried")
+	assert_eq(H.stash_count(sim, "steel_body"), 1)
+	assert_eq(sim.combatant(Vocab.PLAYER)["defence"], 1, "an iron body alone takes 1 off a hit")
+
+
 func test_a_full_version_2_stash_gets_no_kit() -> void:
 	var full: Array = []
 	for i in 8:

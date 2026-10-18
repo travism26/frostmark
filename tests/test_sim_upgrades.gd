@@ -307,7 +307,7 @@ func test_three_visible_gear_tiers_for_every_slot_and_style() -> void:
 		elif slot == ItemTable.SLOT_TOOL:
 			group = ItemTable.tool(kind)
 		seen["%s/%s" % [group, tier]] = true
-	for group in ["melee", "ranged", "magic", ItemTable.SLOT_ARMOUR, ItemTable.TOOL_AXE, ItemTable.TOOL_PICKAXE]:
+	for group in ["melee", "ranged", "magic", ItemTable.SLOT_HELM, ItemTable.SLOT_BODY, ItemTable.SLOT_LEGS, ItemTable.TOOL_AXE, ItemTable.TOOL_PICKAXE]:
 		for tier in ItemTable.TIERS:
 			assert_true(seen.has("%s/%s" % [group, tier]), "a %s %s" % [tier, group])
 
@@ -315,7 +315,7 @@ func test_three_visible_gear_tiers_for_every_slot_and_style() -> void:
 func test_higher_tiers_are_stronger_and_worth_more() -> void:
 	var lines := [
 		["wooden_club", "bronze_sword", "iron_sword"], ["wooden_bow", "bronze_bow", "iron_bow"],
-		["wooden_staff", "bronze_staff", "iron_staff"], ["wooden_armour", "bronze_armour", "iron_armour"],
+		["wooden_staff", "bronze_staff", "iron_staff"],
 	]
 	for line in lines:
 		for i in range(1, line.size()):
@@ -323,6 +323,66 @@ func test_higher_tiers_are_stronger_and_worth_more() -> void:
 			var hi: Dictionary = ItemTable.ITEMS[line[i]]
 			assert_true(int(hi.get("power", hi.get("defence", 0))) > int(lo.get("power", lo.get("defence", 0))), "%s beats %s" % [line[i], line[i - 1]])
 			assert_true(int(hi["value"]) > int(lo["value"]), "%s is worth more than %s" % [line[i], line[i - 1]])
+
+
+## The single armour each tier had before #38: its defence, weight, value and recipe inputs.
+const SINGLE_ARMOUR := {
+	"wooden": {"defence": 1, "weight": 4, "value": 16, "inputs": {"logs": 8}},
+	"bronze": {"defence": 2, "weight": 5, "value": 50, "inputs": {"bronze_bar": 4}},
+	"iron": {"defence": 3, "weight": 6, "value": 90, "inputs": {}},
+	"steel": {"defence": 4, "weight": 7, "value": 180, "inputs": {"steel_bar": 3, "troll_hide": 1}},
+}
+
+
+func _set_of(tier: String) -> Dictionary:
+	return {
+		ItemTable.SLOT_HELM: tier + "_helm", ItemTable.SLOT_BODY: tier + "_body", ItemTable.SLOT_LEGS: tier + "_legs",
+	}
+
+
+func test_a_full_armour_set_matches_the_single_armour_it_replaced() -> void:
+	for tier in ItemTable.TIERS:
+		var before: Dictionary = SINGLE_ARMOUR[tier]
+		var set := _set_of(tier)
+		assert_eq(ItemTable.worn_defence(set), before["defence"], "a full %s set takes off what %s armour did" % [tier, tier])
+		var weight := 0
+		var value := 0
+		var inputs := {}
+		for slot in set:
+			var kind: String = set[slot]
+			assert_eq(ItemTable.slot(kind), slot, "%s goes in the %s slot" % [kind, slot])
+			assert_eq(ItemTable.tier(kind), tier)
+			weight += ItemTable.weight(kind)
+			value += ItemTable.value(kind)
+			if RecipeTable.has(kind):
+				var cost: Dictionary = RecipeTable.get_recipe(kind)["inputs"]
+				for k in cost:
+					inputs[k] = int(inputs.get(k, 0)) + int(cost[k])
+		assert_eq(weight, before["weight"], "a full %s set weighs what the armour did" % tier)
+		assert_eq(value, before["value"], "a full %s set is worth what the armour was" % tier)
+		assert_eq(inputs, before["inputs"], "a full %s set costs what the armour did" % tier)
+
+
+func test_full_sets_get_stronger_tier_by_tier_and_no_piece_gets_weaker() -> void:
+	for i in range(1, ItemTable.TIERS.size()):
+		var lo := _set_of(ItemTable.TIERS[i - 1])
+		var hi := _set_of(ItemTable.TIERS[i])
+		assert_true(ItemTable.worn_defence(hi) > ItemTable.worn_defence(lo), "a full %s set beats %s" % [ItemTable.TIERS[i], ItemTable.TIERS[i - 1]])
+		for slot in ItemTable.ARMOUR_SLOTS:
+			assert_true(ItemTable.defence(hi[slot]) >= ItemTable.defence(lo[slot]), "%s is no weaker than %s" % [hi[slot], lo[slot]])
+			assert_true(ItemTable.value(hi[slot]) > ItemTable.value(lo[slot]), "%s is worth more than %s" % [hi[slot], lo[slot]])
+
+
+func test_defence_is_the_sum_of_the_worn_pieces() -> void:
+	var sim := SimScript.new()
+	assert_eq(sim.combatant(Vocab.PLAYER)["defence"], 0, "nothing worn")
+	var snap := sim.snapshot()
+	snap["inventory"]["equipment"].merge({"helm": "steel_helm", "legs": "iron_legs"}, true)
+	sim.restore(snap)
+	assert_eq(sim.combatant(Vocab.PLAYER)["defence"], 2, "steel helm 1 and iron legs 1")
+	snap["inventory"]["equipment"]["body"] = "steel_body"
+	sim.restore(snap)
+	assert_eq(sim.combatant(Vocab.PLAYER)["defence"], 4, "and a steel body's 2")
 
 
 func test_iron_is_only_found() -> void:

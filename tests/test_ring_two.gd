@@ -25,7 +25,7 @@ func _gate_open() -> Sim:
 
 func _sturdy(sim: Sim) -> void:
 	var snap := sim.snapshot()
-	snap["inventory"]["equipment"]["armour"] = "iron_armour"
+	snap["inventory"]["equipment"].merge({"helm": "iron_helm", "body": "iron_body", "legs": "iron_legs"}, true)
 	sim.restore(snap)
 
 
@@ -357,7 +357,7 @@ func test_the_blast_furnace_needs_the_winch_and_ring_two() -> void:
 func test_steel_gear_steps_above_iron() -> void:
 	var lines := [
 		["iron_sword", "steel_sword"], ["iron_bow", "steel_bow"], ["iron_staff", "steel_staff"],
-		["iron_armour", "steel_armour"],
+		["iron_helm", "steel_helm"], ["iron_body", "steel_body"], ["iron_legs", "steel_legs"],
 		["iron_axe", "steel_axe"], ["iron_pickaxe", "steel_pickaxe"],
 	]
 	for line in lines:
