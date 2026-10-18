@@ -2,8 +2,9 @@
 ## origin and facing its -Z. Besides the idle, walk and run clips every FigureBody plays, it
 ## reads the simulation's player activity once given a `sim` and swings an axe while
 ## gathering, strikes with the equipped weapon's style while attacking and stirs the pot while
-## cooking; it casts with a staff and flinches when a blow lands on it. CharacterGear hangs
-## the visible equipment off its bone slots.
+## cooking; it casts with a staff and flinches when a blow lands on it. The model's own hat,
+## axes, round shield and mug are hidden; CharacterGear hangs only the equipped gear off its
+## bone slots.
 class_name CharacterView
 extends FigureBody
 
@@ -18,6 +19,9 @@ const CLIP_CHOP := "1H_Melee_Attack_Chop"
 const CLIP_FISH := "Interact"
 const CLIP_PUNCH := "Unarmed_Melee_Attack_Punch_A"
 const CLIP_COOK := "Use_Item"
+## The meshes the barbarian glb carries besides its body and cape: never drawn, so only the
+## sim's equipment shows.
+const BUILT_IN_GEAR := ["Barbarian_Hat", "1H_Axe", "1H_Axe_Offhand", "2H_Axe", "Barbarian_Round_Shield", "Mug"]
 
 var _sim: Sim
 
@@ -25,7 +29,7 @@ var _sim: Sim
 func _init() -> void:
 	name = "View"
 	setup(MODEL, Figures.KAYKIT_HEIGHT, HEIGHT, CLIPS)
-	hide_parts(["Barbarian_Hat"])
+	hide_parts(BUILT_IN_GEAR)
 	add_to_group("character_view")
 
 
@@ -34,6 +38,15 @@ func set_sim(sim: Sim) -> void:
 	_sim = sim
 	_current = ""
 	_refresh()
+
+
+## True while the body chops, mines or fishes (a flinch over it does not stop the work), so
+## the tool is in the hand.
+func is_working() -> bool:
+	if _sim == null or is_moving():
+		return false
+	var clip := _base_clip()
+	return clip == CLIP_CHOP or clip == CLIP_FISH
 
 
 func _base_clip() -> String:
