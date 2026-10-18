@@ -701,6 +701,10 @@ static func yard_mesh(kind: String, size: Vector3) -> ArrayMesh:
 			return _weapon_rack(size)
 		"winch_frame":
 			return _winch_frame(size)
+		"forge_hearth":
+			return _forge_hearth(size)
+		"furnace_stack":
+			return _furnace_stack(size)
 	return _shelf_rack(size)
 
 
@@ -887,6 +891,112 @@ static func _cylinder_x(st: SurfaceTool, at: Vector3, half_len: float, r: float,
 		for end in [-1.0, 1.0]:
 			var c := at + Vector3(end * half_len, 0, 0)
 			MeshKit.tri(st, c + o0, c + o1, c, colour, Vector3(end, 0, 0))
+
+
+## The smithy's field stone and its soot (its hoops are COLOR_IRON, its bellows COLOR_LEATHER).
+const COLOR_SMITHY_STONE := Color(0.53, 0.50, 0.48)
+const COLOR_SOOT := Color(0.17, 0.15, 0.15)
+## Live coals: the forge and furnace glow with this emissive colour, the way the waystone
+## runes do, and light nothing around them.
+const COLOR_EMBER := Color(0.95, 0.34, 0.07)
+const EMBER_GLOW := 1.2
+
+## A forge hearth in the gateway's hand: a coursed stone hearth with a bed of glowing coals
+## in a sooty rim, an ash-pit mouth glowing at its front (+z), a stone hood and flue at its
+## back (-z) and timber bellows along its west end. No snow: it is warm.
+static func _forge_hearth(size: Vector3) -> ArrayMesh:
+	var st := MeshKit.begin()
+	var glow := MeshKit.begin()
+	var bellows := 0.3
+	var body := Vector3(size.x - bellows, size.y, size.z)
+	var cx := bellows * 0.5
+	_courses(st, Vector3(cx, 0.0, 0.0), body, body, 3, COLOR_SMITHY_STONE, COLOR_SOOT)
+	# The rim round the coal bed, and the coals sunk a little inside it.
+	var rim := 0.13
+	var top := size.y
+	for side in [-1.0, 1.0]:
+		MeshKit.box(st, Vector3(cx, top + 0.05, side * (body.z * 0.5 - rim * 0.5)), Vector3(body.x, 0.1, rim), COLOR_SOOT, COLOR_SOOT)
+		MeshKit.box(st, Vector3(cx + side * (body.x * 0.5 - rim * 0.5), top + 0.05, 0.0), Vector3(rim, 0.1, body.z - 2.0 * rim), COLOR_SOOT, COLOR_SOOT)
+	# Lumps of coal, most of them alight, heaped in the bed in front of the hood.
+	var bed := Vector2(body.x - 2.0 * rim - 0.06, body.z * 0.42)
+	var lumps := Vector2i(4, 3)
+	for i in lumps.x:
+		for k in lumps.y:
+			var u := (i + 0.5) / lumps.x - 0.5
+			var v := (k + 0.5) / lumps.y - 0.5
+			var lump := Vector3(bed.x / lumps.x - 0.02, 0.05 + 0.03 * ((i + k) % 2), bed.y / lumps.y - 0.02)
+			var at := Vector3(cx + u * bed.x, top + 0.02, 0.08 + v * bed.y)
+			if (i * 2 + k) % 5 == 1:
+				MeshKit.box(st, at, lump, COLOR_SOOT, COLOR_SOOT)
+			else:
+				MeshKit.box(glow, at, lump, COLOR_EMBER, COLOR_EMBER)
+	# The hood over the back of the bed, and its flue.
+	var back := -body.z * 0.5 + 0.17
+	MeshKit.box(st, Vector3(cx, top + 0.3, back), Vector3(body.x * 0.62, 0.4, 0.32), COLOR_SMITHY_STONE * 0.9, COLOR_SOOT)
+	MeshKit.prism(st, Vector3(cx, 0.0, back), 6, 0.15, 0.13, top + 0.5, top + 1.05, 0.3, COLOR_SMITHY_STONE * 0.86, COLOR_SOOT, COLOR_SOOT)
+	# The bellows: two boards with leather between, the nozzle into the hearth's side.
+	var bx := -size.x * 0.5 + bellows * 0.5
+	MeshKit.block(st, Vector3(bx, size.y * 0.55, 0.0), Vector3(0.26, 0.14, size.z * 0.66), 0.0, 0.12, COLOR_LEATHER, COLOR_LEATHER)
+	MeshKit.block(st, Vector3(bx, size.y * 0.55 + 0.09, 0.02), Vector3(0.28, 0.04, size.z * 0.7), 0.0, 0.18, COLOR_TIMBER, COLOR_PLANK)
+	MeshKit.block(st, Vector3(bx, size.y * 0.55 - 0.09, 0.0), Vector3(0.28, 0.04, size.z * 0.7), 0.0, 0.06, COLOR_TIMBER_DARK, COLOR_TIMBER_DARK)
+	MeshKit.box(st, Vector3(bx + 0.14, size.y * 0.55, -size.z * 0.32), Vector3(0.12, 0.06, 0.06), COLOR_IRON, COLOR_IRON)
+	MeshKit.log_post(st, Vector3(bx, 0.0, size.z * 0.25), 0.0, size.y * 0.5, 0.04, 0.02, Vector2.ZERO, COLOR_TIMBER_DARK, COLOR_TIMBER_DARK)
+	MeshKit.log_post(st, Vector3(bx, 0.0, -size.z * 0.25), 0.0, size.y * 0.5, 0.04, 0.02, Vector2.ZERO, COLOR_TIMBER_DARK, COLOR_TIMBER_DARK)
+	return _with_glow(st, glow)
+
+
+## A blast furnace stack `size` high: a tapering coursed-stone body to a little over half
+## its height bound with iron hoops, a glowing tap under a lintel at its front (+z), a
+## snowy shoulder, and a round chimney whose sooty mouth glows from the coals inside.
+static func _furnace_stack(size: Vector3) -> ArrayMesh:
+	var st := MeshKit.begin()
+	var glow := MeshKit.begin()
+	var body_top := size.y * 0.55
+	var foot := Vector3(size.x, body_top, size.z)
+	var head := Vector3(size.x * 0.8, body_top, size.z * 0.8)
+	_courses(st, Vector3.ZERO, foot, head, 6, COLOR_SMITHY_STONE, COLOR_SMITHY_STONE)
+	for y in [body_top * 0.3, body_top * 0.72]:
+		var w := lerpf(1.0, 0.8, y / body_top)
+		MeshKit.box(st, Vector3(0.0, y, 0.0), Vector3(size.x * w + 0.05, 0.08, size.z * w + 0.05), COLOR_IRON, COLOR_IRON)
+	# The tap at the foot, glowing under its lintel, and a short run of slag before it.
+	var front := size.z * 0.5
+	MeshKit.box(glow, Vector3(0.0, 0.27, front + 0.005), Vector3(0.38, 0.32, 0.02), COLOR_EMBER, COLOR_EMBER)
+	MeshKit.box(st, Vector3(0.0, 0.5, front + 0.03), Vector3(0.62, 0.12, 0.08), COLOR_SOOT, COLOR_SOOT)
+	MeshKit.box(glow, Vector3(0.0, 0.015, front + 0.12), Vector3(0.14, 0.03, 0.24), COLOR_EMBER, COLOR_EMBER)
+	# The shoulder narrows the body to the chimney; the chimney's mouth glows.
+	var r_head := head.x * 0.5 * sqrt(2.0)
+	MeshKit.prism(st, Vector3.ZERO, 4, r_head, 0.42, body_top, body_top + 0.35, PI * 0.25, COLOR_SMITHY_STONE, MeshKit.SNOW, MeshKit.SNOW)
+	MeshKit.prism(st, Vector3.ZERO, 8, 0.34, 0.29, body_top + 0.3, size.y - 0.14, 0.0, COLOR_SMITHY_STONE * 0.92, COLOR_SOOT, COLOR_SOOT)
+	MeshKit.box(st, Vector3(0.0, size.y - 0.07, 0.0), Vector3(0.7, 0.14, 0.7), COLOR_SOOT, COLOR_SOOT)
+	MeshKit.box(glow, Vector3(0.0, size.y + 0.005, 0.0), Vector3(0.4, 0.02, 0.4), COLOR_EMBER, COLOR_EMBER)
+	return _with_glow(st, glow)
+
+
+## Courses of cut stone `count` high from the ground to `foot.y`, centred at `at`, narrowing
+## from `foot` at the bottom to `head` at the top: blocks about a ruin-kit block long with
+## joints staggered course to course, each a shade apart; the top course is capped in `top`.
+static func _courses(st: SurfaceTool, at: Vector3, foot: Vector3, head: Vector3, count: int, stone: Color, top: Color) -> void:
+	var course := foot.y / count
+	for row in count:
+		var w := foot.lerp(head, (row + 0.5) / count)
+		var blocks := maxi(roundi(w.x / (RuinKit.BLOCK * 0.5)), 1)
+		var span := w.x / blocks
+		var stagger := 0.5 * span if row % 2 == 1 else 0.0
+		for i in range(0, blocks + (1 if row % 2 == 1 else 0)):
+			var u0 := maxf(-w.x * 0.5 + i * span - stagger, -w.x * 0.5)
+			var u1 := minf(-w.x * 0.5 + (i + 1) * span - stagger, w.x * 0.5)
+			var shade := stone * (0.86 + 0.06 * ((row + i) % 3))
+			shade.a = 1.0
+			MeshKit.box(st, at + Vector3((u0 + u1) * 0.5, (row + 0.5) * course, 0.0), Vector3(u1 - u0 - 0.025, course - 0.025, w.z), shade, top if row == count - 1 else shade)
+
+
+## The mesh of `st`, plus `glow` as a second surface in the emissive ember material.
+static func _with_glow(st: SurfaceTool, glow: SurfaceTool) -> ArrayMesh:
+	var mesh := MeshKit.finish(st)
+	glow.generate_normals()
+	glow.commit(mesh)
+	mesh.surface_set_material(1, Props.flat(COLOR_EMBER, EMBER_GLOW))
+	return mesh
 
 
 ## Draws one Kenney model, scaled to `height` and snow-capped like a prop, once per transform:
