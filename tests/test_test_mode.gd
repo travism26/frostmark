@@ -1,0 +1,78 @@
+## The test-mode code (docs/testing.md): the save code in tools/test_mode_code.txt imports into
+## this build and gives the maxed character it promises. When the save version moves on, the
+## code still migrates; regenerate it with tools/test_mode_code.gd if anything here fails.
+extends "res://tests/run.gd".TestCase
+
+const H := preload("res://tests/sim_helpers.gd")
+const SimScript := preload("res://sim/sim.gd")
+const Vocab := preload("res://sim/vocab.gd")
+
+const CODE_PATH := "res://tools/test_mode_code.txt"
+
+
+## A new character that has imported the test-mode code.
+func _imported() -> Sim:
+	var sim := SimScript.new()
+	var code := FileAccess.get_file_as_string(CODE_PATH)
+	assert_false(code.strip_edges().is_empty(), "%s holds a code" % CODE_PATH)
+	var result := sim.command(Vocab.IMPORT_SAVE, {"code": code})
+	assert_true(result["ok"], "the test-mode code imports: %s" % result["reason"])
+	return sim
+
+
+func test_the_code_imports_as_a_save_of_this_version() -> void:
+	var sim := _imported()
+	var saved := H.of_kind(sim.drain_events(), Vocab.EV_SAVED)
+	assert_eq(saved.size(), 1)
+	assert_eq(sim.state["version"], Sim.STATE_VERSION)
+	assert_eq(sim.state["player"]["region"], WorldDef.REGION_OUTPOST)
+
+
+func test_every_skill_is_at_the_top_of_the_curve() -> void:
+	var sim := _imported()
+	for name in SkillTable.NAMES:
+		assert_eq(sim.state["skills"][name]["level"], SkillTable.MAX_LEVEL, "%s level" % name)
+
+
+func test_steel_is_worn_and_every_style_and_tool_is_carried_without_overweight() -> void:
+	var sim := _imported()
+	var worn: Dictionary = sim.state["inventory"]["equipment"]
+	for slot in ItemTable.EQUIPMENT_SLOTS:
+		assert_eq(ItemTable.tier(worn[slot]), ItemTable.TIER_STEEL, "the %s worn is steel" % slot)
+	for kind in ["steel_axe", "steel_pickaxe", "fishing_rod", "steel_sword", "steel_bow", "steel_staff"]:
+		var carried := H.pack_count(sim, kind) + (1 if worn.values().has(kind) else 0)
+		assert_eq(carried, 1, "%s is worn or carried" % kind)
+	assert_true(H.pack_count(sim, "arrows") > 0, "arrows for the bow")
+	assert_true(H.pack_count(sim, "frost_shards") > 0, "frost shards for the staff")
+	assert_false(sim.is_overweight(), "the kit is within the carry limit")
+
+
+func test_every_upgrade_is_built_and_the_stash_is_full() -> void:
+	var sim := _imported()
+	for id in UpgradeTable.ids():
+		assert_true((sim.state["upgrades"] as Array).has(id), "%s is built" % id)
+	assert_eq(sim.state["stash"]["capacity"], 16)
+	for slot in sim.state["stash"]["slots"]:
+		assert_true(slot != null, "no stash slot is empty")
+
+
+func test_the_ring_two_gate_is_open_and_every_waystone_is_attuned_and_awake() -> void:
+	var sim := _imported()
+	assert_true(sim.ring_gate_open("ring_two_gate"), "the ring-two gate stands open")
+	assert_true((sim.state["rings_reached"] as Array).has(WorldDef.REGION_RING_TWO))
+	for id in sim.world.objects_of_kind(WorldDef.KIND_WAYSTONE):
+		assert_true((sim.state["waystones"] as Array).has(id), "%s is attuned" % id)
+
+
+func test_warmth_and_health_are_full_and_hints_are_off() -> void:
+	var sim := _imported()
+	assert_eq(sim.state["warmth"], Sim.WARMTH_MAX)
+	assert_eq(sim.state["health"], Sim.HEALTH_MAX)
+	assert_false(sim.state["guide"]["on"], "hints are off")
+
+
+func test_nothing_is_left_to_build() -> void:
+	var sim := _imported()
+	var result := sim.command(Vocab.BUILD, {"upgrade": "forge"})
+	assert_false(result["ok"])
+	assert_eq(result["reason"], Vocab.REASON_ALREADY_BUILT)
