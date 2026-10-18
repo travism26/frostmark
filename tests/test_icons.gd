@@ -66,7 +66,7 @@ func test_every_icon_and_author_in_use_is_credited() -> void:
 
 func test_tiered_gear_takes_its_tier_colour_and_styles_share_the_telegraph_colours() -> void:
 	assert_eq(IconTable.tint("steel_sword"), IconTable.TIER_TINTS[ItemTable.TIER_STEEL], "steel gear wears the steel tint")
-	assert_eq(IconTable.tint("steel_axe"), IconTable.tint("steel_armour"), "all steel gear matches")
+	assert_eq(IconTable.tint("steel_axe"), IconTable.tint("steel_body"), "all steel gear matches")
 	assert_ne(IconTable.tint("bronze_sword"), IconTable.tint("iron_sword"), "tiers differ")
 	for style in IconTable.STYLE_COLOURS:
 		assert_eq(IconTable.tint(IconTable.style_key(style)), IconTable.STYLE_COLOURS[style], "%s badge is the telegraph colour" % style)
