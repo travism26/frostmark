@@ -11,6 +11,9 @@ const YardLookScript := preload("res://scenes/yard_look.gd")
 ## the gate path.
 const WALL_GAP := 0.05
 const CLEARANCE := 0.5
+## Upgrades whose yard looks land with a sibling ticket of #47 still open: the forge and the
+## blast furnace (#51). Each comes off this list with its look.
+const LOOKS_TO_COME := ["forge", "blast_furnace"]
 
 
 func test_nothing_built_draws_nothing() -> void:
@@ -81,6 +84,39 @@ func test_no_two_pieces_overlap() -> void:
 			assert_true(Geometry2D.intersect_polygons(a, b).is_empty(), "%s and %s do not overlap" % [pieces[i]["upgrade"], pieces[j]["upgrade"]])
 
 
+func test_every_upgrade_but_waystones_yields_a_piece_when_built() -> void:
+	for id in UpgradeTable.ids():
+		var pieces := YardLookScript.pieces([id])
+		if id == "waystone":
+			assert_true(pieces.is_empty(), "waystones show out in the rings, not in the yard")
+		elif not (id in LOOKS_TO_COME and pieces.is_empty()):
+			assert_true(not pieces.is_empty(), "building %s puts a piece in the yard" % id)
+
+
+func test_the_armoury_stands_along_the_east_wall() -> void:
+	var pieces := YardLookScript.pieces(["armoury"])
+	assert_eq(pieces.size(), 1)
+	var armoury := pieces[0]
+	assert_eq(armoury["spot"], "east_wall")
+	var east := _box(_solid(WorldDefScript.outpost(), "wall_east"))
+	for c in YardLookScript.footprint(armoury):
+		assert_true(east.position.x - c.x < 1.0, "the armoury's corner %s stands against the east wall" % c)
+
+
+func test_the_winch_stands_inside_the_south_gate_to_one_side_of_the_path() -> void:
+	var pieces := YardLookScript.pieces(["ring_two_gate"])
+	assert_eq(pieces.size(), 1)
+	var winch := pieces[0]
+	assert_eq(winch["spot"], "south_gate")
+	var gate := _box(WorldDefScript.outpost().objects["gate"])
+	var corners := YardLookScript.footprint(winch)
+	var west := corners[0].x < gate.position.x
+	for c in corners:
+		assert_true(gate.position.y - c.y > 0.0 and gate.position.y - c.y < 3.5, "the winch's corner %s stands just inside the gate" % c)
+		assert_true((c.x < gate.position.x) == west and (west or c.x > gate.end.x), "the winch's corner %s keeps to one side of the gate path" % c)
+		assert_true(absf(c.x - gate.get_center().x) < 7.0, "the winch's corner %s stands near the gate" % c)
+
+
 func test_only_built_upgrades_draw() -> void:
 	for id in UpgradeTable.ids():
 		for piece in YardLookScript.pieces([id]):
@@ -143,6 +179,13 @@ func test_every_look_is_for_a_real_upgrade_in_a_real_spot() -> void:
 		assert_true(UpgradeTable.has(id), "%s is an upgrade" % id)
 		assert_true(YardLookScript.SPOTS.has(look["spot"]), "%s builds in a known spot" % id)
 		assert_true(int(look["step"]) >= 1, "%s's step counts from 1" % id)
+
+
+static func _solid(w: WorldDef, id: String) -> Dictionary:
+	for s in w.solids:
+		if s["id"] == id:
+			return s
+	return {}
 
 
 static func _box(thing: Dictionary) -> Rect2:

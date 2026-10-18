@@ -662,6 +662,11 @@ const YARD_RACK_BOARDS := [0.1, 0.48, 0.86]
 const COLOR_IRON := Color(0.22, 0.23, 0.26)
 const COLOR_IRON_EDGE := Color(0.36, 0.37, 0.41)
 const COLOR_BRASS := Color(0.66, 0.52, 0.26)
+## Bright worked iron on the armoury's blades and the winch's bands and chain, and the armoury's
+## grips, before the ring tint.
+const COLOR_STEEL := Color(0.62, 0.65, 0.70)
+const COLOR_IRON_DARK := Color(0.27, 0.28, 0.31)
+const COLOR_LEATHER := Color(0.36, 0.22, 0.14)
 
 ## One piece from YardLook, standing where the piece says: kit models and hand-made meshes in
 ## the outpost's timber. Nothing clickable, so a click falls through to the yard floor.
@@ -692,6 +697,10 @@ static func yard_mesh(kind: String, size: Vector3) -> ArrayMesh:
 			return _hatch(size)
 		"iron_chest":
 			return _iron_chest(size)
+		"weapon_rack":
+			return _weapon_rack(size)
+		"winch_frame":
+			return _winch_frame(size)
 	return _shelf_rack(size)
 
 
@@ -754,6 +763,130 @@ static func _iron_chest(size: Vector3) -> ArrayMesh:
 		MeshKit.box(st, Vector3(x * (size.x * 0.5 - 0.03), size.y * 0.5, 0.0), Vector3(0.08, size.y + 0.02, size.z + 0.02), COLOR_IRON, COLOR_IRON_EDGE)
 	MeshKit.box(st, Vector3(0.0, body - 0.02, size.z * 0.5 + 0.025), Vector3(0.16, 0.2, 0.03), COLOR_BRASS, COLOR_BRASS)
 	return MeshKit.finish(st)
+
+
+## A weapon rack in the gateway's hand, its back to -z: two log uprights, a snowy top rail
+## and a notched foot rail in fresh plank, swords (hilts up, iron blades catching the light)
+## and spears leaning back into it, and a round shield in the banners' red hung at the middle,
+## tipped up so its face reads from above.
+static func _weapon_rack(size: Vector3) -> ArrayMesh:
+	var st := MeshKit.begin()
+	var r := 0.07
+	var back := -size.z * 0.5 + r
+	for x in [-1.0, 1.0]:
+		MeshKit.log_post(st, Vector3(x * (size.x * 0.5 - r), 0.0, back), -0.05, size.y - 0.1, r, 0.12, Vector2.ZERO, COLOR_TIMBER)
+	MeshKit.box(st, Vector3(0.0, size.y * 0.78, back + 0.04), Vector3(size.x - 0.04, 0.09, 0.1), COLOR_PLANK, MeshKit.SNOW)
+	MeshKit.box(st, Vector3(0.0, 0.12, size.z * 0.5 - 0.1), Vector3(size.x - 0.04, 0.1, 0.16), COLOR_PLANK, COLOR_PLANK)
+	MeshKit.box(st, Vector3(0.0, 0.04, 0.0), Vector3(size.x - 0.2, 0.06, size.z - 0.08), COLOR_TIMBER_DARK, COLOR_TIMBER_DARK)
+	# Each weapon stands on the foot rail and leans back onto the top rail.
+	var rest := Vector3(0.0, size.y * 0.78, back + 0.12)
+	var foot_z := size.z * 0.5 - 0.12
+	var lean := atan2(foot_z - rest.z, rest.y)
+	var slots := [-0.8, -0.5, -0.2, 0.55, 0.85]
+	for i in slots.size():
+		var x: float = slots[i] * (size.x * 0.5 - 0.15)
+		if i % 2 == 0:
+			_rack_sword(st, Vector3(x, 0.17, foot_z), lean)
+		else:
+			_rack_spear(st, Vector3(x, 0.17, foot_z), lean, size.y + 0.15)
+	_rack_shield(st, Vector3(size.x * 0.08, size.y * 0.55, back + 0.24), 0.4)
+	return MeshKit.finish(st)
+
+
+## A point `up` metres along a weapon standing at `foot` and leaning back (to -z) by `lean`.
+static func _along(foot: Vector3, lean: float, up: float) -> Vector3:
+	return foot + Vector3(0.0, cos(lean) * up, -sin(lean) * up)
+
+
+## A sword point-down in a rack: an iron blade, a dark crossguard, a leather grip and pommel.
+static func _rack_sword(st: SurfaceTool, foot: Vector3, lean: float) -> void:
+	var tilt := -lean
+	MeshKit.block(st, _along(foot, lean, 0.4), Vector3(0.12, 0.8, 0.04), 0.0, tilt, COLOR_STEEL, COLOR_STEEL)
+	MeshKit.block(st, _along(foot, lean, 0.82), Vector3(0.32, 0.07, 0.08), 0.0, tilt, COLOR_IRON_DARK, COLOR_IRON_DARK)
+	MeshKit.block(st, _along(foot, lean, 0.94), Vector3(0.06, 0.2, 0.06), 0.0, tilt, COLOR_LEATHER, COLOR_LEATHER)
+	MeshKit.block(st, _along(foot, lean, 1.06), Vector3(0.1, 0.08, 0.1), 0.0, tilt, COLOR_IRON_DARK, COLOR_IRON_DARK)
+
+
+## A spear butt-down in a rack: a timber shaft `length` long and an iron head.
+static func _rack_spear(st: SurfaceTool, foot: Vector3, lean: float, length: float) -> void:
+	var tilt := -lean
+	MeshKit.block(st, _along(foot, lean, length * 0.45), Vector3(0.06, length * 0.9, 0.06), 0.0, tilt, COLOR_TIMBER_DARK, COLOR_TIMBER_DARK)
+	MeshKit.block(st, _along(foot, lean, length * 0.95), Vector3(0.14, length * 0.14, 0.05), PI * 0.25, tilt, COLOR_STEEL, COLOR_STEEL)
+
+
+## A round shield `r` across hung at `at`, facing +z and tipped back to face the sky a little:
+## a red face, a dark iron rim and a boss.
+static func _rack_shield(st: SurfaceTool, at: Vector3, r: float) -> void:
+	var sides := 10
+	var face := Basis(Vector3.RIGHT, -0.7)
+	var normal := face * Vector3.BACK
+	for k in sides:
+		var a0 := k * TAU / sides
+		var a1 := (k + 1) * TAU / sides
+		var p0 := at + face * Vector3(cos(a0) * r, sin(a0) * r, 0.0)
+		var p1 := at + face * Vector3(cos(a1) * r, sin(a1) * r, 0.0)
+		var i0 := at + face * Vector3(cos(a0) * r * 0.82, sin(a0) * r * 0.82, 0.02)
+		var i1 := at + face * Vector3(cos(a1) * r * 0.82, sin(a1) * r * 0.82, 0.02)
+		MeshKit.quad(st, p0, p1, i1, i0, COLOR_IRON_DARK, COLOR_IRON_DARK, normal)
+		MeshKit.tri(st, i0, i1, at + normal * 0.03, COLOR_PENNANT, normal)
+	MeshKit.block(st, at + normal * 0.05, Vector3(0.12, 0.12, 0.06), 0.0, -0.7, COLOR_STEEL, COLOR_STEEL)
+
+
+## A winch frame in the gateway's hand: two A-frame trestles of log legs on sill timbers, an
+## axle beam across their tops, a timber drum with iron bands and its chain wound on, a crank
+## at one end, and the chain run out along the ground (+z) to an anchor stone with an iron ring.
+static func _winch_frame(size: Vector3) -> ArrayMesh:
+	var st := MeshKit.begin()
+	var r := 0.07
+	var half := size * 0.5
+	var top := size.y - 0.15
+	var drum_y := size.y * 0.62
+	var foot_z := half.z - 0.25
+	for side in [-1.0, 1.0]:
+		var x: float = side * (half.x - 0.2)
+		MeshKit.box(st, Vector3(x, 0.05, -0.1), Vector3(0.16, 0.1, size.z - 0.25), COLOR_TIMBER_DARK, COLOR_TIMBER_DARK)
+		for z in [-foot_z - 0.1, foot_z - 0.1]:
+			MeshKit.log_post(st, Vector3(x, 0.0, z), 0.0, top, r, 0.1, Vector2(0.0, (-0.1 - z) / top), COLOR_TIMBER)
+		MeshKit.box(st, Vector3(x, drum_y, -0.1), Vector3(0.14, 0.12, 0.3), COLOR_TIMBER_DARK, MeshKit.SNOW)
+	MeshKit.box(st, Vector3(0.0, top + 0.02, -0.1), Vector3(size.x - 0.2, 0.12, 0.14), COLOR_PLANK, MeshKit.SNOW)
+	# The drum, its iron bands and the chain wound round it.
+	var drum_x := half.x - 0.32
+	_cylinder_x(st, Vector3(0.0, drum_y, -0.1), drum_x, 0.2, 8, COLOR_PLANK)
+	for x in [-drum_x + 0.05, drum_x - 0.05]:
+		_cylinder_x(st, Vector3(x, drum_y, -0.1), 0.04, 0.215, 8, COLOR_IRON_DARK)
+	_cylinder_x(st, Vector3(0.0, drum_y, -0.1), 0.32, 0.23, 8, COLOR_STEEL)
+	# The crank outside the east trestle, and the axle through both.
+	_cylinder_x(st, Vector3(0.0, drum_y, -0.1), half.x - 0.05, 0.04, 6, COLOR_IRON_DARK)
+	MeshKit.box(st, Vector3(half.x - 0.07, drum_y + 0.14, -0.1), Vector3(0.05, 0.32, 0.06), COLOR_IRON_DARK, COLOR_IRON_DARK)
+	_cylinder_x(st, Vector3(half.x + 0.0, drum_y + 0.28, -0.1), 0.07, 0.03, 6, COLOR_LEATHER)
+	# The chain: links off the drum's foot, down and out along the ground to the anchor.
+	var from := Vector3(0.0, drum_y - 0.22, 0.05)
+	var to := Vector3(0.0, 0.08, half.z - 0.2)
+	var links := 9
+	for i in links:
+		var t := (i + 0.5) / links
+		var p := from.lerp(to, t)
+		p.y = lerpf(from.y, to.y, sqrt(t))
+		MeshKit.block(st, p, Vector3(0.05, 0.03, 0.12) if i % 2 == 0 else Vector3(0.015, 0.06, 0.12), 0.0, 0.0, COLOR_STEEL, COLOR_STEEL)
+	MeshKit.prism(st, Vector3(0.0, 0.0, half.z - 0.12), 6, 0.16, 0.12, 0.0, 0.16, 0.3, COLOR_PATH_STONE, COLOR_PATH_STONE, MeshKit.SNOW)
+	MeshKit.box(st, Vector3(0.0, 0.2, half.z - 0.12), Vector3(0.12, 0.1, 0.03), COLOR_IRON_DARK, COLOR_IRON_DARK)
+	return MeshKit.finish(st)
+
+
+## A horizontal prism `sides` around and `r` wide along x, `half_len` either side of `at`,
+## closed at both ends: a drum, a band, an axle.
+static func _cylinder_x(st: SurfaceTool, at: Vector3, half_len: float, r: float, sides: int, colour: Color) -> void:
+	for k in sides:
+		var a0 := (k + 0.5) * TAU / sides
+		var a1 := (k + 1.5) * TAU / sides
+		var o0 := Vector3(0.0, sin(a0) * r, cos(a0) * r)
+		var o1 := Vector3(0.0, sin(a1) * r, cos(a1) * r)
+		var out := (o0 + o1).normalized()
+		var lit := colour if out.y < 0.5 else colour.lightened(0.08)
+		MeshKit.quad(st, at + o0 - Vector3(half_len, 0, 0), at + o1 - Vector3(half_len, 0, 0), at + o1 + Vector3(half_len, 0, 0), at + o0 + Vector3(half_len, 0, 0), lit, lit, out)
+		for end in [-1.0, 1.0]:
+			var c := at + Vector3(end * half_len, 0, 0)
+			MeshKit.tri(st, c + o0, c + o1, c, colour, Vector3(end, 0, 0))
 
 
 ## Draws one Kenney model, scaled to `height` and snow-capped like a prop, once per transform:

@@ -15,10 +15,15 @@ extends RefCounted
 ## of the one before (a spot's +x runs north here).
 const SPOTS := {
 	"stash_corner": {"at": [-8.55, -4.4], "turn": PI * 0.5},
+	# The armoury: along the east wall, between the wood pile and the tent's fence.
+	"east_wall": {"at": [8.6, 1.7], "turn": -PI * 0.5},
+	# The winch: just inside the south gate, west of the path and the signpost, far enough
+	# in from the palisade that the wall never hides it from the camera.
+	"south_gate": {"at": [-5.0, 6.9], "turn": PI},
 }
 
 ## The hand-made meshes a part can name (WorldDressing builds them), beside the kit models.
-const MESHES := ["shelf_rack", "hatch", "iron_chest"]
+const MESHES := ["shelf_rack", "hatch", "iron_chest", "weapon_rack", "winch_frame"]
 
 ## Each upgrade's look: its `line` and `step` in that line, the `spot` it builds in, its
 ## `offset` [x, z] in the spot's frame, its `size` [along, out] on the ground, and its
@@ -59,6 +64,23 @@ const LOOKS := {
 		"line": "stash", "step": 3, "spot": "stash_corner", "offset": [-4.4, 0.12], "size": [1.4, 0.95],
 		"parts": [
 			{"mesh": "iron_chest", "size": [1.2, 0.72, 0.78], "at": [0.0, 0.0], "y": 0.0, "turn": 0.0},
+		],
+	},
+	# A timber weapon rack against the wall, swords and spears standing in it and a painted
+	# shield hung at its middle, with a crate of spare gear at one end.
+	"armoury": {
+		"line": "armoury", "step": 1, "spot": "east_wall", "offset": [0.0, 0.0], "size": [2.8, 0.6],
+		"parts": [
+			{"mesh": "weapon_rack", "size": [2.3, 1.7, 0.55], "at": [-0.2, 0.0], "y": 0.0, "turn": 0.0},
+			{"model": Props.SURVIVAL + "box.glb", "height": 0.45, "snow_from": 0.8, "at": [1.15, 0.0], "y": 0.0, "turn": 0.2},
+		],
+	},
+	# A winch frame with an iron-banded drum and its chain run out to an anchor stone, to one
+	# side of the gate path. Low, so it never hides the character from the camera.
+	"ring_two_gate": {
+		"line": "winch", "step": 1, "spot": "south_gate", "offset": [0.0, 0.0], "size": [2.0, 1.2],
+		"parts": [
+			{"mesh": "winch_frame", "size": [2.0, 1.6, 1.2], "at": [0.0, 0.0], "y": 0.0, "turn": 0.0},
 		],
 	},
 }
