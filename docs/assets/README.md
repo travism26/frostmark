@@ -9,6 +9,7 @@ Every licence was read from the source's own page on **2026-10-16** where the pa
 | File | Covers | Entries |
 |------|--------|---------|
 | [characters-and-animations.md](characters-and-animations.md) | Rigged characters, enemies, animals, animation packs, Mixamo | 52 |
+| [character-catalogue.md](character-catalogue.md) | Deeper pass for #63: player bodies, ring-one and ring-two creatures, animation packs, with rigs, props and shortlists | 36 |
 | [environment-and-props.md](environment-and-props.md) | Outpost, village, ruins, camp, dungeon and prop kits | 52 |
 | [terrain-nature-and-weather.md](terrain-nature-and-weather.md) | Winter trees, rocks, PBR textures, skyboxes, terrain and weather | 37 |
 | [weapons-tools-and-items.md](weapons-tools-and-items.md) | Weapons, tools, resources, food, loot, item icons | 37 |
