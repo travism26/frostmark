@@ -231,6 +231,8 @@ Any other kind is `unknown_command`. Rejection reasons for movement: `bad_args`,
 | Waystones | 10 iron ore, 6 bronze bars, 10 logs | Ring-two gate winch | Wakes the waystones in ring one and ring two |
 | Stash vault | 12 logs, 10 iron ore, 4 coal | Stash cellar, Ring-two gate winch | +4 stash slots |
 
+`sim.upgrade_status()` answers, without changing anything, the status of every upgrade, keyed by id in table order: `built`, `can_build` (unlocked, every prerequisite built, the stash holds the whole cost; wherever the player stands) or `not_yet`. Each entry also carries `locked` (the table's text), `requires` (prerequisite ids not yet built), `cost` (every cost item as `{item, have, need}`, `have` counted in the stash), `short` (the cost entries the stash falls short of) and `reason` (what `check(build)` says now, so standing outside the outpost shows there). The Upgrades tab reads only this.
+
 **Gear tiers** (every weapon, armour and tool has one, and it shows on the character):
 
 | Tier | Melee | Ranged (arrows) | Magic (frost shards) | Armour (defence) | Tools | Comes from |

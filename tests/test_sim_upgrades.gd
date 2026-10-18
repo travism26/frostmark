@@ -82,6 +82,73 @@ func test_an_upgrade_with_unmet_prerequisites_is_refused() -> void:
 	assert_true(sim.command(Vocab.BUILD, {"upgrade": "armoury"})["ok"], "with the forge built it goes ahead")
 
 
+func test_the_status_query_lists_every_upgrade_in_table_order() -> void:
+	var sim := _with_stash([])
+	assert_eq(sim.upgrade_status().keys(), UpgradeTable.ids())
+
+
+func test_a_built_upgrade_reports_built() -> void:
+	var sim := _with_stash([], ["stash_shelves"], Sim.STASH_START_SLOTS + 4)
+	var s: Dictionary = sim.upgrade_status()["stash_shelves"]
+	assert_eq(s["status"], Vocab.UPGRADE_BUILT)
+	assert_eq(s["reason"], Vocab.REASON_ALREADY_BUILT)
+
+
+func test_an_affordable_unlocked_upgrade_can_be_built_now() -> void:
+	var sim := _with_stash([{"item": "logs", "count": 9}])
+	var s: Dictionary = sim.upgrade_status()["stash_shelves"]
+	assert_eq(s["status"], Vocab.UPGRADE_CAN_BUILD)
+	assert_eq(s["requires"], [])
+	assert_eq(s["short"], [])
+	assert_eq(s["cost"], [{"item": "logs", "have": 9, "need": 8}], "every cost item with what the stash holds")
+	assert_eq(s["reason"], "", "Build would be accepted")
+
+
+func test_can_build_now_does_not_depend_on_where_the_player_stands() -> void:
+	var sim := _with_stash([{"item": "logs", "count": 8}])
+	H.place(sim, H.OUTSIDE)
+	var s: Dictionary = sim.upgrade_status()["stash_shelves"]
+	assert_eq(s["status"], Vocab.UPGRADE_CAN_BUILD)
+	assert_eq(s["reason"], Vocab.REASON_NOT_IN_OUTPOST, "but Build is refused out there")
+
+
+func test_a_short_cost_reports_what_is_held_and_needed() -> void:
+	var sim := _with_stash([{"item": "logs", "count": 10}, {"item": "copper_ore", "count": 1}])
+	var s: Dictionary = sim.upgrade_status()["forge"]
+	assert_eq(s["status"], Vocab.UPGRADE_NOT_YET)
+	assert_eq(s["requires"], [])
+	assert_eq(s["short"], [{"item": "copper_ore", "have": 1, "need": 3}, {"item": "tin_ore", "have": 0, "need": 3}])
+	assert_eq(s["reason"], Vocab.REASON_MISSING_INPUTS)
+
+
+func test_an_unmet_prerequisite_is_named() -> void:
+	var lots := [{"item": "logs", "count": 10}, {"item": "logs", "count": 10}, {"item": "bronze_bar", "count": 10}]
+	var sim := _with_stash(lots)
+	var s: Dictionary = sim.upgrade_status()["stash_cellar"]
+	assert_eq(s["status"], Vocab.UPGRADE_NOT_YET, "affordable but the shelves are not built")
+	assert_eq(s["requires"], ["stash_shelves"])
+	assert_eq(s["short"], [])
+	assert_eq(s["reason"], Vocab.REASON_UPGRADE_MISSING)
+	var winch: Dictionary = sim.upgrade_status()["ring_two_gate"]
+	assert_eq(winch["requires"], ["armoury"])
+	assert_eq(winch["short"], [
+		{"item": "iron_ore", "have": 0, "need": 8}, {"item": "wolf_pelt", "have": 0, "need": 3},
+	], "missing prerequisites and short items together")
+	var built := _with_stash(lots, ["stash_shelves"], Sim.STASH_START_SLOTS + 4)
+	assert_eq(built.upgrade_status()["stash_cellar"]["status"], Vocab.UPGRADE_CAN_BUILD, "once the shelves stand")
+
+
+func test_the_status_query_changes_nothing() -> void:
+	var sim := _with_stash([{"item": "logs", "count": 8}, {"item": "copper_ore", "count": 3}])
+	var before := sim.snapshot()
+	sim.upgrade_status()
+	assert_eq(sim.snapshot(), before)
+	assert_eq(sim.drain_events(), [], "no events")
+	var statuses := sim.upgrade_status()
+	statuses["stash_shelves"]["cost"][0]["have"] = 99
+	assert_eq(sim.upgrade_status()["stash_shelves"]["cost"][0]["have"], 8, "a fresh answer each time")
+
+
 func test_building_needs_the_materials_and_the_outpost() -> void:
 	var sim := _with_stash([{"item": "logs", "count": 3}])
 	assert_eq(sim.command(Vocab.BUILD, {"upgrade": "stash_shelves"})["reason"], Vocab.REASON_MISSING_INPUTS)

@@ -362,37 +362,38 @@ func _add_craft_row(id: String) -> void:
 	_craft_rows[id] = {"text": text, "button": craft}
 
 
-## Upgrade rows are built once and updated in place, like the recipe rows.
+## Upgrade rows are built once and updated in place, like the recipe rows. Status comes from
+## the sim's upgrade_status() query.
 func _refresh_upgrades() -> void:
-	var stash: Array = sim.state["stash"]["slots"]
-	var built: Array = sim.state["upgrades"]
-	for id in UpgradeTable.ids():
+	var statuses := sim.upgrade_status()
+	for id in statuses:
 		if not _upgrade_rows.has(id):
 			_add_upgrade_row(id)
-		var u := UpgradeTable.get_upgrade(id)
-		var costs: PackedStringArray = []
-		for kind in u["cost"]:
-			costs.append("%d %s (%d)" % [u["cost"][kind], ItemTable.label(kind), Inventory.count_of(stash, kind)])
-		var lines: PackedStringArray = [_effect_text(u["effects"])]
-		if built.has(id):
+		var s: Dictionary = statuses[id]
+		var built: bool = s["status"] == SimVocab.UPGRADE_BUILT
+		var locked: bool = not built and s["locked"] != ""
+		var lines: PackedStringArray = [_effect_text(UpgradeTable.get_upgrade(id)["effects"])]
+		if built:
 			lines.append("Built.")
-		elif u["locked"] != "":
-			lines.append("Locked. %s" % u["locked"])
+		elif locked:
+			lines.append("Locked. %s" % s["locked"])
 		else:
+			var costs: PackedStringArray = []
+			for c in s["cost"]:
+				costs.append("%d %s (%d)" % [c["need"], ItemTable.label(c["item"]), c["have"]])
 			lines.append("Costs %s from the stash." % ", ".join(costs))
 			var missing: PackedStringArray = []
-			for need in u["requires"]:
-				if not built.has(need):
-					missing.append(UpgradeTable.get_upgrade(need)["label"])
+			for need in s["requires"]:
+				missing.append(UpgradeTable.get_upgrade(need)["label"])
 			if not missing.is_empty():
 				lines.append("Needs the %s first." % " and the ".join(missing))
 		var row: Dictionary = _upgrade_rows[id]
 		(row["text"] as Label).text = "\n".join(lines)
-		var why := sim.check(SimVocab.BUILD, {"upgrade": id})
+		var why: String = s["reason"]
 		var button := row["button"] as Button
 		button.disabled = why != ""
-		button.text = "Built" if built.has(id) else "Locked" if u["locked"] != "" else "Build"
-		button.icon = UiTheme.icon("checkmark", 14) if built.has(id) else UiTheme.icon("locked", 14) if u["locked"] != "" else null
+		button.text = "Built" if built else "Locked" if locked else "Build"
+		button.icon = UiTheme.icon("checkmark", 14) if built else UiTheme.icon("locked", 14) if locked else null
 		button.tooltip_text = _why_text(why)
 	_upgrade_note.text = "Build from what is in the stash, inside the outpost." if sim.in_outpost() else "Upgrades are built inside the outpost."
 

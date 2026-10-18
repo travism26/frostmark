@@ -1441,6 +1441,42 @@ func _build(args: Dictionary, commit: bool) -> String:
 	return ""
 
 
+## Every upgrade's status, keyed by id in the table's order. Read-only: the Upgrades tab reads it
+## instead of working status out itself. Each entry is `{status, locked, requires, cost, short,
+## reason}`: `status` is one of SimVocab.UPGRADE_*, `locked` the table's locked text, `requires`
+## the prerequisite ids not yet built, `cost` every cost item as `{item, have, need}` (`have`
+## counted in the stash), `short` the cost entries the stash falls short of, and `reason` what
+## `check(build)` answers right now ("" when Build would be accepted, so it also covers standing
+## outside the outpost). "Can build now" does not depend on where the player stands.
+func upgrade_status() -> Dictionary:
+	var out := {}
+	var built: Array = state["upgrades"]
+	var slots: Array = state["stash"]["slots"]
+	for id in UpgradeTable.ids():
+		var u := UpgradeTable.get_upgrade(id)
+		var requires: Array[String] = []
+		for need in u["requires"]:
+			if not built.has(need):
+				requires.append(need)
+		var cost: Array[Dictionary] = []
+		var short: Array[Dictionary] = []
+		for kind in u["cost"]:
+			var entry := {"item": kind, "have": Inventory.count_of(slots, kind), "need": int(u["cost"][kind])}
+			cost.append(entry)
+			if entry["have"] < entry["need"]:
+				short.append(entry)
+		var status := SimVocab.UPGRADE_NOT_YET
+		if built.has(id):
+			status = SimVocab.UPGRADE_BUILT
+		elif u["locked"] == "" and requires.is_empty() and short.is_empty():
+			status = SimVocab.UPGRADE_CAN_BUILD
+		out[id] = {
+			"status": status, "locked": u["locked"], "requires": requires, "cost": cost, "short": short,
+			"reason": _build({"upgrade": id}, false),
+		}
+	return out
+
+
 # --- Skills ---------------------------------------------------------------------------
 
 func _grant_xp(skill: String, amount: int) -> void:
