@@ -70,8 +70,10 @@ var _craft_panel: PanelContainer
 var _craft_list: VBoxContainer
 var _craft_rows := {}  # recipe id -> {text, button}
 var _upgrade_list: VBoxContainer
-var _upgrade_rows := {}  # upgrade id -> {text, button}
+var _upgrade_rows := {}  # upgrade id -> {title, text, button, style, state}
 var _upgrade_note: Label
+var _flash_upgrade := ""  # the upgrade whose row is flashing, "" for none
+var _flash_left := 0.0
 var _scale_buttons := {}  # scale -> Button
 var _motion: CheckBox
 var _volume: HSlider
@@ -123,6 +125,12 @@ func _process(delta: float) -> void:
 		_banner_box.modulate.a = clampf(_banner_left / 0.6, 0.0, 1.0)
 	if _saved_label.modulate.a > 0.0:
 		_saved_label.modulate.a = maxf(0.0, _saved_label.modulate.a - delta * 0.5)
+	if _flash_upgrade != "":
+		_flash_left -= delta
+		var id := _flash_upgrade
+		if _flash_left <= 0.0:
+			_flash_upgrade = ""
+		_paint_upgrade_row(id)
 
 
 ## A big line across the top of the screen that fades out: banking, level-ups, crafting.
@@ -362,45 +370,75 @@ func _add_craft_row(id: String) -> void:
 	_craft_rows[id] = {"text": text, "button": craft}
 
 
-## Upgrade rows are built once and updated in place, like the recipe rows. Status comes from
-## the sim's upgrade_status() query.
+## Upgrade rows are built once with the page and updated in place, like the recipe rows.
+## Status comes from the sim's upgrade_status() query; UpgradeRows words it.
 func _refresh_upgrades() -> void:
 	var statuses := sim.upgrade_status()
 	for id in statuses:
-		if not _upgrade_rows.has(id):
-			_add_upgrade_row(id)
 		var s: Dictionary = statuses[id]
-		var built: bool = s["status"] == SimVocab.UPGRADE_BUILT
-		var locked: bool = not built and s["locked"] != ""
-		var lines: PackedStringArray = [_effect_text(UpgradeTable.get_upgrade(id)["effects"])]
-		if built:
-			lines.append("Built.")
-		elif locked:
-			lines.append("Locked. %s" % s["locked"])
-		else:
-			var costs: PackedStringArray = []
-			for c in s["cost"]:
-				costs.append("%d %s (%d)" % [c["need"], ItemTable.label(c["item"]), c["have"]])
-			lines.append("Costs %s from the stash." % ", ".join(costs))
-			var missing: PackedStringArray = []
-			for need in s["requires"]:
-				missing.append(UpgradeTable.get_upgrade(need)["label"])
-			if not missing.is_empty():
-				lines.append("Needs the %s first." % " and the ".join(missing))
+		var v := UpgradeRows.view(id, s)
 		var row: Dictionary = _upgrade_rows[id]
-		(row["text"] as Label).text = "\n".join(lines)
+		row["state"] = v["state"]
+		(row["text"] as Label).text = "\n".join(v["lines"])
 		var why: String = s["reason"]
 		var button := row["button"] as Button
 		button.disabled = why != ""
-		button.text = "Built" if built else "Locked" if locked else "Build"
-		button.icon = UiTheme.icon("checkmark", 14) if built else UiTheme.icon("locked", 14) if locked else null
+		button.text = v["button"]
+		button.icon = UiTheme.icon(v["icon"], 14) if v["icon"] != "" else null
 		button.tooltip_text = _why_text(why)
+		_paint_upgrade_row(id)
 	_upgrade_note.text = "Build from what is in the stash, inside the outpost." if sim.in_outpost() else "Upgrades are built inside the outpost."
 
 
+## The row just built flashes once, then rests in its built state.
+func flash_upgrade(id: String) -> void:
+	if not _upgrade_rows.has(id):
+		return
+	var was := _flash_upgrade
+	_flash_upgrade = id
+	_flash_left = UpgradeRows.FLASH_SECONDS
+	if was != "" and was != id:
+		_paint_upgrade_row(was)
+
+
+## Colours a row for its state: a can-build-now row stands out in ember on timber, rows not
+## buildable yet are greyed, and the flashing row glows ember over whichever it is.
+func _paint_upgrade_row(id: String) -> void:
+	var row: Dictionary = _upgrade_rows[id]
+	var state: String = row["state"]
+	var fill := Color(UiTheme.TIMBER, 0.0)
+	var edge := Color(UiTheme.IRON_DARK, 0.0)
+	var title_colour := UiTheme.TEXT
+	var unmet := state == UpgradeRows.NOT_YET or state == UpgradeRows.LOCKED
+	if state == UpgradeRows.CAN_BUILD:
+		fill = Color(UiTheme.TIMBER, 0.6)
+		edge = UiTheme.EMBER
+		title_colour = UiTheme.EMBER
+	elif unmet:
+		title_colour = UiTheme.TEXT_DISABLED
+	if id == _flash_upgrade:
+		var glow := UpgradeRows.flash(UpgradeRows.FLASH_SECONDS - _flash_left)
+		fill = fill.lerp(Color(UiTheme.EMBER_DEEP, 0.7), glow)
+		edge = edge.lerp(UiTheme.EMBER, glow)
+	var style := row["style"] as StyleBoxFlat
+	style.bg_color = fill
+	style.border_color = edge
+	(row["title"] as Label).add_theme_color_override("font_color", title_colour)
+	(row["text"] as Label).modulate = Color(1, 1, 1, 0.6 if unmet else 1.0)
+
+
+func _add_upgrade_group(title: String) -> void:
+	var heading := UiTheme.heading(title, 12, UiTheme.TEXT_DIM)
+	_upgrade_list.add_child(heading)
+
+
 func _add_upgrade_row(id: String) -> void:
+	var style := UiTheme.row_style()
+	var frame := PanelContainer.new()
+	frame.add_theme_stylebox_override("panel", style)
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 4)
+	frame.add_child(box)
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 8)
 	var title := UiTheme.heading(UpgradeTable.get_upgrade(id)["label"], 13)
@@ -418,28 +456,8 @@ func _add_upgrade_row(id: String) -> void:
 	var text := UiTheme.muted("", 12)
 	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(text)
-	_upgrade_list.add_child(box)
-	_upgrade_list.add_child(HSeparator.new())
-	_upgrade_rows[id] = {"text": text, "button": build}
-
-
-static func _effect_text(effects: Dictionary) -> String:
-	var parts: PackedStringArray = []
-	if effects.has("stash"):
-		parts.append("+%d stash slots" % effects["stash"])
-	if effects.has("recipes"):
-		var names: PackedStringArray = []
-		for r in effects["recipes"]:
-			names.append(str(RecipeTable.get_recipe(r)["label"]).to_lower())
-		parts.append("unlocks %s" % ", ".join(names))
-	if effects.has("smithing_tier"):
-		parts.append("smithing works up to %s" % effects["smithing_tier"])
-	if effects.has("ring_gate"):
-		parts.append("works the gate to ring two once its captain falls")
-	if effects.has("waystones"):
-		parts.append("wakes the waystones in ring one and ring two: visit one, then travel home from it")
-	var text := "; ".join(parts)
-	return text.substr(0, 1).to_upper() + text.substr(1)
+	_upgrade_list.add_child(frame)
+	_upgrade_rows[id] = {"title": title, "text": text, "button": build, "style": style, "state": UpgradeRows.NOT_YET}
 
 
 ## What a refusal means, for a disabled button's tooltip.
@@ -726,7 +744,12 @@ func _build_upgrades_page() -> Control:
 	box.add_child(scroll)
 	_upgrade_list = VBoxContainer.new()
 	_upgrade_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_upgrade_list.add_theme_constant_override("separation", 6)
 	scroll.add_child(_upgrade_list)
+	for group in UpgradeRows.groups():
+		_add_upgrade_group(group["title"])
+		for id in group["ids"]:
+			_add_upgrade_row(id)
 	return box
 
 
