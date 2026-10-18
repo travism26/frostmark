@@ -20,10 +20,12 @@ const SPOTS := {
 	# The winch: just inside the south gate, west of the path and the signpost, far enough
 	# in from the palisade that the wall never hides it from the camera.
 	"south_gate": {"at": [-5.0, 6.9], "turn": PI},
+	# The smithy: the north band, west of the workbench; its back is the north wall.
+	"smithy": {"at": [3.6, -7.4], "turn": 0.0},
 }
 
 ## The hand-made meshes a part can name (WorldDressing builds them), beside the kit models.
-const MESHES := ["shelf_rack", "hatch", "iron_chest", "weapon_rack", "winch_frame"]
+const MESHES := ["shelf_rack", "hatch", "iron_chest", "weapon_rack", "winch_frame", "forge_hearth", "furnace_stack"]
 
 ## Each upgrade's look: its `line` and `step` in that line, the `spot` it builds in, its
 ## `offset` [x, z] in the spot's frame, its `size` [along, out] on the ground, and its
@@ -81,6 +83,24 @@ const LOOKS := {
 		"line": "winch", "step": 1, "spot": "south_gate", "offset": [0.0, 0.0], "size": [2.0, 1.2],
 		"parts": [
 			{"mesh": "winch_frame", "size": [2.0, 1.6, 1.2], "at": [0.0, 0.0], "y": 0.0, "turn": 0.0},
+		],
+	},
+	# A stone hearth with a bed of glowing coals, bellows on its west side and a short flue at
+	# its back, a quench bucket beside it: the smithy's first step, in front of the spot.
+	"forge": {
+		"line": "smithing", "step": 1, "spot": "smithy", "offset": [0.0, 0.6], "size": [1.6, 1.1],
+		"parts": [
+			{"mesh": "forge_hearth", "size": [1.2, 0.85, 0.95], "at": [-0.15, 0.0], "y": 0.0, "turn": 0.0},
+			{"model": Props.SURVIVAL + "bucket.glb", "height": 0.34, "snow_from": 1.1, "at": [0.6, 0.25], "y": 0.0, "turn": 0.4},
+		],
+	},
+	# The forge grown big: a hooped stone stack with a glowing tap at its foot and a chimney
+	# whose mouth glows, behind the forge against the north wall. The tallest thing in the
+	# yard, and north of everything the player walks to, so the camera always sees past it.
+	"blast_furnace": {
+		"line": "smithing", "step": 2, "spot": "smithy", "offset": [0.0, -0.8], "size": [1.5, 1.3],
+		"parts": [
+			{"mesh": "furnace_stack", "size": [1.4, 4.4, 1.2], "at": [0.0, 0.0], "y": 0.0, "turn": 0.0},
 		],
 	},
 }
