@@ -83,10 +83,37 @@ func test_a_shot_no_blow_answers_drops_instead_of_hanging() -> void:
 
 func test_every_look_is_there_to_warm_up() -> void:
 	var all := ProjectilesScript.samples()
-	assert_eq(all.get_child_count(), 6, "an arrow, a shard and a puff each way")
+	assert_eq(all.get_child_count(), 8, "an arrow, a shard and each puff each way")
 	for node in all.find_children("*", "MeshInstance3D", true, false):
 		assert_true((node as MeshInstance3D).mesh != null, "%s has a mesh" % node.name)
 	all.free()
+
+
+func test_every_shot_and_puff_of_a_look_shares_its_resources() -> void:
+	# A fresh material per shot let the browser drop its compiled shader between shots, so
+	# every arrow froze the game while it compiled again (seconds in Firefox).
+	for make in [ProjectilesScript.arrow, ProjectilesScript.shard]:
+		var first: Node3D = make.call()
+		var second: Node3D = make.call()
+		for part in ["Body", "Trail"]:
+			var a := first.get_node(part) as MeshInstance3D
+			var b := second.get_node(part) as MeshInstance3D
+			assert_eq(a.mesh, b.mesh, "%s %s shares its mesh" % [first.name, part])
+			assert_eq(a.material_override, b.material_override, "%s %s shares its material" % [first.name, part])
+		var body := (first.get_node("Body") as MeshInstance3D).mesh
+		var again := (second.get_node("Body") as MeshInstance3D).mesh
+		assert_eq(body.surface_get_material(0), again.surface_get_material(0), "%s body shares its material" % first.name)
+		first.free()
+		second.free()
+	for kind in [ProjectilesScript.ARROW, ProjectilesScript.SHARD, ""]:
+		for reduced in [false, true]:
+			var first := ProjectilesScript.puff(kind, reduced)
+			var second := ProjectilesScript.puff(kind, reduced)
+			assert_eq(first.mesh, second.mesh, "puff %s %s shares its quad and material" % [kind, reduced])
+			assert_eq(first.color_ramp, second.color_ramp, "and its ramp")
+			assert_eq(first.scale_amount_curve, second.scale_amount_curve, "and its curve")
+			first.free()
+			second.free()
 
 
 func test_a_puff_bursts_once_and_reduced_motion_only_fades() -> void:
