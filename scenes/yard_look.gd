@@ -43,6 +43,28 @@ const LOOKS := {
 }
 
 
+## What each upgrade is built of, which picks the sound its build makes (AudioCues): every
+## upgrade declares one, waystones too, though they draw nothing in the yard. Kept apart from
+## LOOKS so a look and its material can land on their own.
+const TIMBER := "timber"
+const STONE := "stone"
+const IRON := "iron"
+const MATERIALS := {
+	"stash_shelves": TIMBER,
+	"forge": STONE,
+	"stash_cellar": TIMBER,
+	"armoury": IRON,
+	"ring_two_gate": TIMBER,
+	"blast_furnace": STONE,
+	"waystone": STONE,
+	"stash_vault": IRON,
+}
+
+
+## The material an upgrade is built of, or "" when it declares none.
+static func material(id: String) -> String:
+	return MATERIALS.get(id, "")
+
 ## The pieces the built upgrades put in the yard, in the upgrade table's order whatever the
 ## order of `built`. Each piece carries its `upgrade`, `line`, `step` and `spot`, where it
 ## stands (`at`, a Vector2 on the ground, and `turn`), its `size` on the ground and its
