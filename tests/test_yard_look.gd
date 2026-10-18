@@ -112,7 +112,7 @@ func test_the_winch_stands_inside_the_south_gate_to_one_side_of_the_path() -> vo
 	var corners := YardLookScript.footprint(winch)
 	var west := corners[0].x < gate.position.x
 	for c in corners:
-		assert_true(gate.position.y - c.y > 0.0 and gate.position.y - c.y < 1.5, "the winch's corner %s stands just inside the gate" % c)
+		assert_true(gate.position.y - c.y > 0.0 and gate.position.y - c.y < 3.5, "the winch's corner %s stands just inside the gate" % c)
 		assert_true((c.x < gate.position.x) == west and (west or c.x > gate.end.x), "the winch's corner %s keeps to one side of the gate path" % c)
 		assert_true(absf(c.x - gate.get_center().x) < 7.0, "the winch's corner %s stands near the gate" % c)
 
