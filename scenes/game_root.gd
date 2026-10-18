@@ -143,6 +143,8 @@ var _loot := {}  # loot id -> its pile's node
 var _enemy_layer := Node3D.new()
 var _loot_layer := Node3D.new()
 var _fire_layer := Node3D.new()
+var _yard_layer := Node3D.new()  # the pieces the built upgrades put in the yard
+var _yard_built: Array = []  # the built upgrades the yard layer was last drawn for
 
 @onready var _world: Node3D = $World
 @onready var _character: Node3D = $Character
@@ -158,6 +160,7 @@ func _ready() -> void:
 	add_child(_enemy_layer)
 	add_child(_loot_layer)
 	add_child(_fire_layer)
+	add_child(_yard_layer)
 	_build_enemies(sim.world)
 	_gear = CharacterGear.new()
 	_character_view = CharacterView.new()
@@ -368,6 +371,7 @@ func _show_sim() -> void:
 		_set_node_look(id, int(sim.state["nodes"][id]["left"]) > 0)
 	_sync_ring_gates()
 	_sync_waystones()
+	_sync_yard()
 	for id in _fires:
 		(_fires[id] as Node).queue_free()
 	_fires.clear()
@@ -514,6 +518,7 @@ func _apply_events(events: Array[Dictionary]) -> void:
 				_hud.banner("Built: %s." % label)
 				_last_event = "Built the %s." % label.to_lower()
 				_sync_waystones()
+				_sync_yard()
 			SimVocab.EV_RING_GATE_OPENED:
 				_sync_ring_gates()
 				_hud.banner("The gate to ring two is open.")
@@ -741,11 +746,16 @@ func _add_fade_twin(mesh: MeshInstance3D) -> void:
 ## for 50 to 275 ms. So behind the title screen a tiny sample of every look the world can
 ## show is drawn in front of the camera for a few frames: each material once plain and once
 ## instanced, beside and away from a fire's light (both change the compiled shader), plus
-## the see-through fade twins and every label size with every glyph it can print. The HUD
-## is drawn under the title too, so its text is rasterised before the first click.
+## the see-through fade twins and every label size with every glyph it can print. The yard
+## pieces of every upgrade are sampled too, built or not, so none freezes the game when it
+## first appears. The HUD is drawn under the title too, so its text is rasterised before the
+## first click.
 func _build_warmup() -> void:
 	var looks := {}  # shader key -> [a mesh, a material with that key]
-	for root: Node in [_world, _enemy_layer, _character]:
+	var every_piece := Node3D.new()
+	for piece in YardLook.pieces(UpgradeTable.ids()):
+		every_piece.add_child(WorldDressing.yard_piece(piece))
+	for root: Node in [_world, _enemy_layer, _character, every_piece]:
 		for node in root.find_children("*", "GeometryInstance3D", true, false):
 			var mesh: Mesh = null
 			if node is MeshInstance3D:
@@ -761,6 +771,7 @@ func _build_warmup() -> void:
 				elif material == null:
 					material = mesh.surface_get_material(i)
 				_add_look(looks, mesh, material)
+	every_piece.free()
 	for m: MeshInstance3D in _fade_twins:
 		_add_look(looks, m.mesh, _fade_twins[m])
 	var sizes := {CUE_FONT: true, CUE_FONT_HEAVY: true, LOOT_FONT: true}
@@ -1034,6 +1045,18 @@ func _sync_waystones() -> void:
 		(_waystones[id]["glow"] as Node3D).visible = awake
 		var state := "asleep" if not awake else "attuned" if sim.waystone_attuned(id) else "visit to attune"
 		(_waystones[id]["label"] as Label3D).text = "Waystone (%s)" % state
+
+
+## The yard shows a piece for every built upgrade (YardLook), redrawn when the list changes.
+func _sync_yard() -> void:
+	var built: Array = sim.state["upgrades"]
+	if built == _yard_built:
+		return
+	for child in _yard_layer.get_children():
+		child.queue_free()
+	for piece in YardLook.pieces(built):
+		_yard_layer.add_child(WorldDressing.yard_piece(piece))
+	_yard_built = built.duplicate()
 
 
 func _ring_gate_text(id: String) -> String:

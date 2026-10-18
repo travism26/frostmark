@@ -1,8 +1,10 @@
 ## Board-only, not shipped: renders the real scene with the HUD hidden at any list of spots,
-## for checking dressing and landmarks without a browser build.
+## for checking dressing, landmarks and yard pieces without a browser build. A spot can name
+## upgrades to have built, joined by `+`, to show their pieces in the yard.
 ##
-##   godot --resolution 1280x720 -s tools/spot_shots.gd -- <out_dir> <name>=<x>,<z>[,<distance>] ...
+##   godot --resolution 1280x720 -s tools/spot_shots.gd -- <out_dir> <name>=<x>,<z>[,<distance>[,<upgrade>+...]] ...
 ##   e.g. godot --resolution 1280x720 -s tools/spot_shots.gd -- /tmp/shots wreck=6.5,45.5 keep=0.5,95,30
+##        godot --resolution 1280x720 -s tools/spot_shots.gd -- /tmp/shots shelves=-6,-3,32,stash_shelves
 extends SceneTree
 
 const H := preload("res://tests/sim_helpers.gd")
@@ -17,14 +19,15 @@ var _had_save := false
 func _init() -> void:
 	var args := OS.get_cmdline_user_args()
 	if args.size() < 2:
-		printerr("usage: godot -s tools/spot_shots.gd -- <out_dir> <name>=<x>,<z>[,<distance>] ...")
+		printerr("usage: godot -s tools/spot_shots.gd -- <out_dir> <name>=<x>,<z>[,<distance>[,<upgrade>+...]] ...")
 		quit(2)
 		return
 	_out_dir = args[0]
 	for a in args.slice(1):
 		var parts: PackedStringArray = a.split("=")
 		var nums: PackedStringArray = parts[1].split(",")
-		_spots.append({"name": parts[0], "at": [float(nums[0]), float(nums[1])], "distance": float(nums[2]) if nums.size() > 2 else 24.0})
+		var upgrades: Array = Array(nums[3].split("+")) if nums.size() > 3 else []
+		_spots.append({"name": parts[0], "at": [float(nums[0]), float(nums[1])], "distance": float(nums[2]) if nums.size() > 2 else 24.0, "upgrades": upgrades})
 	DirAccess.make_dir_recursive_absolute(_out_dir)
 	if FileAccess.file_exists("user://frostmark.save"):
 		_had_save = true
@@ -43,6 +46,7 @@ func _run() -> void:
 		var sim := Sim.new(world)
 		sim.command(SimVocab.NEW_CHARACTER, {"previous": ""})
 		H.place(sim, spot["at"])
+		H.patch(sim, {"upgrades": spot["upgrades"]})
 		main._on_import(sim.export_code())
 		main.get_node("HUD").visible = false
 		main._camera_rig.distance = spot["distance"]
