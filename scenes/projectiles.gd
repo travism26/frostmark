@@ -5,6 +5,11 @@
 ## arrives on the tick the blow resolves; it lands on the player when that tick's `hit` comes,
 ## and in the snow past them when `missed` does. Shots are hand-made meshes and a trail quad,
 ## with no shadow and no state beyond what is on screen.
+##
+## Every shot and puff of a look shares one set of meshes and materials, made once and held
+## for the session. The browser compiles a material's shader when it is first drawn and drops
+## it when the last material of its kind is freed, so a fresh material per shot froze the game
+## for 60 to 120 ms on every arrow and shard.
 class_name Projectiles
 extends Node3D
 
@@ -59,6 +64,8 @@ var reduced_motion := false
 var _shots: Array[Dictionary] = []
 
 static var _trail_texture: Texture2D
+## Look name -> the meshes, materials, curves and ramps every node of that look shares.
+static var _looks := {}
 
 
 ## The projectile a blow of `style` throws: an arrow for ranged, a shard for magic, none for melee.
@@ -226,6 +233,12 @@ static func _aim(target: Node3D) -> Vector3:
 ## An arrow pointing along its -Z: a wooden shaft, a steel head and pale fletching, with a
 ## faint streak behind it.
 static func arrow() -> Node3D:
+	if not _looks.has(ARROW):
+		_looks[ARROW] = _shot_look(_arrow_mesh(), COLOR_ARROW_TRAIL, false)
+	return _shot_node("Arrow", _looks[ARROW])
+
+
+static func _arrow_mesh() -> ArrayMesh:
 	var st := MeshKit.begin()
 	var half := ARROW_LENGTH * 0.5
 	MeshKit.box(st, Vector3(0, 0, 0.1), Vector3(0.1, 0.1, ARROW_LENGTH - 0.3), COLOR_SHAFT, COLOR_SHAFT)
@@ -241,12 +254,18 @@ static func arrow() -> Node3D:
 			MeshKit.tri(st, Vector3(0, 0, half - 0.45), Vector3(0, 0, half), Vector3(0, 0, half) + out, COLOR_FLETCH, side.cross(Vector3.BACK))
 	var mesh := MeshKit.finish(st)
 	(mesh.surface_get_material(0) as StandardMaterial3D).cull_mode = BaseMaterial3D.CULL_DISABLED  # the fletching is one face thick
-	return _shot_node("Arrow", mesh, COLOR_ARROW_TRAIL, false)
+	return mesh
 
 
 ## A frost shard pointing along its -Z: a long six-sided spike of ice, bright at its core,
 ## with a streak behind it.
 static func shard() -> Node3D:
+	if not _looks.has(SHARD):
+		_looks[SHARD] = _shot_look(_shard_mesh(), COLOR_SHARD_TRAIL, true)
+	return _shot_node("Shard", _looks[SHARD])
+
+
+static func _shard_mesh() -> ArrayMesh:
 	var st := MeshKit.begin()
 	var nose := Vector3(0, 0, -SHARD_LENGTH * 0.6)
 	var tail := Vector3(0, 0, SHARD_LENGTH * 0.4)
@@ -262,26 +281,15 @@ static func shard() -> Node3D:
 	var mesh := MeshKit.finish(st)
 	var mat := mesh.surface_get_material(0) as StandardMaterial3D
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED  # it glows with its own cold
-	return _shot_node("Shard", mesh, COLOR_SHARD_TRAIL, true)
+	return mesh
 
 
-static func _shot_node(node_name: String, mesh: ArrayMesh, trail_colour: Color, wide: bool) -> Node3D:
-	var root := Node3D.new()
-	root.name = node_name
-	var body := MeshInstance3D.new()
-	body.name = "Body"
-	body.mesh = mesh
-	body.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	root.add_child(body)
-	# The streak lies flat behind the shot, so it reads from above as a line of travel.
+## A shot's body `mesh` and the streak that lies flat behind it, so it reads from above as a
+## line of travel.
+static func _shot_look(mesh: ArrayMesh, trail_colour: Color, wide: bool) -> Dictionary:
 	var quad := QuadMesh.new()
 	quad.size = Vector2(0.36 if wide else 0.24, TRAIL_LENGTH)
 	quad.orientation = PlaneMesh.FACE_Y
-	var trail := MeshInstance3D.new()
-	trail.name = "Trail"
-	trail.mesh = quad
-	trail.position = Vector3(0, 0, TRAIL_LENGTH * 0.5)
-	trail.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	var mat := StandardMaterial3D.new()
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
@@ -289,7 +297,23 @@ static func _shot_node(node_name: String, mesh: ArrayMesh, trail_colour: Color, 
 	mat.albedo_color = trail_colour
 	mat.albedo_texture = _trail_tex()
 	mat.disable_receive_shadows = true
-	trail.material_override = mat
+	return {"body": mesh, "trail": quad, "trail_material": mat}
+
+
+static func _shot_node(node_name: String, look: Dictionary) -> Node3D:
+	var root := Node3D.new()
+	root.name = node_name
+	var body := MeshInstance3D.new()
+	body.name = "Body"
+	body.mesh = look["body"]
+	body.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	root.add_child(body)
+	var trail := MeshInstance3D.new()
+	trail.name = "Trail"
+	trail.mesh = look["trail"]
+	trail.material_override = look["trail_material"]
+	trail.position = Vector3(0, 0, TRAIL_LENGTH * 0.5)
+	trail.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	root.add_child(trail)
 	return root
 
@@ -306,9 +330,7 @@ static func puff(kind: String, reduced: bool) -> CPUParticles3D:
 	p.lifetime = PUFF_SECONDS
 	p.local_coords = false
 	var icy := kind == SHARD
-	var colour := COLOR_SNOW
-	if kind != "":
-		colour = COLOR_SNOW.lerp(IconTable.STYLE_COLOURS[CombatTable.STYLE_MAGIC if icy else CombatTable.STYLE_RANGED], 0.6)
+	var look := _puff_look(kind, reduced)
 	if reduced:
 		p.amount = 1
 		p.direction = Vector3.UP
@@ -316,7 +338,6 @@ static func puff(kind: String, reduced: bool) -> CPUParticles3D:
 		p.initial_velocity_min = 0.0
 		p.initial_velocity_max = 0.0
 		p.gravity = Vector3.ZERO
-		p.scale_amount_curve = FireFx._curve([[0.0, 1.0], [1.0, 1.0]])
 	else:
 		p.amount = 12 if icy else 10
 		p.direction = Vector3.UP
@@ -331,13 +352,29 @@ static func puff(kind: String, reduced: bool) -> CPUParticles3D:
 		p.angle_max = 90.0
 		p.scale_amount_min = 0.6
 		p.scale_amount_max = 1.1
-		p.scale_amount_curve = FireFx._curve([[0.0, 0.6], [0.3, 1.0], [1.0, 1.3]])
-	p.color_ramp = FireFx._ramp([[0.0, Color(1, 1, 1, 0.0)], [0.1, Color(1, 1, 1, 0.9)], [1.0, Color(1, 1, 1, 0.0)]])
-	var quad := QuadMesh.new()
-	quad.size = Vector2(0.8, 0.8) if icy else Vector2(0.9, 0.9)
-	quad.material = FireFx._billboard(STAR if icy else SMOKE, colour, false)
-	p.mesh = quad
+	p.scale_amount_curve = look["scale"]
+	p.color_ramp = look["ramp"]
+	p.mesh = look["mesh"]
 	return p
+
+
+## The quad, curve and ramp every puff of `kind` (and `reduced`) shares.
+static func _puff_look(kind: String, reduced: bool) -> Dictionary:
+	var key := "puff %s %s" % [kind, reduced]
+	if not _looks.has(key):
+		var icy := kind == SHARD
+		var colour := COLOR_SNOW
+		if kind != "":
+			colour = COLOR_SNOW.lerp(IconTable.STYLE_COLOURS[CombatTable.STYLE_MAGIC if icy else CombatTable.STYLE_RANGED], 0.6)
+		var quad := QuadMesh.new()
+		quad.size = Vector2(0.8, 0.8) if icy else Vector2(0.9, 0.9)
+		quad.material = FireFx._billboard(STAR if icy else SMOKE, colour, false)
+		_looks[key] = {
+			"mesh": quad,
+			"scale": FireFx._curve([[0.0, 1.0], [1.0, 1.0]] if reduced else [[0.0, 0.6], [0.3, 1.0], [1.0, 1.3]]),
+			"ramp": FireFx._ramp([[0.0, Color(1, 1, 1, 0.0)], [0.1, Color(1, 1, 1, 0.9)], [1.0, Color(1, 1, 1, 0.0)]]),
+		}
+	return _looks[key]
 
 
 ## One of every look a shot can take, for the warm-up to compile before play.
@@ -345,7 +382,7 @@ static func samples() -> Node3D:
 	var all := Node3D.new()
 	all.add_child(arrow())
 	all.add_child(shard())
-	for kind in [ARROW, SHARD]:
+	for kind in [ARROW, SHARD, ""]:
 		for reduced in [false, true]:
 			all.add_child(puff(kind, reduced))
 	return all
