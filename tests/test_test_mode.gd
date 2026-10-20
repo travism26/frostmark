@@ -104,3 +104,24 @@ func test_the_query_pair_matches_its_hash() -> void:
 	assert_eq(FieldKit.for_query("?" + QUERY_PAIR), full, "the query pair asks for the test-mode code")
 	assert_eq(FieldKit.for_query("?x=1&" + QUERY_PAIR), full, "beside other parameters too")
 	assert_eq(FieldKit.for_query("?hearth=wax"), "", "any other query asks for nothing")
+
+
+func test_the_ring_two_parameter_stands_the_same_character_in_ring_two() -> void:
+	var sim := SimScript.new()
+	var result := sim.command(Vocab.IMPORT_SAVE, {"code": FieldKit.for_query("?" + QUERY_PAIR + "&ring=two")})
+	assert_true(result["ok"], "the ring-two link imports: %s" % result["reason"])
+	assert_eq(sim.state["player"]["region"], WorldDef.REGION_RING_TWO)
+	assert_eq(sim.state["player"]["pos"], FieldKit.RING_SPOTS["two"])
+	var snap := sim.snapshot()
+	var home := _imported().snapshot()
+	snap.erase("player")
+	home.erase("player")
+	assert_eq(snap, home, "everything but where the character stands is the test-mode save")
+	assert_eq(FieldKit.for_query("?ring=two&" + QUERY_PAIR), FieldKit.for_query("?" + QUERY_PAIR + "&ring=two"), "in either order")
+
+
+func test_the_ring_parameter_alone_or_unknown_changes_nothing() -> void:
+	var full := FileAccess.get_file_as_string(CODE_PATH).strip_edges()
+	assert_eq(FieldKit.for_query("?ring=two"), "", "without the query pair it asks for nothing")
+	assert_eq(FieldKit.for_query("?" + QUERY_PAIR + "&ring=nine"), full, "an unknown ring is the outpost")
+	assert_eq(FieldKit.for_query("?hearth=kindling&ring=two"), FieldKit.bare_code(), "the build-from-scratch link ignores it")

@@ -9,6 +9,7 @@
 ##
 ## A short code typed into Import code, or a query parameter on the page, stands for each full
 ## save code. Only their hashes live here; the repo is public, so this is obscurity, not a lock.
+## A `ring=` parameter beside the test-mode pair stands the character in that ring instead.
 class_name FieldKit
 extends RefCounted
 
@@ -19,6 +20,10 @@ const QUERY_HASH := "3b56c406c45b0c8a43371bdeda47567153511ba1521c1d895ce31d94d84
 ## The same two hashes for the build-from-scratch character.
 const BARE_SHORT_HASH := "b17b2820c6322457ba8198b77384821ace5a35a605b42c418ea23194d9d70053"
 const BARE_QUERY_HASH := "fd4d2de984044370d48fd4dbd8d7211f4794441f55d6c268e446755046e43309"
+
+## Where `ring=<name>` beside the test-mode query pair stands the character: ring two just
+## inside its gate, the spot tools/ring_codes.gd uses.
+const RING_SPOTS := {"two": [2.5, 71.5]}
 
 const EQUIPMENT := {
 	"weapon": "steel_sword", "helm": "steel_helm", "body": "steel_body", "legs": "steel_legs", "tool": "steel_pickaxe",
@@ -67,18 +72,25 @@ static func page_code(world: WorldDef = null) -> String:
 
 
 ## The full save code a query string such as `?a=b&c=d` asks for, or "" when it asks for none.
+## An unknown `ring=` value leaves the test-mode character in the outpost.
 static func for_query(search: String, world: WorldDef = null) -> String:
-	for pair in search.trim_prefix("?").split("&", false):
+	var pairs := search.trim_prefix("?").split("&", false)
+	var spot: Array = []
+	for pair in pairs:
+		if pair.begins_with("ring="):
+			spot = RING_SPOTS.get(pair.trim_prefix("ring="), [])
+	for pair in pairs:
 		match pair.sha256_text():
 			QUERY_HASH:
-				return code(world)
+				return code(world, spot)
 			BARE_QUERY_HASH:
 				return bare_code(world)
 	return ""
 
 
-## The maxed character as a save code, or "" if this version would not restore it.
-static func code(world: WorldDef = null) -> String:
+## The maxed character as a save code, or "" if this version would not restore it. It stands
+## at `spot` when one is given, otherwise in the outpost.
+static func code(world: WorldDef = null, spot: Array = []) -> String:
 	var sim := Sim.new(world)
 	sim.command(SimVocab.NEW_CHARACTER, {"previous": ""})
 	sim.command(SimVocab.SET_HINTS, {"on": false})
@@ -101,6 +113,9 @@ static func code(world: WorldDef = null) -> String:
 	snap["waystones"] = sim.world.objects_of_kind(WorldDef.KIND_WAYSTONE)
 	snap["warmth"] = Sim.WARMTH_MAX
 	snap["health"] = Sim.HEALTH_MAX
+	if not spot.is_empty():
+		snap["player"]["pos"] = spot.duplicate()
+		snap["player"]["path"] = []
 	if not sim.restore(snap):
 		return ""
 	return sim.export_code()
