@@ -1,13 +1,15 @@
 ## The ring dressing table against the world definition: one landmark per compass direction
 ## per ring that click-to-move can reach, camps where the sim's packs really live, a kit piece
-## for every ruin solid, markers on the ring edges, and scatter that thickens outward. The
-## meshes themselves are judged from screenshots; this checks the data they are built from.
+## for every ruin solid, markers on the ring edges, scatter that thickens outward and cliffs
+## capped in the snow of their ring. The meshes themselves are judged from screenshots; this
+## checks the data they are built from, and the cliffs' vertex colours.
 extends "res://tests/run.gd".TestCase
 
 const WorldDefScript := preload("res://sim/world_def.gd")
 const GridPathScript := preload("res://sim/grid_path.gd")
 const RingLookScript := preload("res://scenes/ring_look.gd")
 const RingDressingScript := preload("res://scenes/ring_dressing.gd")
+const WorldDressingScript := preload("res://scenes/world_dressing.gd")
 
 ## A point deep inside each dressed ring to walk from.
 const FROM := {
@@ -84,6 +86,28 @@ func test_every_ruin_solid_gets_a_kit_piece_in_its_own_footprint() -> void:
 		assert_eq(w.region_at(Vector2((s["min"][0] + s["max"][0]) * 0.5, (s["min"][1] + s["max"][1]) * 0.5)), WorldDef.REGION_RING_TWO, "%s is in ring two" % s["id"])
 	assert_true(int(pieces.get("wall", 0)) >= 10, "the outer wall and the keep are broken walls")
 	assert_eq(int(pieces.get("pillar", 0)), 4, "the four pillars east are pillars")
+
+
+func test_every_cliff_is_capped_in_the_snow_of_its_ring() -> void:
+	var w := WorldDefScript.outpost()
+	var brightest := {}
+	for s in w.solids:
+		if s["kind"] != WorldDef.KIND_CLIFF:
+			continue
+		var centre := Vector2((s["min"][0] + s["max"][0]) * 0.5, (s["min"][1] + s["max"][1]) * 0.5)
+		var snow: Color = WorldDressingScript.COLOR_SNOW_CAP * (RingLookScript.at(w, centre)["snow_tone"] as Color)
+		# The mesh keeps its vertex colours at eight bits a channel, so they are matched to 1%.
+		var colours: PackedColorArray = WorldDressingScript.solid_mesh(w, s).surface_get_arrays(0)[Mesh.ARRAY_COLOR]
+		var top := 0.0
+		var capped := false
+		for c in colours:
+			top = maxf(top, c.get_luminance())
+			capped = capped or (absf(c.r - snow.r) < 0.01 and absf(c.g - snow.g) < 0.01 and absf(c.b - snow.b) < 0.01)
+		assert_true(capped, "%s carries its ring's snow" % s["id"])
+		assert_true(top <= maxf(snow.get_luminance(), WorldDressingScript.COLOR_ICE_PALE.get_luminance()) + 0.001, "nothing on %s is brighter than its snow or pale ice" % s["id"])
+		assert_true(snow.get_luminance() > WorldDressingScript.COLOR_ICE_DEEP.get_luminance(), "%s still reads as snow-capped over its deep ice" % s["id"])
+		brightest[w.region_at(centre)] = snow.get_luminance()
+	assert_true(brightest[WorldDef.REGION_RING_TWO] < brightest[WorldDef.REGION_RING_ONE], "ring two's cliffs are capped darker than ring one's")
 
 
 func test_camps_mark_the_packs_the_sim_places() -> void:

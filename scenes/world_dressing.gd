@@ -148,10 +148,11 @@ static func path_stones(from: Vector2, to: Vector2) -> MultiMeshInstance3D:
 # --- Walls and cliffs --------------------------------------------------------------------
 
 ## The look of a blocking solid: a palisade of sharpened logs for a wall, jagged ice for a
-## cliff, a broken wall or pillar from the ruin kit (in the stone of the ring it stands in) for
-## a ruin, or null to keep the plain box. The mesh is centred on the footprint with the ground
-## at -height/2, matching GameRoot's block placement, and carries one StandardMaterial3D on
-## its only surface so the occluder fade can still see through it.
+## cliff (its snow in the snow tone of the ring it stands in), a broken wall or pillar from the
+## ruin kit (in the stone of the ring it stands in) for a ruin, or null to keep the plain box.
+## The mesh is centred on the footprint with the ground at -height/2, matching GameRoot's block
+## placement, and carries one StandardMaterial3D on its only surface so the occluder fade can
+## still see through it.
 static func solid_mesh(world: WorldDef, solid: Dictionary) -> ArrayMesh:
 	var min_xz: Array = solid["min"]
 	var max_xz: Array = solid["max"]
@@ -162,7 +163,8 @@ static func solid_mesh(world: WorldDef, solid: Dictionary) -> ArrayMesh:
 		WorldDef.KIND_WALL:
 			return _palisade(size, centre)
 		WorldDef.KIND_CLIFF:
-			return _ice_cliff(size, centre)
+			var tone: Color = RingLook.at(world, centre)["snow_tone"]
+			return _ice_cliff(size, centre, COLOR_SNOW_CAP * tone)
 		WorldDef.KIND_RUIN:
 			var stone: Color = RingLook.at(world, centre)["stone"]
 			if RingDressing.ruin_piece(solid) == "pillar":
@@ -199,8 +201,9 @@ static func _palisade(size: Vector3, centre: Vector2) -> ArrayMesh:
 
 ## A ridge of ice along the footprint: a bank of snow at its toe, a face towards the world
 ## that steps in and out in deep blue, a crest and a higher snow-covered ridge behind it that
-## rise and fall, and shards of ice standing along the top and broken at the foot.
-static func _ice_cliff(size: Vector3, centre: Vector2) -> ArrayMesh:
+## rise and fall, and shards of ice standing along the top and broken at the foot. The snow
+## takes `snow`, the cap toned by the ring the cliff stands in, so it sits in that ring's light.
+static func _ice_cliff(size: Vector3, centre: Vector2, snow: Color) -> ArrayMesh:
 	var along_x := size.x >= size.z
 	var length := size.x if along_x else size.z
 	var thick := size.z if along_x else size.x
@@ -228,7 +231,7 @@ static func _ice_cliff(size: Vector3, centre: Vector2) -> ArrayMesh:
 			MeshKit.local(u, outer, along_x) + Vector3(0, top_y * 0.4 + base_y * 0.6, 0),
 			MeshKit.local(u, outer, along_x) + Vector3(0, base_y, 0),
 		])
-	var colours := [COLOR_SNOW_CAP, COLOR_ICE_DEEP, COLOR_ICE, COLOR_ICE, COLOR_SNOW_CAP, COLOR_SNOW_CAP, COLOR_ICE_PALE]
+	var colours := [snow, COLOR_ICE_DEEP, COLOR_ICE, COLOR_ICE, snow, snow, COLOR_ICE_PALE]
 	var face_out := MeshKit.local(0.0, n, along_x)
 	var hints := [face_out + Vector3.UP * 2.0, face_out, face_out, face_out + Vector3.UP, Vector3.UP, -face_out + Vector3.UP, -face_out]
 	for i in steps:

@@ -512,13 +512,7 @@ func _apply_events(events: Array[Dictionary]) -> void:
 						else:
 							_last_event = "The waystone sleeps. Build Waystones at the outpost to wake it."
 			SimVocab.EV_REGION_CHANGED:
-				_last_event = "Entered the %s." % str(e["to"]).replace("_", " ")
-				if e["from"] == WorldDef.REGION_OUTPOST:
-					_last_event += " The cold sets in."
-				elif e["to"] == WorldDef.REGION_RING_ONE:
-					_last_event += " Wolves and bandits hunt here."
-				elif e["to"] == WorldDef.REGION_RING_TWO:
-					_last_event += " Trolls and stalkers keep the ruins."
+				_last_event = _entered_text(e)
 			SimVocab.EV_GATHERED:
 				_last_event = "+%d %s  (+%d %s xp)" % [e["count"], ItemTable.label(e["item"]), e["xp"], e["skill"]]
 			SimVocab.EV_ACTIVITY_STOPPED:
@@ -677,6 +671,22 @@ static func _banked_text(e: Dictionary) -> String:
 		for id in newly:
 			names.append(UpgradeTable.get_upgrade(id)["label"])
 		text += "\nYou can now build: %s." % ", ".join(names)
+	return text
+
+
+## The status line for a `region_changed` event: the ring entered, then the cold on leaving
+## the outpost or what hunts in a numbered ring. The numbered rings are named bare ("ring
+## one"), the others with "the" ("the inner ring").
+static func _entered_text(e: Dictionary) -> String:
+	var to: String = e["to"]
+	var name := to.replace("_", " ")
+	var text := "Entered %s." % (name if to.begins_with("ring_") else "the " + name)
+	if e["from"] == WorldDef.REGION_OUTPOST:
+		text += " The cold sets in."
+	elif to == WorldDef.REGION_RING_ONE:
+		text += " Wolves and bandits hunt here."
+	elif to == WorldDef.REGION_RING_TWO:
+		text += " Trolls and stalkers keep the ruins."
 	return text
 
 

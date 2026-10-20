@@ -8,14 +8,14 @@ To check something deep in the rings without playing up to it, load the test-mod
 - **Link:** open <https://travism26.github.io/frostmark/?hearth=tallow> (or `?hearth=tallow` on a local build). The game skips the title screen and loads the character on startup, every time the page loads with that parameter.
 - **Full code:** paste the whole of `tools/test_mode_code.txt` into **Import code**.
 
-To start in ring two instead of the outpost, add `ring=two` to the link: <https://travism26.github.io/frostmark/?hearth=tallow&ring=two> (or `?hearth=tallow&ring=two` on a local build). It is the same character standing just inside the ring-two gate, the spot `tools/ring_codes.gd` uses; without `ring=`, or with any other value, the link loads in the outpost as before. The parameter does nothing on its own or beside the build-from-scratch link.
+To start in ring two instead of the outpost, add `ring=two` to the link: <https://travism26.github.io/frostmark/?hearth=tallow&ring=two> (or `?hearth=tallow&ring=two` on a local build). It is the same character standing just inside the ring-two gate, within reach of the brazier so it starts warming; without `ring=`, or with any other value, the link loads in the outpost as before. The parameter does nothing on its own or beside the build-from-scratch link.
 
 They work on the live site and in a local build. The short code and the link are obscurity, not security: the repo is public, so anyone reading this file can use them, and the game only keeps their sha256 hashes (`scenes/field_kit.gd`) so they do not turn up in a search of the code. Nothing in the game's interface mentions them.
 
 It is an ordinary save code of the current save version, not a cheat: the rules are unchanged, so the character can still freeze, be hit and die. It loads a character in the outpost with:
 
 - every skill at level 99
-- steel sword, steel helm, steel body, steel legs and steel pickaxe worn; a steel axe, fishing rod, steel bow, steel staff, 100 arrows, 100 frost shards and 5 cooked char in the pack, under the carry limit
+- steel sword, steel helm, steel body, steel legs and steel pickaxe worn; a steel axe, fishing rod, steel bow, steel staff, 100 arrows, 100 frost shards, 5 cooked char and 3 logs (one field fire) in the pack, at the carry limit
 - every upgrade built, so the stash has 20 slots, all holding full stacks of every material, food and ammunition
 - the captain down and the ring-two gate open, ring two already reached
 - both waystones attuned and awake, so `travel` home works from either
@@ -29,7 +29,7 @@ Loading it replaces the browser save, so export your own code first if you want 
 godot --headless -s tools/test_mode_code.gd
 ```
 
-`tests/test_test_mode.gd` imports the file and checks every point above, that the short code loads the same character, and that `ring=two` loads it in ring two. An older code still migrates forward, but regenerate it when the save version moves on or a test there fails (a new skill would load at level 1, for example).
+`tests/test_test_mode.gd` imports the file and checks every point above, that the short code loads the same character, and that `ring=two` loads it in ring two beside the brazier. An older code still migrates forward, but regenerate it when the save version moves on or a test there fails (a new skill would load at level 1, for example).
 
 ## The build-from-scratch code
 
