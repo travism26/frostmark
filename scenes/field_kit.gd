@@ -22,18 +22,19 @@ const BARE_SHORT_HASH := "b17b2820c6322457ba8198b77384821ace5a35a605b42c418ea231
 const BARE_QUERY_HASH := "fd4d2de984044370d48fd4dbd8d7211f4794441f55d6c268e446755046e43309"
 
 ## Where `ring=<name>` beside the test-mode query pair stands the character: ring two just
-## inside its gate, the spot tools/ring_codes.gd uses.
-const RING_SPOTS := {"two": [2.5, 71.5]}
+## inside its gate, within reach of the brazier so the character starts warming.
+const RING_SPOTS := {"two": [3.5, 70.5]}
 
 const EQUIPMENT := {
 	"weapon": "steel_sword", "helm": "steel_helm", "body": "steel_body", "legs": "steel_legs", "tool": "steel_pickaxe",
 }
-## A tool and a weapon for every skill and style, with ammunition and food, under the carry limit.
+## A tool and a weapon for every skill and style, with ammunition, food and the logs for one
+## field fire, up to the carry limit.
 const PACK := [
 	{"item": "steel_axe", "count": 1}, {"item": "fishing_rod", "count": 1},
 	{"item": "steel_bow", "count": 1}, {"item": "steel_staff", "count": 1},
 	{"item": "arrows", "count": 100}, {"item": "frost_shards", "count": 100},
-	{"item": "cooked_char", "count": 5},
+	{"item": "cooked_char", "count": 5}, {"item": "logs", "count": Sim.FIELD_FIRE_LOGS},
 ]
 ## Full stacks of every material, so any recipe can be made at once.
 const STASH := [

@@ -47,6 +47,7 @@ func test_steel_is_worn_and_every_style_and_tool_is_carried_without_overweight()
 		assert_eq(carried, 1, "%s is worn or carried" % kind)
 	assert_true(H.pack_count(sim, "arrows") > 0, "arrows for the bow")
 	assert_true(H.pack_count(sim, "frost_shards") > 0, "frost shards for the staff")
+	assert_eq(H.pack_count(sim, "logs"), Sim.FIELD_FIRE_LOGS, "logs for one field fire")
 	assert_false(sim.is_overweight(), "the kit is within the carry limit")
 
 
@@ -112,6 +113,9 @@ func test_the_ring_two_parameter_stands_the_same_character_in_ring_two() -> void
 	assert_true(result["ok"], "the ring-two link imports: %s" % result["reason"])
 	assert_eq(sim.state["player"]["region"], WorldDef.REGION_RING_TWO)
 	assert_eq(sim.state["player"]["pos"], FieldKit.RING_SPOTS["two"])
+	assert_true(sim.near_fire(), "the character stands within reach of the ring-two brazier")
+	var spot: Array = FieldKit.RING_SPOTS["two"]
+	assert_true(sim.world.is_walkable(Vector2(spot[0], spot[1])), "the spot is not in a footprint")
 	var snap := sim.snapshot()
 	var home := _imported().snapshot()
 	snap.erase("player")
