@@ -2,7 +2,7 @@
 ## ground clicks into `move_to`, marker, field-fire and loot clicks into `interact` (the
 ## outpost gate into `cross_gate`) and enemy clicks into `attack`, and plays the simulation's
 ## events back as motion, telegraph rings and swing arcs on the ground, sound, HUD, banners
-## and the death screen. The
+## and the death screen. A click is confirmed where it lands (ClickMarker). The
 ## world is built from the Sim's WorldDef (props from scenes/props.gd) so the
 ## drawing and the walkability grid can never disagree. It starts on the title screen and
 ## writes the browser save whenever the simulation reports a save point, nudging the player
@@ -135,6 +135,7 @@ var _atmosphere: Node
 var _audio: Node
 var _cues: CombatCues
 var _projectiles: Projectiles  # arrows and frost shards in flight
+var _click_marker: ClickMarker  # where the last click goes
 var _ui_settings: UiSettings
 var _hover_point: Variant = null  # mouse position whose world label to show, or null
 var _hovered_label: Label3D
@@ -177,6 +178,8 @@ func _ready() -> void:
 	add_child(_cues)
 	_projectiles = Projectiles.new()
 	add_child(_projectiles)
+	_click_marker = ClickMarker.new()
+	add_child(_click_marker)
 	_atmosphere = Atmosphere.new()
 	add_child(_atmosphere)
 	_atmosphere.setup($Sun, $WorldEnvironment.environment, _camera_rig, _character, sim.world)
@@ -207,6 +210,7 @@ func _ready() -> void:
 	_ui_settings.apply(get_window())
 	_build_beat.moves_camera = not _ui_settings.reduced_motion
 	_projectiles.reduced_motion = _ui_settings.reduced_motion
+	_click_marker.reduced_motion = _ui_settings.reduced_motion
 	_hud.set_settings(_audio.settings, _ui_settings)
 	_title_screen = TitleScreen.new()
 	_title_screen.help_requested.connect(func() -> void: _help_panel.open(false))
@@ -261,6 +265,8 @@ func _process(delta: float) -> void:
 		# Some enemy changes carry no event (healing on reaching home), so redraw them all.
 		for id in _enemies:
 			_sync_enemy(id)
+	if _click_marker.held() and (sim.state["player"]["path"] as Array).is_empty():
+		_unpin(_click_marker.clear())  # the walk ended without arriving: travel, cooking, a death
 	_animate(delta)
 
 
@@ -293,7 +299,31 @@ func _physics_process(_delta: float) -> void:
 	else:
 		var p: Vector3 = hit["position"]
 		sim.command(SimVocab.MOVE_TO, {"pos": [p.x, p.z]})
-	_apply_events(sim.drain_events())
+	var events := sim.drain_events()
+	_mark_click(events, hit)
+	_apply_events(events)
+
+
+## Confirms a click where it lands: a cross on the ground the character is walking to, or a
+## ring under what was clicked with its label up. An enemy's ring only pops, since the fight
+## draws its own.
+func _mark_click(events: Array[Dictionary], hit: Dictionary) -> void:
+	_unpin(_click_marker.clear())
+	var collider: CollisionObject3D = hit["collider"]
+	if not collider.has_meta("enemy_id") and not collider.has_meta("object_id"):
+		_click_marker.mark(events, hit["position"])
+		return
+	var box: Vector3 = ((collider.get_child(0) as CollisionShape3D).shape as BoxShape3D).size
+	var label: Label3D = collider.get_meta("hover_label", null)
+	var centre := (collider.get_parent() as Node3D).global_position
+	_click_marker.mark(events, centre, maxf(box.x, box.z) * 0.5, label, collider.has_meta("enemy_id"))
+
+
+## The click's mark is gone: if the mouse still rests on the thing whose label it held up,
+## the hover shows that label again.
+func _unpin(label: Label3D) -> void:
+	if label != null and label == _hovered_label:
+		_hovered_label = null
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -330,6 +360,7 @@ func _on_ui_settings(settings: UiSettings) -> void:
 	_audio.settings.reduced_motion = settings.reduced_motion  # the director's copy, saved with the sound
 	_build_beat.moves_camera = not settings.reduced_motion
 	_projectiles.reduced_motion = settings.reduced_motion
+	_click_marker.reduced_motion = settings.reduced_motion
 	sim.command(SimVocab.SET_AUTO_RETALIATE, {"on": settings.auto_retaliate})
 	settings.save_to()
 
@@ -390,6 +421,7 @@ func _show_sim() -> void:
 	_place_character(sim.player_pos(), _facing, 0.0)
 	_build_beat.cancel()  # a loaded yard stands as it is, with no beat
 	_projectiles.clear()
+	_unpin(_click_marker.clear())
 	_camera_rig.global_position = _character.global_position
 	for id in _node_looks:
 		_set_node_look(id, int(sim.state["nodes"][id]["left"]) > 0)
@@ -485,6 +517,7 @@ func _apply_events(events: Array[Dictionary]) -> void:
 				_hud.close_panels()
 				_build_beat.cancel()  # moving, by any command, ends the build beat
 			SimVocab.EV_ARRIVED:
+				_unpin(_click_marker.clear())
 				if e["object_id"] == "":
 					_last_event = "Arrived."
 			SimVocab.EV_INTERACTED:
@@ -814,7 +847,7 @@ func _build_warmup() -> void:
 		every_piece.add_child(WorldDressing.yard_piece(piece))
 		every_piece.add_child(BuildBeat.puff(piece))
 	every_piece.add_child(Projectiles.samples())
-	for root: Node in [_world, _enemy_layer, _character, every_piece]:
+	for root: Node in [_world, _enemy_layer, _character, every_piece, _click_marker]:
 		for node in root.find_children("*", "GeometryInstance3D", true, false):
 			var mesh: Mesh = null
 			if node is MeshInstance3D:
