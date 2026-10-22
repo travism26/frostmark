@@ -56,6 +56,16 @@ func test_approach_cells_ring_blocking_objects() -> void:
 	assert_true(w.approach_cells("nothing").is_empty())
 
 
+# Smithing reads the pack, so every craft is a walk from the stash to the workbench and back.
+func test_the_workbench_stands_a_short_walk_from_the_stash() -> void:
+	var w := WorldDefScript.outpost()
+	var nearest := INF
+	for s in w.approach_cells("stash"):
+		for b in w.approach_cells("workbench"):
+			nearest = minf(nearest, w.cell_center(s).distance_to(w.cell_center(b)))
+	assert_true(nearest <= 4.0, "the workbench's approach cells are %.1f m from the stash's" % nearest)
+
+
 func test_nearest_walkable_cell() -> void:
 	var w := WorldDefScript.outpost()
 	var free: Variant = w.nearest_walkable_cell(Vector2(0.5, 4.5), 2)

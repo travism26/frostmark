@@ -36,7 +36,7 @@ What the outpost has built stands in its yard, specified in [#47](https://github
 | Stash shelves | The stash corner, along the west wall south of the stash | A timber shelf rack with crates and a keg on its boards |
 | Stash cellar | The stash corner, south of the shelves | A plank hatch in the yard floor with iron hinge straps, and a stack of casks against the wall |
 | Stash vault | The stash corner, south of the cellar | An iron-bound chest: timber body, plank lid, iron straps and a brass lock plate facing the yard |
-| Forge | The smithy, in the north band west of the workbench | A coursed stone hearth with a bed of glowing coals, a hood and flue, bellows and a quench bucket |
+| Forge | The smithy, in the north band east of the workbench | A coursed stone hearth with a bed of glowing coals, a hood and flue, bellows and a quench bucket |
 | Blast furnace | The smithy, behind the forge against the north wall | A hooped stone stack with a glowing tap and a chimney whose mouth glows; the tallest thing in the yard, and north of everything the player walks to |
 | Armoury | The east wall, between the wood pile and the tent's fence | A timber weapon rack of swords and spears with a red shield hung at its middle, and a crate of spare gear |
 | Ring-two gate winch | Just inside the south gate, west of the path and the signpost | A winch frame: log trestles, an iron-banded drum with its crank, and the chain run out to an anchor stone |

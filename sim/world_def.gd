@@ -176,7 +176,7 @@ static func outpost() -> WorldDef:
 		},
 		"workbench": {
 			"kind": KIND_WORKBENCH, "label": "Workbench", "blocks": true, "height": 1.0,
-			"min": [5.0, -7.0], "max": [7.0, -6.0],
+			"min": [-3.0, -7.0], "max": [-1.0, -6.0],
 		},
 		# Barred until the captain has fallen and the outpost has built its winch. It always
 		# blocks the walkability grid: an open gate is passed by walking up to it (see Sim).
