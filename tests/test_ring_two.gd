@@ -11,7 +11,7 @@ const Vocab := preload("res://sim/vocab.gd")
 const NORTH_OF_GATE := [0.5, 50.5]
 const PAST_THE_GATE := [0.5, 65.5]
 ## Standing at the workbench, inside the outpost.
-const AT_WORKBENCH := [6.0, -5.0]
+const AT_WORKBENCH := [-2.0, -5.0]
 const UPGRADES_TO_THE_WINCH := ["stash_shelves", "forge", "armoury", "ring_two_gate"]
 
 

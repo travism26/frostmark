@@ -20,8 +20,8 @@ const SPOTS := {
 	# The winch: just inside the south gate, west of the path and the signpost, far enough
 	# in from the palisade that the wall never hides it from the camera.
 	"south_gate": {"at": [-5.0, 6.9], "turn": PI},
-	# The smithy: the north band, west of the workbench; its back is the north wall.
-	"smithy": {"at": [3.6, -7.4], "turn": 0.0},
+	# The smithy: the north band, east of the workbench; its back is the north wall.
+	"smithy": {"at": [0.9, -7.4], "turn": 0.0},
 }
 
 ## The hand-made meshes a part can name (WorldDressing builds them), beside the kit models.
