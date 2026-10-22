@@ -78,7 +78,7 @@ static func view(id: String, status: Dictionary) -> Dictionary:
 			var costs: PackedStringArray = []
 			for c in status["cost"]:
 				costs.append("%d %s (%d)" % [c["need"], ItemTable.label(c["item"]), c["have"]])
-			lines.append("Costs %s from the stash." % ", ".join(costs))
+			lines.append("Costs %s from the stash and your pack." % ", ".join(costs))
 			var missing: PackedStringArray = []
 			for need in status["requires"]:
 				missing.append(UpgradeTable.get_upgrade(need)["label"])

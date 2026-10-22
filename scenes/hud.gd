@@ -389,7 +389,7 @@ func _refresh_upgrades() -> void:
 		button.icon = UiTheme.icon(v["icon"], 14) if v["icon"] != "" else null
 		button.tooltip_text = _why_text(why)
 		_paint_upgrade_row(id)
-	_upgrade_note.text = "Build from what is in the stash, inside the outpost." if sim.in_outpost() else "Upgrades are built inside the outpost."
+	_upgrade_note.text = "Build from the stash and your pack, inside the outpost." if sim.in_outpost() else "Upgrades are built inside the outpost."
 
 
 ## The row just built flashes once, then rests in its built state.
