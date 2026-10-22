@@ -618,9 +618,10 @@ func _action_for(object_id: String) -> String:
 
 ## Moves the whole pack into the stash. What does not fit stays in the pack and is
 ## reported as overflow. `newly_affordable` lists, in table order, the upgrades that can be
-## built now and could not before this bank. Always a save point, even with an empty pack.
+## built now and could not before this bank, from the stash alone as it was out there.
+## Always a save point, even with an empty pack.
 func _bank() -> void:
-	var before := _buildable_now()
+	var before := _buildable_now([state["stash"]["slots"]])
 	var pack: Array = state["inventory"]["pack"]
 	var stash: Array = state["stash"]["slots"]
 	var banked: Array = []
@@ -640,7 +641,7 @@ func _bank() -> void:
 		else:
 			pack[i] = null
 	var newly: Array[String] = []
-	for id in _buildable_now():
+	for id in _buildable_now(_build_stores()):
 		if not before.has(id):
 			newly.append(id)
 	_emit({
@@ -650,10 +651,10 @@ func _bank() -> void:
 	_save_due = "gate"
 
 
-## The ids `upgrade_status()` reports as can build now, in table order.
-func _buildable_now() -> Array[String]:
+## The ids that can be built now from `stores`, in table order.
+func _buildable_now(stores: Array) -> Array[String]:
 	var out: Array[String] = []
-	var statuses := upgrade_status()
+	var statuses := _upgrade_status(stores)
 	for id in statuses:
 		if statuses[id]["status"] == SimVocab.UPGRADE_CAN_BUILD:
 			out.append(id)
@@ -1455,8 +1456,26 @@ func _light_fire(_args: Dictionary, commit: bool) -> String:
 
 # --- Outpost upgrades -----------------------------------------------------------------
 
-## Builds an outpost upgrade, paying its cost out of the stash. Inside the outpost only, once,
-## after the upgrades it requires; a locked upgrade is listed but cannot be built yet.
+## What an upgrade's cost draws on: the stash, then the pack while inside the outpost. Carried
+## loot outside the walls is not safe yet, so it does not count.
+func _build_stores() -> Array:
+	var stores: Array = [state["stash"]["slots"]]
+	if in_outpost():
+		stores.append(state["inventory"]["pack"])
+	return stores
+
+
+## How many of `kind` `stores` hold between them.
+static func _count_in(stores: Array, kind: String) -> int:
+	var n := 0
+	for slots in stores:
+		n += Inventory.count_of(slots, kind)
+	return n
+
+
+## Builds an outpost upgrade, paying its cost out of the stash first, then the pack. Inside the
+## outpost only, once, after the upgrades it requires; a locked upgrade is listed but cannot be
+## built yet.
 func _build(args: Dictionary, commit: bool) -> String:
 	var id := str(args.get("upgrade", ""))
 	if not UpgradeTable.has(id):
@@ -1472,19 +1491,24 @@ func _build(args: Dictionary, commit: bool) -> String:
 			return SimVocab.REASON_UPGRADE_MISSING
 	if not in_outpost():
 		return SimVocab.REASON_NOT_IN_OUTPOST
-	var slots: Array = state["stash"]["slots"]
+	var stores := _build_stores()
 	var cost: Dictionary = u["cost"]
 	for kind in cost:
-		if Inventory.count_of(slots, kind) < int(cost[kind]):
+		if _count_in(stores, kind) < int(cost[kind]):
 			return SimVocab.REASON_MISSING_INPUTS
 	if commit:
 		var before := _open_ring_gates()
 		for kind in cost:
-			Inventory.remove(slots, kind, int(cost[kind]))
+			var left := int(cost[kind])
+			for from in stores:
+				var n := mini(left, Inventory.count_of(from, kind))
+				Inventory.remove(from, kind, n)
+				left -= n
 		upgrades.append(id)
 		var effects: Dictionary = u["effects"]
 		var more := int(effects.get("stash", 0))
 		if more > 0:
+			var slots: Array = state["stash"]["slots"]
 			state["stash"]["capacity"] = int(state["stash"]["capacity"]) + more
 			slots.resize(slots.size() + more)
 		_emit({"kind": SimVocab.EV_BUILT, "upgrade": id, "effects": effects.duplicate(true)})
@@ -1497,13 +1521,17 @@ func _build(args: Dictionary, commit: bool) -> String:
 ## instead of working status out itself. Each entry is `{status, locked, requires, cost, short,
 ## reason}`: `status` is one of SimVocab.UPGRADE_*, `locked` the table's locked text, `requires`
 ## the prerequisite ids not yet built, `cost` every cost item as `{item, have, need}` (`have`
-## counted in the stash), `short` the cost entries the stash falls short of, and `reason` what
-## `check(build)` answers right now ("" when Build would be accepted, so it also covers standing
-## outside the outpost). "Can build now" does not depend on where the player stands.
+## counted in the stash, plus the pack inside the outpost), `short` the cost entries that falls
+## short of, and `reason` what `check(build)` answers right now ("" when Build would be
+## accepted, so it also covers standing outside the outpost).
 func upgrade_status() -> Dictionary:
+	return _upgrade_status(_build_stores())
+
+
+## `upgrade_status()` with `have` counted in `stores`.
+func _upgrade_status(stores: Array) -> Dictionary:
 	var out := {}
 	var built: Array = state["upgrades"]
-	var slots: Array = state["stash"]["slots"]
 	for id in UpgradeTable.ids():
 		var u := UpgradeTable.get_upgrade(id)
 		var requires: Array[String] = []
@@ -1513,7 +1541,7 @@ func upgrade_status() -> Dictionary:
 		var cost: Array[Dictionary] = []
 		var short: Array[Dictionary] = []
 		for kind in u["cost"]:
-			var entry := {"item": kind, "have": Inventory.count_of(slots, kind), "need": int(u["cost"][kind])}
+			var entry := {"item": kind, "have": _count_in(stores, kind), "need": int(u["cost"][kind])}
 			cost.append(entry)
 			if entry["have"] < entry["need"]:
 				short.append(entry)

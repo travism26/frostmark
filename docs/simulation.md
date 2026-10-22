@@ -42,7 +42,7 @@ Walking consumes `Sim.WALK_PER_TICK` metres of path per tick (4 m/s, so 2 m). A 
 | `equip` | `{index}` or `{unequip: slot}` | 3 | Equip a pack item into its slot, swapping the old one into that pack slot; or unequip into the pack |
 | `smith` | `{recipe}` | 3 | Craft a recipe standing at the workbench inside the outpost, from the pack |
 | `cook` | `{index}` | 5 | Standing by any fire, cook that pack slot's raw food, one item every 2 ticks, until that kind runs out, the pack is full or the player walks off |
-| `build` | `{upgrade}` | 5 | Build an outpost upgrade inside the outpost, paying its cost from the stash |
+| `build` | `{upgrade}` | 5 | Build an outpost upgrade inside the outpost, paying its cost from the stash and your pack (the stash first) |
 | `light_fire` | `{}` | 5 | Burn 3 logs from the pack into a field fire where the player stands (not inside the outpost) |
 | `attack` | `{enemy_id}` | 4 | Close to the weapon's reach and strike on every ready tick until the enemy dies, the player walks or interacts elsewhere, or a bow runs out of arrows or a staff out of frost shards |
 | `eat` | `{index}` | 4 | Eat one food item from a pack slot. Lands next tick, costs that tick's step and swing, heals over the food's ticks |
@@ -53,7 +53,7 @@ Walking consumes `Sim.WALK_PER_TICK` metres of path per tick (4 m/s, so 2 m). A 
 | `travel` | `{object_id}` | waystones | Standing by an awake, attuned waystone, channel for `Sim.TRAVEL_TICKS` ticks, then stand outside the outpost gate (see waystones below). `sim.travel_check(id)` answers the same validation without starting |
 | `set_auto_retaliate` | `{on: bool}` | #60 | Turns auto-retaliate on (the default) or off (see attacking below). At once, not queued. Held in `sim.auto_retaliate`, outside the state, so it is never in a save and outlives `new_character` and `import_save` |
 
-Any other kind is `unknown_command`. Rejection reasons for movement: `bad_args`, `outside_world` (off the grid), `not_walkable` (no free cell within `SNAP_RADIUS_CELLS`), `unreachable` (no route; no route crosses the ring-two gate), `unknown_object`. For gathering: `not_gatherable`, `depleted`, `no_tool`, `level_too_low`, `pack_full`. For the inventory: `empty_slot`, `not_equippable`, `pack_full`, `stash_full`, `not_in_outpost`. Gathering also refuses `tool_too_weak` (iron, coal and rich iron need a bronze pickaxe or better). For crafting: `unknown_recipe`, `tier_capped` (above the smithing cap: bronze until the blast furnace, then steel), `not_at_workbench`, `level_too_low`, `upgrade_missing`, `missing_inputs`, `pack_full`. For cooking: `bad_args`, `empty_slot`, `not_cookable`, `not_at_fire`, `level_too_low`, `pack_full`. For building: `unknown_upgrade`, `already_built`, `upgrade_locked`, `upgrade_missing` (a prerequisite), `not_in_outpost`, `missing_inputs` (from the stash). For a field fire: `in_outpost`, `missing_inputs`. For combat: `unknown_enemy`, `target_dead`, `in_outpost` (nothing is fought from inside), `unreachable` (the enemy lives on the other side of the ring-two gate), `no_ammo` (a bow with no arrows or a staff with no frost shards in the pack). For eating: `empty_slot`, `not_food`, `already_eating` (one meal a tick). For save codes: `bad_code`, `bad_checksum`, `unsupported_version`, `bad_snapshot`. For the guide: `bad_args`. For travel: `unknown_object`, `not_waystone`, `upgrade_missing` (no built upgrade has woken that waystone), `not_attuned` (never visited), `not_at_waystone` (farther than 1.5 m from it).
+Any other kind is `unknown_command`. Rejection reasons for movement: `bad_args`, `outside_world` (off the grid), `not_walkable` (no free cell within `SNAP_RADIUS_CELLS`), `unreachable` (no route; no route crosses the ring-two gate), `unknown_object`. For gathering: `not_gatherable`, `depleted`, `no_tool`, `level_too_low`, `pack_full`. For the inventory: `empty_slot`, `not_equippable`, `pack_full`, `stash_full`, `not_in_outpost`. Gathering also refuses `tool_too_weak` (iron, coal and rich iron need a bronze pickaxe or better). For crafting: `unknown_recipe`, `tier_capped` (above the smithing cap: bronze until the blast furnace, then steel), `not_at_workbench`, `level_too_low`, `upgrade_missing`, `missing_inputs`, `pack_full`. For cooking: `bad_args`, `empty_slot`, `not_cookable`, `not_at_fire`, `level_too_low`, `pack_full`. For building: `unknown_upgrade`, `already_built`, `upgrade_locked`, `upgrade_missing` (a prerequisite), `not_in_outpost`, `missing_inputs` (from the stash and the pack). For a field fire: `in_outpost`, `missing_inputs`. For combat: `unknown_enemy`, `target_dead`, `in_outpost` (nothing is fought from inside), `unreachable` (the enemy lives on the other side of the ring-two gate), `no_ammo` (a bow with no arrows or a staff with no frost shards in the pack). For eating: `empty_slot`, `not_food`, `already_eating` (one meal a tick). For save codes: `bad_code`, `bad_checksum`, `unsupported_version`, `bad_snapshot`. For the guide: `bad_args`. For travel: `unknown_object`, `not_waystone`, `upgrade_missing` (no built upgrade has woken that waystone), `not_attuned` (never visited), `not_at_waystone` (farther than 1.5 m from it).
 
 ### Interaction actions
 
@@ -89,7 +89,7 @@ Any other kind is `unknown_command`. Rejection reasons for movement: `bad_args`,
 | `crafted` | `recipe, item, count` | A recipe was made |
 | `equipped` | `slot, item, previous` | Gear changed; `item` is `""` when unequipping |
 | `dropped`, `deposited`, `withdrew` | `item, count` | Items moved |
-| `banked` | `items, overflow, newly_affordable` | The player walked into the outpost. `items` and `overflow` are lists of `{item, count}`; overflow stayed in the pack because the stash was full. `newly_affordable` lists the upgrade ids, in table order, that `upgrade_status()` reports as `can_build` after this bank and did not before it (never a built one or one missing a prerequisite); empty when nothing changed |
+| `banked` | `items, overflow, newly_affordable` | The player walked into the outpost. `items` and `overflow` are lists of `{item, count}`; overflow stayed in the pack because the stash was full. `newly_affordable` lists the upgrade ids, in table order, that `upgrade_status()` reports as `can_build` after this bank (stash and pack, so overflow counts) and did not from the stash alone before it (never a built one or one missing a prerequisite); empty when nothing changed |
 | `warmth_changed` | `warmth, max` | Warmth moved this tick |
 | `took_damage` | `amount, cause, health` | Health fell. `cause` is `cold` or the enemy kind that hit |
 | `ate` | `item, heal, ticks` | A meal landed |
@@ -222,7 +222,7 @@ How these numbers were measured against the brief's thirty minutes to the captai
 | Steel helm, legs | 1 steel bar each | 5 | Blast furnace | 20 |
 | Steel body | 1 steel bar, 1 troll hide | 5 | Blast furnace | 40 |
 
-**Outpost upgrades** (paid from the stash, inside the outpost):
+**Outpost upgrades** (paid from the stash and your pack, inside the outpost; the stash first):
 
 | Upgrade | Cost | Needs | Effect |
 |---------|------|-------|--------|
@@ -235,7 +235,7 @@ How these numbers were measured against the brief's thirty minutes to the captai
 | Waystones | 10 iron ore, 6 bronze bars, 10 logs | Ring-two gate winch | Wakes the waystones in ring one and ring two |
 | Stash vault | 12 logs, 10 iron ore, 4 coal | Stash cellar, Ring-two gate winch | +4 stash slots |
 
-`sim.upgrade_status()` answers, without changing anything, the status of every upgrade, keyed by id in table order: `built`, `can_build` (unlocked, every prerequisite built, the stash holds the whole cost; wherever the player stands) or `not_yet`. Each entry also carries `locked` (the table's text), `requires` (prerequisite ids not yet built), `cost` (every cost item as `{item, have, need}`, `have` counted in the stash), `short` (the cost entries the stash falls short of) and `reason` (what `check(build)` says now, so standing outside the outpost shows there). The Upgrades tab reads only this.
+`sim.upgrade_status()` answers, without changing anything, the status of every upgrade, keyed by id in table order: `built`, `can_build` (unlocked, every prerequisite built, the whole cost held) or `not_yet`. Inside the outpost the cost counts the stash and the pack together; outside it counts the stash alone, since carried loot is not safe until the gate. Each entry also carries `locked` (the table's text), `requires` (prerequisite ids not yet built), `cost` (every cost item as `{item, have, need}`, `have` counted that way), `short` (the cost entries that falls short of) and `reason` (what `check(build)` says now, so standing outside the outpost shows there). The Upgrades tab reads only this.
 
 **Gear tiers** (every weapon, armour piece and tool has one, and it shows on the character):
 

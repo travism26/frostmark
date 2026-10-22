@@ -1,4 +1,4 @@
-## The outpost tech tree: build pays from the stash, prerequisites and locks are enforced,
+## The outpost tech tree: build pays from the stash and, inside the outpost, the pack; prerequisites and locks are enforced,
 ## and each built upgrade applies its effect. Also the gear tiers it unlocks.
 extends "res://tests/run.gd".TestCase
 
@@ -104,12 +104,55 @@ func test_an_affordable_unlocked_upgrade_can_be_built_now() -> void:
 	assert_eq(s["reason"], "", "Build would be accepted")
 
 
-func test_can_build_now_does_not_depend_on_where_the_player_stands() -> void:
+func test_outside_the_outpost_only_the_stash_counts() -> void:
 	var sim := _with_stash([{"item": "logs", "count": 8}])
 	H.place(sim, H.OUTSIDE)
 	var s: Dictionary = sim.upgrade_status()["stash_shelves"]
-	assert_eq(s["status"], Vocab.UPGRADE_CAN_BUILD)
+	assert_eq(s["status"], Vocab.UPGRADE_CAN_BUILD, "a stash that covers the cost can build from anywhere")
 	assert_eq(s["reason"], Vocab.REASON_NOT_IN_OUTPOST, "but Build is refused out there")
+	sim = _with_stash([{"item": "logs", "count": 3}])
+	H.set_pack(sim, [{"item": "logs", "count": 10}])
+	H.place(sim, H.OUTSIDE)
+	s = sim.upgrade_status()["stash_shelves"]
+	assert_eq(s["status"], Vocab.UPGRADE_NOT_YET, "carried logs are not safe yet")
+	assert_eq(s["cost"], [{"item": "logs", "have": 3, "need": 8}], "the pack is not counted")
+	assert_eq(s["short"], [{"item": "logs", "have": 3, "need": 8}])
+
+
+func test_inside_the_outpost_the_status_counts_the_stash_and_the_pack() -> void:
+	var sim := _with_stash([{"item": "logs", "count": 3}])
+	H.set_pack(sim, [{"item": "logs", "count": 5}, {"item": "copper_ore", "count": 2}])
+	var shelves: Dictionary = sim.upgrade_status()["stash_shelves"]
+	assert_eq(shelves["status"], Vocab.UPGRADE_CAN_BUILD)
+	assert_eq(shelves["cost"], [{"item": "logs", "have": 8, "need": 8}], "3 stashed and 5 carried")
+	assert_eq(shelves["short"], [])
+	assert_eq(shelves["reason"], "", "Build would be accepted")
+	var forge: Dictionary = sim.upgrade_status()["forge"]
+	assert_eq(forge["short"], [{"item": "copper_ore", "have": 2, "need": 3}, {"item": "tin_ore", "have": 0, "need": 3}])
+	assert_eq(forge["reason"], Vocab.REASON_MISSING_INPUTS)
+
+
+func test_a_build_is_paid_partly_from_the_pack() -> void:
+	var sim := _with_stash([{"item": "logs", "count": 3}, {"item": "wooden_bow", "count": 1}])
+	H.set_pack(sim, [{"item": "logs", "count": 7}, {"item": "copper_ore", "count": 2}])
+	assert_eq(sim.check(Vocab.BUILD, {"upgrade": "stash_shelves"}), "")
+	assert_true(sim.command(Vocab.BUILD, {"upgrade": "stash_shelves"})["ok"])
+	var events := H.run(sim, 1)
+	assert_eq(sim.state["upgrades"], ["stash_shelves"])
+	assert_eq(H.of_kind(events, Vocab.EV_BUILT).size(), 1)
+	assert_eq(H.stash_count(sim, "logs"), 0, "the stash's 3 logs went first")
+	assert_eq(H.pack_count(sim, "logs"), 2, "then 5 of the pack's 7")
+	assert_eq(H.stash_count(sim, "wooden_bow"), 1, "the rest untouched")
+	assert_eq(H.pack_count(sim, "copper_ore"), 2)
+
+
+func test_a_build_pays_from_the_stash_before_the_pack() -> void:
+	var sim := _with_stash([{"item": "logs", "count": 10}])
+	H.set_pack(sim, [{"item": "logs", "count": 10}])
+	assert_true(sim.command(Vocab.BUILD, {"upgrade": "stash_shelves"})["ok"])
+	H.run(sim, 1)
+	assert_eq(H.stash_count(sim, "logs"), 2, "the whole cost came out of the stash")
+	assert_eq(H.pack_count(sim, "logs"), 10, "the pack was not touched")
 
 
 func test_a_short_cost_reports_what_is_held_and_needed() -> void:
@@ -180,6 +223,18 @@ func test_a_bank_that_unlocks_nothing_has_an_empty_list() -> void:
 	assert_eq(_bank(sim, [{"item": "logs", "count": 2}])["newly_affordable"], [], "the shelves were affordable already")
 
 
+func test_a_bank_whose_overflow_completes_a_cost_names_it() -> void:
+	var slots: Array = []
+	for i in Sim.STASH_START_SLOTS:
+		slots.append({"item": "wooden_bow", "count": 1})
+	var sim := _with_stash(slots)
+	var banked := _bank(sim, [{"item": "logs", "count": 8}])
+	assert_eq(banked["items"], [], "the stash is full")
+	assert_eq(banked["overflow"], [{"item": "logs", "count": 8}])
+	assert_eq(banked["newly_affordable"], ["stash_shelves"], "the overflow inside the walls pays for the shelves")
+	assert_eq(sim.check(Vocab.BUILD, {"upgrade": "stash_shelves"}), "")
+
+
 func test_the_newly_affordable_list_skips_built_and_unmet_upgrades() -> void:
 	var sim := _with_stash([], ["forge"])
 	var banked := _bank(sim, [
@@ -193,10 +248,16 @@ func test_the_newly_affordable_list_skips_built_and_unmet_upgrades() -> void:
 func test_building_needs_the_materials_and_the_outpost() -> void:
 	var sim := _with_stash([{"item": "logs", "count": 3}])
 	assert_eq(sim.command(Vocab.BUILD, {"upgrade": "stash_shelves"})["reason"], Vocab.REASON_MISSING_INPUTS)
+	H.set_pack(sim, [{"item": "logs", "count": 4}])
+	assert_eq(sim.command(Vocab.BUILD, {"upgrade": "stash_shelves"})["reason"], Vocab.REASON_MISSING_INPUTS, "3 stashed and 4 carried are still short")
 	sim = _with_stash([{"item": "logs", "count": 10}])
 	H.set_pack(sim, [{"item": "logs", "count": 10}])
 	H.place(sim, H.OUTSIDE)
 	assert_eq(sim.command(Vocab.BUILD, {"upgrade": "stash_shelves"})["reason"], Vocab.REASON_NOT_IN_OUTPOST)
+	sim = _with_stash([{"item": "logs", "count": 3}])
+	H.set_pack(sim, [{"item": "logs", "count": 10}])
+	H.place(sim, H.OUTSIDE)
+	assert_eq(sim.check(Vocab.BUILD, {"upgrade": "stash_shelves"}), Vocab.REASON_NOT_IN_OUTPOST, "the pack does not count out there")
 	assert_eq(sim.command(Vocab.BUILD, {"upgrade": "palace"})["reason"], Vocab.REASON_UNKNOWN_UPGRADE)
 
 
