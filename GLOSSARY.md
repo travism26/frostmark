@@ -52,6 +52,16 @@ _Avoid_: Cluster, patch
 A fixed place where many rocks (about six) of one or two kinds stand together, often guarded. Its rocks yield no more than anywhere else; there are just more of them.
 _Avoid_: Hotspot, quarry, mining area
 
+### Gear
+
+**Gear tier**:
+The rung a piece of gear sits on: wooden, bronze, iron, then steel. It shows on the character.
+_Avoid_: Metal tier, smithing tier, material
+
+**Smithing cap**:
+The highest gear tier you can smith right now, raised by outpost upgrades. Found gear can sit above it.
+_Avoid_: Smithing tier, craft limit
+
 ### Outpost
 
 **Outpost upgrade**:
@@ -61,3 +71,7 @@ _Avoid_: Building, structure
 **Pack frame**:
 The outpost upgrade that raises the carry limit.
 _Avoid_: Backpack upgrade
+
+**Bloomery**:
+The outpost upgrade that raises the smithing cap from bronze to iron. It is optional: nothing past it requires it.
+_Avoid_: Smelter, iron forge
