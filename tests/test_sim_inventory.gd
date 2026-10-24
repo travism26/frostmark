@@ -12,16 +12,31 @@ func _walked_after(sim: Sim, ticks: int) -> float:
 	return start.distance_to(sim.player_pos())
 
 
-func test_carry_weight_slows_movement() -> void:
-	var light := SimScript.new()
-	var heavy := SimScript.new()
+## A pack of logs that brings a new character (a wooden axe equipped) to `kg` carried.
+func _carrying(kg: int) -> Sim:
+	var sim := SimScript.new()
+	var logs := kg - sim.carry_weight()
 	var load: Array = []
-	for i in 3:
-		load.append({"item": "logs", "count": 10})
-	H.set_pack(heavy, load)
-	assert_false(light.is_overweight())
-	assert_true(heavy.carry_weight() > Sim.CARRY_LIMIT, "thirty logs and an axe are over the limit")
-	assert_true(heavy.is_overweight())
+	while logs > 0:
+		load.append({"item": "logs", "count": mini(logs, ItemTable.stack_size("logs"))})
+		logs -= ItemTable.stack_size("logs")
+	H.set_pack(sim, load)
+	return sim
+
+
+func test_a_new_character_carries_45_kg_before_overweight() -> void:
+	var at_limit := _carrying(45)
+	var over := _carrying(46)
+	assert_eq(at_limit.carry_limit(), 45)
+	assert_eq(at_limit.carry_weight(), 45)
+	assert_false(at_limit.is_overweight(), "45 kg is at the limit, not over it")
+	assert_eq(over.carry_weight(), 46)
+	assert_true(over.is_overweight(), "46 kg is over")
+
+
+func test_carry_weight_slows_movement() -> void:
+	var light := _carrying(45)
+	var heavy := _carrying(46)
 	for sim in [light, heavy]:
 		sim.command(Vocab.MOVE_TO, {"pos": [6.5, 4.5]})
 	var normal := _walked_after(light, 1)
@@ -35,6 +50,28 @@ func test_carry_weight_counts_pack_and_equipment() -> void:
 	assert_eq(sim.carry_weight(), ItemTable.weight("wooden_axe"))
 	H.set_pack(sim, [{"item": "logs", "count": 5}])
 	assert_eq(sim.carry_weight(), ItemTable.weight("wooden_axe") + 5 * ItemTable.weight("logs"))
+
+
+func test_a_bronze_kit_with_three_tools_and_food_leaves_room_for_haul() -> void:
+	var sim := SimScript.new()
+	var snap := sim.snapshot()
+	snap["inventory"]["equipment"] = {
+		"weapon": "bronze_sword", "helm": "bronze_helm", "body": "bronze_body", "legs": "bronze_legs",
+		"tool": "bronze_pickaxe",
+	}
+	sim.restore(snap)
+	H.set_pack(sim, [
+		{"item": "bronze_axe", "count": 1}, {"item": "fishing_rod", "count": 1},
+		{"item": "cooked_fish", "count": 10},
+	])
+	assert_eq(sim.carry_weight(), 24, "worn gear counts toward carry weight")
+	assert_false(sim.is_overweight())
+	assert_eq(sim.carry_limit() - sim.carry_weight(), 21, "about two stacks of haul")
+
+
+func test_the_pack_has_12_slots() -> void:
+	var sim := SimScript.new()
+	assert_eq(sim.state["inventory"]["pack"].size(), 12)
 
 
 func test_deposit_and_withdraw_inside_the_outpost() -> void:
