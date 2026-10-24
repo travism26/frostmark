@@ -12,7 +12,7 @@ To check something deep in the rings without playing up to it, load the test-mod
 
 - **Short code:** on the title screen type `PELTKEG7` into **Import code** (case and spaces do not matter).
 - **Link:** open <https://travism26.github.io/frostmark/?hearth=tallow> (or `?hearth=tallow` on a local build). The game skips the title screen and loads the character on startup, every time the page loads with that parameter.
-- **Full code:** paste the whole of `tools/test_mode_code.txt` into **Import code**.
+- **Full code:** write it to `tools/test_mode_code.txt` (below) and paste the whole file into **Import code**.
 
 To start in ring two instead of the outpost, add `ring=two` to the link: <https://travism26.github.io/frostmark/?hearth=tallow&ring=two> (or `?hearth=tallow&ring=two` on a local build). It is the same character standing just inside the ring-two gate, within reach of the brazier so it starts warming; without `ring=`, or with any other value, the link loads in the outpost as before. The parameter does nothing on its own or beside the build-from-scratch link.
 
@@ -35,7 +35,9 @@ Loading it replaces the browser save, so export your own code first if you want 
 godot --headless -s tools/test_mode_code.gd
 ```
 
-`tests/test_test_mode.gd` imports the file and checks every point above, that the short code loads the same character, and that `ring=two` loads it in ring two beside the brazier. An older code still migrates forward, but regenerate it when the save version moves on or a test there fails (a new skill would load at level 1, for example).
+The file is not committed (`.gitignore`), because it changed with every upgrade or layout edit and parallel branches kept conflicting on it. So a merge or rebase never touches it, and a copy written before one is stale: run the command above again after any pull, merge or rebase before pasting it. An older code still migrates forward, but a stale one can miss what changed since (a new skill would load at level 1, for example).
+
+`tests/test_test_mode.gd` builds the code the same way, imports it and checks every point above, that the short code loads the same character, and that `ring=two` loads it in ring two beside the brazier.
 
 ## The build-from-scratch code
 

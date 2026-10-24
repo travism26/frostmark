@@ -1,14 +1,13 @@
-## The test-mode code (docs/testing.md): the save code in tools/test_mode_code.txt imports into
-## this build and gives the maxed character it promises. When the save version moves on, the
-## code still migrates; regenerate it with tools/test_mode_code.gd if anything here fails.
-## The short code and the page's query pair stand for the same save (scenes/field_kit.gd).
+## The test-mode code (docs/testing.md): the save code scenes/field_kit.gd builds imports into
+## this build and gives the maxed character it promises. It is built here rather than read from
+## a committed file, so it is always of this build. The short code and the page's query pair
+## stand for the same save.
 extends "res://tests/run.gd".TestCase
 
 const H := preload("res://tests/sim_helpers.gd")
 const SimScript := preload("res://sim/sim.gd")
 const Vocab := preload("res://sim/vocab.gd")
 
-const CODE_PATH := "res://tools/test_mode_code.txt"
 const SHORT_CODE := "PELTKEG7"
 const QUERY_PAIR := "hearth=tallow"
 
@@ -16,8 +15,8 @@ const QUERY_PAIR := "hearth=tallow"
 ## A new character that has imported the test-mode code.
 func _imported() -> Sim:
 	var sim := SimScript.new()
-	var code := FileAccess.get_file_as_string(CODE_PATH)
-	assert_false(code.strip_edges().is_empty(), "%s holds a code" % CODE_PATH)
+	var code := FieldKit.code()
+	assert_false(code.is_empty(), "the maxed snapshot restores")
 	var result := sim.command(Vocab.IMPORT_SAVE, {"code": code})
 	assert_true(result["ok"], "the test-mode code imports: %s" % result["reason"])
 	return sim
@@ -83,7 +82,7 @@ func test_nothing_is_left_to_build() -> void:
 
 
 func test_the_short_code_expands_to_the_same_maxed_save() -> void:
-	var full := FileAccess.get_file_as_string(CODE_PATH).strip_edges()
+	var full := FieldKit.code()
 	assert_eq(FieldKit.expand(SHORT_CODE), full, "the short code is the test-mode code")
 	assert_eq(FieldKit.expand("  peltkeg7\n"), full, "case and spacing do not matter")
 	var sim := SimScript.new()
@@ -101,7 +100,7 @@ func test_any_other_code_passes_through_untouched() -> void:
 func test_the_query_pair_matches_its_hash() -> void:
 	assert_eq(QUERY_PAIR.sha256_text(), FieldKit.QUERY_HASH)
 	assert_eq(FieldKit.page_code(), "", "off the web no page asks for it")
-	var full := FileAccess.get_file_as_string(CODE_PATH).strip_edges()
+	var full := FieldKit.code()
 	assert_eq(FieldKit.for_query("?" + QUERY_PAIR), full, "the query pair asks for the test-mode code")
 	assert_eq(FieldKit.for_query("?x=1&" + QUERY_PAIR), full, "beside other parameters too")
 	assert_eq(FieldKit.for_query("?hearth=wax"), "", "any other query asks for nothing")
@@ -125,7 +124,7 @@ func test_the_ring_two_parameter_stands_the_same_character_in_ring_two() -> void
 
 
 func test_the_ring_parameter_alone_or_unknown_changes_nothing() -> void:
-	var full := FileAccess.get_file_as_string(CODE_PATH).strip_edges()
+	var full := FieldKit.code()
 	assert_eq(FieldKit.for_query("?ring=two"), "", "without the query pair it asks for nothing")
 	assert_eq(FieldKit.for_query("?" + QUERY_PAIR + "&ring=nine"), full, "an unknown ring is the outpost")
 	assert_eq(FieldKit.for_query("?hearth=kindling&ring=two"), FieldKit.bare_code(), "the build-from-scratch link ignores it")
