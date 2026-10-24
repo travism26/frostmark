@@ -145,6 +145,116 @@ func test_a_save_from_the_old_layout_loads_into_the_new_one() -> void:
 			assert_eq(int(sim.state["nodes"][id]["left"]), full, "%s starts full" % id)
 
 
+## Ids of ring one's nodes of `kind`.
+func _ring_one(w: WorldDef, kind: String) -> Array[String]:
+	var out: Array[String] = []
+	for id in w.objects_of_kind(kind):
+		if w.region_at(w.object_center(id)) == WorldDef.REGION_RING_ONE:
+			out.append(id)
+	return out
+
+
+## `ids` grouped into spots: nodes a step apart (under 5 m) stand in the same spot.
+func _spots(w: WorldDef, ids: Array[String]) -> Array:
+	var spots: Array = []
+	for id in ids:
+		var home: Array = []
+		for spot in spots:
+			for other in spot:
+				if w.object_center(id).distance_to(w.object_center(other)) < 5.0:
+					home = spot
+		if home.is_empty():
+			spots.append([id])
+		else:
+			home.append(id)
+	return spots
+
+
+func _centre(w: WorldDef, spot: Array) -> Vector2:
+	var sum := Vector2.ZERO
+	for id in spot:
+		sum += w.object_center(id)
+	return sum / spot.size()
+
+
+## The compass side of the world's centre `at` lies on.
+func _side(at: Vector2) -> String:
+	return ("east" if at.x > 0.0 else "west") if absf(at.x) > absf(at.y) else ("south" if at.y > 0.0 else "north")
+
+
+## How far `at` is from the road south, which runs from the inner ring's edge down to the
+## ring-two gate along x = 0.
+func _off_road(at: Vector2) -> float:
+	return at.distance_to(Vector2(0.0, clampf(at.y, 24.0, 60.0)))
+
+
+func test_ring_one_has_two_iron_spots_of_two_far_apart() -> void:
+	var w := WorldDefScript.outpost()
+	var iron := _ring_one(w, WorldDef.KIND_IRON_ROCK)
+	assert_eq(iron.size(), 4, "four iron rocks")
+	var spots := _spots(w, iron)
+	assert_eq(spots.size(), 2, "in two spots")
+	var sides := {}
+	for spot in spots:
+		assert_eq(spot.size(), 2, "%s is a spot of two" % [spot])
+		var at := _centre(w, spot)
+		var side := _side(at)
+		if at.x < 0.0 and at.y > 0.0:
+			side = "south-west"
+		sides[side] = true
+		assert_true(_off_road(at) > 15.0, "%s keeps off the road south" % [spot])
+		for id in spot:
+			var o: Dictionary = w.objects[id]
+			for s in w.solids:
+				if s["kind"] != WorldDef.KIND_CLIFF:
+					continue
+				# The gap between the two footprints, along whichever axis they are apart on.
+				var gap := maxf(
+					maxf(float(s["min"][0]) - float(o["max"][0]), float(o["min"][0]) - float(s["max"][0])),
+					maxf(float(s["min"][1]) - float(o["max"][1]), float(o["min"][1]) - float(s["max"][1])))
+				assert_true(gap >= 10.0, "%s keeps clear of %s (%.1f m)" % [id, s["id"], gap])
+	assert_eq(sides, {"east": true, "south-west": true}, "one spot east and one south-west")
+	assert_true(_centre(w, spots[0]).distance_to(_centre(w, spots[1])) > 40.0, "the two spots are far apart")
+	# One sweep of both spots is the winch's iron.
+	var ore := 0
+	for id in iron:
+		ore += int(WorldDef.NODE_KINDS[WorldDef.KIND_IRON_ROCK]["yield"])
+	assert_eq(ore, int(UpgradeTable.get_upgrade("ring_two_gate")["cost"]["iron_ore"]), "a sweep of both spots pays for the winch")
+
+
+func test_ring_one_has_three_ice_hole_spots_of_two_off_the_road() -> void:
+	var w := WorldDefScript.outpost()
+	var holes := _ring_one(w, WorldDef.KIND_ICE_HOLE)
+	assert_eq(holes.size(), 6, "six ice holes")
+	var spots := _spots(w, holes)
+	assert_eq(spots.size(), 3, "in three spots")
+	var sides := {}
+	for spot in spots:
+		assert_eq(spot.size(), 2, "%s is a spot of two" % [spot])
+		var at := _centre(w, spot)
+		sides[_side(at)] = true
+		assert_true(_off_road(at) > 20.0, "%s keeps well off the road south" % [spot])
+		if "ice_hole" in spot:
+			assert_eq(_side(at), "north", "the old hole is in the north spot")
+	assert_eq(sides, {"north": true, "east": true, "west": true}, "one spot north, east and west")
+
+
+func test_a_save_from_before_ring_ones_spots_loads() -> void:
+	var sim := SimScript.new()
+	var snap := sim.snapshot()
+	# iron_3 stood apart from the east spot and is gone; the old ice hole stayed put.
+	snap["nodes"]["iron_3"] = {"left": 1, "respawn_tick": 0}
+	snap["nodes"].erase("iron_4")
+	snap["nodes"].erase("ice_hole_2")
+	snap["nodes"]["ice_hole"] = {"left": 2, "respawn_tick": 0}
+	assert_true(sim.restore(snap))
+	assert_false(sim.state["nodes"].has("iron_3"), "a node the layout no longer has is dropped")
+	assert_eq(sim.state["nodes"]["ice_hole"], {"left": 2, "respawn_tick": 0}, "a node that stayed keeps its count")
+	for id in ["iron_4", "ice_hole_2"]:
+		var full := int(WorldDef.NODE_KINDS[sim.world.objects[id]["kind"]]["yield"])
+		assert_eq(int(sim.state["nodes"][id]["left"]), full, "%s starts full" % id)
+
+
 func test_better_nodes_need_more_skill_and_pay_more() -> void:
 	var pairs := [
 		[WorldDef.KIND_TREE, WorldDef.KIND_FROST_PINE],

@@ -123,7 +123,8 @@ var path_grid: AStarGrid2D = null
 ## per compass side, beside its landmark), two fishing holes together to the north and two ice
 ## crystals north-east and north-west. Ring one (out to the cliffs at
 ## 60 m) holds the wolf packs, bandit archers and two frost witches, the better nodes (frost
-## pines west, iron east, an ice hole north) and, at its far southern edge, the gate to ring two
+## pines west, iron in two spots of two rocks east and south-west, ice holes in three spots of
+## two north, east and west) and, at its far southern edge, the gate to ring two
 ## with the bandit captain standing at it. Ring two lies beyond that gate and nowhere else: a
 ## band of ruins south of the cliffs (see `_ring_two`). Ring one is only reached by walking
 ## through the inner ring.
@@ -212,17 +213,27 @@ static func outpost() -> WorldDef:
 	var frost := [[-42.0, 8.0], [-46.0, 13.0], [-39.0, 15.0], [-44.0, 3.0]]
 	for i in frost.size():
 		_place(w, "frost_pine_%d" % (i + 1), KIND_FROST_PINE, "Frost pine", frost[i], [1.0, 1.0], 4.0)
-	var iron := [[40.0, 6.0], [45.0, 10.0], [41.0, 14.0]]
-	for i in iron.size():
-		_place(w, "iron_%d" % (i + 1), KIND_IRON_ROCK, "Iron rock", iron[i], [2.0, 2.0], 1.2)
-	_place(w, "ice_hole", KIND_ICE_HOLE, "Ice hole", [-9.0, -43.0], [2.0, 2.0], 0.1)
+	# Iron in two spots of two rocks, twelve ore between them (the winch's cost): east by the
+	# archer camp, where the old cluster stood, and south-west by the far wolf pack, clear of the
+	# cliff and the road south. iron_1 and iron_2 stay in the east spot; iron_3 stood apart from
+	# them and is gone, so the south-west spot numbers on from 4.
+	var iron := {"iron_1": [40.0, 6.0], "iron_2": [43.5, 7.5], "iron_4": [-38.0, 40.0], "iron_5": [-34.5, 41.5]}
+	for id in iron:
+		_place(w, id, KIND_IRON_ROCK, "Iron rock", iron[id], [2.0, 2.0], 1.2)
+	# Trout in three spots of two holes, north (the old hole and one more), east and west, and
+	# none on the road south, where fishing would mean standing still within the archers' and
+	# the captain's reach.
+	var ice_holes := [[-9.0, -43.0], [-12.5, -43.0], [42.0, -8.0], [45.5, -8.0], [-34.0, -5.0], [-37.5, -5.0]]
+	_place(w, "ice_hole", KIND_ICE_HOLE, "Ice hole", ice_holes[0], [2.0, 2.0], 0.1)
+	for i in range(1, ice_holes.size()):
+		_place(w, "ice_hole_%d" % (i + 1), KIND_ICE_HOLE, "Ice hole", ice_holes[i], [2.0, 2.0], 0.1)
 	# Ring one's waystone stands near the far southern road, out of sight of the captain and the
 	# archer flanking the road east, so the long walk back from his gate can be skipped.
 	_place(w, "ring_one_waystone", KIND_WAYSTONE, "Waystone", [12.0, 54.0], [1.0, 1.0], 2.2)
 	# Ring one's enemies. The near groups sit just past the southern pines: two wolves south-west,
 	# a pack of three farther west, a bandit archer south-east. Chopping the south-western pine is
 	# loud enough for the near pack to hear. Farther out: an archer camp by the iron, a pack among
-	# the frost pines, a pack by the ice hole, two archers flanking the road south, a frost witch
+	# the frost pines, a pack by the north ice holes, two archers flanking the road south, a frost witch
 	# out on each northern flank, and the captain at the ring-two gate. Every group sits more than a fight's noise
 	# (CombatTable.NOISE_FIGHT) from the next, so each is fought on its own.
 	var placements := [
