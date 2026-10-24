@@ -103,6 +103,19 @@ func test_the_armoury_stands_along_the_east_wall() -> void:
 		assert_true(east.position.x - c.x < 1.0, "the armoury's corner %s stands against the east wall" % c)
 
 
+func test_the_pack_frame_adds_a_timber_rack_along_the_east_wall() -> void:
+	assert_eq(YardLookScript.pieces(["armoury"]).size(), 1)
+	var pieces := YardLookScript.pieces(["armoury", "pack_frame"])
+	assert_eq(pieces.size(), 2, "building the Pack frame adds its piece")
+	var frame := pieces[1]
+	assert_eq(frame["upgrade"], "pack_frame")
+	assert_eq(YardLookScript.material("pack_frame"), YardLookScript.TIMBER)
+	assert_true((frame["parts"] as Array).any(func(p: Dictionary) -> bool: return p.get("mesh", "") == "shelf_rack"), "the frame is a timber rack")
+	var east := _box(_solid(WorldDefScript.outpost(), "wall_east"))
+	for c in YardLookScript.footprint(frame):
+		assert_true(east.position.x - c.x < 1.0, "the frame's corner %s stands against the east wall" % c)
+
+
 func test_the_winch_stands_inside_the_south_gate_to_one_side_of_the_path() -> void:
 	var pieces := YardLookScript.pieces(["ring_two_gate"])
 	assert_eq(pieces.size(), 1)
