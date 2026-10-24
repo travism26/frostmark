@@ -184,7 +184,7 @@ How these numbers were measured against the brief's thirty minutes to the captai
 | Cold | At zero warmth health drains 1 per tick (50 s from full). At zero health the player dies by the death rule below |
 | Cooking | One raw item every 2 ticks at any fire. Burn chance is the dish's base at its level, minus 5 per level above: raw fish 40% at cooking 1 (gone by level 9), 10 xp; raw trout needs cooking 3, 50% there, 18 xp; raw char needs cooking 5, 50% there, 26 xp. Burnt food is lost and gives no xp |
 | Food | Raw fish heals 4 over 2 ticks, cooked fish 24 over 4, raw trout 6 over 2, cooked trout 40 over 5, raw char 8 over 2, cooked char 56 over 7, starting the tick it is eaten. Meals overlap by adding up |
-| Smithing | At the workbench from the pack. The smithing cap is bronze until the Bloomery lifts it to iron, or the blast furnace to steel; the highest built lift wins. A recipe needs both its tier within the cap and its named upgrade built, so the blast furnace alone smelts no iron. No recipe makes iron gear yet: iron gear only drops |
+| Smithing | At the workbench from the pack. The smithing cap is bronze until the Bloomery lifts it to iron, or the blast furnace to steel; the highest built lift wins. A recipe needs both its tier within the cap and its named upgrade built, so the blast furnace alone smelts no iron. Iron gear is smithed after the Bloomery and still drops as loot |
 
 **Nodes** (each regrows `respawn` ticks after its last yield):
 
@@ -218,6 +218,11 @@ How these numbers were measured against the brief's thirty minutes to the captai
 | Bronze staff | 2 bronze bars, 2 logs, 1 ice crystal | 2 | Forge | 25 |
 | Bronze helm, body, legs | 1, 2, 1 bronze bars | 3 | Armoury | 10, 20, 10 |
 | Iron bar | 2 iron ore | 3 | Bloomery | 18 |
+| Iron axe, iron pickaxe | 1 iron bar, 2 logs | 3 | Bloomery | 22 |
+| Iron sword | 2 iron bars, 1 log | 4 | Bloomery | 36 |
+| Iron bow | 2 iron bars, 3 logs | 4 | Bloomery | 36 |
+| Iron staff | 2 iron bars, 2 logs, 1 ice crystal | 4 | Bloomery | 36 |
+| Iron helm, body, legs | 1, 2, 1 iron bars | 4 | Bloomery | 15, 30, 15 |
 | Steel bar | 1 iron ore, 2 coal | 4 | Blast furnace | 25 |
 | Steel axe, steel pickaxe | 1 steel bar, 2 logs | 4 | Blast furnace | 30 |
 | Steel sword | 2 steel bars, 1 log | 5 | Blast furnace | 50 |
@@ -234,7 +239,7 @@ How these numbers were measured against the brief's thirty minutes to the captai
 | Stash cellar | 10 logs, 2 bronze bars | Stash shelves | +4 stash slots |
 | Armoury | 6 logs, 2 bronze bars, 3 wolf pelts | Forge | Unlocks the bronze helm, body and legs |
 | Pack frame | 10 logs, 4 wolf pelts | Armoury | +15 kg carry limit, to 60 kg. Optional: nothing else needs it |
-| Bloomery | 8 logs, 2 bronze bars, 4 iron ore | Armoury | Unlocks iron bars and lifts the smithing cap to iron. Optional: nothing else needs it |
+| Bloomery | 8 logs, 2 bronze bars, 4 iron ore | Armoury | Unlocks iron bars and iron tools, weapons and armour, and lifts the smithing cap to iron. Optional: nothing else needs it |
 | Ring-two gate winch | 12 logs, 12 iron ore, 3 bronze bars, 5 wolf pelts | Armoury | Readies the gate to ring two; it opens once the captain has fallen |
 | Blast furnace | 12 logs, 4 bronze bars, 6 coal, 2 troll hides | Ring-two gate winch | Unlocks steel bars, tools, weapons and armour, and lifts the smithing cap to steel |
 | Waystones | 10 iron ore, 6 bronze bars, 10 logs | Ring-two gate winch | Wakes the waystones in ring one and ring two |
@@ -248,7 +253,7 @@ How these numbers were measured against the brief's thirty minutes to the captai
 |------|-------|-----------------|----------------------|-------------------------------------------|-------|------------|
 | Wooden | club, power 5 | wooden bow, power 4 | wooden staff, power 4 | 0 + 1 + 0 = 1 | axe, pickaxe, fishing rod | the workbench, from logs (the staff also takes an ice crystal) |
 | Bronze | sword, power 7 | bronze bow, power 6 | bronze staff, power 6 | 0 + 1 + 1 = 2 | axe, pickaxe | the workbench, after the forge (armour after the armoury) |
-| Iron | sword, power 9 | iron bow, power 8 | iron staff, power 8 | 1 + 1 + 1 = 3 | axe, pickaxe | only as loot, in both rings and from the captain |
+| Iron | sword, power 9 | iron bow, power 8 | iron staff, power 8 | 1 + 1 + 1 = 3 | axe, pickaxe | the workbench, after the Bloomery, from ring one's iron ore; also as loot, in both rings and from the captain |
 | Steel | sword, power 11 | steel bow, power 10 | steel staff, power 10 | 1 + 2 + 1 = 4 | axe, pickaxe | the workbench, after the blast furnace, from ring two's coal |
 
 Armour is three equipment slots, helm, body and legs, each taking its own piece; there are five equipment slots in all (weapon, helm, body, legs, tool). A full set of one tier weighs, is worth and costs what that tier's single armour did before the split ([#38](https://github.com/travism26/frostmark/issues/38)), and takes the same off a hit. Pieces of different tiers can be worn together.

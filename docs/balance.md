@@ -158,3 +158,13 @@ Measured at the 45 kg carry limit, the estimate rises 21 seconds, from 28:28 to 
 The estimate is a second shorter, 28:48 instead of 28:49, but the iron phase changed underneath it. Four rocks of three ore are the winch's twelve in one sweep, so the run no longer stands by the old cluster waiting for a rock to regrow, and its sim time drops 32 seconds. The walk to the south-west spot passes the near archer, the near pack and the far pack, back since the first fights, so the run now fights them on the way. That adds 14 world clicks and one panel click, 31 seconds of allowance. With half the allowance it is 20:53, with half as much again 36:43. No number was retuned.
 
 The play bot used to fight back only in ring two, so ring one could kill it mid-trip. It now fights whatever notices it anywhere outside the walls, with whatever it holds. `tests/test_pacing.gd` takes food on its iron trip for the same reason. It reaches the fallen captain at tick 1715 (14.3 minutes), down from 1765, and its ring-two half takes 1715 ticks, up from 1645: the extra fights in ring one shift the run's seeded rolls, so the captain fight and the ring-two fights land differently. Both stay inside their windows.
+
+## Off the timed route: the Bloomery
+
+[#117](https://github.com/travism26/frostmark/issues/117) lets the workbench make all eight iron items once the Bloomery is built. The Bloomery stays off the timed route, and the run doesn't build it, for three reasons:
+
+- **The captain falls to bronze.** The run beats him in bronze armour with a bronze sword and a wooden bow and staff, with no deaths, so iron is a choice to arm up further, not a step the route needs.
+- **Iron costs extra trips.** One sweep of ring one's iron rocks is 12 ore, which is the winch's 12. The Bloomery takes 4 more, and a kit of a weapon, a full armour set and a pickaxe takes 7 bars, 14 ore. All eight iron items take 12 bars, 24 ore. That is two more sweeps past the archers and wolves, with ore carried home through ring one.
+- **The target measures the shortest way to the captain.** Putting an optional detour on the timed route would measure a player who chose to take longer.
+
+So the measured run and `tests/test_pacing.gd` don't change: 12:58 of sim time and a 28:48 estimate, and the planner's captain falls at tick 1715 with its ring-two half taking 1715 ticks. Iron drops are unchanged too. A rare drop or the captain's guaranteed piece is still a shortcut past the smithing.
