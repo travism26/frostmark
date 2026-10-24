@@ -168,3 +168,7 @@ The play bot used to fight back only in ring two, so ring one could kill it mid-
 - **The target measures the shortest way to the captain.** Putting an optional detour on the timed route would measure a player who chose to take longer.
 
 So the measured run and `tests/test_pacing.gd` don't change: 12:58 of sim time and a 28:48 estimate, and the planner's captain falls at tick 1715 with its ring-two half taking 1715 ticks. Iron drops are unchanged too. A rare drop or the captain's guaranteed piece is still a shortcut past the smithing.
+
+## The guarded mine in ring one
+
+[#113](https://github.com/travism26/frostmark/issues/113) put a mine of three copper and three tin rocks against ring one's west cliff, north of the watch post, and moved `witch_2` from the north-west flank to its mouth, within earshot of every side of every rock. A visit there is 12 copper and 12 tin ore, but only after the witch. The run takes none of it: it mines its bronze in the inner ring before its first fight, and none of its ring-one trips passes the mine or the witch, so the measured run is unchanged at 28:48 and `tests/test_pacing.gd` still reaches the fallen captain at tick 1715. No number was retuned.
