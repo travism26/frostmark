@@ -37,11 +37,12 @@ What the outpost has built stands in its yard, specified in [#47](https://github
 | Stash cellar | The stash corner, south of the shelves | A plank hatch in the yard floor with iron hinge straps, and a stack of casks against the wall |
 | Stash vault | The stash corner, south of the cellar | An iron-bound chest: timber body, plank lid, iron straps and a brass lock plate facing the yard |
 | Forge | The smithy, in the north band east of the workbench | A coursed stone hearth with a bed of glowing coals, a hood and flue, bellows and a quench bucket |
+| Bloomery | The smithy, east of the forge | A squat round clay shaft on a stone footing, its mouth and its tap arch glowing, a clay bellows pipe in its west side and a heap of iron ore at its east foot |
 | Blast furnace | The smithy, behind the forge against the north wall | A hooped stone stack with a glowing tap and a chimney whose mouth glows; the tallest thing in the yard, and north of everything the player walks to |
 | Armoury | The east wall, between the wood pile and the tent's fence | A timber weapon rack of swords and spears with a red shield hung at its middle, and a crate of spare gear |
 | Ring-two gate winch | Just inside the south gate, west of the path and the signpost | A winch frame: log trestles, an iron-banded drum with its crank, and the chain run out to an anchor stone |
 
-A later step of a line builds beside the earlier step in the same spot, so the stash corner grows south along the west wall one step at a time (the woodpile's log stacks stand further south to leave it room). The forge and furnace glow through emissive ember materials, the way the waystone runes do, and add no lights. Every piece stays inside the palisade and clear of the stations, the tent and the gate path (`tests/test_yard_look.gd`), and every piece's materials are sampled in the shader warm-up, built or not. `tools/spot_shots.gd` shows a spot with upgrades built.
+A later step of a line builds beside the earlier step in the same spot, so the stash corner grows south along the west wall one step at a time (the woodpile's log stacks stand further south to leave it room). The forge, the Bloomery and the furnace glow through emissive ember materials, the way the waystone runes do, and add no lights. Every piece stays inside the palisade and clear of the stations, the tent and the gate path (`tests/test_yard_look.gd`), and every piece's materials are sampled in the shader warm-up, built or not. `tools/spot_shots.gd` shows a spot with upgrades built.
 
 ## The ruin kit
 

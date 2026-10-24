@@ -121,25 +121,30 @@ func test_the_smithing_line_builds_up_one_spot_beside_the_workbench() -> void:
 	var w := WorldDefScript.outpost()
 	var forge := YardLookScript.pieces(["forge"])
 	assert_eq(forge.size(), 1)
-	var both := YardLookScript.pieces(["blast_furnace", "forge"])
-	assert_eq(both.size(), 2)
-	assert_eq(both[0]["upgrade"], "forge")
-	assert_eq(both[1]["upgrade"], "blast_furnace")
-	assert_eq(both[0], forge[0], "the blast furnace adds to the forge and leaves it where it was")
-	for i in both.size():
-		assert_eq(both[i]["line"], "smithing")
-		assert_eq(both[i]["step"], i + 1)
-		assert_eq(both[i]["spot"], "smithy", "%s builds in the smithy" % both[i]["upgrade"])
+	var line := YardLookScript.pieces(["blast_furnace", "bloomery", "forge"])
+	assert_eq(line.size(), 3)
+	assert_eq(line[0]["upgrade"], "forge")
+	assert_eq(line[1]["upgrade"], "bloomery")
+	assert_eq(line[2]["upgrade"], "blast_furnace")
+	assert_eq(line[0], forge[0], "the later steps add to the forge and leave it where it was")
+	for i in line.size():
+		assert_eq(line[i]["line"], "smithing")
+		assert_eq(line[i]["step"], i + 1)
+		assert_eq(line[i]["spot"], "smithy", "%s builds in the smithy" % line[i]["upgrade"])
+		for j in range(i + 1, line.size()):
+			assert_true(Geometry2D.intersect_polygons(YardLookScript.footprint(line[i]), YardLookScript.footprint(line[j])).is_empty(), "%s leaves %s its ground" % [line[j]["upgrade"], line[i]["upgrade"]])
 	var bench := _box(w.objects["workbench"])
-	var forge_at: Vector2 = both[0]["at"]
-	var furnace_at: Vector2 = both[1]["at"]
+	var forge_at: Vector2 = line[0]["at"]
+	var bloomery_at: Vector2 = line[1]["at"]
+	var furnace_at: Vector2 = line[2]["at"]
 	assert_true(forge_at.distance_to(bench.get_center()) < 3.5, "the forge stands beside the workbench")
+	assert_true(bloomery_at.x > forge_at.x and absf(bloomery_at.y - forge_at.y) < 1.0, "the bloomery stands beside the forge, away from the workbench")
+	assert_true(bloomery_at.distance_to(forge_at) < 3.0, "the bloomery stands close by the forge")
 	assert_true(furnace_at.y < forge_at.y and absf(furnace_at.x - forge_at.x) < 0.5, "the furnace stands behind the forge")
-	assert_true(Geometry2D.intersect_polygons(YardLookScript.footprint(both[0]), YardLookScript.footprint(both[1])).is_empty(), "the furnace leaves the forge its ground")
 	# Against the north wall: nothing the player can stand on lies north of the tower.
 	var north_face := _yard_interior(w).position.y
 	var deepest := INF
-	for c in YardLookScript.footprint(both[1]):
+	for c in YardLookScript.footprint(line[2]):
 		deepest = minf(deepest, c.y)
 	assert_true(deepest - north_face < 0.2, "the furnace's back is at the wall: %s" % deepest)
 
@@ -163,7 +168,7 @@ func test_the_blast_furnace_is_the_tallest_thing_in_the_yard() -> void:
 
 
 func test_the_smithy_glows_with_emissive_materials_and_no_lights() -> void:
-	for piece in YardLookScript.pieces(["forge", "blast_furnace"]):
+	for piece in YardLookScript.pieces(["forge", "bloomery", "blast_furnace"]):
 		var node := WorldDressing.yard_piece(piece)
 		assert_true(node.find_children("*", "Light3D", true, false).is_empty(), "%s adds no light" % piece["upgrade"])
 		var glows := false
