@@ -92,6 +92,7 @@ The zones are concentric rings around the outpost, so danger grows with distance
 ### Gear tiers
 
 - **The launch tiers are wooden, bronze and iron, and they show on the character.** You can see progress at a glance.
+- **Iron is smithable in ring one through the Bloomery,** an optional outpost upgrade, from ring one's iron ore. Iron gear still drops as loot too.
 - **Steel and beyond arrive with ring two,** so a new gear tier comes with each new ring of danger.
 
 ### Saving
@@ -151,7 +152,7 @@ On GitHub Pages:
 - **The safe ring** has trees, rocks and a fishing hole.
 - **Ring one** has wolves and bandit archers.
 - **A bandit captain** stands at the edge of ring one, guarding the gate to ring two. The first version ends at that gate.
-- **All seven skills** are in, with smithing capped at the first metal tier.
+- **All seven skills** are in. Smithing reaches iron in ring one through the Bloomery, and steel arrives with ring two.
 - **It takes about thirty minutes to reach the captain.** That fits inside one evening session.
 
 The ship order is in [roadmap.md](roadmap.md): five slices, one per PR, each playable at the public link.
