@@ -1103,6 +1103,8 @@ func _add_cliff_forest(world: WorldDef) -> void:
 		var p := Vector2(t, -edge - depth) if side == 0 else Vector2(edge + depth, t) if side == 1 else Vector2(t, edge + depth) if side == 2 else Vector2(-edge - depth, t)
 		if absf(p.x) < 24.0 and p.y > 0.0:
 			continue  # the camera looks over this stretch at the captain's gate: keep it clear
+		if _on_a_mine(p):
+			continue  # a mine's rock face rises here
 		if not world.is_walkable(p):
 			points.append(Vector3(p.x, 2.6, p.y))
 	var tree := Props.model(Props.NATURE + "tree_pineDefaultA.glb", 3.6)
@@ -1115,6 +1117,15 @@ func _add_cliff_forest(world: WorldDef) -> void:
 		var scale_offset := Transform3D(inner.basis, inner.position) * Props._relative_transform(inner, source)
 		_world.add_child(_multimesh(mesh, points, Vector3.ZERO, scale_offset))
 	tree.free()
+
+
+## Whether `p` is on or within a pine's reach of a mine piece's ground.
+static func _on_a_mine(p: Vector2) -> bool:
+	for piece in RingDressing.mine_pieces():
+		var ground := RingDressing.piece_ground(piece)
+		if p.x > ground[0].x - 1.5 and p.x < ground[1].x + 1.5 and p.y > ground[0].y - 1.5 and p.y < ground[1].y + 1.5:
+			return true
+	return false
 
 
 ## One MultiMeshInstance3D drawing `mesh` at each of `points` (plus `offset`), each with a
