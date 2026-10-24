@@ -51,6 +51,10 @@ const ITEMS := {
 	"bronze_bar": {
 		"label": "Bronze bar", "stack": 10, "weight": 1, "value": 8, "slot": "",
 	},
+	# Smelted from two iron ore once the Bloomery is built.
+	"iron_bar": {
+		"label": "Iron bar", "stack": 10, "weight": 2, "value": 18, "slot": "",
+	},
 	# Ring two's seams. Coal and iron ore smelt into steel once the blast furnace is built.
 	"coal": {
 		"label": "Coal", "stack": 10, "weight": 1, "value": 6, "slot": "",

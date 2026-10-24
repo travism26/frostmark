@@ -340,6 +340,89 @@ func test_the_forge_unlocks_bronze_recipes() -> void:
 		assert_eq(H.stash_count(sim, kind), 0, "the forge took its %s" % kind)
 
 
+## A character at the workbench with `upgrades` built, at smithing `level`, whose stash holds
+## the Bloomery's logs and bronze bars and whose pack holds `ore` iron ore: the Bloomery's
+## cost split between the two.
+func _at_workbench_for_the_bloomery(upgrades: Array, ore: int, level := 3) -> Sim:
+	var cost: Dictionary = UpgradeTable.get_upgrade("bloomery")["cost"]
+	var sim := _with_stash([{"item": "logs", "count": cost["logs"]}, {"item": "bronze_bar", "count": cost["bronze_bar"]}], upgrades)
+	var snap := sim.snapshot()
+	snap["skills"][SkillTable.SMITHING] = {"xp": SkillTable.xp_for_level(level), "level": level}
+	sim.restore(snap)
+	sim.command(Vocab.INTERACT, {"object_id": "workbench"})
+	H.run_until_idle(sim, 60)
+	H.set_pack(sim, [{"item": "iron_ore", "count": ore}])
+	sim.drain_events()
+	return sim
+
+
+func test_the_bloomery_is_built_after_the_armoury_from_the_stash_and_the_pack() -> void:
+	var cost: Dictionary = UpgradeTable.get_upgrade("bloomery")["cost"]
+	assert_eq(cost, {"logs": 8, "bronze_bar": 2, "iron_ore": 4})
+	var sim := _at_workbench_for_the_bloomery(["stash_shelves", "forge"], 4)
+	assert_eq(sim.command(Vocab.BUILD, {"upgrade": "bloomery"})["reason"], Vocab.REASON_UPGRADE_MISSING)
+	assert_eq(sim.upgrade_status()["bloomery"]["requires"], ["armoury"], "the Armoury is named")
+	H.run(sim, 1)
+	assert_false((sim.state["upgrades"] as Array).has("bloomery"), "nothing was built")
+	assert_eq(H.pack_count(sim, "iron_ore"), 4, "nothing was paid")
+	sim = _at_workbench_for_the_bloomery(["stash_shelves", "forge", "armoury"], 4)
+	assert_eq(sim.upgrade_status()["bloomery"]["status"], Vocab.UPGRADE_CAN_BUILD)
+	assert_true(sim.command(Vocab.BUILD, {"upgrade": "bloomery"})["ok"])
+	var built := H.of_kind(H.run(sim, 1), Vocab.EV_BUILT)
+	assert_eq(built.size(), 1)
+	assert_eq(built[0]["upgrade"], "bloomery")
+	assert_eq(H.stash_count(sim, "logs"), 0, "the logs left the stash")
+	assert_eq(H.stash_count(sim, "bronze_bar"), 0, "the bronze bars left the stash")
+	assert_eq(H.pack_count(sim, "iron_ore"), 0, "the iron ore left the pack")
+
+
+func test_the_bloomery_unlocks_the_iron_bar() -> void:
+	var sim := _at_workbench_for_the_bloomery(["forge", "armoury"], 8)
+	assert_eq(sim.check(Vocab.SMITH, {"recipe": "iron_bar"}), Vocab.REASON_UPGRADE_MISSING)
+	sim.command(Vocab.BUILD, {"upgrade": "bloomery"})
+	H.run(sim, 1)
+	assert_eq(sim.check(Vocab.SMITH, {"recipe": "iron_bar"}), "", "the Bloomery makes iron possible")
+	assert_true(sim.command(Vocab.SMITH, {"recipe": "iron_bar"})["ok"])
+	var events := H.run(sim, 1)
+	assert_eq(H.of_kind(events, Vocab.EV_CRAFTED)[0]["item"], "iron_bar")
+	assert_eq(H.pack_count(sim, "iron_bar"), 1)
+	assert_eq(H.pack_count(sim, "iron_ore"), 2, "two ore a bar: 8 less the Bloomery's 4 and this bar's 2")
+	var low := _at_workbench_for_the_bloomery(["forge", "armoury", "bloomery"], 2, 2)
+	assert_eq(low.check(Vocab.SMITH, {"recipe": "iron_bar"}), Vocab.REASON_LEVEL_TOO_LOW, "iron bars need smithing 3")
+
+
+func test_the_smithing_cap_reads_bronze_then_iron_then_steel() -> void:
+	var sim := _with_stash([], ["stash_shelves", "forge", "armoury"])
+	assert_eq(sim.smithing_cap(), ItemTable.TIER_BRONZE)
+	H.patch(sim, {"upgrades": ["stash_shelves", "forge", "armoury", "bloomery"]})
+	assert_eq(sim.smithing_cap(), ItemTable.TIER_IRON, "the Bloomery lifts it to iron")
+	H.patch(sim, {"upgrades": ["stash_shelves", "forge", "armoury", "bloomery", "ring_two_gate", "blast_furnace"]})
+	assert_eq(sim.smithing_cap(), ItemTable.TIER_STEEL, "the blast furnace lifts it to steel")
+
+
+func test_the_blast_furnace_alone_does_not_smelt_iron() -> void:
+	var sim := _at_workbench_for_the_bloomery(["forge", "armoury", "ring_two_gate", "blast_furnace"], 2, 50)
+	assert_eq(sim.smithing_cap(), ItemTable.TIER_STEEL)
+	assert_eq(sim.check(Vocab.SMITH, {"recipe": "iron_bar"}), Vocab.REASON_UPGRADE_MISSING, "iron still needs the Bloomery")
+
+
+func test_nothing_requires_the_bloomery() -> void:
+	for id in UpgradeTable.ids():
+		assert_false((UpgradeTable.get_upgrade(id)["requires"] as Array).has("bloomery"), "%s does not need the Bloomery" % id)
+	assert_eq(UpgradeTable.get_upgrade("ring_two_gate")["requires"], ["armoury"], "the winch needs only the Armoury")
+
+
+func test_the_bloomery_survives_death() -> void:
+	var sim := _at_workbench_for_the_bloomery(["stash_shelves", "forge", "armoury"], 4)
+	sim.command(Vocab.BUILD, {"upgrade": "bloomery"})
+	H.run(sim, 1)
+	H.place(sim, H.OUTSIDE)
+	H.patch(sim, {"warmth": 0, "health": 1})
+	assert_eq(H.of_kind(H.run(sim, 2), Vocab.EV_DIED).size(), 1)
+	assert_true((sim.state["upgrades"] as Array).has("bloomery"), "the Bloomery still stands")
+	assert_eq(sim.smithing_cap(), ItemTable.TIER_IRON)
+
+
 func test_upgrades_survive_death() -> void:
 	var sim := _with_stash([{"item": "logs", "count": 10}])
 	sim.command(Vocab.BUILD, {"upgrade": "stash_shelves"})

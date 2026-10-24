@@ -706,6 +706,8 @@ static func yard_mesh(kind: String, size: Vector3) -> ArrayMesh:
 			return _winch_frame(size)
 		"forge_hearth":
 			return _forge_hearth(size)
+		"bloomery_shaft":
+			return _bloomery_shaft(size)
 		"furnace_stack":
 			return _furnace_stack(size)
 	return _shelf_rack(size)
@@ -902,6 +904,9 @@ const COLOR_SOOT := Color(0.17, 0.15, 0.15)
 ## Live coals: the forge and furnace glow with this emissive colour, the way the waystone
 ## runes do, and light nothing around them.
 const COLOR_EMBER := Color(0.95, 0.34, 0.07)
+## The bloomery's daubed clay, and the ore heaped beside it.
+const COLOR_CLAY := Color(0.56, 0.38, 0.27)
+const COLOR_IRON_ORE := Color(0.36, 0.31, 0.32)
 const EMBER_GLOW := 1.2
 
 ## A forge hearth in the gateway's hand: a coursed stone hearth with a bed of glowing coals
@@ -945,6 +950,31 @@ static func _forge_hearth(size: Vector3) -> ArrayMesh:
 	MeshKit.box(st, Vector3(bx + 0.14, size.y * 0.55, -size.z * 0.32), Vector3(0.12, 0.06, 0.06), COLOR_IRON, COLOR_IRON)
 	MeshKit.log_post(st, Vector3(bx, 0.0, size.z * 0.25), 0.0, size.y * 0.5, 0.04, 0.02, Vector2.ZERO, COLOR_TIMBER_DARK, COLOR_TIMBER_DARK)
 	MeshKit.log_post(st, Vector3(bx, 0.0, -size.z * 0.25), 0.0, size.y * 0.5, 0.04, 0.02, Vector2.ZERO, COLOR_TIMBER_DARK, COLOR_TIMBER_DARK)
+	return _with_glow(st, glow)
+
+
+## A bloomery `size` high: a round clay shaft tapering to a sooty, glowing mouth on a stone
+## footing, a glowing tap arch at its front (+z) where the bloom is drawn, a clay pipe for the
+## bellows at its west side and a heap of iron ore at its east foot. Snow only on the footing.
+static func _bloomery_shaft(size: Vector3) -> ArrayMesh:
+	var st := MeshKit.begin()
+	var glow := MeshKit.begin()
+	var r := minf(size.x, size.z) * 0.5
+	var footing := 0.22
+	_courses(st, Vector3.ZERO, Vector3(size.x, footing, size.z), Vector3(size.x, footing, size.z), 1, COLOR_SMITHY_STONE, MeshKit.SNOW)
+	MeshKit.prism(st, Vector3.ZERO, 8, r * 0.82, r * 0.5, footing, size.y - 0.08, PI / 8.0, COLOR_CLAY, COLOR_CLAY * 0.82, COLOR_SOOT)
+	MeshKit.prism(st, Vector3.ZERO, 8, r * 0.52, r * 0.46, size.y - 0.08, size.y, PI / 8.0, COLOR_SOOT, COLOR_SOOT, COLOR_SOOT)
+	MeshKit.box(glow, Vector3(0.0, size.y + 0.005, 0.0), Vector3(r * 0.6, 0.02, r * 0.6), COLOR_EMBER, COLOR_EMBER)
+	# The tap arch at the foot, glowing, with a clay lintel over it.
+	var front := r * 0.8
+	MeshKit.box(glow, Vector3(0.0, footing + 0.16, front + 0.005), Vector3(0.26, 0.26, 0.02), COLOR_EMBER, COLOR_EMBER)
+	MeshKit.box(st, Vector3(0.0, footing + 0.34, front - 0.01), Vector3(0.4, 0.08, 0.1), COLOR_CLAY * 0.7, COLOR_CLAY * 0.7)
+	# The tuyere: a clay pipe into the west side, low, where the bellows blow.
+	MeshKit.block(st, Vector3(-r * 0.9, footing + 0.3, 0.0), Vector3(0.36, 0.1, 0.1), 0.0, 0.0, COLOR_CLAY * 0.75, COLOR_CLAY * 0.75)
+	# Ore heaped at the east foot, ready to be charged.
+	var lumps := [Vector3(r + 0.08, 0.0, 0.12), Vector3(r + 0.2, 0.0, -0.06), Vector3(r + 0.06, 0.0, -0.18), Vector3(r + 0.14, 0.08, 0.02)]
+	for i in lumps.size():
+		MeshKit.box(st, lumps[i] + Vector3(0.0, 0.06, 0.0), Vector3(0.14, 0.12, 0.13), COLOR_IRON_ORE, COLOR_IRON_ORE * 1.1)
 	return _with_glow(st, glow)
 
 

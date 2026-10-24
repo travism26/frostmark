@@ -27,7 +27,7 @@ func test_lines_come_first_in_step_order_then_the_singles() -> void:
 	var groups := UpgradeRowsScript.groups()
 	assert_eq(groups.size(), 3)
 	assert_eq(groups[0], {"title": "Stash line", "ids": ["stash_shelves", "stash_cellar", "stash_vault"]})
-	assert_eq(groups[1], {"title": "Smithing line", "ids": ["forge", "blast_furnace"]})
+	assert_eq(groups[1], {"title": "Smithing line", "ids": ["forge", "bloomery", "blast_furnace"]})
 	assert_eq(groups[2], {"title": UpgradeRowsScript.SINGLES, "ids": ["armoury", "ring_two_gate", "waystone"]})
 
 

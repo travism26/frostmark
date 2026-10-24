@@ -72,6 +72,15 @@ func test_tiered_gear_takes_its_tier_colour_and_styles_share_the_telegraph_colou
 		assert_eq(IconTable.tint(IconTable.style_key(style)), IconTable.STYLE_COLOURS[style], "%s badge is the telegraph colour" % style)
 
 
+func test_each_metal_bar_is_a_bar_in_its_own_metal() -> void:
+	var bars := ["bronze_bar", "iron_bar", "steel_bar"]
+	for kind in bars:
+		assert_eq(IconTable.path(kind), IconTable.path("bronze_bar"), "%s reads as a bar" % kind)
+	for i in bars.size():
+		for j in range(i + 1, bars.size()):
+			assert_ne(IconTable.tint(bars[i]), IconTable.tint(bars[j]), "%s and %s differ" % [bars[i], bars[j]])
+
+
 func test_ui_settings_persist_and_keep_the_sound_section() -> void:
 	DirAccess.remove_absolute(SETTINGS_PATH)
 	var fresh := UiSettings.load_from(SETTINGS_PATH)

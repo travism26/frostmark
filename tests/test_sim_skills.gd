@@ -238,17 +238,22 @@ func test_bronze_gear_needs_smithing_level() -> void:
 func test_smithing_stops_at_bronze_until_the_blast_furnace() -> void:
 	var sim := _at_workbench([{"item": "iron_ore", "count": 5}, {"item": "coal", "count": 10}], ["forge"])
 	_set_level(sim, SkillTable.SMITHING, 50)
-	assert_eq(sim.command(Vocab.SMITH, {"recipe": "steel_bar"})["reason"], Vocab.REASON_TIER_CAPPED)
+	assert_eq(sim.smithing_cap(), ItemTable.TIER_BRONZE)
+	assert_eq(sim.command(Vocab.SMITH, {"recipe": "steel_bar"})["reason"], Vocab.REASON_UPGRADE_MISSING)
 	H.run(sim, 1)
 	assert_eq(H.pack_count(sim, "iron_ore"), 5, "the ore is untouched")
+	# Every recipe above the cap names the upgrade that lifts the cap to its tier, and is
+	# refused for want of it.
 	var capped := 0
 	for id in RecipeTable.ids():
-		var tier: String = RecipeTable.get_recipe(id)["tier"]
-		assert_ne(tier, ItemTable.TIER_IRON, "%s: no recipe works iron" % id)
-		if ItemTable.tier_rank(tier) > ItemTable.tier_rank(Sim.SMITHING_TIER_CAP):
-			capped += 1
-			assert_eq(sim.command(Vocab.SMITH, {"recipe": id})["reason"], Vocab.REASON_TIER_CAPPED, id)
-	assert_true(capped > 0, "the workbench lists steel, and refuses it")
+		var r := RecipeTable.get_recipe(id)
+		if ItemTable.tier_rank(r["tier"]) <= ItemTable.tier_rank(Sim.SMITHING_TIER_CAP):
+			continue
+		capped += 1
+		var lifts: String = UpgradeTable.get_upgrade(r["upgrade"]).get("effects", {}).get("smithing_tier", "")
+		assert_eq(lifts, r["tier"], "%s's upgrade lifts the cap to its tier" % id)
+		assert_eq(sim.command(Vocab.SMITH, {"recipe": id})["reason"], Vocab.REASON_UPGRADE_MISSING, id)
+	assert_true(capped > 0, "the workbench lists iron and steel, and refuses them")
 
 
 func test_every_gathering_and_crafting_skill_feeds_the_next() -> void:

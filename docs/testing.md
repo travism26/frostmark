@@ -44,7 +44,7 @@ The same note holds: obscurity, not security, only their sha256 hashes are in `s
 - nothing built, the captain standing, no ring reached and no waystone attuned
 - the stash holding the starting kit and, beside it, every upgrade's cost added up
 
-The summed cost is worked out from `sim/upgrades.gd` each time the code is loaded, so a new or repriced upgrade is covered without touching it. It fills more slots than a new stash has, so this save alone starts with as many stash slots as it fills (23 today rather than 8); the shelves, cellar and vault still add their slots when built. Built in the table's order, every upgrade goes up and the materials run out together.
+The summed cost is worked out from `sim/upgrades.gd` each time the code is loaded, so a new or repriced upgrade is covered without touching it. It fills more slots than a new stash has, so this save alone starts with as many stash slots as it fills (24 today rather than 8); the shelves, cellar and vault still add their slots when built. Built in the table's order, every upgrade goes up and the materials run out together.
 
 `tests/test_bare_mode.gd` checks each point and builds every upgrade from it in turn.
 

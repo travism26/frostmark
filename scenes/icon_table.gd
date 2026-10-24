@@ -85,6 +85,7 @@ const ICONS := {
 	"iron_ore": {"icon": "faithtoken/ore", "tint": Color(0.46, 0.40, 0.42)},
 	"coal": {"icon": "delapouite/coal-pile", "tint": Color(0.24, 0.26, 0.30)},
 	"bronze_bar": {"icon": "lorc/metal-bar", "tint": Color(0.74, 0.47, 0.20)},
+	"iron_bar": {"icon": "lorc/metal-bar", "tint": Color(0.50, 0.54, 0.60)},
 	"steel_bar": {"icon": "lorc/metal-bar", "tint": Color(0.66, 0.74, 0.84)},
 	"wolf_pelt": {"icon": "delapouite/animal-hide", "tint": Color(0.50, 0.44, 0.40)},
 	"troll_hide": {"icon": "delapouite/animal-hide", "tint": Color(0.38, 0.52, 0.58)},

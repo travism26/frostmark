@@ -25,7 +25,7 @@ const SPOTS := {
 }
 
 ## The hand-made meshes a part can name (WorldDressing builds them), beside the kit models.
-const MESHES := ["shelf_rack", "hatch", "iron_chest", "weapon_rack", "winch_frame", "forge_hearth", "furnace_stack"]
+const MESHES := ["shelf_rack", "hatch", "iron_chest", "weapon_rack", "winch_frame", "forge_hearth", "bloomery_shaft", "furnace_stack"]
 
 ## Each upgrade's look: its `line` and `step` in that line, the `spot` it builds in, its
 ## `offset` [x, z] in the spot's frame, its `size` [along, out] on the ground, and its
@@ -94,11 +94,19 @@ const LOOKS := {
 			{"model": Props.SURVIVAL + "bucket.glb", "height": 0.34, "snow_from": 1.1, "at": [0.6, 0.25], "y": 0.0, "turn": 0.4},
 		],
 	},
+	# A squat clay shaft east of the forge, its mouth and its tap glowing, a heap of ore at its
+	# side waiting to be charged: the smithy's second step, the first to work iron.
+	"bloomery": {
+		"line": "smithing", "step": 2, "spot": "smithy", "offset": [2.4, 0.3], "size": [1.4, 1.2],
+		"parts": [
+			{"mesh": "bloomery_shaft", "size": [1.0, 1.6, 1.0], "at": [-0.15, 0.0], "y": 0.0, "turn": 0.0},
+		],
+	},
 	# The forge grown big: a hooped stone stack with a glowing tap at its foot and a chimney
 	# whose mouth glows, behind the forge against the north wall. The tallest thing in the
 	# yard, and north of everything the player walks to, so the camera always sees past it.
 	"blast_furnace": {
-		"line": "smithing", "step": 2, "spot": "smithy", "offset": [0.0, -0.8], "size": [1.5, 1.3],
+		"line": "smithing", "step": 3, "spot": "smithy", "offset": [0.0, -0.8], "size": [1.5, 1.3],
 		"parts": [
 			{"mesh": "furnace_stack", "size": [1.4, 4.4, 1.2], "at": [0.0, 0.0], "y": 0.0, "turn": 0.0},
 		],
@@ -117,6 +125,7 @@ const MATERIALS := {
 	"forge": STONE,
 	"stash_cellar": TIMBER,
 	"armoury": IRON,
+	"bloomery": STONE,
 	"ring_two_gate": TIMBER,
 	"blast_furnace": STONE,
 	"waystone": STONE,
