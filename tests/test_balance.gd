@@ -27,8 +27,8 @@ const TOLERANCE_MINUTES := 4.0
 
 const SOUTH_TREES := ["tree_1", "tree_2", "tree_3", "tree_4", "tree_5", "tree_6"]
 const NORTH_TREES := ["tree_7", "tree_8", "tree_9", "tree_10"]
-const COPPER := ["copper_1", "copper_2", "copper_3"]
-const TIN := ["tin_1", "tin_2", "tin_3"]
+const COPPER := ["copper_4", "copper_5", "copper_6", "copper_7"]
+const TIN := ["tin_6", "tin_5", "tin_4", "tin_7"]
 const IRON := ["iron_1", "iron_2", "iron_3"]
 const CRYSTALS := ["ice_crystal_2", "ice_crystal_1"]
 const STACK := 10

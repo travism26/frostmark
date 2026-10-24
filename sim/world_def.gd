@@ -119,8 +119,9 @@ var path_grid: AStarGrid2D = null
 
 ## The world, as rings around the outpost. The walled outpost has one gate on its south side,
 ## the fire, the stash and the workbench. The inner ring (out to 24 m) is safe but cold: pines
-## south and north of the walls, copper rocks to the east, tin to the west, one fishing hole to
-## the north and two ice crystals north-east and north-west. Ring one (out to the cliffs at
+## south and north of the walls, four spots of one copper and one tin rock 15 to 22 m out (one
+## per compass side, beside its landmark), two fishing holes together to the north and two ice
+## crystals north-east and north-west. Ring one (out to the cliffs at
 ## 60 m) holds the wolf packs, bandit archers and two frost witches, the better nodes (frost
 ## pines west, iron east, an ice hole north) and, at its far southern edge, the gate to ring two
 ## with the bandit captain standing at it. Ring two lies beyond that gate and nowhere else: a
@@ -193,13 +194,18 @@ static func outpost() -> WorldDef:
 	]
 	for i in trees.size():
 		_place(w, "tree_%d" % (i + 1), KIND_TREE, "Pine", trees[i], [1.0, 1.0], 3.0)
-	var copper := [[13.0, -7.0], [17.0, -3.0], [13.0, 1.0]]
+	# One copper and one tin rock in a spot on each side, north, east, south and west, each beside
+	# that side's landmark (RingDressing.LANDMARKS) and out of earshot of every enemy home. The
+	# south spot sits east of the cairn, which the near wolves would hear. Ids 1 to 3 were the
+	# rocks that stood against the walls, so the spots number on from 4.
+	var copper := [[2.5, -21.5], [15.5, 12.5], [3.0, 20.0], [-22.0, -3.5]]
 	for i in copper.size():
-		_place(w, "copper_%d" % (i + 1), KIND_COPPER_ROCK, "Copper rock", copper[i], [2.0, 2.0], 1.0)
-	var tin := [[-15.0, -7.0], [-19.0, -3.0], [-15.0, 1.0]]
+		_place(w, "copper_%d" % (i + 4), KIND_COPPER_ROCK, "Copper rock", copper[i], [2.0, 2.0], 1.0)
+	var tin := [[2.5, -18.0], [18.0, 9.0], [3.0, 16.5], [-18.5, -3.5]]
 	for i in tin.size():
-		_place(w, "tin_%d" % (i + 1), KIND_TIN_ROCK, "Tin rock", tin[i], [2.0, 2.0], 1.0)
+		_place(w, "tin_%d" % (i + 4), KIND_TIN_ROCK, "Tin rock", tin[i], [2.0, 2.0], 1.0)
 	_place(w, "fishing_hole", KIND_FISHING_HOLE, "Fishing hole", [-1.0, -19.0], [2.0, 2.0], 0.1)
+	_place(w, "fishing_hole_2", KIND_FISHING_HOLE, "Fishing hole", [-4.5, -19.0], [2.0, 2.0], 0.1)
 	var crystals := [[16.0, -14.0], [-18.0, -13.0]]
 	for i in crystals.size():
 		_place(w, "ice_crystal_%d" % (i + 1), KIND_ICE_CRYSTAL, "Ice crystal", crystals[i], [1.0, 1.0], 1.4)

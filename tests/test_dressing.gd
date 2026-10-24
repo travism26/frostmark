@@ -144,3 +144,33 @@ func test_scatter_thickens_outward_and_every_ring_has_a_table() -> void:
 			var band: Array = entry.get("band", [0.0, INF])
 			assert_true(float(band[0]) < float(band[1]), "%s %s band is ordered" % [ring, entry["what"]])
 	assert_true(float(RingLookScript.entry(WorldDef.REGION_RING_TWO)["drift"]) > float(RingLookScript.entry(WorldDef.REGION_INNER_RING)["drift"]), "drifts lie deeper out")
+
+
+func test_scattered_dressing_keeps_clear_of_every_node() -> void:
+	var w := WorldDefScript.outpost()
+	var placer := WorldDressingScript.Placer.new(w, 7)
+	for ring in RingDressingScript.rings():
+		var spots := placer.scatter(ring, 400, 1.0, WorldDressingScript.DRESSING_MARGIN, WorldDressingScript.DRESSING_HOME_MARGIN)
+		assert_true(spots.size() > 100, "%s gets scatter" % ring)
+		for p in spots:
+			for id in w.node_ids():
+				assert_true(w.distance_to_object(id, p) >= WorldDressingScript.DRESSING_MARGIN, "dressing at %s keeps off %s" % [p, id])
+
+
+func test_each_inner_ring_ore_spot_lies_by_its_sides_landmark() -> void:
+	var w := WorldDefScript.outpost()
+	var ring := WorldDef.REGION_INNER_RING
+	var centre := RingDressingScript.ring_centre(w, ring)
+	for kind in [WorldDef.KIND_COPPER_ROCK, WorldDef.KIND_TIN_ROCK]:
+		for id in w.objects_of_kind(kind):
+			var at := w.object_center(id)
+			if w.region_at(at) != ring:
+				continue
+			var side := RingDressingScript.direction_of(centre, at)
+			var nearest := ""
+			for direction in RingDressingScript.DIRECTIONS:
+				var mark: Dictionary = RingDressingScript.landmark(ring, direction)
+				var best: Dictionary = RingDressingScript.landmark(ring, nearest) if nearest != "" else {}
+				if nearest == "" or at.distance_to(Vector2(mark["at"][0], mark["at"][1])) < at.distance_to(Vector2(best["at"][0], best["at"][1])):
+					nearest = direction
+			assert_eq(nearest, side, "%s, on the %s side, lies nearest that side's landmark" % [id, side])

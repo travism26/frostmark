@@ -37,7 +37,7 @@ func test_the_skills_panel_has_all_eight() -> void:
 
 func test_mining_a_rock_yields_ore_and_mining_xp() -> void:
 	var sim := _with_tool("wooden_pickaxe")
-	var events := _gather_all(sim, "copper_1")
+	var events := _gather_all(sim, "copper_4")
 	var yield_count := int(WorldDef.NODE_KINDS[WorldDef.KIND_COPPER_ROCK]["yield"])
 	assert_eq(H.pack_count(sim, "copper_ore"), yield_count)
 	assert_eq(int(sim.state["skills"]["mining"]["xp"]), yield_count * int(WorldDef.NODE_KINDS[WorldDef.KIND_COPPER_ROCK]["xp"]))
@@ -45,14 +45,14 @@ func test_mining_a_rock_yields_ore_and_mining_xp() -> void:
 	var gathered := H.of_kind(events, Vocab.EV_GATHERED)
 	assert_eq(gathered[0]["skill"], SkillTable.MINING)
 	assert_eq(H.of_kind(events, Vocab.EV_NODE_DEPLETED).size(), 1)
-	_gather_all(sim, "tin_1")
+	_gather_all(sim, "tin_4")
 	assert_eq(H.pack_count(sim, "tin_ore"), int(WorldDef.NODE_KINDS[WorldDef.KIND_TIN_ROCK]["yield"]))
 
 
 func test_mining_needs_a_pickaxe() -> void:
 	var sim := SimScript.new()  # a new character carries only the axe
-	assert_eq(sim.command(Vocab.GATHER, {"object_id": "copper_1"})["reason"], Vocab.REASON_NO_TOOL)
-	assert_eq(sim.command(Vocab.INTERACT, {"object_id": "tin_2"})["reason"], Vocab.REASON_NO_TOOL)
+	assert_eq(sim.command(Vocab.GATHER, {"object_id": "copper_4"})["reason"], Vocab.REASON_NO_TOOL)
+	assert_eq(sim.command(Vocab.INTERACT, {"object_id": "tin_5"})["reason"], Vocab.REASON_NO_TOOL)
 
 
 func test_iron_needs_mining_level_and_a_bronze_pickaxe() -> void:

@@ -227,7 +227,7 @@ func test_a_version_3_snapshot_migrates() -> void:
 	assert_eq(sim.state["bosses_defeated"], [], "the captain has not fallen")
 	assert_eq(sim.state["nodes"]["tree_1"], {"left": 1, "respawn_tick": 0}, "known nodes keep their state")
 	assert_eq(sim.state["nodes"]["tree_2"], {"left": 0, "respawn_tick": 950})
-	assert_eq(int(sim.state["nodes"]["copper_1"]["left"]), int(WorldDef.NODE_KINDS[WorldDef.KIND_COPPER_ROCK]["yield"]), "new nodes start full")
+	assert_eq(int(sim.state["nodes"]["copper_4"]["left"]), int(WorldDef.NODE_KINDS[WorldDef.KIND_COPPER_ROCK]["yield"]), "new nodes start full")
 	assert_eq(sim.state["enemies"]["wolf_1"]["mode"], Sim.MODE_ENGAGED, "a fight in progress carries on")
 	assert_eq(int(sim.state["enemies"]["wolf_1"]["health"]), 9)
 	assert_eq(sim.state["enemies"]["archer_1"]["mode"], Sim.MODE_DEAD)
