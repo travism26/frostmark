@@ -1,7 +1,8 @@
 ## Board-only, not shipped: writes the test-mode save code (docs/testing.md), the maxed
 ## character scenes/field_kit.gd builds, to tools/test_mode_code.txt.
 ##   godot --headless -s tools/test_mode_code.gd > /dev/null && cat tools/test_mode_code.txt
-## Regenerate it whenever the save version changes; tests/test_test_mode.gd imports the file.
+## The file is not committed (.gitignore): run this again after any pull or merge to refresh it.
+## tests/test_test_mode.gd builds the same code itself.
 extends SceneTree
 
 const CODE_PATH := "res://tools/test_mode_code.txt"
