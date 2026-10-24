@@ -83,7 +83,7 @@ func test_every_spec_command_is_known() -> void:
 		assert_ne(result["reason"], Vocab.REASON_UNKNOWN_COMMAND, "%s is in the vocabulary" % kind)
 		if not Vocab.IMPLEMENTED.has(kind):
 			assert_eq(result["reason"], Vocab.REASON_NOT_IMPLEMENTED, "%s is reserved" % kind)
-	assert_eq(Vocab.COMMANDS.size(), 20, "the spec's fifteen commands, the brief's field fire, the guide's two, waystone travel and auto-retaliate")
+	assert_eq(Vocab.COMMANDS.size(), 21, "the spec's fifteen commands, the brief's field fire, the guide's two, waystone travel, auto-retaliate and Deposit haul")
 	assert_eq(Vocab.IMPLEMENTED.size(), Vocab.COMMANDS.size(), "the first playable implements every command")
 
 

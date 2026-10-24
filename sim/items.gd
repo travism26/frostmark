@@ -282,6 +282,23 @@ static func heal(kind: String) -> int:
 	return int(ITEMS[kind].get("heal", 0))
 
 
+## Whether the item is kit, carried to use rather than to bank: gear (anything with an
+## equipment slot), the ammo of any weapon, or cooked food (what a cooking recipe makes).
+## Everything else, raw food included, is haul.
+static func is_kit(kind: String) -> bool:
+	if not ITEMS.has(kind):
+		return false
+	if slot(kind) != "":
+		return true
+	for other in ITEMS:
+		if ITEMS[other].get("ammo", "") == kind:
+			return true
+	for raw in RecipeTable.COOKING:
+		if RecipeTable.COOKING[raw]["output"] == kind:
+			return true
+	return false
+
+
 ## Health taken off every hit while the item is worn, or 0.
 static func defence(kind: String) -> int:
 	return int(ITEMS[kind].get("defence", 0)) if ITEMS.has(kind) else 0

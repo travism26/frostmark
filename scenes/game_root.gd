@@ -59,6 +59,7 @@ const REASON_TEXT := {
 	SimVocab.REASON_STASH_FULL: "The stash is full.",
 	SimVocab.REASON_DEPLETED: "That's spent for now. It will come back.",
 	SimVocab.REASON_NOT_IN_OUTPOST: "The stash is only reachable inside the outpost.",
+	SimVocab.REASON_NO_HAUL: "No haul to deposit: gear, ammo and cooked food stay in the pack.",
 	SimVocab.REASON_NOT_AT_WORKBENCH: "Stand at the workbench to craft.",
 	SimVocab.REASON_MISSING_INPUTS: "You don't have the materials for that.",
 	SimVocab.REASON_LEVEL_TOO_LOW: "Your skill level is too low.",
@@ -606,6 +607,8 @@ func _apply_events(events: Array[Dictionary]) -> void:
 					_last_event = "Equipped the %s." % ItemTable.label(e["item"]).to_lower()
 			SimVocab.EV_DEPOSITED:
 				_last_event = "Deposited %d %s." % [e["count"], ItemTable.label(e["item"])]
+			SimVocab.EV_DEPOSITED_HAUL:
+				_hud.banner(_deposited_haul_text(e))
 			SimVocab.EV_WITHDREW:
 				_last_event = "Withdrew %d %s." % [e["count"], ItemTable.label(e["item"])]
 			SimVocab.EV_DROPPED:
@@ -705,6 +708,23 @@ static func _banked_text(e: Dictionary) -> String:
 			names.append(UpgradeTable.get_upgrade(id)["label"])
 		text += "\nYou can now build: %s." % ", ".join(names)
 	return text
+
+
+## The banner for a `deposited_haul` event: what was stored, and what stayed in the pack
+## for a full stash.
+static func _deposited_haul_text(e: Dictionary) -> String:
+	var text := "Stored %s." % _item_list(e["items"])
+	if not (e["stayed"] as Array).is_empty():
+		text += "\nStash full: %s stayed in your pack." % _item_list(e["stayed"])
+	return text
+
+
+## `{item, count}` entries as "4 Logs, 2 Copper ore".
+static func _item_list(entries: Array) -> String:
+	var parts: PackedStringArray = []
+	for item in entries:
+		parts.append("%d %s" % [item["count"], ItemTable.label(item["item"])])
+	return ", ".join(parts)
 
 
 ## The status line for a `region_changed` event: the ring entered, then the cold on leaving
