@@ -120,3 +120,22 @@ Each was tried on its own against the same run:
 
 - The build-from-scratch character's stash (docs/testing.md) needs one more slot for the summed upgrade costs: 23 instead of 22.
 - `tests/test_pacing.gd`, the planner's route, fights the pack by the ice hole and mines 12 iron for the winch. It reaches the fallen captain at tick 1789 (14.9 minutes), up from 1602 (13.3 minutes), still inside its window of 1200 to 2700 ticks. Its ring-two half keeps the wooden bow unless the captain dropped a better one: it used to rely on a lucky drop. It takes 1776 ticks, inside its window. At the 45 kg carry limit the captain falls at tick 1704 (14.2 minutes) and the ring-two half takes 1653 ticks (13.8 minutes), both still inside their windows.
+
+## Re-measured: copper and tin round the inner ring
+
+[#111](https://github.com/travism26/frostmark/issues/111) moved copper and tin off the outpost walls into four spots of one copper and one tin rock, one on each side of the inner ring 15 to 22 m out, and gave the north fishing hole a second hole beside it. The run mines copper north, east, then south, and tin south, east, then north, so a stack of each is a walk round the outpost rather than a step off the wall:
+
+| Phase | Sim time | World clicks | Panel clicks | Outings | Firsts | Allowance | Estimate |
+|-------|----------|--------------|--------------|---------|--------|-----------|----------|
+| first tools | 0:37 | 8 | 3 | 1 | 2 | 1:15 | 1:52 |
+| inner ring | 4:12 | 24 | 7 | 2 | 2 | 2:19 | 6:31 |
+| bronze and a wooden set | 0:54 | 8 | 23 | 1 | 8 | 3:45 | 4:39 |
+| first fights | 1:11 | 16 | 10 | 1 | 0 | 1:22 | 2:33 |
+| iron, armour and the winch | 6:20 | 36 | 39 | 4 | 6 | 5:59 | 12:19 |
+| to the captain | 0:17 | 2 | 5 | 1 | 0 | 0:39 | 0:56 |
+| captain fight | 0:30 | 2 | 7 | 0 | 0 | 0:25 | 0:55 |
+| **to the captain** | **13:30** | | | | | **15:19** | **28:49** |
+
+Measured at the 45 kg carry limit, the estimate rises 21 seconds, from 28:28 to 28:49, all of it walking between spots: 10 s more in the inner-ring phase and 11 s more on the second bronze trip in the iron phase. The first tools are cut from the southern pines, which did not move, so that phase is unchanged. With half the allowance it is 21:09, with half as much again 36:28. The clicks are the same, since a stack of ten still takes three rocks of each. No number was retuned.
+
+`tests/test_pacing.gd` reaches the fallen captain at tick 1765 (14.7 minutes), up from 1704, and its ring-two half takes 1645 ticks, down from 1653, both inside their windows.

@@ -191,9 +191,9 @@ How these numbers were measured against the brief's thirty minutes to the captai
 | Node | Where | Skill and level | Tool | Yields | Per node | Respawn | Xp |
 |------|-------|-----------------|------|--------|----------|---------|----|
 | Pine (tier 1) | 6 south of the gate, 4 north of the walls | woodcutting 1 | axe | logs | 4 | 90 | 10 |
-| Copper rock (tier 1) | 3 east of the outpost | mining 1 | pickaxe | copper ore | 4 | 100 | 10 |
-| Tin rock (tier 1) | 3 west of the outpost | mining 1 | pickaxe | tin ore | 4 | 100 | 10 |
-| Fishing hole (tier 1) | 1 north of the outpost | fishing 1 | rod | raw fish | 6 | 80 | 10 |
+| Copper rock (tier 1) | 4 in the inner ring, one in each spot of a copper and a tin rock: north by the fallen pine, east by the split rock, south east of the cairn, west by the dead giant, 15 to 22 m out and out of earshot of every enemy | mining 1 | pickaxe | copper ore | 4 | 100 | 10 |
+| Tin rock (tier 1) | 4 in the inner ring, one beside each copper rock | mining 1 | pickaxe | tin ore | 4 | 100 | 10 |
+| Fishing hole (tier 1) | 2 together north of the outpost | fishing 1 | rod | raw fish | 6 | 80 | 10 |
 | Ice crystal (tier 1) | 2 north of the outpost, east and west | mining 2 | pickaxe | ice crystal | 3 | 120 | 14 |
 | Frost pine (tier 2) | 4 in ring one, west | woodcutting 3 | axe | logs | 6 | 120 | 16 |
 | Iron rock (tier 2) | 3 in ring one, east, by the archer camp | mining 3 | bronze pickaxe or better | iron ore | 3 | 150 | 18 |
@@ -359,7 +359,7 @@ A browser save can fail to hold: storage full, or blocked as in some private bro
 
 - A grid of `cols` x `rows` square cells of `cell_size` (128 x 192 cells of 1 m, origin at `[-64, -64]`, so ring two fits south of ring one), rasterised by `bake()` from the solids and blocking objects.
 - `solids`: `{id, kind, min, max, height}` rectangles: the outpost's palisade `wall`s, the `cliff`s that close ring one at 60 m (open only at the ring-two gate) and wall in ring two from 64 m to 124 m, rock `outcrop`s that make the walk out a route, ring two's `ruin` walls and pillars, and the keeper's tent (`decor`) in the outpost yard.
-- `objects`: typed markers by id, `{kind, label, min, max, height, blocks}`. The outpost has `gate` (with an `outward` direction), `fire`, `stash` and `workbench`; the inner ring has `tree_1` to `tree_10`, `copper_1` to `copper_3`, `tin_1` to `tin_3`, `fishing_hole` and `ice_crystal_1` and `ice_crystal_2`; ring one has `frost_pine_1` to `frost_pine_4`, `iron_1` to `iron_3`, `ice_hole`, `ring_one_waystone` and `ring_two_gate` (with its `guardian` enemy id, `upgrade` id and `outward` direction); ring two has the `brazier` (a fire), `coal_1` to `coal_5`, `rich_iron_1` to `rich_iron_3`, `deep_hole_1` to `deep_hole_3` and `ring_two_waystone`.
+- `objects`: typed markers by id, `{kind, label, min, max, height, blocks}`. The outpost has `gate` (with an `outward` direction), `fire`, `stash` and `workbench`; the inner ring has `tree_1` to `tree_10`, `copper_4` to `copper_7` and `tin_4` to `tin_7` (the north, east, south and west spots), `fishing_hole` and `fishing_hole_2`, and `ice_crystal_1` and `ice_crystal_2`; ring one has `frost_pine_1` to `frost_pine_4`, `iron_1` to `iron_3`, `ice_hole`, `ring_one_waystone` and `ring_two_gate` (with its `guardian` enemy id, `upgrade` id and `outward` direction); ring two has the `brazier` (a fire), `coal_1` to `coal_5`, `rich_iron_1` to `rich_iron_3`, `deep_hole_1` to `deep_hole_3` and `ring_two_waystone`.
 - `enemies`: placements by id, `{kind, home, pack}`. Every placement gets an entry in `state.enemies`; the kind's stats are in `CombatTable`. None lives in the inner ring. Ring one holds wolves, bandit archers, frost witches and the captain; ring two holds `troll_1` to `troll_4` and `stalker_1` to `stalker_5`.
 - `NODE_KINDS`: per gatherable kind, its tier, the skill and required level, the tool and lowest tool tier, the item, yield, regrowth ticks and xp. Every placed object of such a kind gets an entry in `state.nodes`.
 - `regions`: named polygons in precedence order, first match wins: `outpost` (the walled square), `inner_ring` (out to 24 m), `ring_one` (out to the cliffs at 60 m), `ring_two` (everything beyond, of which only the ruins south of the ring-two gate are walkable). Ring one is only reached by walking through the inner ring, and ring two only through its gate.
