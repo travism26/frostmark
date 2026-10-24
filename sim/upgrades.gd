@@ -2,9 +2,9 @@
 ##
 ## `cost` maps item kinds to counts taken from the stash when the upgrade is built (inside the
 ## outpost). `requires` lists upgrade ids that must be built first. `effects` says what the
-## upgrade changes: `stash` adds that many stash slots, `recipes` names the workbench recipes
-## it unlocks (RecipeTable entries whose `upgrade` is this id), `smithing_tier` raises the
-## highest metal tier the workbench works, `ring_gate` names the ring gate it readies (it
+## upgrade changes: `stash` adds that many stash slots, `carry` adds that many kilograms to the
+## carry limit, `recipes` names the workbench recipes it unlocks (RecipeTable entries whose
+## `upgrade` is this id), `smithing_tier` raises the highest metal tier the workbench works, `ring_gate` names the ring gate it readies (it
 ## opens once that ring's guardian has fallen too), and `waystones` lists the waystone objects it
 ## wakes (each still has to be visited once before it carries anyone home). An upgrade with
 ## `locked` set is listed but cannot be built in this version; the text says why. Listed in the

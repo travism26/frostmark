@@ -49,7 +49,7 @@ The simulation only counts what the character does: walking, gathering, cooking,
 | An outing | 20 s | Deciding where to go and what to bring, and watching the cold on the way |
 | A recipe smithed or an upgrade built for the first time | 15 s | Reading its cost and what it unlocks |
 
-These are a first-time player's numbers, not a practised one's, because the brief's target is a new character. The allowance comes to slightly more than the sim time. That is a big share, so the run also prints the estimate with half the allowance and with half as much again. The tuned route lands at 21:36 and 36:50 on those, so the target holds for a quicker or slower player, though not for a speedrunner.
+These are a first-time player's numbers, not a practised one's, because the brief's target is a new character. The allowance comes to slightly more than the sim time. That is a big share, so the run also prints the estimate with half the allowance and with half as much again. At the 45 kg carry limit the route lands at 20:48 and 36:07 on those, so the target holds for a quicker or slower player, though not for a speedrunner.
 
 ## The measured run
 
@@ -92,6 +92,23 @@ Before tuning the run came in at 27:15, nearly three minutes short, and only 1:3
 
 Together they bring the run to 29:13. Both are ring-one loot carried home past the wolves and archers, so the extra minutes come with the tension the brief asks for, not with more chopping in the safe ring.
 
+### The carry limit at 45 kg
+
+[#108](https://github.com/travism26/frostmark/issues/108) raised the carry limit from 30 to 45 kg, and the run was measured again. The bot plays the same route and does not build the Pack frame, which is optional:
+
+| Phase | Sim time | World clicks | Panel clicks | Outings | Firsts | Allowance | Estimate |
+|-------|----------|--------------|--------------|---------|--------|-----------|----------|
+| first tools | 0:37 | 8 | 3 | 1 | 2 | 1:15 | 1:52 |
+| inner ring | 4:02 | 24 | 7 | 2 | 2 | 2:19 | 6:21 |
+| bronze and a wooden set | 0:54 | 8 | 23 | 1 | 8 | 3:45 | 4:39 |
+| first fights | 1:11 | 16 | 10 | 1 | 0 | 1:22 | 2:33 |
+| iron, armour and the winch | 6:09 | 36 | 39 | 4 | 6 | 5:59 | 12:08 |
+| to the captain | 0:17 | 2 | 5 | 1 | 0 | 0:39 | 0:56 |
+| captain fight | 0:30 | 2 | 7 | 0 | 0 | 0:25 | 0:55 |
+| **to the captain** | **13:09** | | | | | **15:19** | **28:28** |
+
+The estimate drops 0:45, from 29:13 to 28:28, and stays inside 26 to 34 minutes. The run still dies no times and beats the captain in 30 seconds. The minutes come off the walking: at 30 kg the bot spent part of the inner ring, its first fights and the iron trips overweight, at 60% speed, and at 45 kg it walks those stretches at full speed. Nothing else was retuned.
+
 ### Levers measured and left alone
 
 Each was tried on its own against the same run:
@@ -102,4 +119,4 @@ Each was tried on its own against the same run:
 ### Knock-on numbers
 
 - The build-from-scratch character's stash (docs/testing.md) needs one more slot for the summed upgrade costs: 23 instead of 22.
-- `tests/test_pacing.gd`, the planner's route, fights the pack by the ice hole and mines 12 iron for the winch. It reaches the fallen captain at tick 1789 (14.9 minutes), up from 1602 (13.3 minutes), still inside its window of 1200 to 2700 ticks. Its ring-two half keeps the wooden bow unless the captain dropped a better one: it used to rely on a lucky drop. It takes 1776 ticks, inside its window.
+- `tests/test_pacing.gd`, the planner's route, fights the pack by the ice hole and mines 12 iron for the winch. It reaches the fallen captain at tick 1789 (14.9 minutes), up from 1602 (13.3 minutes), still inside its window of 1200 to 2700 ticks. Its ring-two half keeps the wooden bow unless the captain dropped a better one: it used to rely on a lucky drop. It takes 1776 ticks, inside its window. At the 45 kg carry limit the captain falls at tick 1704 (14.2 minutes) and the ring-two half takes 1653 ticks (13.8 minutes), both still inside their windows.

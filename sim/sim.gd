@@ -24,9 +24,10 @@ const SNAP_RADIUS_CELLS := 2
 const STATE_VERSION := 10
 
 ## The pack: a fixed number of slots, and a carried weight (pack plus equipment, in kg)
-## above which walking slows to OVERWEIGHT_SPEED of normal.
+## above which walking slows to OVERWEIGHT_SPEED of normal. BASE_CARRY_LIMIT is that weight
+## before upgrades; carry_limit() adds their `carry` effects.
 const PACK_SLOTS := 12
-const CARRY_LIMIT := 30
+const BASE_CARRY_LIMIT := 45
 const OVERWEIGHT_SPEED := 0.6
 ## Stash slots a new character starts with; outpost upgrades raise it in a later slice.
 const STASH_START_SLOTS := 8
@@ -2347,8 +2348,17 @@ func carry_weight() -> int:
 	return w
 
 
+## Kilograms carried before walking slows: BASE_CARRY_LIMIT plus the `carry` effect of every
+## built upgrade.
+func carry_limit() -> int:
+	var limit := BASE_CARRY_LIMIT
+	for id in state["upgrades"]:
+		limit += int(UpgradeTable.get_upgrade(id).get("effects", {}).get("carry", 0))
+	return limit
+
+
 func is_overweight() -> bool:
-	return carry_weight() > CARRY_LIMIT
+	return carry_weight() > carry_limit()
 
 
 ## The highest metal tier the workbench works: SMITHING_TIER_CAP, raised by any built upgrade

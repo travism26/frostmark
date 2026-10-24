@@ -250,7 +250,7 @@ func _refresh_pack() -> void:
 			var verb := _pack_verb(kind)
 			_pack_buttons[i].set_tip(func() -> Control: return UiTooltip.item(kind, verb))
 	_weight_label.text = "Carrying %d / %d kg%s" % [
-		sim.carry_weight(), Sim.CARRY_LIMIT, "  (slowed)" if sim.is_overweight() else "",
+		sim.carry_weight(), sim.carry_limit(), "  (slowed)" if sim.is_overweight() else "",
 	]
 	_weight_label.add_theme_color_override("font_color", UiTheme.BLOOD if sim.is_overweight() else UiTheme.TEXT_DIM)
 	_refresh_style()
