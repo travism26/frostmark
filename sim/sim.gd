@@ -102,7 +102,7 @@ const ENEMY_MODES: Array[String] = [MODE_IDLE, MODE_ENGAGED, MODE_RETURNING, MOD
 ## That is what makes a weapon swap land on the next tick, and eating cost it.
 const QUEUED_COMMANDS: Array[String] = [
 	SimVocab.SMITH, SimVocab.EQUIP, SimVocab.EAT, SimVocab.DROP, SimVocab.DEPOSIT, SimVocab.WITHDRAW,
-	SimVocab.BUILD, SimVocab.LIGHT_FIRE,
+	SimVocab.BUILD, SimVocab.LIGHT_FIRE, SimVocab.DEPOSIT_HAUL,
 ]
 
 var world: WorldDef
@@ -1685,7 +1685,7 @@ func _held_by_value() -> Array:
 
 # --- Inventory and outpost actions ----------------------------------------------------
 
-## Why a queued command (deposit, withdraw, drop, equip, eat, smith) would be refused right now,
+## Why a queued command (deposit, withdraw, deposit haul, drop, equip, eat, smith) would be refused right now,
 ## or "" when it would be accepted. Read-only: the presentation uses it to grey out buttons.
 func check(kind: String, args: Dictionary) -> String:
 	if not QUEUED_COMMANDS.has(kind):
@@ -1713,6 +1713,8 @@ func _apply(kind: String, args: Dictionary, commit: bool) -> String:
 			return _build(args, commit)
 		SimVocab.LIGHT_FIRE:
 			return _light_fire(args, commit)
+		SimVocab.DEPOSIT_HAUL:
+			return _deposit_haul(commit)
 	return SimVocab.REASON_NOT_IMPLEMENTED
 
 
@@ -1755,6 +1757,46 @@ func _move_between(args: Dictionary, commit: bool, deposit: bool) -> String:
 			"item": kind, "count": count,
 		})
 		_save_due = SimVocab.DEPOSIT if deposit else SimVocab.WITHDRAW
+	return ""
+
+
+## Deposit haul: every pack slot that is not kit (ItemTable.is_kit) into the stash, filling
+## existing stacks first; kit stays where it is. What does not fit stays in the pack and is
+## reported as `stayed`. Refused when the pack holds no haul or none of it fits.
+func _deposit_haul(commit: bool) -> String:
+	if not in_outpost():
+		return SimVocab.REASON_NOT_IN_OUTPOST
+	var pack: Array = state["inventory"]["pack"]
+	var stash: Array = state["stash"]["slots"]
+	var any_haul := false
+	var any_fits := false
+	for s in pack:
+		if s != null and not ItemTable.is_kit(s["item"]):
+			any_haul = true
+			any_fits = any_fits or Inventory.room_for(stash, s["item"]) > 0
+	if not any_haul:
+		return SimVocab.REASON_NO_HAUL
+	if not any_fits:
+		return SimVocab.REASON_STASH_FULL
+	if commit:
+		var moved: Array = []
+		var stayed: Array = []
+		for i in pack.size():
+			var s: Variant = pack[i]
+			if s == null or ItemTable.is_kit(s["item"]):
+				continue
+			var kind: String = s["item"]
+			var count := int(s["count"])
+			var left := Inventory.add(stash, kind, count)
+			if left < count:
+				moved.append({"item": kind, "count": count - left})
+			if left > 0:
+				stayed.append({"item": kind, "count": left})
+				s["count"] = left
+			else:
+				pack[i] = null
+		_emit({"kind": SimVocab.EV_DEPOSITED_HAUL, "items": _merged(moved), "stayed": _merged(stayed)})
+		_save_due = SimVocab.DEPOSIT_HAUL
 	return ""
 
 

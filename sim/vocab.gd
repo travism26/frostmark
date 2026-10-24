@@ -20,6 +20,7 @@ const EAT := "eat"                  # {index}                  eat food from a p
 const DROP := "drop"                # {index, count?}          drop from a pack slot
 const DEPOSIT := "deposit"          # {index, count?}          pack slot to stash, inside the outpost
 const WITHDRAW := "withdraw"        # {index, count?}          stash slot to pack, inside the outpost
+const DEPOSIT_HAUL := "deposit_haul"  # {}                     every haul slot to the stash, kit stays; inside the outpost
 const BUILD := "build"              # {upgrade}                build an outpost upgrade from the stash, inside the outpost
 const ATTACK := "attack"            # {enemy_id}               close to reach and strike every ready tick
 const CROSS_GATE := "cross_gate"    # {}                       walk through the gate to its other side
@@ -32,19 +33,19 @@ const TRAVEL := "travel"            # {object_id}              channel at a ways
 const SET_AUTO_RETALIATE := "set_auto_retaliate"  # {on: bool}  fight back when hit while idle (on) or not
 
 ## Every command kind: the spec's fifteen in spec order, then the brief's field fire, then the
-## first-outing guide's two, then waystone travel, then auto-retaliate. `Sim.command()` rejects anything else as
-## `unknown_command`.
+## first-outing guide's two, then waystone travel, then auto-retaliate, then Deposit haul.
+## `Sim.command()` rejects anything else as `unknown_command`.
 const COMMANDS: Array[String] = [
 	MOVE_TO, INTERACT, GATHER, COOK, SMITH, EQUIP, EAT, DROP, DEPOSIT, WITHDRAW,
 	BUILD, ATTACK, CROSS_GATE, EXPORT_SAVE, IMPORT_SAVE, LIGHT_FIRE, SET_HINTS, NEW_CHARACTER, TRAVEL,
-	SET_AUTO_RETALIATE,
+	SET_AUTO_RETALIATE, DEPOSIT_HAUL,
 ]
 
 ## Commands that do something in this slice. The rest answer `not_implemented`.
 const IMPLEMENTED: Array[String] = [
 	MOVE_TO, INTERACT, GATHER, COOK, SMITH, EQUIP, EAT, DROP, DEPOSIT, WITHDRAW, BUILD, ATTACK,
 	CROSS_GATE, EXPORT_SAVE, IMPORT_SAVE, LIGHT_FIRE, SET_HINTS, NEW_CHARACTER, TRAVEL,
-	SET_AUTO_RETALIATE,
+	SET_AUTO_RETALIATE, DEPOSIT_HAUL,
 ]
 
 # --- Events ---------------------------------------------------------------------
@@ -66,6 +67,7 @@ const EV_EQUIPPED := "equipped"                  # {slot, item, previous}  item 
 const EV_DROPPED := "dropped"                    # {item, count}
 const EV_DEPOSITED := "deposited"                # {item, count}
 const EV_WITHDREW := "withdrew"                  # {item, count}
+const EV_DEPOSITED_HAUL := "deposited_haul"      # {items, stayed} each a list of {item, count}; stayed is haul the stash had no room for
 const EV_BANKED := "banked"                      # {items, overflow} each a list of {item, count}, newly_affordable upgrade ids
 const EV_WARMTH_CHANGED := "warmth_changed"      # {warmth, max}
 const EV_TOOK_DAMAGE := "took_damage"            # {amount, cause, health}  cause: "cold" or an enemy kind
@@ -141,6 +143,7 @@ const REASON_STASH_FULL := "stash_full"
 const REASON_EMPTY_SLOT := "empty_slot"
 const REASON_NOT_EQUIPPABLE := "not_equippable"
 const REASON_NOT_IN_OUTPOST := "not_in_outpost"
+const REASON_NO_HAUL := "no_haul"
 const REASON_NOT_AT_WORKBENCH := "not_at_workbench"
 const REASON_UNKNOWN_RECIPE := "unknown_recipe"
 const REASON_UPGRADE_MISSING := "upgrade_missing"
