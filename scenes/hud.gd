@@ -66,6 +66,7 @@ var _stash_panel: PanelContainer
 var _stash_title: Label
 var _stash_grid: GridContainer
 var _stash_buttons: Array[UiTooltip.Host] = []
+var _deposit_haul_button: Button
 var _craft_panel: PanelContainer
 var _craft_list: VBoxContainer
 var _craft_rows := {}  # recipe id -> {text, button}
@@ -321,6 +322,9 @@ func _refresh_stash() -> void:
 			if slots[i] != null:
 				var kind: String = slots[i]["item"]
 				b.set_tip(func() -> Control: return UiTooltip.item(kind, "Click to withdraw", ""))
+	var haul_why := sim.check(SimVocab.DEPOSIT_HAUL, {})
+	_deposit_haul_button.disabled = haul_why != ""
+	_deposit_haul_button.tooltip_text = _why_text(haul_why) if haul_why != "" else "Put away everything but your gear, ammo and cooked food."
 
 
 ## Recipe rows are built once and updated in place, so a Craft button is never freed
@@ -481,6 +485,10 @@ static func _why_text(reason: String) -> String:
 			return "Smithing stops at bronze until the blast furnace is built."
 		SimVocab.REASON_PACK_FULL:
 			return "Your pack is full."
+		SimVocab.REASON_NO_HAUL:
+			return "Nothing to deposit: gear, ammo and cooked food stay in the pack."
+		SimVocab.REASON_STASH_FULL:
+			return "The stash is full."
 	return reason.replace("_", " ").capitalize()
 
 
@@ -907,6 +915,10 @@ func _build_stash() -> void:
 	_stash_grid.add_theme_constant_override("h_separation", 6)
 	_stash_grid.add_theme_constant_override("v_separation", 6)
 	box.add_child(_stash_grid)
+	_deposit_haul_button = Button.new()
+	_deposit_haul_button.text = "Deposit haul"
+	_deposit_haul_button.pressed.connect(func() -> void: command_requested.emit(SimVocab.DEPOSIT_HAUL, {}))
+	box.add_child(_deposit_haul_button)
 
 
 func _build_craft() -> void:
