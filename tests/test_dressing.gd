@@ -90,7 +90,7 @@ func test_every_ruin_solid_gets_a_kit_piece_in_its_own_footprint() -> void:
 
 func test_every_cliff_is_capped_in_the_snow_of_its_ring() -> void:
 	var w := WorldDefScript.outpost()
-	var brightest := {}
+	var tones := {}  # ring -> every cliff snow luminance in it
 	for s in w.solids:
 		if s["kind"] != WorldDef.KIND_CLIFF:
 			continue
@@ -106,8 +106,14 @@ func test_every_cliff_is_capped_in_the_snow_of_its_ring() -> void:
 		assert_true(capped, "%s carries its ring's snow" % s["id"])
 		assert_true(top <= maxf(snow.get_luminance(), WorldDressingScript.COLOR_ICE_PALE.get_luminance()) + 0.001, "nothing on %s is brighter than its snow or pale ice" % s["id"])
 		assert_true(snow.get_luminance() > WorldDressingScript.COLOR_ICE_DEEP.get_luminance(), "%s still reads as snow-capped over its deep ice" % s["id"])
-		brightest[w.region_at(centre)] = snow.get_luminance()
-	assert_true(brightest[WorldDef.REGION_RING_TWO] < brightest[WorldDef.REGION_RING_ONE], "ring two's cliffs are capped darker than ring one's")
+		# Ring one's edge cliffs stand just past its polygon, where region_at already says ring
+		# two, so a cliff's ring is the one it walls in: ring two's are named for it.
+		var ring := WorldDef.REGION_RING_TWO if (s["id"] as String).begins_with("cliff_ring_two") else WorldDef.REGION_RING_ONE
+		if not tones.has(ring):
+			tones[ring] = []
+		tones[ring].append(snow.get_luminance())
+	assert_true(tones.has(WorldDef.REGION_RING_ONE) and tones.has(WorldDef.REGION_RING_TWO), "both rings have cliffs")
+	assert_true(tones[WorldDef.REGION_RING_TWO].max() < tones[WorldDef.REGION_RING_ONE].min(), "ring two's cliffs are capped darker than ring one's")
 
 
 func test_camps_mark_the_packs_the_sim_places() -> void:
