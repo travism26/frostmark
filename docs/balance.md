@@ -163,7 +163,7 @@ The play bot used to fight back only in ring two, so ring one could kill it mid-
 
 [#117](https://github.com/travism26/frostmark/issues/117) lets the workbench make all eight iron items once the Bloomery is built. The Bloomery stays off the timed route, and the run doesn't build it, for three reasons:
 
-- **The captain falls to bronze.** The run beats him in a bronze kit with no deaths, so iron is a choice to arm up further, not a step the route needs.
+- **The captain falls to bronze.** The run beats him in bronze armour with a bronze sword and a wooden bow and staff, with no deaths, so iron is a choice to arm up further, not a step the route needs.
 - **Iron costs extra trips.** One sweep of ring one's iron rocks is 12 ore, which is the winch's 12. The Bloomery takes 4 more, and a kit of a weapon, a full armour set and a pickaxe takes 7 bars, 14 ore. All eight iron items take 12 bars, 24 ore. That is two more sweeps past the archers and wolves, with ore carried home through ring one.
 - **The target measures the shortest way to the captain.** Putting an optional detour on the timed route would measure a player who chose to take longer.
 
