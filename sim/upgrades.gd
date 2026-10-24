@@ -59,7 +59,7 @@ const UPGRADES := {
 		},
 		"locked": "",
 	},
-	# Shortcuts home from deep in the rings. Travel never banks: the walk through the gate does.
+	# Shortcuts home from deep in the rings. Travel is not a return: the walk through the gate is.
 	"waystone": {
 		"label": "Waystones", "cost": {"iron_ore": 10, "bronze_bar": 6, "logs": 10},
 		"requires": ["ring_two_gate"], "effects": {"waystones": ["ring_one_waystone", "ring_two_waystone"]},

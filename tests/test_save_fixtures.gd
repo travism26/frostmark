@@ -52,7 +52,28 @@ func test_the_version_5_fixture_keeps_its_place_on_the_guide() -> void:
 	var sim := SimScript.new()
 	assert_true(sim.command(Vocab.IMPORT_SAVE, {"code": _fixture(5)})["ok"])
 	assert_true(sim.hints_on(), "the guide it was saved with is still on")
-	assert_eq(sim.hint(), "bank", "it cut a pine and is on its way home to bank")
+	assert_eq(sim.hint(), "bank", "it cut a pine and is on its way home")
+
+
+func test_a_save_made_mid_trip_keeps_its_pack_on_return() -> void:
+	var sim := SimScript.new()
+	assert_true(sim.command(Vocab.IMPORT_SAVE, {"code": _fixture(5)})["ok"])
+	assert_false(sim.in_outpost(), "it was saved out in the snow")
+	var pack: Array = sim.state["inventory"]["pack"].duplicate(true)
+	var stash: Array = sim.state["stash"]["slots"].duplicate(true)
+	assert_true(Inventory.count_of(pack, "logs") > 0, "carrying the logs it cut")
+	assert_true(sim.command(Vocab.CROSS_GATE)["ok"])
+	var returned: Array = []
+	for i in 200:
+		sim.step()
+		for e in sim.drain_events():
+			if e["kind"] == Vocab.EV_RETURNED:
+				returned.append(e)
+		if sim.in_outpost() and not sim.is_moving():
+			break
+	assert_eq(returned.size(), 1, "it walks home through the gate")
+	assert_eq(sim.state["inventory"]["pack"], pack, "the old rule does not bank it")
+	assert_eq(sim.state["stash"]["slots"], stash)
 
 
 func test_the_version_6_fixture_keeps_its_magic_and_shards() -> void:

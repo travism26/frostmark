@@ -286,7 +286,7 @@ static func heal(kind: String) -> int:
 	return int(ITEMS[kind].get("heal", 0))
 
 
-## Whether the item is kit, carried to use rather than to bank: gear (anything with an
+## Whether the item is kit, carried to use rather than to put away: gear (anything with an
 ## equipment slot), the ammo of any weapon, or cooked food (what a cooking recipe makes).
 ## Everything else, raw food included, is haul.
 static func is_kit(kind: String) -> bool:

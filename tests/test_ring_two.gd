@@ -61,7 +61,7 @@ func test_the_open_gate_is_walked_through_both_ways() -> void:
 	assert_eq(sim.state["player"]["region"], WorldDef.REGION_RING_TWO, "through to ring two")
 	assert_true(sim.player_pos().y > 62.0, "beyond the gate")
 	assert_false(sim.is_moving(), "and standing there")
-	assert_eq(H.pack_count(sim, "iron_ore"), 2, "the pack is not banked")
+	assert_eq(H.pack_count(sim, "iron_ore"), 2, "still in the pack, still at risk")
 	var reached := H.of_kind(into, Vocab.EV_RING_TWO_REACHED)
 	assert_eq(reached.size(), 1, "the first arrival is marked")
 	assert_eq(H.of_kind(into, Vocab.EV_SAVED)[-1]["reason"], "ring_two", "and is a save point")

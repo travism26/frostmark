@@ -59,7 +59,7 @@ func test_freezing_to_death_is_a_real_death() -> void:
 	assert_eq(died[0]["cause"], "cold")
 	assert_eq(sim.state["player"]["region"], WorldDef.REGION_OUTPOST)
 	assert_true(sim.near_fire(), "beside the fire")
-	assert_eq(H.of_kind(events, Vocab.EV_BANKED).size(), 0, "waking inside is not crossing the gate")
+	assert_eq(H.of_kind(events, Vocab.EV_RETURNED).size(), 0, "waking inside is not crossing the gate")
 	assert_eq(int(sim.state["health"]), Sim.HEALTH_MAX)
 	assert_eq(int(sim.state["warmth"]), Sim.WARMTH_MAX)
 
