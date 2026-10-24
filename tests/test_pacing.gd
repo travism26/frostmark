@@ -23,7 +23,7 @@ const SOUTH_TREES := ["tree_1", "tree_2", "tree_3", "tree_4", "tree_5", "tree_6"
 const NORTH_TREES := ["tree_7", "tree_8", "tree_9", "tree_10"]
 const COPPER := ["copper_4", "copper_5", "copper_6", "copper_7"]
 const TIN := ["tin_6", "tin_5", "tin_4", "tin_7"]
-const IRON := ["iron_1", "iron_2", "iron_3"]
+const IRON := ["iron_1", "iron_2", "iron_4", "iron_5"]
 const CRYSTALS := ["ice_crystal_2", "ice_crystal_1"]
 const COAL_EAST := ["coal_1", "coal_2", "coal_3", "coal_4"]
 const RICH_IRON := ["rich_iron_1", "rich_iron_2", "rich_iron_3"]
@@ -107,8 +107,10 @@ func _play_to_the_captain() -> int:
 	bot.home()
 	bot.note("first fights")
 	# 4. More ore, iron from ring one and the north pack's pelts, then the armoury, armour and
-	# the gate winch.
+	# the gate winch. The iron's south-west spot lies past the packs fought on the last trip,
+	# back by now, so the bot takes food.
 	bot.kit(["bronze_pickaxe"])
+	bot.withdraw("cooked_fish")
 	bot.head_out()
 	bot.gather(COPPER, "copper_ore", 9)
 	bot.gather(IRON, "iron_ore", 12)

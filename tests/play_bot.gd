@@ -145,14 +145,18 @@ func gather(ids: Array, item: String, want: int) -> void:
 			continue
 		var attackers: Array = []
 		while busy() and H.pack_count(sim, item) < want and attackers.is_empty():
-			attackers = _ring_two_threats(step())
+			attackers = _threats(step())
 		if not attackers.is_empty():
-			# In ring two, whatever attacks is fought (a bow for stalkers, a blade for trolls),
-			# then the bot rests at the brazier and goes back to work.
-			for id in attackers:
-				var kind: String = sim.state["enemies"][id]["kind"]
-				fight_with(RANGED if kind == "ruin_stalker" else MELEE, [id])
-			rest_at_the_brazier()
+			# Whatever notices the bot is fought. In ring two that is a bow for stalkers and a
+			# blade for trolls, then a rest at the brazier; nearer home, whatever it holds. Then it
+			# goes back to work.
+			if sim.state["player"]["region"] == WorldDef.REGION_RING_TWO:
+				for id in attackers:
+					var kind: String = sim.state["enemies"][id]["kind"]
+					fight_with(RANGED if kind == "ruin_stalker" else MELEE, [id])
+				rest_at_the_brazier()
+			else:
+				fight(attackers)
 			continue
 		if sim.is_gathering():
 			cmd(Vocab.MOVE_TO, {"pos": [sim.player_pos().x, sim.player_pos().y]})
@@ -172,10 +176,11 @@ func _wrong_weapon_for(id: String) -> bool:
 	return CombatTable.weapon(sim.player_weapon())["style"] != _style_for(id) and best_weapon(_style_for(id)) != ""
 
 
-## The enemies that noticed the player in these events, while in ring two.
-func _ring_two_threats(events: Array[Dictionary]) -> Array:
+## The enemies that noticed the player in these events, anywhere outside the walls: one that
+## noticed from ring one follows the player into the inner ring.
+func _threats(events: Array[Dictionary]) -> Array:
 	var out: Array = []
-	if sim.state["player"]["region"] != WorldDef.REGION_RING_TWO:
+	if sim.in_outpost():
 		return out
 	for e in H.of_kind(events, Vocab.EV_ENEMY_NOTICED):
 		out.append(e["enemy_id"])
