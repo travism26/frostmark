@@ -28,7 +28,7 @@ func test_lines_come_first_in_step_order_then_the_singles() -> void:
 	assert_eq(groups.size(), 3)
 	assert_eq(groups[0], {"title": "Stash line", "ids": ["stash_shelves", "stash_cellar", "stash_vault"]})
 	assert_eq(groups[1], {"title": "Smithing line", "ids": ["forge", "bloomery", "blast_furnace"]})
-	assert_eq(groups[2], {"title": UpgradeRowsScript.SINGLES, "ids": ["armoury", "ring_two_gate", "waystone"]})
+	assert_eq(groups[2], {"title": UpgradeRowsScript.SINGLES, "ids": ["armoury", "pack_frame", "ring_two_gate", "waystone"]})
 
 
 func test_every_upgrade_has_exactly_one_row() -> void:
@@ -74,6 +74,20 @@ func test_a_row_whose_cost_is_met_but_needs_an_upgrade_names_only_that() -> void
 	assert_true(v["lines"].has("Needs the Stash shelves first."))
 	for line in v["lines"]:
 		assert_true(not str(line).begins_with("Short of"), "nothing is short")
+
+
+func test_the_carry_effect_reads_kilograms_of_carry_limit() -> void:
+	assert_eq(UpgradeRowsScript.effect_text({"carry": 15}), "+15 kg carry limit")
+
+
+func test_the_pack_frame_row_shows_its_cost_and_the_armoury() -> void:
+	var sim := _sim_with_stash([{"item": "logs", "count": 10}, {"item": "wolf_pelt", "count": 1}])
+	var v := UpgradeRowsScript.view("pack_frame", sim.upgrade_status()["pack_frame"])
+	assert_eq(v["state"], UpgradeRowsScript.NOT_YET)
+	assert_eq(v["lines"][0], "+15 kg carry limit", "what it does first")
+	assert_true(v["lines"].has("Costs 10 Logs (10), 4 Wolf pelt (1) from the stash and your pack."), "its cost: %s" % [v["lines"]])
+	assert_true(v["lines"].has("Needs the Armoury first."), "its requirement")
+	assert_true(v["lines"].has("Short of 3 wolf pelt."))
 
 
 func test_a_built_row_says_built_with_the_checkmark() -> void:

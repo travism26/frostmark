@@ -73,7 +73,7 @@ Magic, farming and the other skills come in later slices. Shipping fewer skills 
 ### Outpost and tech tree
 
 - **Upgrades cost gathered resources,** so every outing pays into something lasting.
-- **Upgrades unlock stash size, crafting recipes, waystones, and the gate to the next ring.** It's one tree that drives progression, like a Civ-style tech tree, instead of free-placement building.
+- **Upgrades unlock stash size, carry limit, crafting recipes, waystones, and the gate to the next ring.** It's one tree that drives progression, like a Civ-style tech tree, instead of free-placement building.
 
 ### Death
 

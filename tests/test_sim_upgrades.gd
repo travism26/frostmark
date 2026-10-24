@@ -423,6 +423,81 @@ func test_the_bloomery_survives_death() -> void:
 	assert_eq(sim.smithing_cap(), ItemTable.TIER_IRON)
 
 
+## A character in the outpost with `upgrades` built, whose stash holds the Pack frame's logs
+## and whose pack holds its wolf pelts: the cost split between the two.
+func _in_the_outpost_for_the_pack_frame(upgrades: Array) -> Sim:
+	var cost: Dictionary = UpgradeTable.get_upgrade("pack_frame")["cost"]
+	var sim := _with_stash([{"item": "logs", "count": cost["logs"]}], upgrades)
+	H.set_pack(sim, [{"item": "wolf_pelt", "count": cost["wolf_pelt"]}])
+	sim.drain_events()
+	return sim
+
+
+## `sim`'s pack swapped for logs, a stack at a time, so it carries `kg` kilograms with what it
+## wears.
+func _carrying_logs(sim: Sim, kg: int) -> void:
+	H.set_pack(sim, [])
+	kg -= sim.carry_weight()
+	var load: Array = []
+	while kg > 0:
+		load.append({"item": "logs", "count": mini(kg, ItemTable.stack_size("logs"))})
+		kg -= ItemTable.stack_size("logs")
+	H.set_pack(sim, load)
+
+
+func test_the_pack_frame_is_built_after_the_armoury_from_the_stash_and_the_pack() -> void:
+	var u := UpgradeTable.get_upgrade("pack_frame")
+	assert_eq(u["label"], "Pack frame")
+	assert_eq(u["cost"], {"logs": 10, "wolf_pelt": 4})
+	assert_eq(u["requires"], ["armoury"])
+	assert_eq(u["effects"], {"carry": 15})
+	assert_eq(u["locked"], "")
+	var sim := _in_the_outpost_for_the_pack_frame(["stash_shelves", "forge"])
+	assert_eq(sim.command(Vocab.BUILD, {"upgrade": "pack_frame"})["reason"], Vocab.REASON_UPGRADE_MISSING)
+	assert_eq(sim.upgrade_status()["pack_frame"]["requires"], ["armoury"], "the Armoury is named")
+	H.run(sim, 1)
+	assert_false((sim.state["upgrades"] as Array).has("pack_frame"), "nothing was built")
+	assert_eq(H.pack_count(sim, "wolf_pelt"), 4, "nothing was paid")
+	sim = _in_the_outpost_for_the_pack_frame(["stash_shelves", "forge", "armoury"])
+	assert_eq(sim.upgrade_status()["pack_frame"]["status"], Vocab.UPGRADE_CAN_BUILD)
+	assert_true(sim.command(Vocab.BUILD, {"upgrade": "pack_frame"})["ok"])
+	var built := H.of_kind(H.run(sim, 1), Vocab.EV_BUILT)
+	assert_eq(built.size(), 1)
+	assert_eq(built[0]["upgrade"], "pack_frame")
+	assert_eq(H.stash_count(sim, "logs"), 0, "the logs left the stash")
+	assert_eq(H.pack_count(sim, "wolf_pelt"), 0, "the wolf pelts left the pack")
+
+
+func test_the_pack_frame_raises_the_carry_limit_to_60() -> void:
+	var sim := _in_the_outpost_for_the_pack_frame(["stash_shelves", "forge", "armoury"])
+	assert_eq(sim.carry_limit(), 45)
+	sim.command(Vocab.BUILD, {"upgrade": "pack_frame"})
+	H.run(sim, 1)
+	assert_eq(sim.carry_limit(), 60, "the next trip carries 15 kg more")
+	_carrying_logs(sim, 60)
+	assert_eq(sim.carry_weight(), 60)
+	assert_false(sim.is_overweight(), "60 kg is at the limit, not over it")
+	_carrying_logs(sim, 61)
+	assert_true(sim.is_overweight(), "61 kg is over")
+
+
+func test_the_pack_frame_survives_a_snapshot_and_restore() -> void:
+	var sim := _in_the_outpost_for_the_pack_frame(["stash_shelves", "forge", "armoury"])
+	sim.command(Vocab.BUILD, {"upgrade": "pack_frame"})
+	H.run(sim, 1)
+	var restored := SimScript.new()
+	restored.restore(sim.snapshot())
+	assert_eq(restored.carry_limit(), 60)
+	_carrying_logs(restored, 60)
+	assert_false(restored.is_overweight(), "60 kg is still within the limit after a restore")
+
+
+func test_nothing_requires_the_pack_frame() -> void:
+	for id in UpgradeTable.ids():
+		assert_false((UpgradeTable.get_upgrade(id)["requires"] as Array).has("pack_frame"), "%s does not need the Pack frame" % id)
+	assert_eq(UpgradeTable.get_upgrade("ring_two_gate")["requires"], ["armoury"], "the winch needs only the Armoury")
+
+
 func test_upgrades_survive_death() -> void:
 	var sim := _with_stash([{"item": "logs", "count": 10}])
 	sim.command(Vocab.BUILD, {"upgrade": "stash_shelves"})

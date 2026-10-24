@@ -123,6 +123,8 @@ static func effect_text(effects: Dictionary) -> String:
 	var parts: PackedStringArray = []
 	if effects.has("stash"):
 		parts.append("+%d stash slots" % effects["stash"])
+	if effects.has("carry"):
+		parts.append("+%d kg carry limit" % effects["carry"])
 	if effects.has("recipes"):
 		var names: PackedStringArray = []
 		for r in effects["recipes"]:
