@@ -7,11 +7,11 @@ A top-down extraction game: you leave a safe outpost, gather and fight in a froz
 ### Carrying
 
 **Pack**:
-The slots you carry items in on a trip. Its contents are at risk until you walk back through the outpost gate.
+The slots you carry items in. Its contents are safe inside the walls but at risk whenever you are outside them, including anything left in it from the last trip.
 _Avoid_: Bag, backpack, inventory (inventory is the pack plus worn equipment)
 
 **Stash**:
-The outpost's safe storage. Nothing in it is lost on death.
+The outpost's storage, and the only place an item is safe for good. Nothing in it is lost on death.
 _Avoid_: Bank, chest, storage
 
 **Carry weight**:
@@ -26,9 +26,17 @@ _Avoid_: Weight cap, max weight
 Carrying more than the carry limit. You walk slower but can still carry more; there is no hard cap.
 _Avoid_: Encumbered, overloaded
 
+**Kit**:
+What you carry to use rather than to bank: gear (anything you can equip), ammo, and cooked food.
+_Avoid_: Loadout, gear set
+
 **Haul**:
-What you gathered or looted on a trip, as opposed to the kit you set out with.
+Everything in the pack that is not kit: materials, raw food, and anything else you gathered or looted.
 _Avoid_: Loot (loot is what enemies drop)
+
+**Return**:
+Crossing the outpost gate inward. It makes you safe but moves nothing; depositing is a separate step at the stash.
+_Avoid_: Banking, extraction
 
 ### Outpost
 
