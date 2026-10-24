@@ -173,10 +173,13 @@ func _play() -> void:
 
 ## When the stash and pack hold fewer than `need` logs, a trip out to chop a stack more.
 func _logs_for(need: int) -> void:
-	while H.stash_count(sim, "logs") + H.pack_count(sim, "logs") < need:
+	var guard := 0
+	while H.stash_count(sim, "logs") + H.pack_count(sim, "logs") < need and guard < 20:
+		guard += 1
 		bot.head_out()
 		bot.gather(SOUTH_TREES + NORTH_TREES, "logs", H.pack_count(sim, "logs") + STACK)
 		bot.home()
+	assert_true(H.stash_count(sim, "logs") + H.pack_count(sim, "logs") >= need, "%d logs" % need)
 
 
 ## Until the stash holds `need` wolf pelts, trips into ring one with the sword, each clearing the

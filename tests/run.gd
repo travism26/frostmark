@@ -76,6 +76,8 @@ func _init() -> void:
 	var t0 := Time.get_ticks_msec()
 
 	for path in files:
+		# Named before it runs, so a run that hangs says which file it hung in.
+		print("RUN " + path.trim_prefix("res://"))
 		var script: Script = load(path)
 		if script == null:
 			failed += 1

@@ -35,9 +35,15 @@ Progress is saved in the browser at the gate, after every stash, workbench or up
 You need Godot 4.5.1 stable, plus its export templates if you want to export.
 
 ```sh
+tools/check.sh                       # the local gate: import, unit tests and a smoke run
+```
+
+It prints the Godot version, runs the import, the unit tests and a headless smoke run of the main scene, each under a time limit, and exits non-zero if any fails or logs a `SCRIPT ERROR`. The steps on their own:
+
+```sh
 godot --headless --import            # once, to build the .godot/ import cache
 godot --headless -s tests/run.gd     # unit tests; exits non-zero on any failure
-godot --headless --quit-after 30     # smoke run of the main scene
+godot --headless --quit-after 3600   # smoke run of the main scene
 ```
 
 To export the web build and play it in a browser:

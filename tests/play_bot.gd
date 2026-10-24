@@ -12,6 +12,8 @@ const Vocab := preload("res://sim/vocab.gd")
 const FOOD := ["cooked_char", "cooked_trout", "cooked_fish"]
 const MELEE := "melee"
 const RANGED := "ranged"
+## The longest a wait by a fire may take: from 1 health to full is 50 ticks there.
+const FIRE_TICKS := 600
 
 ## Commands a person gives by clicking in the world, and those given in a panel.
 const WORLD_COMMANDS := [Vocab.MOVE_TO, Vocab.INTERACT, Vocab.GATHER, Vocab.CROSS_GATE, Vocab.ATTACK]
@@ -83,6 +85,27 @@ func step(n := 1) -> Array[Dictionary]:
 	return events
 
 
+## Steps until `cond` holds, at most `max_ticks` ticks. Running out records a failed
+## assertion and returns false, so a wait that can never end fails the run instead of hanging it.
+func step_until(cond: Callable, max_ticks: int, what: String) -> bool:
+	for i in max_ticks:
+		if cond.call():
+			return true
+		step()
+	if cond.call():
+		return true
+	t.assert_true(false, "%s within %d ticks" % [what, max_ticks])
+	return false
+
+
+func _warm_and_mended() -> bool:
+	return int(sim.state["warmth"]) >= Sim.WARMTH_MAX and int(sim.state["health"]) >= Sim.HEALTH_MAX - 20
+
+
+func _healed() -> bool:
+	return int(sim.state["health"]) >= Sim.HEALTH_MAX
+
+
 func busy() -> bool:
 	return sim.is_moving() or sim.is_gathering() or sim.is_cooking() or sim.is_attacking()
 
@@ -123,8 +146,7 @@ func home(deposit := true) -> void:
 	if int(sim.state["warmth"]) < Sim.WARMTH_MAX or int(sim.state["health"]) < Sim.HEALTH_MAX - 20:
 		cmd(Vocab.INTERACT, {"object_id": "fire"})
 		run_idle(60)
-		while int(sim.state["warmth"]) < Sim.WARMTH_MAX or int(sim.state["health"]) < Sim.HEALTH_MAX - 20:
-			step()
+		step_until(_warm_and_mended, FIRE_TICKS, "warm and mended at the fire")
 
 
 ## Gathers from the first workable node in `ids` until the pack holds `want` of `item`. Waits
@@ -209,16 +231,14 @@ func to_ring_two() -> void:
 func warm_at(fire: String) -> void:
 	cmd(Vocab.INTERACT, {"object_id": fire})
 	run_idle(100)
-	while int(sim.state["warmth"]) < Sim.WARMTH_MAX or int(sim.state["health"]) < Sim.HEALTH_MAX - 20:
-		step()
+	step_until(_warm_and_mended, FIRE_TICKS, "warm and mended at the %s" % fire)
 
 
 ## Out to ring two with food, both weapons, arrows and the tools in `tools`, at full health.
 func ready_for_ring_two(tools: Array) -> void:
 	if int(sim.state["health"]) < Sim.HEALTH_MAX:
 		warm_at("fire")
-		while int(sim.state["health"]) < Sim.HEALTH_MAX:
-			step()
+		step_until(_healed, FIRE_TICKS, "healed at the fire")
 	kit(tools)
 	withdraw_food()
 	for style in [MELEE, RANGED]:
@@ -270,8 +290,7 @@ func fight_with(style: String, ids: Array) -> void:
 ## Back to the brazier past the ring-two gate to warm up and heal before the next fight.
 func rest_at_the_brazier() -> void:
 	warm_at("brazier")
-	while int(sim.state["health"]) < Sim.HEALTH_MAX:
-		step()
+	step_until(_healed, FIRE_TICKS, "healed at the brazier")
 
 
 ## Clicks Deposit haul at the stash when the pack holds any haul and the stash has room.

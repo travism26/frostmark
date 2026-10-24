@@ -24,6 +24,8 @@ jobs:
   build:
     name: Test and web export
     runs-on: ubuntu-24.04
+    # The whole job takes under a minute; a run past these limits has hung.
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
 
@@ -62,7 +64,15 @@ jobs:
         run: godot --headless --import
 
       - name: Unit tests
-        run: godot --headless -s tests/run.gd
+        timeout-minutes: 3
+        # A script error aborts its test method without failing the suite, so it fails the step here.
+        run: |
+          set -o pipefail
+          godot --headless -s tests/run.gd 2>&1 | tee "$RUNNER_TEMP/unit.log"
+          if grep -A1 'SCRIPT ERROR' "$RUNNER_TEMP/unit.log"; then
+            echo "::error::the unit suite logged a SCRIPT ERROR"
+            exit 1
+          fi
 
       - name: Smoke run of the main scene
         run: |

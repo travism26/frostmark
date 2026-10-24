@@ -1,5 +1,11 @@
 # Testing by hand
 
+## The local gate
+
+Before testing by hand, run `tools/check.sh`. It prints the Godot version, then runs the import, the unit suite and a headless smoke run of the main scene (`--quit-after 3600`), each under a `perl` alarm since macOS has no `timeout` (exit 142 means a step timed out). It exits non-zero if any step fails, if the unit suite logs a `SCRIPT ERROR` (which aborts a test method without failing it), or if the smoke run logs a `SCRIPT ERROR` or `ERROR:` line. The unit runner prints `RUN <file>` before each test file, so a hung run names the file it hung in.
+
+It does not export the web build: CI, on Godot 4.5.1, is the only web-export authority. For the browser check, download the PR's CI artifact (`gh run download <run> -n frostmark-web`) and serve it with `python3 -m http.server`.
+
 ## The test-mode code
 
 To check something deep in the rings without playing up to it, load the test-mode character. There are three ways, all giving the same save:
