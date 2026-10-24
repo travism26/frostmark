@@ -51,7 +51,7 @@ func test_the_combat_and_milestone_events_each_sound() -> void:
 		Vocab.EV_ENEMY_STANCE: AudioCues.CUE_MELEE,
 		Vocab.EV_ENEMY_DIED: AudioCues.FALL,
 		Vocab.EV_DIED: AudioCues.STING_DEATH,
-		Vocab.EV_BANKED: AudioCues.STING_BANK,
+		Vocab.EV_RETURNED: AudioCues.STING_BANK,
 		Vocab.EV_COOKED: AudioCues.COOK,
 		Vocab.EV_CRAFTED: AudioCues.SMITH,
 	}
@@ -131,7 +131,7 @@ func test_a_real_walk_out_and_chop_maps_only_to_known_cues() -> void:
 		for key in AudioCues.event_cues(e):
 			assert_true(known.has(key), "%s maps to known cue %s" % [e["kind"], key])
 			heard[key] = true
-	assert_true(heard.has(AudioCues.STING_BANK), "walking the logs home sounds the banking stinger")
+	assert_true(heard.has(AudioCues.STING_BANK), "walking the logs home sounds the return stinger")
 
 
 func test_settings_persist_volume_music_and_mute() -> void:

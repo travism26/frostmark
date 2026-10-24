@@ -41,7 +41,7 @@ func test_the_hint_path_advances_on_its_events_in_order() -> void:
 	var sim := SimScript.new()
 	# Walking is the first step.
 	var events := H.walk_to(sim, H.OUTSIDE)
-	assert_eq(_hints(events), ["chop"], "a walk finishes the walk step, and an empty pack banks nothing")
+	assert_eq(_hints(events), ["chop"], "a walk finishes the walk step")
 	assert_eq(sim.hint(), "chop")
 	# Cutting a pine is the second.
 	sim.command(Vocab.GATHER, {"object_id": "tree_3"})
@@ -51,17 +51,32 @@ func test_the_hint_path_advances_on_its_events_in_order() -> void:
 	# Walking the logs home through the gate is the third.
 	sim.command(Vocab.CROSS_GATE)
 	events = H.run_until_idle(sim, 100)
-	assert_eq(H.of_kind(events, Vocab.EV_BANKED).size(), 1)
+	assert_eq(H.of_kind(events, Vocab.EV_RETURNED).size(), 1)
 	assert_eq(_hints(events), ["craft"])
-	# Taking logs from the stash and crafting at the workbench is the last.
+	# Making a pickaxe at the workbench from the logs still in the pack is the last.
+	assert_true(H.pack_count(sim, "logs") >= 3, "the logs came home in the pack")
+	assert_eq(H.stash_count(sim, "logs"), 0, "and none went to the stash")
 	sim.command(Vocab.INTERACT, {"object_id": "workbench"})
 	H.run_until_idle(sim, 60)
-	H.set_pack(sim, [{"item": "logs", "count": 3}])
 	assert_true(sim.command(Vocab.SMITH, {"recipe": "wooden_pickaxe"})["ok"])
 	events = H.run(sim, 1)
 	assert_eq(_hints(events), [""], "the path is walked")
 	assert_eq(sim.hint(), "")
 	assert_true(sim.hints_on(), "tips stay on after the path")
+
+
+func test_an_empty_return_does_not_finish_the_return_step() -> void:
+	var sim := SimScript.new()
+	H.walk_to(sim, H.OUTSIDE)
+	sim.state["guide"]["step"] = 2
+	assert_eq(sim.hint(), "bank")
+	var events := H.walk_to(sim, [0.5, 6.5])
+	assert_eq(H.of_kind(events, Vocab.EV_RETURNED).size(), 1, "it is still a return")
+	assert_eq(_hints(events), [], "but with nothing carried it teaches nothing")
+	H.walk_to(sim, H.OUTSIDE)
+	H.set_pack(sim, [{"item": "logs", "count": 3}])
+	events = H.walk_to(sim, [0.5, 6.5])
+	assert_eq(_hints(events), ["craft"], "a return with logs does")
 
 
 func test_a_step_only_listens_for_its_own_event() -> void:

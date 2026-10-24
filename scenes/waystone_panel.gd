@@ -62,6 +62,6 @@ func show_sim(sim: Sim) -> void:
 		_travel.disabled = true
 	else:
 		var why := sim.travel_check(_stone)
-		_note.text = WHY_TEXT.get(why, "Takes you and your pack to the outpost gate. Walk through it to bank.")
+		_note.text = WHY_TEXT.get(why, "Takes you and your pack to the outpost gate. Walk through it to be home safe.")
 		_travel.disabled = why != ""
 	_panel.offset_top = _panel.offset_bottom - _panel.get_combined_minimum_size().y

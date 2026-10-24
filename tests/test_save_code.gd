@@ -6,20 +6,22 @@ const SimScript := preload("res://sim/sim.gd")
 const Vocab := preload("res://sim/vocab.gd")
 
 
-## A character with some history: logs banked, a woodcutting level, warmth spent.
+## A character with some history: logs stored, a woodcutting level, warmth spent.
 func _played() -> Sim:
 	var sim := SimScript.new()
 	sim.command(Vocab.GATHER, {"object_id": "tree_3"})
 	H.run_until_idle(sim, 300)
 	sim.command(Vocab.CROSS_GATE)
 	H.run_until_idle(sim, 60)
+	sim.command(Vocab.DEPOSIT_HAUL)
+	H.run(sim, 1)
 	sim.drain_events()
 	return sim
 
 
 func test_export_then_import_round_trips() -> void:
 	var a := _played()
-	assert_true(H.stash_count(a, "logs") > 0, "something was banked")
+	assert_true(H.stash_count(a, "logs") > 0, "something was stored")
 	var exported := a.command(Vocab.EXPORT_SAVE)
 	assert_true(exported["ok"])
 	var code: String = exported["code"]

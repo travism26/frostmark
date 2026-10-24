@@ -587,15 +587,15 @@ func _apply_events(events: Array[Dictionary]) -> void:
 				_segment = []
 				_place_character(sim.player_pos(), sim.player_facing(), 0.0)
 				_camera_rig.global_position = _character.global_position
-				_hud.banner("The waystone sets you down outside the outpost gate. Walk through it to bank your pack.")
+				_hud.banner("The waystone sets you down outside the outpost gate. Walk through it to be home safe.")
 			SimVocab.EV_RING_TWO_REACHED:
 				_hud.banner("Ring two. The snow lies over broken walls older than the outpost, and the tracks in it are not wolves'. An old brazier still burns past the gate.")
 			SimVocab.EV_ENEMY_STANCE:
 				_show_cue(e)
 			SimVocab.EV_LEVELLED:
 				_hud.banner("%s level %d!" % [str(e["skill"]).capitalize(), e["level"]])
-			SimVocab.EV_BANKED:
-				_hud.banner(_banked_text(e))
+			SimVocab.EV_RETURNED:
+				_hud.banner(_returned_text(e))
 			SimVocab.EV_CRAFTED:
 				_last_event = "Crafted: %s." % ItemTable.label(e["item"])
 				_hud.banner("Crafted a %s." % ItemTable.label(e["item"]).to_lower())
@@ -688,19 +688,12 @@ func _apply_events(events: Array[Dictionary]) -> void:
 	_refresh_status()
 
 
-## The banner for a `banked` event: what went in, what stayed for a full stash, and the
-## upgrades this bank made affordable.
-static func _banked_text(e: Dictionary) -> String:
-	var parts: PackedStringArray = []
-	for item in e["items"]:
-		parts.append("%d %s" % [item["count"], ItemTable.label(item["item"])])
-	var text := "Home safe. Banked %s." % ", ".join(parts) if not parts.is_empty() else "Home safe."
-	if not (e["overflow"] as Array).is_empty():
-		var left: PackedStringArray = []
-		for item in e["overflow"]:
-			left.append("%d %s" % [item["count"], ItemTable.label(item["item"])])
-		text += "\nStash full: %s stayed in your pack." % ", ".join(left)
-	# Only when this bank made something buildable, so it does not nag on every trip.
+## The banner for a `returned` event: home safe, what the pack holds, and the upgrades the
+## pack now pays for inside the walls.
+static func _returned_text(e: Dictionary) -> String:
+	var items: Array = e["items"]
+	var text := "Home safe. Carrying %s." % _item_list(items) if not items.is_empty() else "Home safe."
+	# Only when this return made something buildable, so it does not nag on every trip.
 	var newly: Array = e.get("newly_affordable", [])
 	if not newly.is_empty():
 		var names: PackedStringArray = []

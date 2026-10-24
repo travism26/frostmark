@@ -80,7 +80,7 @@ const SMITHING_TIER_CAP := ItemTable.TIER_BRONZE
 const RING_GATE_STEP := 3.0
 ## Waystone travel channels this many ticks (three seconds) standing by the stone; a blow taken
 ## in that time breaks it, so it is a way home, not a way out of a fight. It ends this far
-## outside the outpost gate, so the last step through the gate, which banks, is the player's.
+## outside the outpost gate, so the last step through the gate, the return, is the player's.
 const TRAVEL_TICKS := 6
 const TRAVEL_GATE_STEP := 2.5
 
@@ -563,7 +563,7 @@ func _step_movement() -> void:
 		player["region"] = region
 		# Walls leave the gate as the only way in, so walking into the outpost is crossing it.
 		if region == WorldDef.REGION_OUTPOST:
-			_bank()
+			_return()
 		elif region == WorldDef.REGION_RING_TWO and not (state["rings_reached"] as Array).has(region):
 			(state["rings_reached"] as Array).append(region)
 			_emit({"kind": SimVocab.EV_RING_TWO_REACHED, "object_id": _nearest_ring_gate(pos)})
@@ -614,40 +614,24 @@ func _action_for(object_id: String) -> String:
 	return SimVocab.ACTION_NONE
 
 
-# --- Banking --------------------------------------------------------------------------
+# --- The return -----------------------------------------------------------------------
 
-## Moves the whole pack into the stash. What does not fit stays in the pack and is
-## reported as overflow. `newly_affordable` lists, in table order, the upgrades that can be
-## built now and could not before this bank, from the stash alone as it was out there.
-## Always a save point, even with an empty pack.
-func _bank() -> void:
+## Crossing the gate inward: nothing moves. Inside the walls nothing can be lost, and the pack
+## rides out again as it is. `items` is the merged pack at the moment of return, empty for an
+## empty pack. `newly_affordable` lists, in table order, the upgrades that can be built now
+## from the stash and the pack and could not from the stash alone just before. Always a save
+## point, even with an empty pack.
+func _return() -> void:
 	var before := _buildable_now([state["stash"]["slots"]])
-	var pack: Array = state["inventory"]["pack"]
-	var stash: Array = state["stash"]["slots"]
-	var banked: Array = []
-	var overflow: Array = []
-	for i in pack.size():
-		var s: Variant = pack[i]
-		if s == null:
-			continue
-		var kind: String = s["item"]
-		var count := int(s["count"])
-		var left := Inventory.add(stash, kind, count)
-		if left < count:
-			banked.append({"item": kind, "count": count - left})
-		if left > 0:
-			overflow.append({"item": kind, "count": left})
-			s["count"] = left
-		else:
-			pack[i] = null
+	var carried: Array = []
+	for s in state["inventory"]["pack"]:
+		if s != null:
+			carried.append({"item": s["item"], "count": int(s["count"])})
 	var newly: Array[String] = []
 	for id in _buildable_now(_build_stores()):
 		if not before.has(id):
 			newly.append(id)
-	_emit({
-		"kind": SimVocab.EV_BANKED, "items": _merged(banked), "overflow": _merged(overflow),
-		"newly_affordable": newly,
-	})
+	_emit({"kind": SimVocab.EV_RETURNED, "items": _merged(carried), "newly_affordable": newly})
 	_save_due = "gate"
 
 
@@ -699,7 +683,7 @@ func _announce_ring_gates(before: Array[String]) -> void:
 ## The player reached an open ring gate: they walk straight through it to RING_GATE_STEP metres
 ## past its centre on the other side, either way. The gate itself always blocks the grid, so no
 ## route crosses it and no enemy follows; the walk through is the only way between the rings.
-## Nothing is banked: the haul is still at risk until the outpost gate.
+## Nothing is made safe: the haul is still at risk until the outpost gate.
 func _pass_ring_gate(object_id: String) -> void:
 	var gate: Dictionary = world.objects[object_id]
 	var outward := Vector2(gate["outward"][0], gate["outward"][1])
@@ -784,7 +768,7 @@ func _step_travel(activity: Dictionary) -> void:
 
 
 ## The channel is done: the player stands TRAVEL_GATE_STEP outside the outpost gate, facing it,
-## with the pack unbanked. Every enemy fighting them loses the trail and heads home. A save point.
+## with the pack still at risk. Every enemy fighting them loses the trail and heads home. A save point.
 func _travel(object_id: String) -> void:
 	var player: Dictionary = state["player"]
 	var from := player_pos()

@@ -193,57 +193,62 @@ func test_the_status_query_changes_nothing() -> void:
 	assert_eq(sim.upgrade_status()["stash_shelves"]["cost"][0]["have"], 8, "a fresh answer each time")
 
 
-## Walks `sim` out of the gate with `pack` and back in; the one `banked` event.
-func _bank(sim: Sim, pack: Array) -> Dictionary:
+## Walks `sim` out of the gate with `pack` and back in; the one `returned` event.
+func _return(sim: Sim, pack: Array) -> Dictionary:
 	H.walk_to(sim, H.OUTSIDE)
 	H.set_pack(sim, pack)
-	var banked := H.of_kind(H.walk_to(sim, [0.5, 6.5]), Vocab.EV_BANKED)
-	assert_eq(banked.size(), 1, "one banked event")
-	return banked[0] if not banked.is_empty() else {}
+	var returned := H.of_kind(H.walk_to(sim, [0.5, 6.5]), Vocab.EV_RETURNED)
+	assert_eq(returned.size(), 1, "one returned event")
+	return returned[0] if not returned.is_empty() else {}
 
 
-func test_a_bank_that_unlocks_one_upgrade_names_it() -> void:
+func test_a_return_that_unlocks_one_upgrade_names_it() -> void:
 	var sim := _with_stash([{"item": "logs", "count": 4}])
-	var banked := _bank(sim, [{"item": "logs", "count": 4}])
-	assert_eq(banked["newly_affordable"], ["stash_shelves"], "8 logs now pay for the shelves")
+	var returned := _return(sim, [{"item": "logs", "count": 4}])
+	assert_eq(returned["newly_affordable"], ["stash_shelves"], "4 stashed and 4 carried pay for the shelves")
+	assert_eq(H.stash_count(sim, "logs"), 4, "nothing moved to pay for it")
 
 
-func test_a_bank_that_unlocks_several_lists_them_in_table_order() -> void:
+func test_a_return_that_unlocks_several_lists_them_in_table_order() -> void:
 	var sim := _with_stash([])
-	var banked := _bank(sim, [
+	var returned := _return(sim, [
 		{"item": "logs", "count": 10}, {"item": "copper_ore", "count": 3}, {"item": "tin_ore", "count": 3},
 	])
-	assert_eq(banked["newly_affordable"], ["stash_shelves", "forge"])
+	assert_eq(returned["newly_affordable"], ["stash_shelves", "forge"])
 
 
-func test_a_bank_that_unlocks_nothing_has_an_empty_list() -> void:
+func test_an_upgrade_is_named_only_once_the_pack_pays_for_it() -> void:
 	var sim := _with_stash([])
-	assert_eq(_bank(sim, [{"item": "logs", "count": 3}])["newly_affordable"], [], "still short of the shelves")
-	assert_eq(_bank(sim, [])["newly_affordable"], [], "an empty pack changes nothing")
-	_bank(sim, [{"item": "logs", "count": 5}])
-	assert_eq(_bank(sim, [{"item": "logs", "count": 2}])["newly_affordable"], [], "the shelves were affordable already")
+	assert_eq(_return(sim, [{"item": "logs", "count": 3}])["newly_affordable"], [], "still short of the shelves")
+	assert_eq(_return(sim, [])["newly_affordable"], [], "an empty pack changes nothing")
+	assert_eq(_return(sim, [{"item": "logs", "count": 8}])["newly_affordable"], ["stash_shelves"], "8 carried logs do it")
+	assert_eq(_return(sim, [{"item": "logs", "count": 8}])["newly_affordable"], ["stash_shelves"],
+		"the stash alone still can't, so the pack makes it buildable again on the next return")
 
 
-func test_a_bank_whose_overflow_completes_a_cost_names_it() -> void:
+func test_a_return_names_nothing_the_stash_already_pays_for() -> void:
+	var sim := _with_stash([{"item": "logs", "count": 8}])
+	assert_eq(_return(sim, [{"item": "logs", "count": 2}])["newly_affordable"], [], "the shelves were affordable already")
+
+
+func test_a_full_stash_does_not_stop_the_pack_counting() -> void:
 	var slots: Array = []
 	for i in Sim.STASH_START_SLOTS:
 		slots.append({"item": "wooden_bow", "count": 1})
 	var sim := _with_stash(slots)
-	var banked := _bank(sim, [{"item": "logs", "count": 8}])
-	assert_eq(banked["items"], [], "the stash is full")
-	assert_eq(banked["overflow"], [{"item": "logs", "count": 8}])
-	assert_eq(banked["newly_affordable"], ["stash_shelves"], "the overflow inside the walls pays for the shelves")
+	var returned := _return(sim, [{"item": "logs", "count": 8}])
+	assert_eq(returned["newly_affordable"], ["stash_shelves"], "the pack inside the walls pays for the shelves")
 	assert_eq(sim.check(Vocab.BUILD, {"upgrade": "stash_shelves"}), "")
 
 
 func test_the_newly_affordable_list_skips_built_and_unmet_upgrades() -> void:
 	var sim := _with_stash([], ["forge"])
-	var banked := _bank(sim, [
+	var returned := _return(sim, [
 		{"item": "logs", "count": 10}, {"item": "copper_ore", "count": 3}, {"item": "tin_ore", "count": 3},
 		{"item": "bronze_bar", "count": 2},
 	])
-	assert_eq(banked["newly_affordable"], ["stash_shelves"],
-		"not the forge (built) nor the cellar (shelves unbuilt), though the stash covers both")
+	assert_eq(returned["newly_affordable"], ["stash_shelves"],
+		"not the forge (built) nor the cellar (shelves unbuilt), though the pack covers both")
 
 
 func test_building_needs_the_materials_and_the_outpost() -> void:

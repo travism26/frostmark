@@ -1,6 +1,6 @@
 # Frostmark
 
-A top-down extraction game: you leave a safe outpost, gather and fight in a frozen wilderness, and bank what you carry by walking back through the gate.
+A top-down extraction game: you leave a safe outpost, gather and fight in a frozen wilderness, and bring what you carry home safe by walking back through the gate.
 
 ## Language
 
@@ -27,7 +27,7 @@ Carrying more than the carry limit. You walk slower but can still carry more; th
 _Avoid_: Encumbered, overloaded
 
 **Kit**:
-What you carry to use rather than to bank: gear (anything you can equip), ammo, and cooked food.
+What you carry to use rather than to put away: gear (anything you can equip), ammo, and cooked food.
 _Avoid_: Loadout, gear set
 
 **Haul**:

@@ -1,6 +1,6 @@
 ## Waystones: the upgrade wakes them, a first visit attunes each one, and travel from an awake,
 ## attuned stone channels for a few ticks and leaves the player outside the outpost gate with the
-## pack unbanked. A blow taken while channelling breaks it.
+## pack still at risk. A blow taken while channelling breaks it.
 extends "res://tests/run.gd".TestCase
 
 const H := preload("res://tests/sim_helpers.gd")
@@ -96,7 +96,7 @@ func test_travel_needs_a_waystone_in_reach() -> void:
 	assert_eq(sim.travel_check("ring_one_waystone"), "", "the one at hand would go")
 
 
-func test_travel_channels_then_stands_outside_the_gate_without_banking() -> void:
+func test_travel_channels_then_stands_outside_the_gate_without_returning() -> void:
 	var sim := _by_stone("ring_one_waystone", BY_RING_ONE_STONE, WINCH + ["waystone"], ["ring_one_waystone"])
 	var stash_before: Array = sim.state["stash"]["slots"].duplicate(true)
 	var result := sim.command(Vocab.TRAVEL, {"object_id": "ring_one_waystone"})
@@ -116,17 +116,17 @@ func test_travel_channels_then_stands_outside_the_gate_without_banking() -> void
 	assert_true(sim.player_pos().distance_to(gate) < 4.0, "on the outpost's doorstep")
 	assert_true(sim.player_pos().y > gate.y, "on the outside of the gate")
 	assert_eq(H.where(events, Vocab.EV_REGION_CHANGED, "to", WorldDef.REGION_INNER_RING).size(), 1)
-	# Travel never banks: the pack is as it was and the stash untouched.
-	assert_eq(H.of_kind(events, Vocab.EV_BANKED).size(), 0)
+	# Travel is not a return: the pack is as it was and the stash untouched.
+	assert_eq(H.of_kind(events, Vocab.EV_RETURNED).size(), 0)
 	assert_eq(H.pack_count(sim, "iron_ore"), 4)
 	assert_eq(H.pack_count(sim, "logs"), 6)
 	assert_eq(sim.state["stash"]["slots"], stash_before)
 	assert_eq(H.where(events, Vocab.EV_SAVED, "reason", "waystone").size(), 1, "arriving is a save point")
-	# The last step through the gate is the player's, and that banks.
+	# The last step through the gate is the player's, and that is the return.
 	assert_true(sim.command(Vocab.CROSS_GATE)["ok"])
 	events = H.run_until_idle(sim, 20)
-	assert_eq(H.of_kind(events, Vocab.EV_BANKED).size(), 1)
-	assert_eq(H.stash_count(sim, "iron_ore"), 4)
+	assert_eq(H.of_kind(events, Vocab.EV_RETURNED).size(), 1)
+	assert_eq(H.pack_count(sim, "iron_ore"), 4, "home safe, still in the pack")
 
 
 func test_travel_from_ring_two_comes_home_too() -> void:

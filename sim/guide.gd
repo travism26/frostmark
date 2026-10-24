@@ -30,12 +30,12 @@ const STEPS: Array[Dictionary] = [
 	},
 	{
 		"id": "bank",
-		"text": "Walk back in through the gate. Crossing it banks your pack in the stash.",
-		"trigger": {"event": SimVocab.EV_BANKED, "nonempty": "items"},
+		"text": "Walk back in through the gate. Inside the walls nothing can be lost.",
+		"trigger": {"event": SimVocab.EV_RETURNED, "nonempty": "items"},
 	},
 	{
 		"id": "craft",
-		"text": "Click the stash and take three logs, then click the workbench and make a wooden pickaxe.",
+		"text": "Click the workbench and make a wooden pickaxe.",
 		"trigger": {"event": SimVocab.EV_CRAFTED},
 	},
 ]
@@ -50,7 +50,7 @@ const TIPS := {
 		"cooldown": 600,
 	},
 	"pack_full": {
-		"text": "Your pack is full. Walk back through the gate to bank it, or right-click an item to drop it.",
+		"text": "Your pack is full. Walk home and put the haul in the stash, or right-click an item to drop it.",
 		"triggers": [
 			{"event": SimVocab.EV_ACTIVITY_STOPPED, "match": {"reason": SimVocab.REASON_PACK_FULL}},
 			{"event": SimVocab.EV_COMMAND_REJECTED, "match": {"reason": SimVocab.REASON_PACK_FULL}},

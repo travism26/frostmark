@@ -14,7 +14,7 @@ const Vocab := preload("res://sim/vocab.gd")
 ## The bot must reach the captain inside this window (ticks are half a second).
 const MIN_TICKS := 1200   # 10 minutes: the route must not be trivial
 const MAX_TICKS := 2700   # 22.5 minutes of perfect clicking: about thirty for a person
-## Ring two, from the first step through its gate to a steel sword, armour and pickaxe banked.
+## Ring two, from the first step through its gate to a steel sword, armour and pickaxe made.
 ## The same reading as ring one's window: the bot's time scaled for a person's 30 to 45 minutes.
 const RING_TWO_MIN_TICKS := 1500   # 12.5 minutes: steel must be worked for
 const RING_TWO_MAX_TICKS := 4050   # 33.75 minutes of perfect clicking: about forty-five for a person
@@ -59,8 +59,8 @@ func _play_to_the_captain() -> int:
 	bot.smith("fishing_rod")
 	bot.build("stash_shelves")
 	bot.note("tools and shelves")
-	# 2. Ore, fish and more wood in the inner ring. The gate banks the whole pack, tools too,
-	# so every trip starts by taking them back out of the stash.
+	# 2. Ore, fish and more wood in the inner ring. Tools stay in the pack through the gate,
+	# so taking them is only for the first trip after they were made.
 	bot.kit(["wooden_pickaxe", "fishing_rod"])
 	bot.head_out()
 	bot.gather(NORTH_TREES, "logs", 10)
@@ -155,7 +155,7 @@ func test_ring_two_to_a_steel_kit_takes_an_evening() -> void:
 	var start := int(sim.state["tick"])
 	bot.log_lines = []
 	assert_eq(sim.state["player"]["region"], WorldDef.REGION_RING_TWO, "starts just through the gate")
-	# 6. Home first, to bank the captain's iron and clear out the gear it outgrew, then fish
+	# 6. Home first, to store the captain's iron and clear out the gear it outgrew, then fish
 	# and bronze bars for the furnace.
 	bot.home()
 	# The wooden bow goes only when the captain's iron gear was a better bow.
@@ -193,6 +193,12 @@ func test_ring_two_to_a_steel_kit_takes_an_evening() -> void:
 	bot.build("blast_furnace")
 	bot.note("the blast furnace")
 	# 8. The keep's trolls for the armour's hide, rich iron behind them, and coal for seven bars.
+	# The food left the stash with the last trips and none comes back through the gate, so
+	# fish and cook for the keep first.
+	bot.head_out()
+	bot.gather(["fishing_hole"], "raw_fish", 6)
+	bot.home(false)
+	bot.cook_all()
 	bot.ready_for_ring_two(["bronze_pickaxe"])
 	bot.fight_with(RANGED, ["stalker_2"])
 	bot.rest_at_the_brazier()
@@ -202,6 +208,9 @@ func test_ring_two_to_a_steel_kit_takes_an_evening() -> void:
 	bot.gather(COAL_EAST, "coal", 6)
 	bot.home()
 	bot.note("the keep, iron and coal")
+	# Kit stays in the pack through the gate, so the tools, spare armour and outgrown bronze no
+	# steel recipe uses go to the stash to make room for the smithing.
+	bot.put_away(["fishing_rod", "wooden_staff", "frost_shards", "bronze_body", "bronze_sword", "bronze_pickaxe"])
 	bot.withdraw("iron_ore")
 	bot.withdraw("coal")
 	bot.withdraw("troll_hide", 1)
