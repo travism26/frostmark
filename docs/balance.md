@@ -16,11 +16,12 @@ It prints the phase table below and fails when the estimate leaves 26 to 34 minu
 
 It plays sensibly but not perfectly, the way someone new to the game would:
 
-- It follows the guide: cut pines, walk the logs home through the gate, craft at the workbench.
+- It follows the guide: cut pines, walk the logs home through the gate, craft at the workbench from the logs in the pack.
 - It turns home when the cold tip shows (warmth 90), not at the last moment.
 - It gathers whole stacks of ten rather than the exact cost.
 - It makes a wooden helm, body and legs before its first fight, then drops them once the bronze set is on, because by then the stash is full.
 - It cooks every fish it catches, eats below half health, and takes its food, bow, arrows, staff and shards out before each trip into ring one.
+- It clicks Deposit haul at the stash on each return and before each outing, so its kit stays in the pack from trip to trip.
 - It gathers for each upgrade from the cost the Upgrades tab shows, so a repriced upgrade changes the route instead of breaking it, and builds the Stash cellar when the stash runs out of room.
 - It uses all eight skills: woodcutting, mining, fishing, cooking, smithing, melee (bronze sword), ranged (the starting bow) and magic (a wooden staff).
 
@@ -45,7 +46,7 @@ The simulation only counts what the character does: walking, gathering, cooking,
 | What | Allowance | Why |
 |------|-----------|-----|
 | A click in the world (a node, an enemy, a door, a fire) | 2 s | Spotting the next target after the last one runs out, turning the camera, aiming the click |
-| A click in a panel (withdraw, deposit, smith, build, equip, eat, cook, drop) | 3 s | Opening the stash or workbench, finding the item in the grid, reading its tooltip |
+| A click in a panel (withdraw, deposit, Deposit haul, smith, build, equip, eat, cook, drop) | 3 s | Opening the stash or workbench, finding the item in the grid, reading its tooltip |
 | An outing | 20 s | Deciding where to go and what to bring, and watching the cold on the way |
 | A recipe smithed or an upgrade built for the first time | 15 s | Reading its cost and what it unlocks |
 
@@ -172,3 +173,28 @@ So the measured run and `tests/test_pacing.gd` don't change: 12:58 of sim time a
 ## The guarded mine in ring one
 
 [#113](https://github.com/travism26/frostmark/issues/113) put a mine of three copper and three tin rocks against ring one's west cliff, north of the watch post, and moved `witch_2` from the north-west flank to its mouth, within earshot of every side of every rock. A visit there is 12 copper and 12 tin ore, but only after the witch. The run takes none of it: it mines its bronze in the inner ring before its first fight, and none of its ring-one trips passes the mine or the witch, so the measured run is unchanged at 28:48 and `tests/test_pacing.gd` still reaches the fallen captain at tick 1715. No number was retuned.
+
+## Re-measured: home safe without banking
+
+[#107](https://github.com/travism26/frostmark/issues/107) stopped the gate banking the pack. The bot now clicks Deposit haul on each return and before each outing instead of taking its kit back out of the stash, and crafts its first pickaxe and rod from the logs it carried home, as the guide's craft step now says. The route is otherwise the same:
+
+| Phase | Sim time | World clicks | Panel clicks | Outings | Firsts | Allowance | Estimate |
+|-------|----------|--------------|--------------|---------|--------|-----------|----------|
+| first tools | 0:36 | 8 | 2 | 1 | 2 | 1:12 | 1:48 |
+| inner ring | 4:12 | 24 | 7 | 2 | 2 | 2:19 | 6:31 |
+| bronze and a wooden set | 0:55 | 8 | 25 | 1 | 8 | 3:51 | 4:46 |
+| first fights | 1:12 | 16 | 12 | 1 | 0 | 1:28 | 2:40 |
+| iron, armour and the winch | 6:09 | 51 | 33 | 4 | 6 | 6:11 | 12:20 |
+| to the captain | 0:15 | 2 | 1 | 1 | 0 | 0:27 | 0:42 |
+| captain fight | 0:29 | 3 | 7 | 0 | 0 | 0:27 | 0:56 |
+| **to the captain** | **13:18** | | | | | **15:28** | **28:46** |
+
+The estimate is two seconds shorter, 28:46 instead of 28:48, and the run still dies no times and beats the captain. Panel clicks moved the most. The withdrawals of tools, armour and arrows before each outing are gone: 3 to 2 for the first tools, 40 to 33 for the iron phase, and 5 to 1 on the road to the captain. The Deposit haul clicks add 2 each to the bronze phase and the first fights. Sim time rose 20 seconds, almost all in the iron phase (5:48 to 6:09). The fewer clicks shift every later tick, so the run meets ring one's enemies at other moments and waits on regrowth at other moments. Nothing in the rules was retuned. With half the allowance it is 21:02, with half as much again 36:30.
+
+`tests/test_pacing.gd` reaches the fallen captain at tick 1664 (13.9 minutes), down from 1715, and its ring-two half takes 1751 ticks, up from 1715, both inside their windows. The ring-two half needed three changes, because kit no longer leaves the pack at the gate and the shifted timing gives the captain a different drop (two iron swords rather than an iron sword and iron legs):
+
+- It heals to full at the outpost fire before each trip into ring two, rather than heading out at 80 health.
+- It fishes and cooks once more before the keep. The food it carried out on the earlier trips was eaten, and none waits in the stash.
+- Before smithing steel it puts the fishing rod, staff, shards and the bronze it outgrew in the stash, to free pack slots.
+
+Without these it died once or twice in ring two.

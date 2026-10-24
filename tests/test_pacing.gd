@@ -193,6 +193,12 @@ func test_ring_two_to_a_steel_kit_takes_an_evening() -> void:
 	bot.build("blast_furnace")
 	bot.note("the blast furnace")
 	# 8. The keep's trolls for the armour's hide, rich iron behind them, and coal for seven bars.
+	# The food left the stash with the last trips and none comes back through the gate, so
+	# fish and cook for the keep first.
+	bot.head_out()
+	bot.gather(["fishing_hole"], "raw_fish", 6)
+	bot.home(false)
+	bot.cook_all()
 	bot.ready_for_ring_two(["bronze_pickaxe"])
 	bot.fight_with(RANGED, ["stalker_2"])
 	bot.rest_at_the_brazier()
@@ -202,9 +208,9 @@ func test_ring_two_to_a_steel_kit_takes_an_evening() -> void:
 	bot.gather(COAL_EAST, "coal", 6)
 	bot.home()
 	bot.note("the keep, iron and coal")
-	# Kit stays in the pack through the gate, so the tools and spare armour no steel recipe
-	# uses go to the stash to make room for the smithing.
-	bot.put_away(["fishing_rod", "wooden_staff", "frost_shards", "bronze_body"])
+	# Kit stays in the pack through the gate, so the tools, spare armour and outgrown bronze no
+	# steel recipe uses go to the stash to make room for the smithing.
+	bot.put_away(["fishing_rod", "wooden_staff", "frost_shards", "bronze_body", "bronze_sword", "bronze_pickaxe"])
 	bot.withdraw("iron_ore")
 	bot.withdraw("coal")
 	bot.withdraw("troll_hide", 1)
