@@ -44,6 +44,12 @@ const SLOT_PX := 56
 const BADGE_PX := 36
 const BANNER_SECONDS := 3.0
 const BANNER_MAX_WIDTH := 580.0
+## The weight line warns this many kilograms before the carry limit.
+const WEIGHT_WARN_KG := 5
+const TONE_DIM := "dim"
+const TONE_AMBER := "amber"
+const TONE_RED := "red"
+const WEIGHT_TONE_COLOURS := {TONE_DIM: UiTheme.TEXT_DIM, TONE_AMBER: UiTheme.EMBER, TONE_RED: UiTheme.BLOOD}
 
 var sim: Sim
 var _panel := PANEL_NONE
@@ -249,10 +255,9 @@ func _refresh_pack() -> void:
 			var kind: String = pack[i]["item"]
 			var verb := _pack_verb(kind)
 			_pack_buttons[i].set_tip(func() -> Control: return UiTooltip.item(kind, verb))
-	_weight_label.text = "Carrying %d / %d kg%s" % [
-		sim.carry_weight(), sim.carry_limit(), "  (slowed)" if sim.is_overweight() else "",
-	]
-	_weight_label.add_theme_color_override("font_color", UiTheme.BLOOD if sim.is_overweight() else UiTheme.TEXT_DIM)
+	var line := _weight_line(sim.carry_weight(), sim.carry_limit())
+	_weight_label.text = line["text"]
+	_weight_label.add_theme_color_override("font_color", WEIGHT_TONE_COLOURS[line["tone"]])
 	_refresh_style()
 
 
@@ -464,6 +469,20 @@ func _add_upgrade_row(id: String) -> void:
 	box.add_child(text)
 	_upgrade_list.add_child(frame)
 	_upgrade_rows[id] = {"title": title, "text": text, "button": build, "style": style, "state": UpgradeRows.NOT_YET}
+
+
+## The pack page's weight line: amber once within WEIGHT_WARN_KG of the carry limit, so the
+## slowdown shows coming, and red with "(slowed)" once overweight.
+static func _weight_line(weight: int, limit: int) -> Dictionary:
+	var tone := TONE_DIM
+	if weight > limit:
+		tone = TONE_RED
+	elif weight >= limit - WEIGHT_WARN_KG:
+		tone = TONE_AMBER
+	return {
+		"text": "Carrying %d / %d kg%s" % [weight, limit, "  (slowed)" if weight > limit else ""],
+		"tone": tone,
+	}
 
 
 ## What a refusal means, for a disabled button's tooltip.
