@@ -30,6 +30,12 @@ const UPGRADES := {
 		"label": "Armoury", "cost": {"logs": 6, "bronze_bar": 2, "wolf_pelt": 3}, "requires": ["forge"],
 		"effects": {"recipes": ["bronze_helm", "bronze_body", "bronze_legs"]}, "locked": "",
 	},
+	# Optional: a frame to lash a heavier load to, so every trip out carries more. Nothing
+	# else needs it.
+	"pack_frame": {
+		"label": "Pack frame", "cost": {"logs": 10, "wolf_pelt": 4}, "requires": ["armoury"],
+		"effects": {"carry": 15}, "locked": "",
+	},
 	# Optional: it lifts the smithing cap from bronze to iron, and nothing else needs it.
 	"bloomery": {
 		"label": "Bloomery", "cost": {"logs": 8, "bronze_bar": 2, "iron_ore": 4}, "requires": ["armoury"],

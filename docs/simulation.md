@@ -233,6 +233,7 @@ How these numbers were measured against the brief's thirty minutes to the captai
 | Forge | 6 logs, 3 copper ore, 3 tin ore | none | Unlocks bronze bars, arrows, bronze tools and weapons |
 | Stash cellar | 10 logs, 2 bronze bars | Stash shelves | +4 stash slots |
 | Armoury | 6 logs, 2 bronze bars, 3 wolf pelts | Forge | Unlocks the bronze helm, body and legs |
+| Pack frame | 10 logs, 4 wolf pelts | Armoury | +15 kg carry limit, to 60 kg. Optional: nothing else needs it |
 | Bloomery | 8 logs, 2 bronze bars, 4 iron ore | Armoury | Unlocks iron bars and lifts the smithing cap to iron. Optional: nothing else needs it |
 | Ring-two gate winch | 12 logs, 12 iron ore, 3 bronze bars, 5 wolf pelts | Armoury | Readies the gate to ring two; it opens once the captain has fallen |
 | Blast furnace | 12 logs, 4 bronze bars, 6 coal, 2 troll hides | Ring-two gate winch | Unlocks steel bars, tools, weapons and armour, and lifts the smithing cap to steel |

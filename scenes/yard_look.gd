@@ -22,6 +22,8 @@ const SPOTS := {
 	"south_gate": {"at": [-5.0, 6.9], "turn": PI},
 	# The smithy: the north band, east of the workbench; its back is the north wall.
 	"smithy": {"at": [0.9, -7.4], "turn": 0.0},
+	# The pack frame: the east wall's free stretch north of the planks and firewood.
+	"east_wall_north": {"at": [8.6, -5.3], "turn": -PI * 0.5},
 }
 
 ## The hand-made meshes a part can name (WorldDressing builds them), beside the kit models.
@@ -77,6 +79,20 @@ const LOOKS := {
 			{"model": Props.SURVIVAL + "box.glb", "height": 0.45, "snow_from": 0.8, "at": [1.15, 0.0], "y": 0.0, "turn": 0.2},
 		],
 	},
+	# A timber rack against the wall hung with a trip's kit: rolled bedrolls on its bottom
+	# board, an axe and a pickaxe on the next, crates on top. Loads lashed and ready to go.
+	"pack_frame": {
+		"line": "pack_frame", "step": 1, "spot": "east_wall_north", "offset": [0.0, 0.0], "size": [2.0, 0.65],
+		"parts": [
+			{"mesh": "shelf_rack", "size": [1.9, 1.3, 0.6], "at": [0.0, 0.0], "y": 0.0, "turn": 0.0},
+			{"model": Props.SURVIVAL + "bedroll.glb", "height": 0.22, "snow_from": 1.1, "at": [-0.45, 0.0], "y": 0.16, "turn": 0.0},
+			{"model": Props.SURVIVAL + "bedroll.glb", "height": 0.22, "snow_from": 1.1, "at": [0.4, 0.02], "y": 0.16, "turn": 0.1},
+			{"model": Props.SURVIVAL + "tool-axe.glb", "height": 0.4, "snow_from": 1.1, "at": [-0.4, 0.0], "y": 0.65, "turn": 0.0},
+			{"model": Props.SURVIVAL + "tool-pickaxe.glb", "height": 0.4, "snow_from": 1.1, "at": [0.35, 0.0], "y": 0.65, "turn": 0.0},
+			{"model": Props.SURVIVAL + "box.glb", "height": 0.36, "snow_from": 1.1, "at": [-0.4, 0.02], "y": 1.15, "turn": 0.15},
+			{"model": Props.SURVIVAL + "box.glb", "height": 0.3, "snow_from": 1.1, "at": [0.45, -0.02], "y": 1.15, "turn": -0.2},
+		],
+	},
 	# A winch frame with an iron-banded drum and its chain run out to an anchor stone, to one
 	# side of the gate path. Low, so it never hides the character from the camera.
 	"ring_two_gate": {
@@ -125,6 +141,7 @@ const MATERIALS := {
 	"forge": STONE,
 	"stash_cellar": TIMBER,
 	"armoury": IRON,
+	"pack_frame": TIMBER,
 	"bloomery": STONE,
 	"ring_two_gate": TIMBER,
 	"blast_furnace": STONE,
