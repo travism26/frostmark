@@ -175,7 +175,7 @@ const ENEMIES := {
 		"respawn_ticks": 300,
 	},
 }
-## The rare drop in both rings: one piece of iron gear. Iron is found, never smithed.
+## The rare drop in both rings: one piece of iron gear, ahead of smithing it at the Bloomery.
 const RARE_LOOT: Array[String] = [
 	"iron_sword", "iron_helm", "iron_body", "iron_legs", "iron_bow", "iron_axe", "iron_pickaxe", "iron_staff",
 ]

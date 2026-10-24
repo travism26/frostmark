@@ -39,7 +39,11 @@ const UPGRADES := {
 	# Optional: it lifts the smithing cap from bronze to iron, and nothing else needs it.
 	"bloomery": {
 		"label": "Bloomery", "cost": {"logs": 8, "bronze_bar": 2, "iron_ore": 4}, "requires": ["armoury"],
-		"effects": {"recipes": ["iron_bar"], "smithing_tier": ItemTable.TIER_IRON}, "locked": "",
+		"effects": {
+			"recipes": ["iron_bar", "iron_axe", "iron_pickaxe", "iron_sword", "iron_bow", "iron_staff", "iron_helm", "iron_body", "iron_legs"],
+			"smithing_tier": ItemTable.TIER_IRON,
+		},
+		"locked": "",
 	},
 	"ring_two_gate": {
 		"label": "Ring-two gate winch", "cost": {"logs": 12, "iron_ore": 12, "bronze_bar": 3, "wolf_pelt": 5},

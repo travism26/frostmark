@@ -97,6 +97,39 @@ const RECIPES := {
 		"label": "Iron bar", "inputs": {"iron_ore": 2}, "output": {"item": "iron_bar", "count": 1},
 		"skill": SkillTable.SMITHING, "level": 3, "upgrade": "bloomery", "xp": 18, "tier": ItemTable.TIER_IRON,
 	},
+	# Iron gear takes the bronze shapes, iron bars for bronze bars, a smithing level above.
+	"iron_axe": {
+		"label": "Iron axe", "inputs": {"iron_bar": 1, "logs": 2}, "output": {"item": "iron_axe", "count": 1},
+		"skill": SkillTable.SMITHING, "level": 3, "upgrade": "bloomery", "xp": 22, "tier": ItemTable.TIER_IRON,
+	},
+	"iron_pickaxe": {
+		"label": "Iron pickaxe", "inputs": {"iron_bar": 1, "logs": 2}, "output": {"item": "iron_pickaxe", "count": 1},
+		"skill": SkillTable.SMITHING, "level": 3, "upgrade": "bloomery", "xp": 22, "tier": ItemTable.TIER_IRON,
+	},
+	"iron_sword": {
+		"label": "Iron sword", "inputs": {"iron_bar": 2, "logs": 1}, "output": {"item": "iron_sword", "count": 1},
+		"skill": SkillTable.SMITHING, "level": 4, "upgrade": "bloomery", "xp": 36, "tier": ItemTable.TIER_IRON,
+	},
+	"iron_bow": {
+		"label": "Iron bow", "inputs": {"iron_bar": 2, "logs": 3}, "output": {"item": "iron_bow", "count": 1},
+		"skill": SkillTable.SMITHING, "level": 4, "upgrade": "bloomery", "xp": 36, "tier": ItemTable.TIER_IRON,
+	},
+	"iron_staff": {
+		"label": "Iron staff", "inputs": {"iron_bar": 2, "logs": 2, "ice_crystal": 1}, "output": {"item": "iron_staff", "count": 1},
+		"skill": SkillTable.SMITHING, "level": 4, "upgrade": "bloomery", "xp": 36, "tier": ItemTable.TIER_IRON,
+	},
+	"iron_helm": {
+		"label": "Iron helm", "inputs": {"iron_bar": 1}, "output": {"item": "iron_helm", "count": 1},
+		"skill": SkillTable.SMITHING, "level": 4, "upgrade": "bloomery", "xp": 15, "tier": ItemTable.TIER_IRON,
+	},
+	"iron_body": {
+		"label": "Iron body", "inputs": {"iron_bar": 2}, "output": {"item": "iron_body", "count": 1},
+		"skill": SkillTable.SMITHING, "level": 4, "upgrade": "bloomery", "xp": 30, "tier": ItemTable.TIER_IRON,
+	},
+	"iron_legs": {
+		"label": "Iron legs", "inputs": {"iron_bar": 1}, "output": {"item": "iron_legs", "count": 1},
+		"skill": SkillTable.SMITHING, "level": 4, "upgrade": "bloomery", "xp": 15, "tier": ItemTable.TIER_IRON,
+	},
 	# Steel: iron ore from both rings and coal from ring two, once the blast furnace is built.
 	"steel_bar": {
 		"label": "Steel bar", "inputs": {"iron_ore": 1, "coal": 2}, "output": {"item": "steel_bar", "count": 1},

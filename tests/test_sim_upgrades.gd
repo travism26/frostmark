@@ -5,6 +5,7 @@ extends "res://tests/run.gd".TestCase
 const H := preload("res://tests/sim_helpers.gd")
 const SimScript := preload("res://sim/sim.gd")
 const Vocab := preload("res://sim/vocab.gd")
+const WorldDefScript := preload("res://sim/world_def.gd")
 
 
 ## A new character in the outpost whose stash holds `entries` and who has built `upgrades`.
@@ -545,10 +546,11 @@ func test_higher_tiers_are_stronger_and_worth_more() -> void:
 
 
 ## The single armour each tier had before #38: its defence, weight, value and recipe inputs.
+## Iron armour had no recipe then; its set now takes the bronze set's four bars, in iron.
 const SINGLE_ARMOUR := {
 	"wooden": {"defence": 1, "weight": 4, "value": 16, "inputs": {"logs": 8}},
 	"bronze": {"defence": 2, "weight": 5, "value": 50, "inputs": {"bronze_bar": 4}},
-	"iron": {"defence": 3, "weight": 6, "value": 90, "inputs": {}},
+	"iron": {"defence": 3, "weight": 6, "value": 90, "inputs": {"iron_bar": 4}},
 	"steel": {"defence": 4, "weight": 7, "value": 180, "inputs": {"steel_bar": 3, "troll_hide": 1}},
 }
 
@@ -604,12 +606,72 @@ func test_defence_is_the_sum_of_the_worn_pieces() -> void:
 	assert_eq(sim.combatant(Vocab.PLAYER)["defence"], 4, "and a steel body's 2")
 
 
-func test_iron_is_only_found() -> void:
+# --- Iron gear ---------------------------------------------------------------------------
+
+## The eight iron gear recipes as the ticket gives them (#117): inputs and smithing level.
+const IRON_GEAR := {
+	"iron_axe": [{"iron_bar": 1, "logs": 2}, 3], "iron_pickaxe": [{"iron_bar": 1, "logs": 2}, 3],
+	"iron_sword": [{"iron_bar": 2, "logs": 1}, 4], "iron_bow": [{"iron_bar": 2, "logs": 3}, 4],
+	"iron_staff": [{"iron_bar": 2, "logs": 2, "ice_crystal": 1}, 4],
+	"iron_helm": [{"iron_bar": 1}, 4], "iron_body": [{"iron_bar": 2}, 4], "iron_legs": [{"iron_bar": 1}, 4],
+}
+
+
+## A character at the workbench with `upgrades` built, at smithing `level`, carrying `recipe`'s inputs.
+func _at_workbench_with_inputs(upgrades: Array, level: int, recipe: String) -> Sim:
+	var sim := _with_stash([], upgrades)
+	var snap := sim.snapshot()
+	snap["skills"][SkillTable.SMITHING] = {"xp": SkillTable.xp_for_level(level), "level": level}
+	sim.restore(snap)
+	sim.command(Vocab.INTERACT, {"object_id": "workbench"})
+	H.run_until_idle(sim, 60)
+	var pack: Array = []
+	var inputs: Dictionary = RecipeTable.get_recipe(recipe)["inputs"]
+	for kind in inputs:
+		pack.append({"item": kind, "count": inputs[kind]})
+	H.set_pack(sim, pack)
+	sim.drain_events()
+	return sim
+
+
+func test_every_iron_item_is_smithed_after_the_bloomery() -> void:
+	for id in IRON_GEAR:
+		var r := RecipeTable.get_recipe(id)
+		assert_eq(r["inputs"], IRON_GEAR[id][0], "%s's inputs" % id)
+		assert_eq(int(r["level"]), IRON_GEAR[id][1], "%s's smithing level" % id)
+		assert_eq(r["output"], {"item": id, "count": 1})
+		var sim := _at_workbench_with_inputs(["forge", "armoury"], IRON_GEAR[id][1], id)
+		assert_eq(sim.check(Vocab.SMITH, {"recipe": id}), Vocab.REASON_UPGRADE_MISSING, "%s needs the Bloomery" % id)
+		H.patch(sim, {"upgrades": ["forge", "armoury", "bloomery"]})
+		assert_true(sim.command(Vocab.SMITH, {"recipe": id})["ok"], "%s is smithed after the Bloomery" % id)
+		H.run(sim, 1)
+		assert_eq(H.pack_count(sim, id), 1, "one %s made" % id)
+		for kind in r["inputs"]:
+			assert_eq(H.pack_count(sim, kind), 0, "%s took its %s" % [id, kind])
+
+
+func test_the_blast_furnace_alone_smiths_steel_but_no_iron_gear() -> void:
+	var built := ["forge", "armoury", "ring_two_gate", "blast_furnace"]
+	for id in RecipeTable.ids():
+		var tier: String = RecipeTable.get_recipe(id)["tier"]
+		if tier == ItemTable.TIER_IRON:
+			var sim := _at_workbench_with_inputs(built, 5, id)
+			assert_eq(sim.check(Vocab.SMITH, {"recipe": id}), Vocab.REASON_UPGRADE_MISSING, "%s still needs the Bloomery" % id)
+		elif tier == ItemTable.TIER_STEEL:
+			var sim := _at_workbench_with_inputs(built, 5, id)
+			assert_eq(sim.check(Vocab.SMITH, {"recipe": id}), "", "%s passes" % id)
+
+
+func test_an_iron_weapon_at_smithing_3_is_too_low() -> void:
+	var sim := _at_workbench_with_inputs(["forge", "armoury", "bloomery"], 3, "iron_sword")
+	assert_eq(sim.check(Vocab.SMITH, {"recipe": "iron_sword"}), Vocab.REASON_LEVEL_TOO_LOW, "an iron sword needs smithing 4")
+
+
+func test_iron_is_made_at_the_bloomery_and_still_drops() -> void:
 	var made := {}
 	for id in RecipeTable.ids():
 		var r := RecipeTable.get_recipe(id)
-		if ItemTable.tier_rank(r["tier"]) <= ItemTable.tier_rank(Sim.SMITHING_TIER_CAP):
-			made[r["output"]["item"]] = true
+		made[r["output"]["item"]] = r["upgrade"]
 	var found := {}
 	for kind in CombatTable.RARE_LOOT:
 		found[kind] = true
@@ -617,5 +679,56 @@ func test_iron_is_only_found() -> void:
 		found[kind] = true
 	for kind in ItemTable.ITEMS:
 		if ItemTable.tier(kind) == ItemTable.TIER_IRON:
-			assert_false(made.has(kind), "%s cannot be smithed" % kind)
+			assert_eq(made.get(kind, ""), "bloomery", "%s is smithed at the Bloomery" % kind)
 			assert_true(found.has(kind), "%s drops in ring one" % kind)
+
+
+func test_iron_recipes_mirror_bronze_and_sit_between_bronze_and_steel() -> void:
+	for id in IRON_GEAR:
+		var iron := RecipeTable.get_recipe(id)
+		var bronze := RecipeTable.get_recipe(id.replace("iron_", "bronze_"))
+		var steel := RecipeTable.get_recipe(id.replace("iron_", "steel_"))
+		assert_eq(iron["upgrade"], "bloomery", "%s names the Bloomery" % id)
+		assert_eq(iron["tier"], ItemTable.TIER_IRON)
+		var shape := {}
+		for kind in bronze["inputs"]:
+			shape[kind.replace("bronze_bar", "iron_bar")] = bronze["inputs"][kind]
+		assert_eq(iron["inputs"], shape, "%s takes the bronze shape with iron bars" % id)
+		assert_true(int(iron["level"]) > int(bronze["level"]) and int(iron["level"]) < int(steel["level"]), "%s's level sits between bronze and steel" % id)
+		assert_true(int(iron["xp"]) > int(bronze["xp"]) and int(iron["xp"]) < int(steel["xp"]), "%s's experience sits between bronze and steel" % id)
+
+
+## Adds to `into` every raw item `kind` comes from: a smithed item's inputs, followed down.
+func _raw_kinds(kind: String, into: Dictionary) -> void:
+	for id in RecipeTable.ids():
+		var r := RecipeTable.get_recipe(id)
+		if r["output"]["item"] == kind:
+			for input in r["inputs"]:
+				_raw_kinds(input, into)
+			return
+	into[kind] = true
+
+
+func test_the_bloomery_and_a_full_iron_kit_are_paid_for_from_ring_one() -> void:
+	var w := WorldDefScript.outpost()
+	var near_side := [WorldDef.REGION_INNER_RING, WorldDef.REGION_RING_ONE]
+	var on_hand := {}
+	for id in w.node_ids():
+		if w.region_at(w.object_center(id)) in near_side:
+			on_hand[WorldDef.NODE_KINDS[w.objects[id]["kind"]]["item"]] = true
+	for id in w.enemies:
+		var home: Array = w.enemies[id]["home"]
+		if w.region_at(Vector2(home[0], home[1])) in near_side:
+			for drop in CombatTable.enemy(w.enemies[id]["kind"])["loot"]:
+				on_hand[drop["item"]] = true
+	var needed := {}
+	var upgrades := ["bloomery"]
+	while not upgrades.is_empty():
+		var u := UpgradeTable.get_upgrade(upgrades.pop_back())
+		for kind in u["cost"]:
+			_raw_kinds(kind, needed)
+		upgrades.append_array(u["requires"])
+	for id in IRON_GEAR:
+		_raw_kinds(id, needed)
+	for kind in needed:
+		assert_true(on_hand.has(kind), "%s comes from ring one" % kind)

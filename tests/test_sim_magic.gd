@@ -261,8 +261,9 @@ func test_the_workbench_refines_crystals_into_shards_and_makes_staffs() -> void:
 	assert_eq(H.pack_count(sim, "bronze_staff"), 1)
 
 
-func test_the_iron_staff_is_only_found() -> void:
+func test_the_iron_staff_is_smithed_at_the_bloomery_and_still_drops() -> void:
 	assert_true(CombatTable.RARE_LOOT.has("iron_staff"), "a rare drop in ring one")
 	assert_true((CombatTable.ENEMIES["bandit_captain"]["boss_loot"] as Array).has("iron_staff"), "the captain may carry one")
-	for id in RecipeTable.ids():
-		assert_true(RecipeTable.get_recipe(id)["output"]["item"] != "iron_staff", "no recipe makes it")
+	var recipe := RecipeTable.get_recipe("iron_staff")
+	assert_eq(recipe["upgrade"], "bloomery", "the Bloomery makes it")
+	assert_eq(recipe["inputs"], {"iron_bar": 2, "logs": 2, "ice_crystal": 1}, "from bars, logs and an ice crystal")
