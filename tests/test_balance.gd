@@ -60,12 +60,11 @@ func _play() -> void:
 	bot = PlayBot.new(self)
 	sim = bot.sim
 	bot.turn_back_warmth = GuideTable.COLD_WARMTH
-	# 1. The guide's path: cut pines, walk the logs home, craft at the workbench.
+	# 1. The guide's path: cut pines, walk the logs home, craft at the workbench from the pack.
 	bot.phase("first tools")
 	bot.head_out()
 	bot.gather(SOUTH_TREES, "logs", STACK)
-	bot.home()
-	bot.withdraw("logs")
+	bot.home(false)
 	bot.smith("wooden_pickaxe")
 	bot.smith("fishing_rod")
 	# 2. The inner ring: ore, fish, crystals and wood, until the shelves and the forge are up.
@@ -145,7 +144,7 @@ func _play() -> void:
 	bot.withdraw("tin_ore")
 	for i in mini(H.pack_count(sim, "copper_ore"), H.pack_count(sim, "tin_ore")):
 		bot.smith("bronze_bar")
-	# Twelve stash slots are cramped by now, and the bank banner offers the cellar.
+	# Twelve stash slots are cramped by now, and the return banner offers the cellar.
 	bot.build("stash_cellar")
 	bot.build("armoury")
 	for piece in ["bronze_helm", "bronze_body", "bronze_legs"]:

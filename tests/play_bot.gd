@@ -15,7 +15,7 @@ const RANGED := "ranged"
 
 ## Commands a person gives by clicking in the world, and those given in a panel.
 const WORLD_COMMANDS := [Vocab.MOVE_TO, Vocab.INTERACT, Vocab.GATHER, Vocab.CROSS_GATE, Vocab.ATTACK]
-const PANEL_COMMANDS := [Vocab.WITHDRAW, Vocab.DEPOSIT, Vocab.SMITH, Vocab.BUILD, Vocab.EQUIP, Vocab.EAT, Vocab.COOK, Vocab.DROP]
+const PANEL_COMMANDS := [Vocab.WITHDRAW, Vocab.DEPOSIT, Vocab.DEPOSIT_HAUL, Vocab.SMITH, Vocab.BUILD, Vocab.EQUIP, Vocab.EAT, Vocab.COOK, Vocab.DROP]
 
 var sim: Sim
 var _case: WeakRef  # the TestCase whose assertions the moves record (weak: it holds the bot)
@@ -96,17 +96,20 @@ func run_idle(max_ticks: int) -> Array[Dictionary]:
 	return events
 
 
+## Puts the haul away first (Deposit haul; kit stays in the pack), so it does not ride out.
 func head_out() -> void:
 	if sim.in_outpost():
+		deposit_haul()
 		cmd(Vocab.CROSS_GATE)
 		run_idle(60)
 		if not _phase.is_empty():
 			_phase["outings"] += 1
 
 
-## Back through the gate (banking), then warm and healed at the fire. From ring two that is
-## back through its gate first.
-func home() -> void:
+## Back through the gate, home safe, haul deposited at the stash unless `deposit` is false
+## (kit stays in the pack), then warm and healed at the fire. From ring two that is back
+## through its gate first.
+func home(deposit := true) -> void:
 	if sim.state["player"]["region"] == WorldDef.REGION_RING_TWO:
 		if int(sim.state["health"]) < 60:
 			rest_at_the_brazier()
@@ -115,6 +118,8 @@ func home() -> void:
 		cmd(Vocab.CROSS_GATE)
 		run_idle(200)
 		t.assert_true(sim.in_outpost(), "home")
+		if deposit:
+			deposit_haul()
 	if int(sim.state["warmth"]) < Sim.WARMTH_MAX or int(sim.state["health"]) < Sim.HEALTH_MAX - 20:
 		cmd(Vocab.INTERACT, {"object_id": "fire"})
 		run_idle(60)
@@ -208,8 +213,12 @@ func warm_at(fire: String) -> void:
 		step()
 
 
-## Out to ring two with food, both weapons, arrows and the tools in `tools`.
+## Out to ring two with food, both weapons, arrows and the tools in `tools`, at full health.
 func ready_for_ring_two(tools: Array) -> void:
+	if int(sim.state["health"]) < Sim.HEALTH_MAX:
+		warm_at("fire")
+		while int(sim.state["health"]) < Sim.HEALTH_MAX:
+			step()
 	kit(tools)
 	withdraw_food()
 	for style in [MELEE, RANGED]:
@@ -265,6 +274,14 @@ func rest_at_the_brazier() -> void:
 		step()
 
 
+## Clicks Deposit haul at the stash when the pack holds any haul and the stash has room.
+func deposit_haul() -> void:
+	if sim.check(Vocab.DEPOSIT_HAUL, {}) != "":
+		return
+	t.assert_true(cmd(Vocab.DEPOSIT_HAUL)["ok"], "deposit haul")
+	step()
+
+
 ## Takes the stash's cooked food, up to ten of each kind.
 func withdraw_food() -> void:
 	for kind in FOOD:
@@ -295,6 +312,16 @@ func withdraw(kind: String, count := -1) -> void:
 			step()
 			left -= n
 	t.assert_true(H.pack_count(sim, kind) >= count, "withdrew %d %s" % [count, kind])
+
+
+## Deposits everything of each kind in `kinds` from the pack: kit the next trips do not need.
+func put_away(kinds: Array) -> void:
+	for kind in kinds:
+		var pack: Array = sim.state["inventory"]["pack"]
+		for i in pack.size():
+			if pack[i] != null and pack[i]["item"] == kind:
+				t.assert_true(cmd(Vocab.DEPOSIT, {"index": i, "count": int(pack[i]["count"])})["ok"], "deposit %s" % kind)
+				step()
 
 
 ## Takes everything of each kind in `kinds` out of the stash and drops it, to free the slots.
