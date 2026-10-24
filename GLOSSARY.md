@@ -38,6 +38,20 @@ _Avoid_: Loot (loot is what enemies drop)
 Crossing the outpost gate inward. It makes you safe but moves nothing; depositing is a separate step at the stash.
 _Avoid_: Banking, extraction
 
+### The world
+
+**Node**:
+One thing you gather from: a tree, a rock, a fishing hole. It runs out after a few gathers and regrows.
+_Avoid_: Resource, vein
+
+**Spot**:
+A small group of nodes at one place, usually two: two rocks, or two fishing holes.
+_Avoid_: Cluster, patch
+
+**Mine**:
+A fixed place where many rocks (about six) of one or two kinds stand together, often guarded. Its rocks yield no more than anywhere else; there are just more of them.
+_Avoid_: Hotspot, quarry, mining area
+
 ### Outpost
 
 **Outpost upgrade**:
