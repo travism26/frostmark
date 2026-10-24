@@ -27,6 +27,16 @@ The snowfield is painted by ring: the ring look's `snow_tone` holds out to each 
 
 Every landmark's foot is reachable by click-to-move (`tests/test_dressing.gd` routes to each), and every one stands where paths rarely run.
 
+## The mine
+
+Ring one's copper and tin mine, against the west cliff north of the watch post, is dressed to read as a mine from a distance ([#114](https://github.com/travism26/frostmark/issues/114)). Its pieces are in the dressing table's mines (`RingDressing.MINES`), each with the ground it covers:
+
+- **A rock face** on the cliff behind the rocks: slabs of the ring's stone rising above the ice, streaked with copper and tin veins, with a timber-framed adit at its foot, boarded up. The cliff-top pines leave room for it.
+- **Ore-streaked boulders** north and east of the rocks: bigger than any rock a pickaxe works, with veins but no glints, so none passes for a node.
+- **Spoil heaps** either side of the frost witch who guards the mine, crushed rock with ore chips and only a dusting of snow, a pickaxe left in one.
+
+Like the rest of the dressing, none of it blocks. Every piece stands clear of every rock, off the ground where you stand to mine one, and off the watch post's ground. The scatter pass keeps its rocks, drifts and bushes off each piece's ground as it does a landmark's (`tests/test_dressing.gd`).
+
 ## The yard: upgrades you can see
 
 What the outpost has built stands in its yard, specified in [#47](https://github.com/travism26/frostmark/issues/47). The yard-look table (`scenes/yard_look.gd`) declares each upgrade's look as data by its id: its upgrade line and step, the spot it builds in, and the kit models and hand-made meshes it is assembled from. A pure function maps the list of built upgrades to the pieces to draw; WorldDressing builds them and GameRoot redraws them whenever the list changes, so a loaded save shows its yard with nothing extra saved. An unbuilt upgrade draws nothing. Like the rest of the dressing, a piece has no collision.

@@ -87,6 +87,27 @@ const LAKES := {
 	WorldDef.REGION_RING_TWO: [{"at": [-46.0, 95.0], "radius": 13.0}],
 }
 
+## The mines, per ring: the ore kinds whose veins streak the pieces, and the pieces that make
+## the rocks read as a mine from a distance. Each piece has a `kind`, the ground it covers
+## (`at` [x, z] and `half` [x, z] extents, which the scatter pass keeps clear like a
+## landmark's) and a `turn`. Ring one's mine stands against the west cliff north of the watch
+## post: a rock face with a boarded-up adit on the cliff behind the rocks, ore-streaked
+## boulders north and east of them and spoil heaps either side of witch 2. Every piece stands
+## clear of every rock, so a rock is never hidden and the walk in stays open.
+const MINES := {
+	WorldDef.REGION_RING_ONE: {
+		"ores": [WorldDef.KIND_COPPER_ROCK, WorldDef.KIND_TIN_ROCK],
+		"pieces": [
+			{"kind": "mine_face", "at": [-62.15, -32.5], "half": [1.8, 6.0], "turn": 0.0},
+			{"kind": "ore_boulder", "at": [-57.5, -38.6], "half": [1.3, 1.3], "turn": 0.4},
+			{"kind": "ore_boulder", "at": [-52.5, -38.0], "half": [1.0, 1.0], "turn": 1.7},
+			{"kind": "ore_boulder", "at": [-47.5, -35.0], "half": [1.1, 1.1], "turn": 2.9},
+			{"kind": "spoil_heap", "at": [-48.4, -31.0], "half": [1.2, 1.0], "turn": 0.3},
+			{"kind": "spoil_heap", "at": [-58.7, -25.5], "half": [1.2, 1.0], "turn": 1.2},
+		],
+	},
+}
+
 ## The enemy kinds whose homes get a camp, and what kind of camp.
 const CAMP_KINDS := {"wolf": "wolf_den", "bandit_archer": "bandit_camp"}
 
@@ -99,6 +120,24 @@ static func rings() -> Array[String]:
 ## The landmark at `ring`/`direction`.
 static func landmark(ring: String, direction: String) -> Dictionary:
 	return LANDMARKS[ring][direction]
+
+
+## Every mine piece in every ring, each with its ring's ores beside it as `ores`.
+static func mine_pieces() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for ring in MINES:
+		for piece in MINES[ring]["pieces"]:
+			var p: Dictionary = piece.duplicate()
+			p["ores"] = MINES[ring]["ores"]
+			out.append(p)
+	return out
+
+
+## The ground a mine piece covers, as [min, max] corners.
+static func piece_ground(piece: Dictionary) -> Array[Vector2]:
+	var at := Vector2(piece["at"][0], piece["at"][1])
+	var half := Vector2(piece["half"][0], piece["half"][1])
+	return [at - half, at + half]
 
 
 ## How many of a scatter entry the ring gets at the look's density.

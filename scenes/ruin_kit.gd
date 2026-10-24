@@ -3,7 +3,8 @@
 ## top) so the pieces sit together whichever ring they stand in. Broken walls, a collapsed
 ## tower base, a fallen arch, pillars, cairns, standing stones carved or rough, a snapped
 ## caravan wagon, a frozen campfire ring; and the landmarks the player steers by: a split
-## rock, a fallen giant pine, a frozen waterfall, a dead giant, an ice spire, a watch post.
+## rock, a fallen giant pine, a frozen waterfall, a dead giant, an ice spire, a watch post;
+## and a mine's dressing: ore-streaked boulders, spoil heaps and a rock face with an adit.
 ##
 ## Presentation only. Every piece is an ArrayMesh standing on the ground at y = 0 (or at
 ## `base_y` for a solid's look, which GameRoot centres on its footprint), seeded from where
@@ -491,6 +492,111 @@ static func watch_post(height: float, centre: Vector2) -> ArrayMesh:
 		_oriented_box(st, foot + ladder * Vector3(side, 1.6, 0), ladder, Vector3(0.07, 3.2, 0.07), TIMBER_DARK, SNOW)
 	for i in 6:
 		_oriented_box(st, foot + ladder * Vector3(0, 0.4 + i * 0.5, 0), ladder, Vector3(0.6, 0.06, 0.06), TIMBER, SNOW)
+	return MeshKit.finish(st)
+
+
+# --- The mine ----------------------------------------------------------------------------
+
+## Crushed rock tipped out of a mine, an earthy grey against the snowfield.
+const SPOIL := Color(0.50, 0.45, 0.40)
+## The dark of a mine's mouth.
+const ADIT := Color(0.07, 0.07, 0.08)
+
+
+## A boulder `radius` round at its foot, with veins of ore streaking its faces, one colour per ore in
+## `veins`, and snow on its crown. Bigger than any rock a pickaxe works, and never glinting,
+## so it dresses a mine without passing for a node.
+static func ore_boulder(radius: float, centre: Vector2, stone: Color, veins: Array) -> ArrayMesh:
+	var rng := MeshKit.rng(centre)
+	var st := MeshKit.begin()
+	var dark := stone.darkened(0.3)
+	var turn := rng.randf() * TAU
+	var lean := Vector2(rng.randf_range(-0.08, 0.08), rng.randf_range(-0.08, 0.08))
+	var body := radius * 1.1
+	MeshKit.prism(st, Vector3.ZERO, 7, radius, radius * 0.75, -0.2, body, turn, dark, stone, stone, lean)
+	var crown := Vector3(lean.x * (body + 0.2), body, lean.y * (body + 0.2))
+	MeshKit.prism(st, crown, 7, radius * 0.75, radius * 0.3, 0.0, radius * 0.5, turn, stone, stone, SNOW, lean * 0.6)
+	# Veins cut diagonally across the faces, a band of each ore in turn.
+	for face in 7:
+		var a := turn + (face + 0.5) * TAU / 7.0
+		var out := Vector3(cos(a), 0.0, sin(a))
+		for k in rng.randi_range(1, 2):
+			var y := body * rng.randf_range(0.25, 0.8)
+			var r := lerpf(radius, radius * 0.75, (y + 0.2) / (body + 0.2)) * cos(PI / 7.0)
+			var at := Vector3(lean.x * (y + 0.2), y, lean.y * (y + 0.2)) + out * (r + 0.015)
+			var vein: Color = veins[(face + k) % veins.size()]
+			MeshKit.block(st, at, Vector3(0.04, 0.09, radius * rng.randf_range(0.5, 0.8)), -a, rng.randf_range(-0.6, 0.6), vein, vein)
+	return MeshKit.finish(st)
+
+
+## A spoil heap covering `half` (x, z extents): a low mound of crushed rock with a smaller
+## one tipped against it, chips of stone and ore over both and only a dusting of snow, since
+## the miners keep tipping fresh spoil on it.
+static func spoil_heap(half: Vector2, centre: Vector2, stone: Color, veins: Array) -> ArrayMesh:
+	var rng := MeshKit.rng(centre)
+	var st := MeshKit.begin()
+	var r := minf(half.x, half.y)
+	var dusted := SPOIL.lerp(SNOW, 0.45)
+	var mounds := [[Vector3((half.x - r) * 0.5, 0, 0), r, r * 0.8], [Vector3(-(half.x - r * 0.6), 0, r * 0.2), r * 0.6, r * 0.5]]
+	for m in mounds:
+		var at: Vector3 = m[0]
+		var mr: float = m[1]
+		var h: float = m[2]
+		MeshKit.prism(st, at, 8, mr, mr * 0.55, -0.05, h * 0.6, rng.randf() * TAU, SPOIL.darkened(0.15), SPOIL, SPOIL)
+		MeshKit.prism(st, at + Vector3(0, h * 0.6, 0), 8, mr * 0.55, mr * 0.15, 0.0, h * 0.4, rng.randf() * TAU, SPOIL, dusted, dusted)
+	for i in 12:
+		var a := rng.randf() * TAU
+		var d := r * rng.randf_range(0.5, 1.0)
+		var chip: Color = veins[i % veins.size()] if i % 3 == 0 else stone * rng.randf_range(0.8, 1.0)
+		chip.a = 1.0
+		MeshKit.block(st, Vector3(cos(a) * d * (half.x / r), 0.06, sin(a) * d), Vector3(0.2, 0.14, 0.17) * rng.randf_range(0.7, 1.3), rng.randf() * TAU, rng.randf_range(-0.4, 0.4), chip, chip)
+	return MeshKit.finish(st)
+
+
+## A rock face covering `half` (x, z extents) on a cliff, facing +x: slabs of rock rising
+## above the ice, highest in the middle, streaked with `veins` of ore, and in the middle at
+## its foot a timber-framed adit, boarded up. Nothing stands past the ground it covers.
+static func mine_face(half: Vector2, height: float, centre: Vector2, stone: Color, veins: Array) -> ArrayMesh:
+	var rng := MeshKit.rng(centre)
+	var st := MeshKit.begin()
+	var front := half.x - 0.45  # the face; the adit's frame stands before it
+	var slabs := maxi(int(half.y * 2.0 / 1.5), 3)
+	var width := half.y * 2.0 / slabs
+	for i in slabs:
+		var z := -half.y + (i + 0.5) * width
+		var fall := 1.0 - 0.55 * pow(absf(z) / half.y, 2.0)
+		var h := height * fall * rng.randf_range(0.85, 1.0)
+		var depth := rng.randf_range(1.4, 2.0)
+		var back := rng.randf_range(0.0, 0.35)
+		var shade := stone * rng.randf_range(0.85, 1.05)
+		shade.a = 1.0
+		if absf(z) < 1.1:
+			# Over the adit only the upper rock, held up by the lintel.
+			MeshKit.block(st, Vector3(front - back - depth * 0.5, 2.3 + (h - 2.3) * 0.5, z), Vector3(depth, h - 2.3, width * 0.92), rng.randf_range(-0.05, 0.05), 0.0, shade, SNOW)
+		else:
+			MeshKit.block(st, Vector3(front - back - depth * 0.5, h * 0.5, z), Vector3(depth, h, width * 0.92), rng.randf_range(-0.05, 0.05), 0.0, shade, SNOW)
+		# A second, set-back tier so the top steps up into the cliff like a mountainside.
+		var upper := h * rng.randf_range(0.2, 0.35)
+		MeshKit.box(st, Vector3(-half.x + 0.75, h + upper * 0.5 - 0.3, z + rng.randf_range(-0.1, 0.1)), Vector3(1.4, upper + 0.3, width * 0.8), shade, SNOW)
+		# Veins slanting down the face.
+		for k in 2:
+			var vein: Color = veins[(i + k) % veins.size()]
+			var y := rng.randf_range(0.6, h - 0.5)
+			if absf(z) < 1.1 and y < 2.5:
+				continue
+			MeshKit.block(st, Vector3(front - back + 0.015, y, z + rng.randf_range(-0.1, 0.1)), Vector3(0.04, 0.12, width * 0.6), 0.0, rng.randf_range(-0.7, 0.7), vein, vein)
+	# The adit: a dark mouth in the rock, its timber frame, and boards nailed across it.
+	MeshKit.box(st, Vector3(front - 0.6, 1.1, 0), Vector3(1.2, 2.2, 2.2), ADIT, ADIT)
+	for side in [-1.0, 1.0]:
+		MeshKit.log_post(st, Vector3(front + 0.2, 0, side * 0.95), -0.1, 2.25, 0.12, 0.0, Vector2.ZERO, TIMBER_DARK, TIMBER_DARK)
+	_oriented_box(st, Vector3(front + 0.2, 2.35, 0), Basis(), Vector3(0.26, 0.24, 2.4), TIMBER_DARK, SNOW)
+	for i in 3:
+		var tilt: float = [0.25, -0.18, 0.1][i]
+		_oriented_box(st, Vector3(front + 0.12, 0.5 + i * 0.6, 0), Basis(Vector3.RIGHT, tilt), Vector3(0.05, 0.2, 1.95), TIMBER, TIMBER)
+	# Fallen rock at the foot of the face, either side of the adit.
+	for i in 6:
+		var z := rng.randf_range(1.4, half.y - 0.5) * (1.0 if i % 2 == 0 else -1.0)
+		MeshKit.block(st, Vector3(front + rng.randf_range(-0.2, 0.1), 0.15, z), Vector3(0.45, 0.3, 0.4), rng.randf() * TAU, rng.randf_range(-0.3, 0.3), stone * 0.9, SNOW)
 	return MeshKit.finish(st)
 
 

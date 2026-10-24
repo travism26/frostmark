@@ -299,12 +299,14 @@ const WIND_ANGLE := 0.55
 ## Dead wood and the pennants' cloth, before the ring tint.
 const COLOR_DEAD_WOOD := Color(0.40, 0.34, 0.32)
 const COLOR_PENNANT := Color(0.78, 0.30, 0.22)
+## A mine's rock face rises this high, over the cliff it stands on.
+const MINE_FACE_HEIGHT := 7.5
 
-## One scatter pass over every ring, then the camps, the landmarks, the lakes and the yard:
-## each ring's clutter comes from RingDressing.SCATTER at the ring look's density, in the
-## ring look's colours, so a later ring, dungeon or region dresses itself by adding a table
-## entry. One multimesh per model surface, nothing clickable, seeded so every session sees the
-## same frontier.
+## One scatter pass over every ring, then the camps, the landmarks, the mines, the lakes and
+## the yard: each ring's clutter comes from RingDressing.SCATTER at the ring look's density,
+## in the ring look's colours, so a later ring, dungeon or region dresses itself by adding a
+## table entry. One multimesh per model surface, nothing clickable, seeded so every session
+## sees the same frontier.
 static func dressing(world: WorldDef) -> Node3D:
 	var root := Node3D.new()
 	root.name = "Dressing"
@@ -316,6 +318,7 @@ static func dressing(world: WorldDef) -> Node3D:
 		root.add_child(node)
 	root.add_child(_camps(world, placer))
 	root.add_child(_landmarks(world))
+	root.add_child(mines(world))
 	root.add_child(_lakes_and_rims(world))
 	root.add_child(yard_props())
 	return root
@@ -465,6 +468,47 @@ static func _landmarks(world: WorldDef) -> Node3D:
 			node.rotation.y = mark["turn"]
 			root.add_child(node)
 	return root
+
+
+## Every mine's dressing, from RingDressing.MINES, with a pickaxe left in the first spoil heap.
+static func mines(world: WorldDef) -> Node3D:
+	var root := Node3D.new()
+	root.name = "Mines"
+	var heaps := 0
+	for piece in RingDressing.mine_pieces():
+		var node := Node3D.new()
+		node.position = Vector3(piece["at"][0], 0.0, piece["at"][1])
+		node.rotation.y = piece["turn"]
+		_add_mesh(node, mine_mesh(world, piece))
+		if piece["kind"] == "spoil_heap":
+			if heaps == 0:
+				var pick := Props.model(Props.SURVIVAL + "tool-pickaxe.glb", 0.9, 0.6)
+				pick.position = Vector3(0.2, 0.3, 0.1)
+				pick.rotation.z = 0.5
+				node.add_child(pick)
+			heaps += 1
+		root.add_child(node)
+	return root
+
+
+## The mesh of one mine piece, standing at the origin before its turn, in the ring look's
+## stone with veins of the mine's ores.
+static func mine_mesh(world: WorldDef, piece: Dictionary) -> ArrayMesh:
+	var at := Vector2(piece["at"][0], piece["at"][1])
+	var half := Vector2(piece["half"][0], piece["half"][1])
+	var stone: Color = RingLook.at(world, at)["stone"]
+	var veins := []
+	for kind in piece["ores"]:
+		veins.append(Props.ORE_COLORS[kind])
+	match piece["kind"]:
+		"mine_face":
+			return RuinKit.mine_face(half, MINE_FACE_HEIGHT, at, stone, veins)
+		"ore_boulder":
+			return RuinKit.ore_boulder(minf(half.x, half.y), at, stone, veins)
+		"spoil_heap":
+			return RuinKit.spoil_heap(half, at, stone, veins)
+	assert(false, "no mine piece %s" % piece["kind"])
+	return null
 
 
 ## Builds one landmark of `kind`, `size` big, standing at the origin.
@@ -1090,6 +1134,9 @@ class Placer:
 				var at := Vector2(mark["at"][0], mark["at"][1])
 				var half := float(mark["size"]) * 0.6
 				_rects.append([at - Vector2.ONE * half, at + Vector2.ONE * half])
+		# And so do the mines' pieces.
+		for piece in RingDressing.mine_pieces():
+			_rects.append(RingDressing.piece_ground(piece))
 
 	## `count` spots in `ring` with a random turn and a scale between `scale_min` and
 	## `scale_max`, within `band` (reach from the world's centre) if given.

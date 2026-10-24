@@ -196,3 +196,101 @@ func test_ring_ones_mine_lies_by_the_watch_post_and_clear_of_its_ground() -> voi
 				maxf(at.y - half - float(o["max"][1]), float(o["min"][1]) - at.y - half))
 			assert_true(gap >= WorldDressingScript.DRESSING_MARGIN, "%s keeps off the watch post's ground (%.1f m)" % [id, gap])
 	assert_eq(mine, 6, "the mine's six rocks")
+
+
+## The ring-one copper and tin rocks: the mine's.
+func _mine_rocks(w: WorldDef) -> Array[String]:
+	var out: Array[String] = []
+	for kind in [WorldDef.KIND_COPPER_ROCK, WorldDef.KIND_TIN_ROCK]:
+		for id in w.objects_of_kind(kind):
+			if w.region_at(w.object_center(id)) == WorldDef.REGION_RING_ONE:
+				out.append(id)
+	return out
+
+
+## How far apart two [min, max] rectangles are (negative when they overlap).
+func _rect_gap(a: Array, b_min: Vector2, b_max: Vector2) -> float:
+	return maxf(maxf(b_min.x - a[1].x, a[0].x - b_max.x), maxf(b_min.y - a[1].y, a[0].y - b_max.y))
+
+
+func test_ring_ones_mine_has_its_own_dressing_clear_of_every_rock() -> void:
+	var w := WorldDefScript.outpost()
+	var rocks := _mine_rocks(w)
+	assert_eq(rocks.size(), 6)
+	var mouth := Vector2.ZERO
+	for id in rocks:
+		mouth += w.object_center(id) / rocks.size()
+	var mine: Dictionary = RingDressingScript.MINES[WorldDef.REGION_RING_ONE]
+	assert_eq(mine["ores"], [WorldDef.KIND_COPPER_ROCK, WorldDef.KIND_TIN_ROCK], "the veins are the rocks' own ores")
+	var kinds := {}
+	for piece in RingDressingScript.mine_pieces():
+		kinds[piece["kind"]] = int(kinds.get(piece["kind"], 0)) + 1
+		var at := Vector2(piece["at"][0], piece["at"][1])
+		var ground := RingDressingScript.piece_ground(piece)
+		assert_true(at.distance_to(mouth) < 14.0, "the %s at %s dresses the mine" % [piece["kind"], at])
+		for id in w.node_ids():
+			var o: Dictionary = w.objects[id]
+			var gap := _rect_gap(ground, Vector2(o["min"][0], o["min"][1]), Vector2(o["max"][0], o["max"][1]))
+			assert_true(gap >= WorldDressingScript.DRESSING_MARGIN - 0.001, "the %s at %s keeps off %s (%.2f m)" % [piece["kind"], at, id, gap])
+		# The mesh itself, turned and set in place, never reaches a rock.
+		var basis := Basis(Vector3.UP, piece["turn"])
+		var vertices: PackedVector3Array = WorldDressingScript.mine_mesh(w, piece).surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+		var nearest := INF
+		for v in vertices:
+			var p := basis * v
+			var flat := at + Vector2(p.x, p.z)
+			for id in rocks:
+				nearest = minf(nearest, w.distance_to_object(id, flat))
+			if piece["kind"] == "mine_face":
+				assert_true(flat.x <= ground[1].x + 0.001 and flat.x >= ground[0].x - 0.001 and flat.y <= ground[1].y + 0.001 and flat.y >= ground[0].y - 0.001, "the rock face stays on its ground (%s)" % flat)
+		assert_true(nearest > 0.5, "the %s at %s stands clear of every rock (%.2f m)" % [piece["kind"], at, nearest])
+	assert_eq(int(kinds.get("mine_face", 0)), 1, "a rock face behind the rocks")
+	assert_true(int(kinds.get("ore_boulder", 0)) >= 2, "ore-streaked boulders")
+	assert_true(int(kinds.get("spoil_heap", 0)) >= 2, "spoil heaps")
+
+
+func test_the_mines_dressing_never_blocks_and_every_rock_stays_reachable() -> void:
+	var w := WorldDefScript.outpost()
+	var mines := WorldDressingScript.mines(w)
+	assert_eq(mines.find_children("*", "CollisionObject3D", true, false).size(), 0, "nothing in the mine's dressing has a body")
+	mines.free()
+	var west: Dictionary = {}
+	for s in w.solids:
+		if s["id"] == "cliff_west":
+			west = s
+	var from := w.cell_of(FROM[WorldDef.REGION_RING_ONE])
+	var landmark: Dictionary = RingDressingScript.landmark(WorldDef.REGION_RING_ONE, "west")
+	var post := Vector2(landmark["at"][0], landmark["at"][1])
+	var post_half := float(landmark["size"]) * 0.6
+	for piece in RingDressingScript.mine_pieces():
+		var at := Vector2(piece["at"][0], piece["at"][1])
+		var ground := RingDressingScript.piece_ground(piece)
+		assert_true(_rect_gap(ground, post - Vector2.ONE * post_half, post + Vector2.ONE * post_half) > 0.0, "the %s at %s keeps off the watch post's ground" % [piece["kind"], at])
+		if piece["kind"] == "mine_face":
+			# The face stands on the cliff, not on the snowfield.
+			assert_true(ground[0].x >= float(west["min"][0]) and ground[1].x <= float(west["max"][0]) and ground[0].y >= float(west["min"][1]) and ground[1].y <= float(west["max"][1]), "the rock face lies on the west cliff")
+			continue
+		assert_true(w.is_walkable(at), "the %s at %s stands on open ground" % [piece["kind"], at])
+		assert_eq(w.region_at(at), WorldDef.REGION_RING_ONE, "the %s at %s is in ring one" % [piece["kind"], at])
+	for id in _mine_rocks(w):
+		var reachable := false
+		for cell in w.approach_cells(id):
+			var stand := w.cell_center(cell)
+			for piece in RingDressingScript.mine_pieces():
+				var ground := RingDressingScript.piece_ground(piece)
+				assert_false(stand.x > ground[0].x and stand.x < ground[1].x and stand.y > ground[0].y and stand.y < ground[1].y, "%s's approach at %s is clear of the %s" % [id, stand, piece["kind"]])
+			if not GridPathScript.find(w, from, cell).is_empty():
+				reachable = true
+		assert_true(reachable, "click-to-move reaches %s" % id)
+
+
+func test_scattered_dressing_keeps_clear_of_the_mine() -> void:
+	var w := WorldDefScript.outpost()
+	var placer := WorldDressingScript.Placer.new(w, 7)
+	var spots := placer.scatter(WorldDef.REGION_RING_ONE, 400, 1.0, WorldDressingScript.DRESSING_MARGIN, WorldDressingScript.DRESSING_HOME_MARGIN)
+	assert_true(spots.size() > 100, "ring one gets scatter")
+	for p in spots:
+		for piece in RingDressingScript.mine_pieces():
+			var ground := RingDressingScript.piece_ground(piece)
+			var gap := _rect_gap(ground, p, p)
+			assert_true(gap >= WorldDressingScript.DRESSING_MARGIN - 0.001, "dressing at %s keeps off the mine's %s" % [p, piece["kind"]])
