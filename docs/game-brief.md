@@ -33,7 +33,7 @@ One outing and one return:
 2. Gather (woodcutting, mining, fishing), fight, and loot. Each ring outward is more dangerous and pays more.
 3. Find fires to keep warm, and eat food to heal.
 4. Choose when to turn back. Every step farther out puts more of what you're carrying at risk.
-5. Walk back through the gate. Everything you carry is banked to the stash.
+5. Walk back through the gate, home safe. Put your haul in the stash; whatever stays in your pack rides out with you.
 6. Turn your haul into crafted gear (cooking, smithing) and outpost upgrades, which open the next push outward.
 
 ## Systems
@@ -67,7 +67,7 @@ Magic, farming and the other skills come in later slices. Shipping fewer skills 
 ### Extraction and the gate
 
 - **It's one connected world, and you walk home.** The walk back is where the risk to your loot lives.
-- **Crossing the outpost gate banks everything.** It's one clear, physical moment where loot becomes safe.
+- **Crossing the gate brings you home safe: nothing can be lost inside the walls. Only the stash is safe for good; whatever stays in your pack rides out with you.**
 - **Waystones, unlocked later, are shortcuts back from deep zones,** so the outer rings stay reachable within an evening session.
 
 ### Outpost and tech tree
@@ -182,6 +182,6 @@ The decision list leaves these open. They are recorded here so nobody settles th
 1. **The combat triangle without magic.** **Settled in slice 4:** until magic exists the rule is two-way. Melee has the edge up close and ranged has the edge at distance, and the same style is neutral. Wolves fight in melee and bandit archers at range, and the bandit captain alternates the two. The full triangle (melee beats ranged, ranged beats magic, magic beats melee) widens in when magic arrives with ring two. **Widened in [#23](https://github.com/travism26/frostmark/issues/23):** magic arrived as an eighth skill, ahead of ring two, and the triangle is in. A bow still has the edge on a melee defender at distance, so melee's edge on ranged is the one that needs to be up close.
 2. **"Most valuable" on death.** Is value the trade price, the gear tier, or something the player picks? Do stacks count as one item?
 3. **Running out of warmth.** What happens when warmth hits zero: damage over time, death, or something else? **Settled in slice 3:** at zero warmth health drains per tick, so a scramble home is possible. Until combat brings the real death rule, health at zero wakes you by the outpost fire with your pack intact.
-4. **Waystones and banking.** Does travelling by waystone bank your loot, or does only the outpost gate do that? **Settled in [#24](https://github.com/travism26/frostmark/issues/24):** only the gate banks. A waystone sets you and your pack down just outside the outpost gate, so the last step through it is still yours, and a blow taken while it channels breaks it, so it is a way home and not a way out of a fight.
+4. **Waystones and banking.** Does travelling by waystone bank your loot, or does only the outpost gate do that? **Settled in [#24](https://github.com/travism26/frostmark/issues/24):** only the gate banks. A waystone sets you and your pack down just outside the outpost gate, so the last step through it is still yours, and a blow taken while it channels breaks it, so it is a way home and not a way out of a fight. **Revised in [#107](https://github.com/travism26/frostmark/issues/107):** the gate no longer banks; walking through it is the return, which brings you home safe, and the stash is filled with Deposit haul. Travel still stops short of the gate, so the return stays the player's step.
 5. **Web export threading.** Use the single-threaded default, which runs on Pages without headers, or the threaded export plus the service-worker workaround? This should be settled in slice 1. **Settled in slice 1:** Frostmark ships the single-threaded export, which runs on Pages without headers or a service worker.
 6. **Asset licence hygiene.** Poly Pizza CC-BY models need attribution and Mixamo isn't CC0. Should the game keep a credits file, or use only CC0 assets?
