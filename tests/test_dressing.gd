@@ -174,3 +174,25 @@ func test_each_inner_ring_ore_spot_lies_by_its_sides_landmark() -> void:
 				if nearest == "" or at.distance_to(Vector2(mark["at"][0], mark["at"][1])) < at.distance_to(Vector2(best["at"][0], best["at"][1])):
 					nearest = direction
 			assert_eq(nearest, side, "%s, on the %s side, lies nearest that side's landmark" % [id, side])
+
+
+func test_ring_ones_mine_lies_by_the_watch_post_and_clear_of_its_ground() -> void:
+	var w := WorldDefScript.outpost()
+	var mark: Dictionary = RingDressingScript.landmark(WorldDef.REGION_RING_ONE, "west")
+	assert_eq(mark["kind"], "watch_post")
+	var at := Vector2(mark["at"][0], mark["at"][1])
+	# The ground the scatter pass keeps clear for a landmark.
+	var half := float(mark["size"]) * 0.6
+	var mine := 0
+	for kind in [WorldDef.KIND_COPPER_ROCK, WorldDef.KIND_TIN_ROCK]:
+		for id in w.objects_of_kind(kind):
+			if w.region_at(w.object_center(id)) != WorldDef.REGION_RING_ONE:
+				continue
+			mine += 1
+			assert_true(w.object_center(id).distance_to(at) < 16.0, "%s lies near the watch post" % id)
+			var o: Dictionary = w.objects[id]
+			var gap := maxf(
+				maxf(at.x - half - float(o["max"][0]), float(o["min"][0]) - at.x - half),
+				maxf(at.y - half - float(o["max"][1]), float(o["min"][1]) - at.y - half))
+			assert_true(gap >= WorldDressingScript.DRESSING_MARGIN, "%s keeps off the watch post's ground (%.1f m)" % [id, gap])
+	assert_eq(mine, 6, "the mine's six rocks")

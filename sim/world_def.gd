@@ -49,9 +49,9 @@ var rescue: Array = [0.5, 1.5]
 ## Gatherable node kinds: the skill they train and the level it needs, the tool they need (and
 ## the lowest tool tier that works, "" for any), what one success yields, how many yields a
 ## node holds before it is depleted, the ticks until it regrows, and the experience per
-## success. `tier` 1 nodes are the inner ring's; `tier` 2 nodes grow in ring one, need more
-## skill and pay more; `tier` 3 nodes lie in ring two's ruins and pay more again. Placed
-## objects of these kinds get a matching entry in the state.
+## success. `tier` 1 nodes are the inner ring's, and ring one's mine; `tier` 2 nodes grow in
+## ring one, need more skill and pay more; `tier` 3 nodes lie in ring two's ruins and pay more
+## again. Placed objects of these kinds get a matching entry in the state.
 const NODE_KINDS := {
 	KIND_TREE: {
 		"tier": 1, "skill": "woodcutting", "level": 1, "tool": "axe", "tool_tier": "", "item": "logs",
@@ -124,7 +124,8 @@ var path_grid: AStarGrid2D = null
 ## crystals north-east and north-west. Ring one (out to the cliffs at
 ## 60 m) holds the wolf packs, bandit archers and two frost witches, the better nodes (frost
 ## pines west, iron in two spots of two rocks east and south-west, ice holes in three spots of
-## two north, east and west) and, at its far southern edge, the gate to ring two
+## two north, east and west), a mine of three copper and three tin rocks against the west cliff
+## that witch 2 guards and, at its far southern edge, the gate to ring two
 ## with the bandit captain standing at it. Ring two lies beyond that gate and nowhere else: a
 ## band of ruins south of the cliffs (see `_ring_two`). Ring one is only reached by walking
 ## through the inner ring.
@@ -210,6 +211,15 @@ static func outpost() -> WorldDef:
 	var crystals := [[16.0, -14.0], [-18.0, -13.0]]
 	for i in crystals.size():
 		_place(w, "ice_crystal_%d" % (i + 1), KIND_ICE_CRYSTAL, "Ice crystal", crystals[i], [1.0, 1.0], 1.4)
+	# The mine: three copper and three tin rocks together against the west cliff, north of the
+	# watch post and clear of its ground, with witch 2 at its mouth. They are ordinary rocks;
+	# the mine pays because six stand together. The spots before it number 4 to 7.
+	var mine_copper := [[-59.0, -35.0], [-53.0, -35.0], [-56.0, -32.0]]
+	for i in mine_copper.size():
+		_place(w, "copper_%d" % (i + 8), KIND_COPPER_ROCK, "Copper rock", mine_copper[i], [2.0, 2.0], 1.0)
+	var mine_tin := [[-56.0, -35.0], [-59.0, -32.0], [-53.0, -32.0]]
+	for i in mine_tin.size():
+		_place(w, "tin_%d" % (i + 8), KIND_TIN_ROCK, "Tin rock", mine_tin[i], [2.0, 2.0], 1.0)
 	var frost := [[-42.0, 8.0], [-46.0, 13.0], [-39.0, 15.0], [-44.0, 3.0]]
 	for i in frost.size():
 		_place(w, "frost_pine_%d" % (i + 1), KIND_FROST_PINE, "Frost pine", frost[i], [1.0, 1.0], 4.0)
@@ -234,8 +244,9 @@ static func outpost() -> WorldDef:
 	# a pack of three farther west, a bandit archer south-east. Chopping the south-western pine is
 	# loud enough for the near pack to hear. Farther out: an archer camp by the iron, a pack among
 	# the frost pines, a pack by the north ice holes, two archers flanking the road south, a frost witch
-	# out on each northern flank, and the captain at the ring-two gate. Every group sits more than a fight's noise
-	# (CombatTable.NOISE_FIGHT) from the next, so each is fought on its own.
+	# out on each northern flank (witch 2 at the mouth of the mine), and the captain at the
+	# ring-two gate. Every group sits more than a fight's noise (CombatTable.NOISE_FIGHT) from the
+	# next, so each is fought on its own.
 	var placements := [
 		["wolf_1", "wolf", [-7.5, 28.5], "west_pack"],
 		["wolf_2", "wolf", [-5.5, 29.5], "west_pack"],
@@ -253,7 +264,7 @@ static func outpost() -> WorldDef:
 		["archer_4", "bandit_archer", [-15.5, 44.5], "archer_4"],
 		["archer_5", "bandit_archer", [17.5, 45.5], "archer_5"],
 		["witch_1", "frost_witch", [38.5, -24.5], "witch_1"],
-		["witch_2", "frost_witch", [-36.5, -22.5], "witch_2"],
+		["witch_2", "frost_witch", [-54.5, -28.5], "witch_2"],
 		["captain", "bandit_captain", [0.5, 56.5], "captain"],
 	]
 	for p in placements:

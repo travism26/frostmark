@@ -31,7 +31,9 @@ func test_the_inner_ring_has_trees_rocks_and_two_fishing_holes() -> void:
 			inner[kind] = int(inner.get(kind, 0)) + 1
 			assert_eq(tier, 1, "%s in the inner ring is a first-tier node" % id)
 		elif region == WorldDef.REGION_RING_ONE:
-			assert_eq(tier, 2, "%s in ring one is a better node" % id)
+			# The mine's copper and tin are ordinary rocks; it pays because six stand together.
+			if kind not in [WorldDef.KIND_COPPER_ROCK, WorldDef.KIND_TIN_ROCK]:
+				assert_eq(tier, 2, "%s in ring one is a better node" % id)
 		else:
 			assert_eq(region, WorldDef.REGION_RING_TWO, "%s is in a ring" % id)
 			assert_eq(tier, 3, "%s in ring two is a third-tier node" % id)
@@ -154,19 +156,19 @@ func _ring_one(w: WorldDef, kind: String) -> Array[String]:
 	return out
 
 
-## `ids` grouped into spots: nodes a step apart (under 5 m) stand in the same spot.
+## `ids` grouped into spots: nodes a step apart (under 5 m) stand in the same spot, and a node
+## a step from two spots joins them.
 func _spots(w: WorldDef, ids: Array[String]) -> Array:
 	var spots: Array = []
 	for id in ids:
-		var home: Array = []
-		for spot in spots:
+		var joined: Array = [id]
+		for spot in spots.duplicate():
 			for other in spot:
 				if w.object_center(id).distance_to(w.object_center(other)) < 5.0:
-					home = spot
-		if home.is_empty():
-			spots.append([id])
-		else:
-			home.append(id)
+					joined.append_array(spot)
+					spots.erase(spot)
+					break
+		spots.append(joined)
 	return spots
 
 
@@ -237,6 +239,80 @@ func test_ring_one_has_three_ice_hole_spots_of_two_off_the_road() -> void:
 		if "ice_hole" in spot:
 			assert_eq(_side(at), "north", "the old hole is in the north spot")
 	assert_eq(sides, {"north": true, "east": true, "west": true}, "one spot north, east and west")
+
+
+## Ring one's copper and tin rocks: the mine's.
+func _mine(w: WorldDef) -> Array[String]:
+	return _ring_one(w, WorldDef.KIND_COPPER_ROCK) + _ring_one(w, WorldDef.KIND_TIN_ROCK)
+
+
+func test_ring_one_has_a_mine_of_copper_and_tin_against_the_west_cliff() -> void:
+	var w := WorldDefScript.outpost()
+	assert_eq(_ring_one(w, WorldDef.KIND_COPPER_ROCK).size(), 3, "three copper rocks")
+	assert_eq(_ring_one(w, WorldDef.KIND_TIN_ROCK).size(), 3, "three tin rocks")
+	var spots := _spots(w, _mine(w))
+	assert_eq(spots.size(), 1, "ring one's copper and tin stand together, and nowhere else")
+	assert_eq(_side(_centre(w, spots[0])), "west", "the mine is on the west side")
+	var cliff: Dictionary = {}
+	for s in w.solids:
+		if s["id"] == "cliff_west":
+			cliff = s
+	for id in _mine(w):
+		var gap := float(w.objects[id]["min"][0]) - float(cliff["max"][0])
+		assert_true(gap <= 8.0, "%s stands against the west cliff (%.1f m)" % [id, gap])
+	# One visit empties it: twelve of each ore.
+	for kind in [WorldDef.KIND_COPPER_ROCK, WorldDef.KIND_TIN_ROCK]:
+		assert_eq(3 * int(WorldDef.NODE_KINDS[kind]["yield"]), 12, "a visit brings back 12 %s ore" % kind)
+
+
+func test_witch_2_hears_anyone_mining_the_mine() -> void:
+	var w := WorldDefScript.outpost()
+	var home := Vector2(w.enemies["witch_2"]["home"][0], w.enemies["witch_2"]["home"][1])
+	for id in _mine(w):
+		assert_true(w.distance_to_object(id, home) <= CombatTable.NOISE_GATHER, "%s is within witch 2's earshot" % id)
+		# Whichever side the player mines it from.
+		for cell in w.approach_cells(id):
+			assert_true(w.cell_center(cell).distance_to(home) <= CombatTable.NOISE_GATHER, "%s's every side is within witch 2's earshot" % id)
+
+
+func test_every_ring_one_group_sits_out_of_earshot_of_the_next() -> void:
+	var w := WorldDefScript.outpost()
+	for a in w.enemies:
+		for b in w.enemies:
+			if w.enemies[a]["pack"] == w.enemies[b]["pack"]:
+				continue
+			var ha: Array = w.enemies[a]["home"]
+			var hb: Array = w.enemies[b]["home"]
+			if w.region_at(Vector2(ha[0], ha[1])) != WorldDef.REGION_RING_ONE or w.region_at(Vector2(hb[0], hb[1])) != WorldDef.REGION_RING_ONE:
+				continue
+			var d := Vector2(ha[0], ha[1]).distance_to(Vector2(hb[0], hb[1]))
+			assert_true(d > CombatTable.NOISE_FIGHT, "%s and %s are %.1f m apart" % [a, b, d])
+
+
+func test_mining_a_mine_rock_wakes_witch_2() -> void:
+	var w := WorldDefScript.outpost()
+	var home := Vector2(w.enemies["witch_2"]["home"][0], w.enemies["witch_2"]["home"][1])
+	var heard := 0
+	for id in _mine(w):
+		var sim := SimScript.new()
+		var snap := sim.snapshot()
+		snap["inventory"]["equipment"]["tool"] = "wooden_pickaxe"
+		sim.restore(snap)
+		# From the rock's side farthest from her. Close in she sees the miner first; past her
+		# sight she hears the pick.
+		var stand := home
+		for cell in w.approach_cells(id):
+			if w.cell_center(cell).distance_to(home) > stand.distance_to(home):
+				stand = w.cell_center(cell)
+		H.place(sim, [stand.x, stand.y])
+		var events := H.run(sim, 2)
+		sim.command(Vocab.GATHER, {"object_id": id})
+		events.append_array(H.run(sim, 6))
+		var noticed := H.where(events, Vocab.EV_ENEMY_NOTICED, "enemy_id", "witch_2")
+		assert_eq(noticed.size(), 1, "mining %s wakes witch 2" % id)
+		if not noticed.is_empty() and noticed[0]["cause"] == CombatTable.NOTICE_NOISE:
+			heard += 1
+	assert_true(heard > 0, "some of the mine is out of her sight, and she still hears it")
 
 
 func test_a_save_from_before_ring_ones_spots_loads() -> void:
