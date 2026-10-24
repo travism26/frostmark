@@ -24,7 +24,7 @@ Everything that is a rule lives in `sim/`, as RefCounted scripts with no Node, s
 
 One tick runs, in order: queued commands (a swap, a meal, a craft, a build, a field fire), the player closing on an attack target, movement (and banking when the walk enters the outpost), the gathering, cooking or waystone activity, combat (the player's swing, then every enemy in turn), node regrowth, loot decay, field fires burning out, then food healing, warmth, health and death. If the tick reached a save point it ends with one `saved` event.
 
-Walking consumes `Sim.WALK_PER_TICK` metres of path per tick (4 m/s, so 2 m). A path of 6 m arrives on the third tick. Carrying more than `Sim.CARRY_LIMIT` kg (pack plus equipment) cuts that to `Sim.OVERWEIGHT_SPEED` (60%).
+Walking consumes `Sim.WALK_PER_TICK` metres of path per tick (4 m/s, so 2 m). A path of 6 m arrives on the third tick. Carrying more than `sim.carry_limit()` kg (pack plus equipment, `sim.carry_weight()`) cuts that to `Sim.OVERWEIGHT_SPEED` (60%); `sim.is_overweight()` says when. The carry limit is `Sim.BASE_CARRY_LIMIT` (45 kg) plus the `carry` effect of every built upgrade, worked out from the built upgrades each time, the way `sim.smithing_cap()` is, so it is not saved. There is no hard cap: an overweight player is slowed, not stopped.
 
 ## Commands
 
@@ -173,7 +173,7 @@ How these numbers were measured against the brief's thirty minutes to the captai
 | Rule | Value |
 |------|-------|
 | Pack | 12 slots; logs, ore, bars, ice crystals and fish stack to 10, arrows and frost shards to 100, gear never stacks |
-| Carry limit | 30 kg (logs, copper, tin, coal and bronze bars 1 kg, iron ore, steel bars and troll hides 2 kg, tools 1 to 3 kg, weapons 2 to 4 kg, armour pieces 1 to 3 kg, arrows and frost shards 0 kg); above it walking is 60% speed |
+| Carry limit | 45 kg, plus any built upgrade's `carry` effect (logs, copper, tin, coal and bronze bars 1 kg, iron ore, steel bars and troll hides 2 kg, tools 1 to 3 kg, weapons 2 to 4 kg, armour pieces 1 to 3 kg, arrows and frost shards 0 kg); above it walking is 60% speed |
 | Stash | 8 slots to start; the shelves, cellar and vault upgrades add 4 each, up to 20. A new character's stash holds a wooden bow, 30 arrows and 5 cooked fish |
 | Experience curve | Shared by all eight skills: level L needs `50 * L * (L - 1) / 2` total xp (50, 150, 300, 500, ...), capped at 99. Levels never decrease |
 | Gathering | One attempt takes `max(2, 4 - (level - 1) / 4 - tool)` ticks and succeeds with `min(95, 60 + 4 * (level - 1) + 10 * tool)` percent, where `tool` is the best carried tool's tier rank (wooden 0, bronze 1, iron 2, steel 3). Needs the node's tool (axe, pickaxe, rod) in the pack or the tool slot |
@@ -222,7 +222,7 @@ How these numbers were measured against the brief's thirty minutes to the captai
 | Steel helm, legs | 1 steel bar each | 5 | Blast furnace | 20 |
 | Steel body | 1 steel bar, 1 troll hide | 5 | Blast furnace | 40 |
 
-**Outpost upgrades** (paid from the stash and your pack, inside the outpost; the stash first):
+**Outpost upgrades** (paid from the stash and your pack, inside the outpost; the stash first). An upgrade's effects are keys in its `effects`: `stash` (slots added to the stash), `carry` (kilograms added to the carry limit), `recipes` (workbench recipes unlocked), `smithing_tier` (the highest tier the workbench works), `ring_gate` (the ring gate it readies) and `waystones` (the waystones it wakes). No upgrade has a `carry` effect yet.
 
 | Upgrade | Cost | Needs | Effect |
 |---------|------|-------|--------|

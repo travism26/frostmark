@@ -29,7 +29,7 @@ const EQUIPMENT := {
 	"weapon": "steel_sword", "helm": "steel_helm", "body": "steel_body", "legs": "steel_legs", "tool": "steel_pickaxe",
 }
 ## A tool and a weapon for every skill and style, with ammunition, food and the logs for one
-## field fire, up to the carry limit.
+## field fire, within the carry limit.
 const PACK := [
 	{"item": "steel_axe", "count": 1}, {"item": "fishing_rod", "count": 1},
 	{"item": "steel_bow", "count": 1}, {"item": "steel_staff", "count": 1},
