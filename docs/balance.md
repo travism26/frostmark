@@ -139,3 +139,22 @@ Each was tried on its own against the same run:
 Measured at the 45 kg carry limit, the estimate rises 21 seconds, from 28:28 to 28:49, all of it walking between spots: 10 s more in the inner-ring phase and 11 s more on the second bronze trip in the iron phase. The first tools are cut from the southern pines, which did not move, so that phase is unchanged. With half the allowance it is 21:09, with half as much again 36:28. The clicks are the same, since a stack of ten still takes three rocks of each. No number was retuned.
 
 `tests/test_pacing.gd` reaches the fallen captain at tick 1765 (14.7 minutes), up from 1704, and its ring-two half takes 1645 ticks, down from 1653, both inside their windows.
+
+## Re-measured: iron and trout spots in ring one
+
+[#112](https://github.com/travism26/frostmark/issues/112) split ring one's three-rock iron cluster into two spots of two rocks, one east by the archer camp where the cluster stood and one south-west by the far wolf pack, and gave ring one three spots of two ice holes, north, east and west. The run's iron trip mines the east spot, then the south-west one:
+
+| Phase | Sim time | World clicks | Panel clicks | Outings | Firsts | Allowance | Estimate |
+|-------|----------|--------------|--------------|---------|--------|-----------|----------|
+| first tools | 0:37 | 8 | 3 | 1 | 2 | 1:15 | 1:52 |
+| inner ring | 4:12 | 24 | 7 | 2 | 2 | 2:19 | 6:31 |
+| bronze and a wooden set | 0:54 | 8 | 23 | 1 | 8 | 3:45 | 4:39 |
+| first fights | 1:11 | 16 | 10 | 1 | 0 | 1:22 | 2:33 |
+| iron, armour and the winch | 5:48 | 50 | 40 | 4 | 6 | 6:30 | 12:18 |
+| to the captain | 0:17 | 2 | 5 | 1 | 0 | 0:39 | 0:56 |
+| captain fight | 0:28 | 2 | 7 | 0 | 0 | 0:25 | 0:53 |
+| **to the captain** | **12:58** | | | | | **15:50** | **28:48** |
+
+The estimate is a second shorter, 28:48 instead of 28:49, but the iron phase changed underneath it. Four rocks of three ore are the winch's twelve in one sweep, so the run no longer stands by the old cluster waiting for a rock to regrow, and its sim time drops 32 seconds. The walk to the south-west spot passes the near archer, the near pack and the far pack, back since the first fights, so the run now fights them on the way. That adds 14 world clicks and one panel click, 31 seconds of allowance. With half the allowance it is 20:53, with half as much again 36:43. No number was retuned.
+
+The play bot used to fight back only in ring two, so ring one could kill it mid-trip. It now fights whatever notices it anywhere outside the walls, with whatever it holds. `tests/test_pacing.gd` takes food on its iron trip for the same reason. It reaches the fallen captain at tick 1715 (14.3 minutes), down from 1765, and its ring-two half takes 1715 ticks, up from 1645: the extra fights in ring one shift the run's seeded rolls, so the captain fight and the ring-two fights land differently. Both stay inside their windows.
