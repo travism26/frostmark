@@ -145,7 +145,7 @@ static func event_cues(e: Dictionary) -> Array[String]:
 			out.append(FALL)
 		SimVocab.EV_DIED:
 			out.append(STING_DEATH)
-		SimVocab.EV_BANKED, SimVocab.EV_RING_TWO_REACHED:
+		SimVocab.EV_RETURNED, SimVocab.EV_RING_TWO_REACHED:
 			out.append(STING_BANK)
 		SimVocab.EV_LEVELLED:
 			out.append(STING_LEVEL)

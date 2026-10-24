@@ -1,5 +1,5 @@
-## The banners a bank and a Deposit haul raise, from the pure functions GameRoot shows them
-## with: the "You can now build" line appears only when the bank made an upgrade newly
+## The banners a return and a Deposit haul raise, from the pure functions GameRoot shows them
+## with: the "You can now build" line appears only when the return made an upgrade newly
 ## affordable, naming each one, and the Deposit haul banner names what stayed only when the
 ## stash filled.
 extends "res://tests/run.gd".TestCase
@@ -7,22 +7,27 @@ extends "res://tests/run.gd".TestCase
 const GameRootScript := preload("res://scenes/game_root.gd")
 
 
-func _banked(newly: Array) -> Dictionary:
-	return {"kind": SimVocab.EV_BANKED, "items": [{"item": "logs", "count": 4}], "overflow": [], "newly_affordable": newly}
+func _returned(items: Array, newly: Array) -> Dictionary:
+	return {"kind": SimVocab.EV_RETURNED, "items": items, "newly_affordable": newly}
 
 
-func test_no_line_when_nothing_became_affordable() -> void:
-	var text := GameRootScript._banked_text(_banked([]))
-	assert_eq(text, "Home safe. Banked 4 Logs.")
+func test_a_return_names_what_the_pack_holds() -> void:
+	var text := GameRootScript._returned_text(_returned([{"item": "logs", "count": 4}, {"item": "raw_fish", "count": 2}], []))
+	assert_eq(text, "Home safe. Carrying 4 Logs, 2 Raw fish.")
 	assert_false(text.contains("You can now build"), "it does not nag on every trip")
 
 
+func test_an_empty_return_is_just_home_safe() -> void:
+	assert_eq(GameRootScript._returned_text(_returned([], [])), "Home safe.")
+
+
 func test_one_newly_affordable_upgrade_is_named() -> void:
-	assert_eq(GameRootScript._banked_text(_banked(["forge"])), "Home safe. Banked 4 Logs.\nYou can now build: Forge.")
+	assert_eq(GameRootScript._returned_text(_returned([{"item": "logs", "count": 4}], ["forge"])),
+		"Home safe. Carrying 4 Logs.\nYou can now build: Forge.")
 
 
 func test_several_are_listed_together() -> void:
-	var text := GameRootScript._banked_text(_banked(["stash_shelves", "forge"]))
+	var text := GameRootScript._returned_text(_returned([{"item": "logs", "count": 4}], ["stash_shelves", "forge"]))
 	assert_true(text.ends_with("\nYou can now build: Stash shelves, Forge."), text)
 
 

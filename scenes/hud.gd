@@ -141,7 +141,7 @@ func _process(delta: float) -> void:
 		_paint_upgrade_row(id)
 
 
-## A big line across the top of the screen that fades out: banking, level-ups, crafting.
+## A big line across the top of the screen that fades out: coming home, level-ups, crafting.
 func banner(text: String) -> void:
 	_banner.text = text
 	_banner_left = BANNER_SECONDS

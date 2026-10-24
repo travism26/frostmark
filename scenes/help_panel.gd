@@ -18,10 +18,10 @@ const CONTROLS := [
 
 const LOOP := [
 	"Walk out through the gate and cut a pine.",
-	"Walk back in: crossing the gate banks your pack in the stash. Nothing you carry is safe until then.",
-	"Take logs from the stash and make a pickaxe or a rod at the workbench.",
+	"Walk back in through the gate: inside the walls nothing can be lost. Deposit haul at the stash puts away what you gathered; anything left in your pack rides out with you.",
+	"Make a pickaxe or a rod from your logs at the workbench.",
 	"Warmth drains outside. Get home, or to a fire, before it runs out.",
-	"Once built, a waystone you have visited takes you to the outpost gate. It does not bank: walk through the gate for that.",
+	"Once built, a waystone you have visited takes you to the outpost gate. You are not home safe until you walk through the gate.",
 	"If you die you keep your five most valuable things. The stash is never touched.",
 ]
 
