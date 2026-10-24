@@ -5,8 +5,7 @@
 ## and `level` are the skill level required; `upgrade` is an outpost upgrade id that must be
 ## built first, or "" when none is needed. `xp` is experience granted to `skill` per craft.
 ## `tier` is the metal tier the recipe works; the simulation refuses any recipe above its
-## smithing cap (bronze until the blast furnace raises it to steel). No recipe works iron:
-## iron stays a thing found, not made.
+## smithing cap (bronze until the Bloomery raises it to iron, or the blast furnace to steel).
 ##
 ## A cooking entry is keyed by the raw item and gives the cooked `output`, the cooking
 ## `level` required, the `xp` per success, and the `burn` percent at that level, which falls
@@ -92,6 +91,11 @@ const RECIPES := {
 	"bronze_legs": {
 		"label": "Bronze legs", "inputs": {"bronze_bar": 1}, "output": {"item": "bronze_legs", "count": 1},
 		"skill": SkillTable.SMITHING, "level": 3, "upgrade": "armoury", "xp": 10, "tier": ItemTable.TIER_BRONZE,
+	},
+	# Iron: ring one's iron ore, once the Bloomery is built.
+	"iron_bar": {
+		"label": "Iron bar", "inputs": {"iron_ore": 2}, "output": {"item": "iron_bar", "count": 1},
+		"skill": SkillTable.SMITHING, "level": 3, "upgrade": "bloomery", "xp": 18, "tier": ItemTable.TIER_IRON,
 	},
 	# Steel: iron ore from both rings and coal from ring two, once the blast furnace is built.
 	"steel_bar": {

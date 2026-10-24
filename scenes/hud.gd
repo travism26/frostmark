@@ -348,8 +348,10 @@ func _refresh_craft() -> void:
 		var why := sim.check(SimVocab.SMITH, {"recipe": id})
 		(row["button"] as Button).disabled = why != ""
 		(row["button"] as Button).tooltip_text = _why_text(why)
-		if why == SimVocab.REASON_TIER_CAPPED:
-			(row["text"] as Label).text = "%s  -  needs the blast furnace: smithing stops at bronze until then" % r["label"]
+		var cap := sim.smithing_cap()
+		if why == SimVocab.REASON_UPGRADE_MISSING and ItemTable.tier_rank(r["tier"]) > ItemTable.tier_rank(cap):
+			var upgrade: String = UpgradeTable.get_upgrade(r["upgrade"])["label"]
+			(row["text"] as Label).text = "%s  -  needs the %s: smithing stops at %s until then" % [r["label"], upgrade, cap]
 
 
 func _add_craft_row(id: String) -> void:
@@ -482,7 +484,7 @@ static func _why_text(reason: String) -> String:
 		SimVocab.REASON_NOT_IN_OUTPOST:
 			return "Only inside the outpost."
 		SimVocab.REASON_TIER_CAPPED:
-			return "Smithing stops at bronze until the blast furnace is built."
+			return "Your smithing doesn't reach that metal yet."
 		SimVocab.REASON_PACK_FULL:
 			return "Your pack is full."
 		SimVocab.REASON_NO_HAUL:

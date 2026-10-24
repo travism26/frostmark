@@ -72,7 +72,7 @@ const REASON_TEXT := {
 	SimVocab.REASON_NOT_AT_FIRE: "Stand by a fire to cook. Light one with three logs, or use the outpost's.",
 	SimVocab.REASON_NOT_COOKABLE: "That can't be cooked.",
 	SimVocab.REASON_NOTHING_LEFT: "Nothing left to cook.",
-	SimVocab.REASON_TIER_CAPPED: "Smithing stops at bronze until the blast furnace is built. Iron is found, not made.",
+	SimVocab.REASON_TIER_CAPPED: "Smithing doesn't reach that metal yet: the Bloomery lifts it to iron, the blast furnace to steel.",
 	SimVocab.REASON_UNREACHABLE: "You can't get there from here. Ring two is only reached through its gate.",
 	SimVocab.REASON_UPGRADE_MISSING: "Build the upgrade that unlocks it first.",
 	SimVocab.REASON_ALREADY_BUILT: "Already built.",

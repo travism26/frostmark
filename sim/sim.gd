@@ -75,7 +75,6 @@ const TOOL_CHANCE_PER_TIER := 10
 const COOK_TICKS := 2
 const BURN_DROP_PER_LEVEL := 5
 ## Smithing works no metal above this tier until an upgrade raises it (see `smithing_cap()`).
-## No recipe works iron at all: iron is found, not made.
 const SMITHING_TIER_CAP := ItemTable.TIER_BRONZE
 ## Passing an open ring gate walks the player this far past the gate's centre on the far side.
 const RING_GATE_STEP := 3.0
@@ -1903,14 +1902,16 @@ func _smith(args: Dictionary, commit: bool) -> String:
 	if not RecipeTable.has(id):
 		return SimVocab.REASON_UNKNOWN_RECIPE
 	var recipe := RecipeTable.get_recipe(id)
+	# The missing upgrade comes first, so the refusal names what to build; the cap still guards
+	# a recipe whose upgrade is built but lifts no tier.
+	if recipe["upgrade"] != "" and not (state["upgrades"] as Array).has(recipe["upgrade"]):
+		return SimVocab.REASON_UPGRADE_MISSING
 	if ItemTable.tier_rank(recipe["tier"]) > ItemTable.tier_rank(smithing_cap()):
 		return SimVocab.REASON_TIER_CAPPED
 	if not in_outpost() or not near_kind(WorldDef.KIND_WORKBENCH, USE_REACH):
 		return SimVocab.REASON_NOT_AT_WORKBENCH
 	if skill_level(recipe["skill"]) < int(recipe["level"]):
 		return SimVocab.REASON_LEVEL_TOO_LOW
-	if recipe["upgrade"] != "" and not (state["upgrades"] as Array).has(recipe["upgrade"]):
-		return SimVocab.REASON_UPGRADE_MISSING
 	var pack: Array = state["inventory"]["pack"]
 	var inputs: Dictionary = recipe["inputs"]
 	for kind in inputs:
@@ -2362,7 +2363,7 @@ func is_overweight() -> bool:
 
 
 ## The highest metal tier the workbench works: SMITHING_TIER_CAP, raised by any built upgrade
-## with a `smithing_tier` effect (the blast furnace lifts it to steel).
+## with a `smithing_tier` effect (the Bloomery lifts it to iron, the blast furnace to steel).
 func smithing_cap() -> String:
 	var cap := SMITHING_TIER_CAP
 	for id in state["upgrades"]:
