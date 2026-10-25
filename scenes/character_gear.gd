@@ -12,6 +12,15 @@
 ## `shin_piece`) so the shader warm-up can draw one of every armour look (`samples`) before
 ## play; the node mounts them on the view.
 ##
+## The kit builders (`peaked_hood`, `under_robe`, `cloak`, `collar`, `stacked_plates`,
+## `crystal`, `fin`, `prism_stack`, `studs`, `edge_trim`) are the layered, non-round shapes
+## the set looks are built from. Each takes a look (its shape's numbers, from
+## `GearLook.numbers` or `GearLook.piece`) and a palette, names its root after its shape,
+## and draws at least two tones (a base plus a darker underside or a lighter trim) so it reads
+## lit from above. A look's `glow` above 0 draws the builder's highlight in the palette's glow
+## colour, shining that bright, through `Props.flat`. A crystal alone carries the one small
+## light and the few motes a top set is allowed, and only when its look asks for them.
+##
 ## Presentation only: GameRoot hands it the equipment slots from the state after every
 ## `equipped` event and on load. The slots come lazily from a sibling CharacterView, so the
 ## gear node may be added before or after the view.
@@ -26,6 +35,22 @@ const SHAPE_KILT := GearLook.SHAPE_KILT
 const SHAPE_FUR_LEGGINGS := GearLook.SHAPE_FUR_LEGGINGS
 const SHAPE_GREAVE := GearLook.SHAPE_GREAVE
 const SHAPE_FUR_BAND := GearLook.SHAPE_FUR_BAND
+const SHAPE_PEAKED_HOOD := GearLook.SHAPE_PEAKED_HOOD
+const SHAPE_UNDER_ROBE := GearLook.SHAPE_UNDER_ROBE
+const SHAPE_CLOAK := GearLook.SHAPE_CLOAK
+const SHAPE_COLLAR := GearLook.SHAPE_COLLAR
+const SHAPE_STACKED_PLATES := GearLook.SHAPE_STACKED_PLATES
+const SHAPE_CRYSTAL := GearLook.SHAPE_CRYSTAL
+const SHAPE_FIN := GearLook.SHAPE_FIN
+const SHAPE_PRISM_STACK := GearLook.SHAPE_PRISM_STACK
+const SHAPE_STUDS := GearLook.SHAPE_STUDS
+const SHAPE_EDGE_TRIM := GearLook.SHAPE_EDGE_TRIM
+## The names of a two-sided builder's side nodes, so a test can measure each side.
+const SIDE_LEFT := "Left"
+const SIDE_RIGHT := "Right"
+## The names of the glow nodes a crystal carries when its look asks for them.
+const GLOW_LIGHT := "Light"
+const GLOW_MOTES := "Motes"
 
 var _shown := {}  # place -> item currently drawn there
 var _pieces := {}  # place -> the nodes drawn for it, to free when it changes
@@ -235,13 +260,14 @@ static func _wrap(shape: String, look: Dictionary, colour: Color) -> Node3D:
 	return root
 
 
-static func _cylinder(top: float, bottom: float, height: float, segments: int, colour: Color) -> CylinderMesh:
+## A cylinder drawn in `look`: a Color, or a material already made (a highlight).
+static func _cylinder(top: float, bottom: float, height: float, segments: int, look: Variant) -> CylinderMesh:
 	var mesh := CylinderMesh.new()
 	mesh.top_radius = top
 	mesh.bottom_radius = bottom
 	mesh.height = height
 	mesh.radial_segments = segments
-	mesh.material = Props.flat(colour)
+	mesh.material = look if look is Material else Props.flat(look)
 	return mesh
 
 
@@ -256,20 +282,394 @@ static func _dome(look: Dictionary, colour: Color) -> SphereMesh:
 	return mesh
 
 
-static func _torus(inner: float, outer: float, rings: int, segments: int, colour: Color) -> TorusMesh:
+## A torus drawn in `look`: a Color, or a material already made (a highlight).
+static func _torus(inner: float, outer: float, rings: int, segments: int, look: Variant) -> TorusMesh:
 	var mesh := TorusMesh.new()
 	mesh.inner_radius = inner
 	mesh.outer_radius = outer
 	mesh.rings = rings
 	mesh.ring_segments = segments
-	mesh.material = Props.flat(colour)
+	mesh.material = look if look is Material else Props.flat(look)
+	return mesh
+
+## The kit builder for `shape`, or an invalid Callable for a shape that is not a kit shape.
+static func kit_builder(shape: String) -> Callable:
+	match shape:
+		SHAPE_PEAKED_HOOD:
+			return peaked_hood
+		SHAPE_UNDER_ROBE:
+			return under_robe
+		SHAPE_CLOAK:
+			return cloak
+		SHAPE_COLLAR:
+			return collar
+		SHAPE_STACKED_PLATES:
+			return stacked_plates
+		SHAPE_CRYSTAL:
+			return crystal
+		SHAPE_FIN:
+			return fin
+		SHAPE_PRISM_STACK:
+			return prism_stack
+		SHAPE_STUDS:
+			return studs
+		SHAPE_EDGE_TRIM:
+			return edge_trim
+	return Callable()
+
+
+## One of each kit shape, built from its GearLook.KIT_SAMPLES look in the kit palette.
+static func kit_samples() -> Array[Node3D]:
+	var out: Array[Node3D] = []
+	for own in GearLook.KIT_SAMPLES:
+		out.append(kit_builder(own["shape"]).call(GearLook.numbers(own), GearLook.KIT))
+	return out
+
+
+## A hood crown with a peak fin swept back from its top (the head is a teardrop from above,
+## not a disc), a drape down the neck in the dark tone and a hoop trimming the face opening.
+static func peaked_hood(look: Dictionary, colours: Dictionary) -> Node3D:
+	var hood := Node3D.new()
+	hood.name = SHAPE_PEAKED_HOOD
+	Figures.part(hood, _dome(look, colours["base"]), Vector3(0, look["y"], 0))
+	var peak := Node3D.new()
+	peak.position = look["peak_offset"]
+	peak.rotation.x = look["peak_tilt"]  # the fin's tip sweeps up and back
+	hood.add_child(peak)
+	var spike := Figures.part(peak, _cone(look["peak_width"] * 0.5, look["peak_length"], 4, colours["base"]), Vector3(0, look["peak_length"] * 0.5, 0))
+	spike.scale.x = 0.5  # a fin, not a horn
+	var drape := Figures.part(hood, _cylinder(look["drape_radius"], look["drape_radius"] * 0.9, look["drape_height"], look["segments"], colours["dark"]), look["drape_offset"])
+	drape.rotation.x = PI * 0.5  # the drape points behind the head, down the neck
+	var hoop := _torus(look["hoop_inner"], look["hoop_outer"], look["hoop_rings"], look["hoop_segments"], _highlight(look, colours))
+	var face := Figures.part(hood, hoop, look["hoop_offset"])
+	face.rotation.x = PI * 0.5  # a hoop framing the face, flush with the crown's front edge
+	return hood
+
+
+## A flaring under-robe in the dark tone under a coat shell set back so the robe shows at the
+## open front, two front panels hanging from the coat's hem each its own length (`Left` and
+## `Right`), and bands up the robe from its hem in the highlight.
+static func under_robe(look: Dictionary, colours: Dictionary) -> Node3D:
+	var robe := _wrap(SHAPE_UNDER_ROBE, look, colours["dark"])
+	Figures.part(robe, _cylinder(look["coat_top_radius"], look["coat_bottom_radius"], look["coat_height"], look["segments"], colours["base"]), Vector3(0, look["coat_y"], look["coat_back"]))
+	for side in [[-1, SIDE_LEFT, look["panel_left"]], [1, SIDE_RIGHT, look["panel_right"]]]:
+		var panel := Node3D.new()
+		panel.name = side[1]
+		panel.position = Vector3(side[0] * look["panel_x"], look["panel_top"], look["panel_z"])
+		panel.rotation.z = side[0] * -look["panel_flare"]  # the panels hang apart at the hem
+		panel.rotation.x = -look["panel_lean"]  # and lean forward, clear of the robe's flare
+		robe.add_child(panel)
+		var length: float = side[2]
+		Figures.part(panel, _box(Vector3(look["panel_width"], length, look["panel_thickness"]), colours["base"]), Vector3(0, -length * 0.5, 0))
+	var top: float = look["y"] + look["height"] * 0.5
+	var band := _highlight(look, colours)
+	for i in int(look["bands"]):
+		var y: float = look["band_from"] + i * look["band_step"]
+		var radius: float = lerpf(look["top_radius"], look["bottom_radius"], clampf((top - y) / look["height"], 0.0, 1.0)) + 0.012
+		Figures.part(robe, _cylinder(radius, radius, look["band_height"], look["segments"], band), Vector3(0, y, 0))
+	return robe
+
+
+## A fin hung from the shoulders behind the body the way the barbarian's cape hangs, in two
+## halves (`Left` and `Right`) each its own length, leaning `tilt` back. Its `outline` is
+## plain (a hem band across each half), forked (the halves part in a V), torn (a ragged hem of
+## dark teeth), tail (a long centre tail) or banner (a narrow panel on a pole over the
+## shoulders).
+static func cloak(look: Dictionary, colours: Dictionary) -> Node3D:
+	var root := Node3D.new()
+	root.name = SHAPE_CLOAK
+	var hang := Node3D.new()
+	hang.position = look["offset"]
+	hang.rotation.x = -look["tilt"]  # the hem swings out behind
+	root.add_child(hang)
+	var outline: String = look["outline"]
+	var half: float = look["width"] * 0.5
+	var thickness: float = look["thickness"]
+	var hem := _highlight(look, colours)
+	for side in [[-1, SIDE_LEFT, look["length_left"]], [1, SIDE_RIGHT, look["length_right"]]]:
+		var panel := Node3D.new()
+		panel.name = side[1]
+		hang.add_child(panel)
+		if outline == GearLook.OUTLINE_FORKED:
+			panel.rotation.z = side[0] * look["fork"]  # each half swings out from the centre line
+		var length: float = side[2]
+		Figures.part(panel, _box(Vector3(half, length, thickness), colours["base"]), Vector3(side[0] * half * 0.5, -length * 0.5, 0))
+		if outline == GearLook.OUTLINE_TORN:
+			var teeth := int(look["teeth"])
+			for i in teeth:
+				var tooth := Figures.part(panel, _cone(look["tooth"] * 0.4, look["tooth"], 4, colours["dark"]), Vector3(side[0] * half * (i + 0.5) / teeth, -length - look["tooth"] * 0.5, 0))
+				tooth.rotation.x = PI  # the points hang down
+		else:
+			Figures.part(panel, _box(Vector3(half, look["hem"], thickness + 0.01), hem), Vector3(side[0] * half * 0.5, -length + look["hem"] * 0.5, 0))
+	match outline:
+		GearLook.OUTLINE_TAIL:
+			var length: float = maxf(look["length_left"], look["length_right"]) + look["tail_length"]
+			Figures.part(hang, _box(Vector3(look["tail_width"], length, thickness), colours["base"]), Vector3(0, -length * 0.5, thickness * 0.5))
+			Figures.part(hang, _box(Vector3(look["tail_width"], look["hem"], thickness + 0.01), hem), Vector3(0, -length + look["hem"] * 0.5, thickness * 0.5))
+		GearLook.OUTLINE_BANNER:
+			var rise: float = look["banner_rise"]
+			Figures.part(hang, _cylinder(0.02, 0.02, rise + 0.2, 6, colours["dark"]), Vector3(0, rise * 0.5 - 0.1, thickness))
+			Figures.part(hang, _box(Vector3(look["banner_width"], rise, thickness), colours["base"]), Vector3(look["banner_width"] * 0.5, rise * 0.5, thickness))
+			Figures.part(hang, _box(Vector3(look["banner_width"], look["hem"], thickness + 0.01), hem), Vector3(look["banner_width"] * 0.5, rise - look["hem"] * 0.5, thickness))
+	return root
+
+
+## An upright plate behind the neck leaning `tilt` back over a dark backing, with its top edge
+## in the highlight: a high collar, a jagged collar with `teeth` points along its top, a
+## wider thicker stone back-plate, or an upright hoop with `teeth` fins on its rim.
+static func collar(look: Dictionary, colours: Dictionary) -> Node3D:
+	var root := Node3D.new()
+	root.name = SHAPE_COLLAR
+	var stand := Node3D.new()
+	stand.position = look["offset"]
+	stand.rotation.x = look["tilt"]  # the top leans back from the neck
+	root.add_child(stand)
+	var kind: String = look["kind"]
+	var width: float = look["width"]
+	var height: float = look["height"]
+	var thickness: float = look["thickness"]
+	var top := _highlight(look, colours)
+	var teeth := int(look["teeth"])
+	if kind == GearLook.COLLAR_HOOP:
+		var ring := Figures.part(stand, _torus(look["hoop_inner"], look["hoop_outer"], look["hoop_rings"], look["hoop_segments"], colours["base"]), Vector3(0, look["hoop_outer"], 0))
+		ring.rotation.x = PI * 0.5  # the hoop stands up behind the head
+		var mid: float = (look["hoop_inner"] + look["hoop_outer"]) * 0.5
+		for i in teeth:
+			var a := PI * 0.5 + (i - (teeth - 1) * 0.5) * (PI * 0.8 / maxf(teeth - 1, 1))
+			var flame := Figures.part(stand, _cone(look["tooth"] * 0.3, look["tooth"], 4, top), Vector3(cos(a) * mid, look["hoop_outer"] + sin(a) * mid, 0))
+			flame.rotation.z = a - PI * 0.5  # each fin points out along the rim
+		return root
+	if kind == GearLook.COLLAR_PLATE:
+		width *= 1.2
+		thickness *= 2.0
+	Figures.part(stand, _box(Vector3(width, height, thickness), colours["base"]), Vector3(0, height * 0.5, 0))
+	Figures.part(stand, _box(Vector3(width + 0.04, height - 0.02, thickness), colours["dark"]), Vector3(0, height * 0.5 - 0.01, thickness))
+	if kind == GearLook.COLLAR_JAGGED:
+		for i in teeth:
+			Figures.part(stand, _cone(look["tooth"] * 0.4, look["tooth"], 4, top), Vector3(width * ((i + 0.5) / teeth - 0.5), height + look["tooth"] * 0.5, 0))
+	else:
+		Figures.part(stand, _box(Vector3(width, 0.04, thickness + 0.02), top), Vector3(0, height, 0))
+	return root
+
+
+## Two or three plates on each shoulder (`Left` and `Right`): the top plate in the base tone,
+## each lower one darker, `step` further out and down and `grow` larger, with the highlight
+## along the top plate's outer edge. Each side has its own count and size.
+static func stacked_plates(look: Dictionary, colours: Dictionary) -> Node3D:
+	var root := Node3D.new()
+	root.name = SHAPE_STACKED_PLATES
+	var edge := _highlight(look, colours)
+	for side in [[-1, SIDE_LEFT, look["plates_left"], look["size_left"]], [1, SIDE_RIGHT, look["plates_right"], look["size_right"]]]:
+		var s: int = side[0]
+		var shoulder := Node3D.new()
+		shoulder.name = side[1]
+		shoulder.position = Vector3(s * look["x"], look["y"], 0)
+		shoulder.rotation.z = s * -look["tilt"]  # the plates slope down the arm
+		root.add_child(shoulder)
+		var size: Vector3 = side[3]
+		var step: Vector3 = look["step"]
+		for i in int(side[2]):
+			var plate_size: Vector3 = size * (1.0 + float(look["grow"]) * i)
+			var colour: Color = colours["base"] if i == 0 else colours["dark"]
+			Figures.part(shoulder, _box(plate_size, colour), Vector3(s * step.x * i, step.y * i, step.z * i))
+		var trim: float = look["trim"]
+		Figures.part(shoulder, _box(Vector3(trim, trim, size.z + 0.01), edge), Vector3(s * (size.x - trim) * 0.5, (size.y + trim) * 0.5, 0))
+	return root
+
+
+## A prism with `facets` sides: its tip in the glow colour shining at `glow` over a dark root,
+## at `offset` turned by `tilt`. `light` adds the one small light a piece may carry, at the
+## tip, and `motes` a few glowing motes drifting up round it.
+static func crystal(look: Dictionary, colours: Dictionary) -> Node3D:
+	var root := Node3D.new()
+	root.name = SHAPE_CRYSTAL
+	var stand := Node3D.new()
+	stand.position = look["offset"]
+	stand.rotation = look["tilt"]
+	root.add_child(stand)
+	var length: float = look["length"]
+	var join: float = length * look["root"]
+	var facets := int(look["facets"])
+	var colour: Color = colours["glow"]
+	var glow: float = look["glow"]
+	Figures.part(stand, _cone(look["radius"], length - join, facets, Props.flat(colour, glow)), Vector3(0, join + (length - join) * 0.5, 0))
+	Figures.part(stand, _cylinder(look["radius"], look["radius"] * 0.5, join, facets, colours["dark"]), Vector3(0, join * 0.5, 0))
+	if look["light"]:
+		var light := OmniLight3D.new()
+		light.name = GLOW_LIGHT
+		light.light_color = colour
+		light.light_energy = look["light_energy"]
+		light.omni_range = look["light_range"]
+		light.omni_attenuation = 1.3
+		light.position.y = join
+		stand.add_child(light)
+	if look["motes"]:
+		var motes := CPUParticles3D.new()
+		motes.name = GLOW_MOTES
+		motes.amount = int(look["motes_count"])
+		motes.lifetime = 2.0
+		motes.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+		motes.emission_sphere_radius = look["motes_radius"]
+		motes.direction = Vector3.UP
+		motes.spread = 30.0
+		motes.gravity = Vector3.ZERO
+		motes.initial_velocity_min = look["motes_rise"] * 0.5
+		motes.initial_velocity_max = look["motes_rise"]
+		motes.scale_amount_min = 0.4
+		motes.scale_amount_max = 1.0
+		var mote := BoxMesh.new()
+		mote.size = Vector3.ONE * look["motes_size"]
+		mote.material = Props.flat(colour, maxf(glow, 1.0))
+		motes.mesh = mote
+		motes.position.y = join
+		stand.add_child(motes)
+	return root
+
+
+## A thin flat plate standing up from its root at `offset`, turned by `tilt`: `size` wide,
+## long and thick, with the highlight along its tip edge, or `teeth` points there when
+## `jagged`. Crests, wings, ears, banners, masks, feathers and pelt flaps.
+static func fin(look: Dictionary, colours: Dictionary) -> Node3D:
+	var root := Node3D.new()
+	root.name = SHAPE_FIN
+	var stand := Node3D.new()
+	stand.position = look["offset"]
+	stand.rotation = look["tilt"]
+	root.add_child(stand)
+	var size: Vector3 = look["size"]
+	Figures.part(stand, _box(size, colours["base"]), Vector3(0, size.y * 0.5, 0))
+	var edge := _highlight(look, colours)
+	if look["jagged"]:
+		var teeth := int(look["teeth"])
+		for i in teeth:
+			Figures.part(stand, _cone(look["tooth"] * 0.4, look["tooth"], 4, edge), Vector3(size.x * ((i + 0.5) / teeth - 0.5), size.y + look["tooth"] * 0.5, 0))
+	else:
+		Figures.part(stand, _box(Vector3(size.x, look["edge"], size.z + 0.01), edge), Vector3(0, size.y, 0))
+	return root
+
+
+## `count` prisms stacked end to end from `offset`, each `bend` further round and `taper` as
+## wide as the one below, from a dark root through the base tone to an accent tip (the glow
+## colour, lit, when `glow` is above 0). Horns, tusks and antler tines.
+static func prism_stack(look: Dictionary, colours: Dictionary) -> Node3D:
+	var root := Node3D.new()
+	root.name = SHAPE_PRISM_STACK
+	var stand := Node3D.new()
+	stand.position = look["offset"]
+	stand.rotation = look["tilt"]
+	root.add_child(stand)
+	var count := int(look["count"])
+	var step: float = look["length"] / count
+	var radius: float = look["radius"]
+	var facets := int(look["facets"])
+	var parent := stand
+	for i in count:
+		var joint := Node3D.new()
+		if i > 0:
+			joint.position = Vector3(0, step, 0)
+			joint.rotation.x = look["bend"]
+		parent.add_child(joint)
+		var colour: Color = colours["dark"] if i == 0 else colours["base"]
+		var next: float = radius * float(look["taper"])
+		var mesh: Mesh
+		if i == count - 1:
+			mesh = _cone(radius, step, facets, _highlight(look, colours, "accent"))
+		else:
+			mesh = _cylinder(next, radius, step, facets, colour)
+		Figures.part(joint, mesh, Vector3(0, step * 0.5, 0))
+		radius = next
+		parent = joint
+	return root
+
+
+## `count` small spheres in the accent tone (the glow colour, lit, when `glow` is above 0)
+## spaced over `arc` of a dark band of `radius`, centred on the front. Rivets, studs and bead
+## belts.
+static func studs(look: Dictionary, colours: Dictionary) -> Node3D:
+	var root := Node3D.new()
+	root.name = SHAPE_STUDS
+	var radius: float = look["radius"]
+	Figures.part(root, _cylinder(radius, radius, look["band_height"], look["segments"], colours["dark"]), Vector3(0, look["y"], 0))
+	var count := int(look["count"])
+	var arc: float = look["arc"]
+	var stud := SphereMesh.new()
+	stud.radius = look["stud"]
+	stud.height = look["stud"] * 2.0
+	stud.radial_segments = 6
+	stud.rings = 3
+	stud.material = _highlight(look, colours, "accent")
+	for i in count:
+		var a := (i - (count - 1) * 0.5) * (arc / maxf(count - 1, 1))
+		Figures.part(root, stud, Vector3(sin(a) * radius, look["y"], -cos(a) * radius))
+	return root
+
+
+## A thin raised rim in the trim tone (the glow colour, lit, when `glow` is above 0) round a
+## plate `size` across and `size.y` tall, over a dark shadow line just below it, so the
+## plate catches a highlight line from above; `round` makes it a hoop of `radius`.
+static func edge_trim(look: Dictionary, colours: Dictionary) -> Node3D:
+	var root := Node3D.new()
+	root.name = SHAPE_EDGE_TRIM
+	var stand := Node3D.new()
+	stand.position = look["offset"]
+	stand.rotation = look["tilt"]
+	root.add_child(stand)
+	var size: Vector3 = look["size"]
+	var lip: float = look["lip"]
+	var rim := _highlight(look, colours)
+	var shadow := Props.flat(colours["dark"])
+	if look["round"]:
+		var radius: float = look["radius"]
+		Figures.part(stand, _cylinder(radius + lip, radius + lip, size.y, look["segments"], rim), Vector3.ZERO)
+		Figures.part(stand, _cylinder(radius + lip + 0.01, radius + lip + 0.01, size.y * 0.6, look["segments"], shadow), Vector3(0, -size.y * 0.6, 0))
+		return root
+	for edge in [[Vector3(size.x, 0, 0), Vector3(size.x + lip, size.y, lip)], [Vector3(0, 0, size.z), Vector3(lip, size.y, size.z + lip)]]:
+		for s in [-1, 1]:
+			var at: Vector3 = (edge[0] as Vector3) * 0.5 * s
+			var rail: Vector3 = edge[1]
+			Figures.part(stand, _box(rail, rim), at)
+			Figures.part(stand, _box(rail + Vector3(0.01, -size.y * 0.4, 0.01), shadow), at + Vector3(0, -size.y * 0.6, 0))
+	return root
+
+
+## The tone a builder's highlight is drawn in: the palette's glow colour shining at the look's
+## `glow` when that is above 0, else the palette's `field` (the trim unless told otherwise).
+static func _highlight(look: Dictionary, colours: Dictionary, field := "trim") -> StandardMaterial3D:
+	var glow: float = look["glow"]
+	if glow > 0.0:
+		return Props.flat(colours["glow"], glow)
+	return Props.flat(colours[field])
+
+
+## A box drawn in `look`: a Color, or a material already made (a highlight).
+static func _box(size: Vector3, look: Variant) -> BoxMesh:
+	var mesh := BoxMesh.new()
+	mesh.size = size
+	mesh.material = look if look is Material else Props.flat(look)
 	return mesh
 
 
+## A prism tapering to a point: a cylinder with `facets` sides and no top, drawn in `look`
+## (a Color, or a material already made).
+static func _cone(radius: float, height: float, facets: int, look: Variant) -> CylinderMesh:
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = 0.0
+	mesh.bottom_radius = radius
+	mesh.height = height
+	mesh.radial_segments = facets
+	mesh.rings = 1
+	mesh.material = look if look is Material else Props.flat(look)
+	return mesh
+
+
+
 ## One of every armour look (every helm, body and legs in the item table, metal and fur,
-## with whatever each puts on the shin), for the warm-up to compile before play.
+## with whatever each puts on the shin) and one of each kit shape, a light and motes
+## included, for the warm-up to compile before play.
 static func samples() -> Node3D:
 	var all := Node3D.new()
+	for sample in kit_samples():
+		all.add_child(sample)
 	for item in ItemTable.ITEMS:
 		match ItemTable.slot(item):
 			ItemTable.SLOT_HELM:
