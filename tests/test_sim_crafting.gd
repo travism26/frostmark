@@ -48,6 +48,62 @@ func test_craft_frees_the_input_slot_for_the_output() -> void:
 	assert_eq(H.pack_count(sim, "wooden_club"), 1)
 
 
+
+## At the workbench with `pack` in the pack and `stash` in the stash.
+func _at_workbench_with_stash(pack: Array, stash: Array) -> Sim:
+	var sim := _at_workbench(pack)
+	var slots := Inventory.empty_slots(Sim.STASH_START_SLOTS)
+	for e in stash:
+		Inventory.add(slots, e["item"], int(e["count"]))
+	H.patch(sim, {"stash": {"capacity": Sim.STASH_START_SLOTS, "slots": slots}})
+	return sim
+
+
+func test_craft_takes_the_inputs_from_the_stash_first() -> void:
+	var sim := _at_workbench_with_stash([{"item": "logs", "count": 3}], [{"item": "logs", "count": 2}])
+	assert_true(sim.command(Vocab.SMITH, {"recipe": "wooden_club"})["ok"], "the stash and the pack make 4 logs")
+	H.run(sim, 1)
+	assert_eq(H.stash_count(sim, "logs"), 0, "the stash pays first")
+	assert_eq(H.pack_count(sim, "logs"), 1, "the pack pays the rest")
+	assert_eq(H.pack_count(sim, "wooden_club"), 1, "the output goes to the pack")
+	assert_eq(H.stash_count(sim, "wooden_club"), 0)
+
+
+func test_craft_from_the_stash_alone_leaves_the_pack() -> void:
+	var sim := _at_workbench_with_stash([{"item": "logs", "count": 3}], [{"item": "logs", "count": 6}])
+	assert_true(sim.command(Vocab.SMITH, {"recipe": "wooden_club"})["ok"])
+	H.run(sim, 1)
+	assert_eq(H.stash_count(sim, "logs"), 2)
+	assert_eq(H.pack_count(sim, "logs"), 3, "the pack is untouched while the stash has enough")
+
+
+func test_craft_from_the_stash_still_needs_room_in_the_pack() -> void:
+	var full: Array = []
+	for i in Sim.PACK_SLOTS:
+		full.append({"item": "copper_ore", "count": 1})
+	var sim := _at_workbench_with_stash(full, [{"item": "logs", "count": 4}])
+	assert_eq(sim.command(Vocab.SMITH, {"recipe": "wooden_club"})["reason"], Vocab.REASON_PACK_FULL)
+	assert_eq(H.stash_count(sim, "logs"), 4, "nothing is taken")
+
+
+func test_craft_room_is_checked_once_the_inputs_are_out() -> void:
+	var full: Array = []
+	for i in Sim.PACK_SLOTS - 1:
+		full.append({"item": "copper_ore", "count": 1})
+	full.append({"item": "logs", "count": 1})
+	var sim := _at_workbench_with_stash(full, [{"item": "logs", "count": 3}])
+	assert_true(sim.command(Vocab.SMITH, {"recipe": "wooden_club"})["ok"], "the last pack log frees its slot")
+	H.run(sim, 1)
+	assert_eq(H.pack_count(sim, "wooden_club"), 1)
+	assert_eq(H.stash_count(sim, "logs"), 0)
+
+
+func test_smithing_count_sums_the_stash_and_the_pack_inside() -> void:
+	var sim := _at_workbench_with_stash([{"item": "logs", "count": 3}], [{"item": "logs", "count": 2}])
+	assert_eq(sim.smithing_count("logs"), 5)
+	H.walk_to(sim, H.OUTSIDE)
+	assert_eq(sim.smithing_count("logs"), 3, "outside the walls only the pack counts")
+
 func test_craft_needs_the_inputs() -> void:
 	var sim := _at_workbench([{"item": "logs", "count": 1}])
 	assert_eq(sim.command(Vocab.SMITH, {"recipe": "wooden_club"})["reason"], Vocab.REASON_MISSING_INPUTS)

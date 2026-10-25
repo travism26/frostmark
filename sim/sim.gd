@@ -1880,7 +1880,9 @@ func _eat_pending() -> bool:
 	return false
 
 
-## Crafts a recipe at the workbench: consumes its inputs from the pack, adds its output.
+## Crafts a recipe at the workbench: takes its inputs from the stash first, then the pack (the
+## way an upgrade pays, `_build_stores`), and adds its output to the pack. The room check runs
+## once the inputs are out, so a craft that frees a pack slot can fill it.
 func _smith(args: Dictionary, commit: bool) -> String:
 	var id := str(args.get("recipe", ""))
 	if not RecipeTable.has(id):
@@ -1896,24 +1898,36 @@ func _smith(args: Dictionary, commit: bool) -> String:
 		return SimVocab.REASON_NOT_AT_WORKBENCH
 	if skill_level(recipe["skill"]) < int(recipe["level"]):
 		return SimVocab.REASON_LEVEL_TOO_LOW
-	var pack: Array = state["inventory"]["pack"]
 	var inputs: Dictionary = recipe["inputs"]
+	var stores := _build_stores()
 	for kind in inputs:
-		if Inventory.count_of(pack, kind) < int(inputs[kind]):
+		if _count_in(stores, kind) < int(inputs[kind]):
 			return SimVocab.REASON_MISSING_INPUTS
-	var after := pack.duplicate(true)
+	var stash: Array = (state["stash"]["slots"] as Array).duplicate(true)
+	var pack: Array = (state["inventory"]["pack"] as Array).duplicate(true)
 	for kind in inputs:
-		Inventory.remove(after, kind, int(inputs[kind]))
+		var left := int(inputs[kind])
+		for from in [stash, pack]:
+			var n := mini(left, Inventory.count_of(from, kind))
+			Inventory.remove(from, kind, n)
+			left -= n
 	var output: Dictionary = recipe["output"]
-	if Inventory.room_for(after, output["item"]) < int(output["count"]):
+	if Inventory.room_for(pack, output["item"]) < int(output["count"]):
 		return SimVocab.REASON_PACK_FULL
 	if commit:
-		Inventory.add(after, output["item"], int(output["count"]))
-		state["inventory"]["pack"] = after
+		Inventory.add(pack, output["item"], int(output["count"]))
+		state["stash"]["slots"] = stash
+		state["inventory"]["pack"] = pack
 		_emit({"kind": SimVocab.EV_CRAFTED, "recipe": id, "item": output["item"], "count": output["count"]})
 		_grant_xp(recipe["skill"], int(recipe["xp"]))
 		_save_due = "craft"
 	return ""
+
+
+## How many of `kind` the workbench can draw on: the stash and the pack inside the outpost, the
+## pack alone outside it. Read-only, for the workbench panel's counts.
+func smithing_count(kind: String) -> int:
+	return _count_in(_build_stores() if in_outpost() else [state["inventory"]["pack"]], kind)
 
 
 # --- Events ---------------------------------------------------------------------------
