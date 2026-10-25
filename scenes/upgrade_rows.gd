@@ -135,7 +135,8 @@ static func effect_text(effects: Dictionary) -> String:
 		var names: PackedStringArray = []
 		for r in effects["recipes"]:
 			names.append(str(RecipeTable.get_recipe(r)["label"]).to_lower())
-		parts.append("unlocks %s" % ", ".join(names))
+		# The Ring-three gate hoist unlocks a whole wardrobe: count it rather than list it.
+		parts.append("unlocks %s" % (", ".join(names) if names.size() <= 12 else "%d top-set recipes" % names.size()))
 	if effects.has("smithing_tier"):
 		parts.append("smithing works up to %s" % effects["smithing_tier"])
 	if effects.has("ring_gate"):

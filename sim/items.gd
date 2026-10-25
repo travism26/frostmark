@@ -17,8 +17,8 @@
 ## A gear piece of a set carries `"set": "<set key>"` and no `tier`: like fur, a sideways piece
 ## with no rank until #138 places the sets on the ladder. Until #138 settles its stats and
 ## sources, a set item takes the stats of the steel item of its slot and style (weight, value
-## and defence, and for a weapon its power, speed, reach and ammo), and it has no recipe and
-## no drop. A quiver or a cape has no steel counterpart, so until #138 a quiver or cape set item
+## and defence, and for a weapon its power, speed, reach and ammo), and it has no drop; only a
+## top-set piece has a recipe (#184). A quiver or a cape has no steel counterpart, so until #138 a quiver or cape set item
 ## takes weight 1, value 40, no defence and no warmth. Engine-free like sim/.
 class_name ItemTable
 extends RefCounted

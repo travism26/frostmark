@@ -1,7 +1,7 @@
 ## Ring three's rare materials (#179): rime steel, frost sinew and aurora glass are materials
-## like a troll hide, which stack, weigh, and go in and out of the stash, and which no enemy,
-## recipe or upgrade touches until their own tickets land; so far only the Frostbound knight, the
-## Snowveil archer and the Aurora seer drop one.
+## like a troll hide, which stack, weigh, and go in and out of the stash, and which only the top
+## sets' recipes spend (#184); so far only the Frostbound knight, the Snowveil archer and the
+## Aurora seer drop one.
 extends "res://tests/run.gd".TestCase
 
 const H := preload("res://tests/sim_helpers.gd")
@@ -37,10 +37,11 @@ func test_each_has_its_own_icon() -> void:
 	assert_false(paths.has(IconTable.path("steel_bar")), "rime steel is not a steel bar")
 
 
-func test_each_tooltip_shows_only_weight_and_value() -> void:
+func test_each_tooltip_shows_weight_and_value_then_what_it_crafts_into() -> void:
 	for kind in RARES:
 		var lines := UiTooltip.item_lines(kind)
-		assert_eq(lines.size(), 1, "%s: %s" % [kind, lines])
+		assert_eq(lines.size(), 2, "%s: %s" % [kind, lines])
+		assert_true(lines[1].begins_with("Crafts into "), lines[1])
 		assert_true(lines[0].contains("1 Kg") and lines[0].contains("25"), lines[0])
 		assert_false(lines[0].contains("Tier"), lines[0])
 
@@ -64,10 +65,12 @@ func test_they_stack_weigh_and_go_in_and_out_of_the_stash() -> void:
 	assert_eq(H.pack_count(sim, "rime_steel"), 10, "a full stack comes back out")
 
 
-func test_no_recipe_or_upgrade_uses_them_yet_and_only_the_listed_enemies_drop_them() -> void:
-	var tables := var_to_str([CombatTable.RARE_LOOT, RecipeTable.RECIPES, UpgradeTable.UPGRADES])
+func test_only_top_set_recipes_spend_them_and_only_the_listed_enemies_drop_them() -> void:
 	for kind in RARES:
-		assert_false(tables.contains('"%s"' % kind), "%s is not spent or in the common rare roll yet" % kind)
+		assert_false(var_to_str(CombatTable.RARE_LOOT).contains('"%s"' % kind), "%s is not in the common rare roll" % kind)
+		for id in RecipeTable.ids():
+			if RecipeTable.get_recipe(id)["inputs"].has(kind):
+				assert_eq(ItemTable.set_of(id) != "", true, "%s: only a set item's recipe spends %s" % [id, kind])
 		for enemy in CombatTable.ENEMIES:
 			var drops := var_to_str(CombatTable.ENEMIES[enemy]["loot"]).contains('"%s"' % kind)
 			assert_eq(drops, DROPPED_BY.get(kind, []).has(enemy), "%s drops %s only if listed" % [enemy, kind])
