@@ -14,7 +14,7 @@ func test_the_inner_ring_has_no_enemies() -> void:
 	for id in w.enemies:
 		var home: Array = w.enemies[id]["home"]
 		var region := w.region_at(Vector2(home[0], home[1]))
-		assert_true(region in [WorldDef.REGION_RING_ONE, WorldDef.REGION_RING_TWO], "%s lives out in a ring" % id)
+		assert_true(region in [WorldDef.REGION_RING_ONE, WorldDef.REGION_RING_TWO, WorldDef.REGION_RING_THREE], "%s lives out in a ring" % id)
 		count[region] = int(count.get(region, 0)) + 1
 	assert_true(int(count.get(WorldDef.REGION_RING_ONE, 0)) >= 10, "ring one is populated")
 	assert_true(int(count.get(WorldDef.REGION_RING_TWO, 0)) >= 6, "ring two is populated")

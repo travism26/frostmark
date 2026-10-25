@@ -1,7 +1,8 @@
 ## Ring three: the glacier south of ring two, behind a gate in ring two's southern cliffs that
 ## the Ring-three gate hoist opens on its own. The gate is walked through both ways and nothing
 ## follows; the first arrival is marked once; a fire burns past the gate; and nothing notices,
-## chases or fights across either ring gate.
+## chases or fights across either ring gate. Its enemies' fights follow, the Snowveil archer's
+## first.
 extends "res://tests/run.gd".TestCase
 
 const H := preload("res://tests/sim_helpers.gd")
@@ -15,6 +16,15 @@ const PAST_THE_GATE := [-39.5, 131.5]
 ## Standing at the workbench, inside the outpost.
 const AT_WORKBENCH := [-2.0, -5.0]
 const UPGRADES_TO_THE_FURNACE := ["stash_shelves", "forge", "armoury", "ring_two_gate", "blast_furnace"]
+## Open ice beside the middle ridge (it runs from z 138 to 153 at x 8 to 9.5), where the pair of
+## archers keep it, and a spot 6 m east of it for the player: inside the archer's sight and its
+## bow's reach, past its kiting distance.
+const RIDGE_HOME := [11.5, 146.0]
+const ACROSS_THE_ICE := [17.5, 146.0]
+## 8 m off it: at the edge of its bow's reach and of the steel bow's own.
+const AT_BOW_RANGE := [19.5, 146.0]
+## The reference character: steel from head to foot, and every combat skill at 40.
+const REFERENCE_LEVEL := 40
 
 
 ## A character whose ring-three gate stands open: the hoist is built. The captain still stands.
@@ -316,3 +326,233 @@ func test_every_save_fixture_loads_with_ring_three_unreached_and_the_hoist_unbui
 		assert_false(sim.ring_gate_open("ring_three_gate"), "%s finds the gate barred" % name)
 		count += 1
 	assert_true(count > 0, "some fixtures")
+
+
+# --- The Snowveil archer ------------------------------------------------------------------
+
+func _set_level(sim: Sim, skill: String, level: int) -> void:
+	var snap := sim.snapshot()
+	snap["skills"][skill] = {"xp": SkillTable.xp_for_level(level), "level": level}
+	sim.restore(snap)
+
+
+## One archer at the ridge, alone in the real ring-three ground, with a player at `at` holding
+## `weapon`, five cooked trout and arrows in the pack. `reference` makes the player the
+## reference character: steel armour and combat skills at 40.
+func _duel(weapon: String, at: Array, reference := true) -> Sim:
+	var sim := H.arena({"foe": {"kind": "snowveil_archer", "home": RIDGE_HOME}})
+	if reference:
+		for skill in [SkillTable.MELEE, SkillTable.RANGED, SkillTable.MAGIC]:
+			_set_level(sim, skill, REFERENCE_LEVEL)
+	H.place(sim, at)
+	H.arm(sim, weapon, [{"item": "cooked_trout", "count": 5}, {"item": "arrows", "count": 100}])
+	if reference:
+		_sturdy(sim)
+		var snap := sim.snapshot()
+		snap["inventory"]["equipment"].merge({"helm": "steel_helm", "body": "steel_body", "legs": "steel_legs"}, true)
+		sim.restore(snap)
+	sim.drain_events()
+	return sim
+
+
+## The archer's blows by tick, as "tick:what": its telegraphs by the name they were told under,
+## and each tick's hit, miss or feint.
+func _blows(events: Array[Dictionary]) -> Array:
+	var out: Array = []
+	for e in events:
+		if e.get("enemy_id", e.get("attacker", "")) != "foe":
+			continue
+		match e["kind"]:
+			Vocab.EV_ENEMY_TELEGRAPHED:
+				out.append("%d:told %s" % [e["tick"], e["action"]])
+			Vocab.EV_HIT:
+				out.append("%d:hit %d" % [e["tick"], e["amount"]])
+			Vocab.EV_ENEMY_FEINTED:
+				out.append("%d:feint" % e["tick"])
+	return out
+
+
+func test_the_snowveil_archer_is_a_feinting_kiting_bowman_with_its_own_loot() -> void:
+	var def := CombatTable.enemy("snowveil_archer")
+	assert_eq(def["label"], "Snowveil archer")
+	assert_eq([def["health"], def["speed"], def["sight"], def["kite"]], [70, 1.5, 10.0, 4.0])
+	assert_eq(def["weapon"], "veil_bow")
+	var bow := CombatTable.weapon("veil_bow")
+	assert_eq([bow["style"], bow["reach"]], [CombatTable.STYLE_RANGED, 8.0], "a natural bow, 8 m")
+	assert_false(ItemTable.has("veil_bow"), "and not an item")
+	assert_eq(def["loot"], [{"item": "frost_sinew", "count": 1}])
+	assert_eq([def["rare_percent"], def["respawn_ticks"]], [0, 300])
+	assert_eq(def["actions"], ["quick_shot", "rest", "piercing_shot", "rest", "rest", "quick_shot", "feint_pierce", "piercing_shot", "rest", "rest"])
+	assert_eq([CombatTable.action_label("quick_shot"), CombatTable.action_damage("quick_shot")], ["Quick shot", 7])
+	assert_eq([CombatTable.action_label("piercing_shot"), CombatTable.action_damage("piercing_shot")], ["Piercing shot", 22])
+	assert_true(CombatTable.is_heavy("piercing_shot"))
+	assert_false(CombatTable.is_heavy("quick_shot"))
+	assert_true(CombatTable.is_feint("feint_pierce"))
+	assert_eq(CombatTable.shown_action("feint_pierce"), "piercing_shot")
+	assert_false(CombatTable.is_attack("feint_pierce"), "a feint deals nothing itself")
+
+
+func test_the_archer_plays_its_cycle_in_order() -> void:
+	var sim := _duel("", ACROSS_THE_ICE, false)
+	sim.command(Vocab.SET_AUTO_RETALIATE, {"on": false})
+	var blows := _blows(H.run_stamped(sim, 24))
+	# Noticed on tick 1: a quick shot, a rest, the honest piercing shot, two rests, a quick shot,
+	# the bluffed piercing shot with the real one straight after, two rests, and round again.
+	assert_eq(blows.slice(0, 11), [
+		"1:told quick_shot", "2:hit 11",
+		"3:told piercing_shot", "4:hit 33",
+		"6:told quick_shot", "7:hit 11",
+		"7:told piercing_shot", "8:feint",
+		"8:told piercing_shot", "9:hit 33",
+		"11:told quick_shot",
+	])
+
+
+func test_the_feinted_piercing_shot_looses_no_damage_and_the_real_one_is_told_on_the_feint_tick() -> void:
+	var sim := _duel("", ACROSS_THE_ICE, false)
+	sim.command(Vocab.SET_AUTO_RETALIATE, {"on": false})
+	var events := H.run_stamped(sim, 10)
+	var told := H.where(events, Vocab.EV_ENEMY_TELEGRAPHED, "action", "piercing_shot")
+	assert_eq(told.size(), 3, "the honest one, the bluff and the real one")
+	var feint := H.of_kind(events, Vocab.EV_ENEMY_FEINTED)
+	assert_eq(feint.size(), 1)
+	assert_eq(feint[0]["action"], "piercing_shot", "told as the shot it pretends to be")
+	assert_eq(feint[0]["tick"], told[1]["at"], "on the tick it was told for")
+	assert_true(told[1]["heavy"] and told[1]["damage"] == 22, "told as heavy as the real one")
+	assert_eq(told[2]["tick"], feint[0]["tick"], "and the real one is told on the feint tick")
+	assert_eq(told[2]["at"], feint[0]["tick"] + 1, "to land the tick after")
+	assert_eq(H.where(events, Vocab.EV_HIT, "tick", feint[0]["tick"]).size(), 0, "nothing lands on the feint tick")
+	assert_eq(H.where(events, Vocab.EV_MISSED, "tick", feint[0]["tick"]).size(), 0)
+	assert_eq(H.where(events, Vocab.EV_HIT, "tick", told[2]["at"])[0]["amount"], 33, "the real one lands in full")
+
+
+func test_the_archer_backs_away_from_a_player_within_4_m_and_a_ridge_corners_it() -> void:
+	var sim := _duel("", [13.5, 146.0], false)  # 2 m east of it
+	sim.command(Vocab.SET_AUTO_RETALIATE, {"on": false})
+	var before: Vector2 = sim.combatant("foe")["pos"]
+	H.run(sim, 2)
+	var after: Vector2 = sim.combatant("foe")["pos"]
+	assert_true(after.distance_to(sim.player_pos()) > before.distance_to(sim.player_pos()), "it opened the distance")
+	assert_true(after.x < before.x, "straight away from the player")
+	# The ridge's east face is at x 9.5: it stops there and cannot back further.
+	H.run(sim, 6)
+	var cornered: Vector2 = sim.combatant("foe")["pos"]
+	assert_true(cornered.x >= 9.5 and cornered.x < 11.0, "it stands against the ridge at %s" % cornered)
+	H.run(sim, 4)
+	assert_eq(sim.combatant("foe")["pos"], cornered, "no room to back away")
+	# Out in the open at 6 m it holds its ground.
+	var open := _duel("", ACROSS_THE_ICE, false)
+	open.command(Vocab.SET_AUTO_RETALIATE, {"on": false})
+	assert_eq(H.where(H.run(open, 6), Vocab.EV_ENEMY_MOVED, "enemy_id", "foe").size(), 0)
+
+
+func test_a_dead_archer_drops_one_frost_sinew_and_no_iron_and_comes_back_300_ticks_later() -> void:
+	var sim := _duel("steel_sword", [10.8, 146.0])
+	H.patch_enemy(sim, "foe", {"health": 1, "pos": [10.0, 146.0]})
+	sim.command(Vocab.ATTACK, {"enemy_id": "foe"})
+	var events := H.run(sim, 3)
+	var drops := H.of_kind(events, Vocab.EV_LOOT_DROPPED)
+	assert_eq(drops.size(), 1, "one pile")
+	assert_eq([drops[0]["item"], drops[0]["count"]], ["frost_sinew", 1])
+	for item in CombatTable.RARE_LOOT:
+		assert_eq(H.where(events, Vocab.EV_LOOT_DROPPED, "item", item).size(), 0, "no %s" % item)
+	H.place(sim, PAST_THE_GATE)  # well out of its sight
+	var back := H.run(sim, int(CombatTable.enemy("snowveil_archer")["respawn_ticks"]))
+	assert_eq(H.of_kind(back, Vocab.EV_ENEMY_RESPAWNED).size(), 1, "back at home")
+	assert_eq(int(sim.state["enemies"]["foe"]["health"]), 70)
+	assert_eq(Vector2(sim.state["enemies"]["foe"]["pos"][0], sim.state["enemies"]["foe"]["pos"][1]), Vector2(RIDGE_HOME[0], RIDGE_HOME[1]))
+	# Every kill drops exactly one, across a run of them.
+	for i in 5:
+		var again := _duel("steel_sword", [10.8, 146.0])
+		H.patch_enemy(again, "foe", {"health": 1, "pos": [10.0, 146.0]})
+		again.command(Vocab.ATTACK, {"enemy_id": "foe"})
+		assert_eq(H.where(H.run(again, 3), Vocab.EV_LOOT_DROPPED, "item", "frost_sinew").size(), 1)
+
+
+func test_every_archers_home_is_in_ring_three_out_of_earshot_of_the_next_group_and_reached_from_its_fire() -> void:
+	var w := WorldDefScript.outpost()
+	var from := w.cell_of(Vector2(PAST_THE_GATE[0], PAST_THE_GATE[1]))
+	var count := 0
+	for a in w.enemies:
+		if w.enemies[a]["kind"] != "snowveil_archer":
+			continue
+		count += 1
+		var ha := Vector2(w.enemies[a]["home"][0], w.enemies[a]["home"][1])
+		assert_eq(w.region_at(ha), WorldDef.REGION_RING_THREE, "%s is in ring three" % a)
+		assert_false(GridPath.find(w, from, w.cell_of(ha)).is_empty(), "%s's home can be walked to from the gate and the fire" % a)
+		assert_true(ha.distance_to(w.object_center("ring_three_fire")) > float(CombatTable.enemy("snowveil_archer")["sight"]), "%s does not see the fire" % a)
+		for b in w.enemies:
+			if w.enemies[a]["pack"] == w.enemies[b]["pack"]:
+				continue
+			var hb := Vector2(w.enemies[b]["home"][0], w.enemies[b]["home"][1])
+			assert_true(ha.distance_to(hb) > 12.0, "%s and %s are %.1f m apart" % [a, b, ha.distance_to(hb)])
+	assert_eq(count, 3, "a pair on the ridge and one alone")
+	assert_eq(w.enemies["veil_archer_1"]["pack"], w.enemies["veil_archer_2"]["pack"])
+	assert_true(w.enemies["veil_archer_3"]["pack"] != w.enemies["veil_archer_1"]["pack"])
+	var lone := Vector2(w.enemies["veil_archer_3"]["home"][0], w.enemies["veil_archer_3"]["home"][1])
+	assert_true(lone.x < -50.0, "the lone one keeps to the west cliff")
+
+
+# --- Reader and non-reader ----------------------------------------------------------------
+
+## The reader closes in with a steel sword and pins the archer against the ridge. It eats only
+## on a rest tick (what the archer's cycle holds next, not what it shows), never on a feint or
+## a heavy, and only once hurt.
+func _read_the_archer() -> Dictionary:
+	var sim := _duel("steel_sword", ACROSS_THE_ICE)
+	sim.command(Vocab.ATTACK, {"enemy_id": "foe"})
+	var ate_on: Array = []
+	var ticks := 0
+	var lowest := int(sim.state["health"])
+	while ticks < 120 and sim.state["enemies"]["foe"]["mode"] != Sim.MODE_DEAD and int(sim.state["health"]) > 0:
+		H.patch(sim, {"warmth": Sim.WARMTH_MAX})
+		var cycle: Array = CombatTable.enemy("snowveil_archer")["actions"]
+		var raw_next: String = str(sim.state["enemies"]["foe"].get("next", {}).get("action", ""))
+		if raw_next == CombatTable.ACTION_REST and int(sim.state["health"]) < 90 and sim.command(Vocab.EAT, {"index": 0})["ok"]:
+			ate_on.append(raw_next)
+		sim.step()
+		sim.drain_events()
+		lowest = mini(lowest, int(sim.state["health"]))
+		ticks += 1
+	return {"health": int(sim.state["health"]), "lowest": lowest, "ate_on": ate_on, "ticks": ticks, "dead": sim.state["enemies"]["foe"]["mode"] == Sim.MODE_DEAD}
+
+
+## The non-reader trades shots with a steel bow from where it stands and eats whenever a heavy
+## is telegraphed, the bluff included.
+func _trade_shots() -> Dictionary:
+	var sim := _duel("steel_bow", AT_BOW_RANGE)
+	sim.command(Vocab.ATTACK, {"enemy_id": "foe"})
+	var eat_next := false
+	var ate_on_feint := 0
+	var ticks := 0
+	var lowest := int(sim.state["health"])
+	while ticks < 120 and sim.state["enemies"]["foe"]["mode"] != Sim.MODE_DEAD and int(sim.state["health"]) > 0:
+		H.patch(sim, {"warmth": Sim.WARMTH_MAX})
+		if eat_next:
+			sim.command(Vocab.EAT, {"index": 0})
+			if str(sim.state["enemies"]["foe"].get("next", {}).get("action", "")) == "feint_pierce":
+				ate_on_feint += 1
+			eat_next = false
+		sim.step()
+		for e in sim.drain_events():
+			if e["kind"] == Vocab.EV_ENEMY_TELEGRAPHED and e["heavy"]:
+				eat_next = true
+		lowest = mini(lowest, int(sim.state["health"]))
+		ticks += 1
+	return {"health": int(sim.state["health"]), "lowest": lowest, "ate_on_feint": ate_on_feint, "ticks": ticks, "dead": sim.state["enemies"]["foe"]["mode"] == Sim.MODE_DEAD}
+
+
+func test_the_reader_pins_the_archer_and_wins_with_over_60_health_left() -> void:
+	var fight := _read_the_archer()
+	assert_true(fight["dead"], "the archer falls")
+	assert_true(fight["health"] > 60, "with %d health left" % fight["health"])
+	assert_eq(fight["ate_on"].filter(func(a: String) -> bool: return a != CombatTable.ACTION_REST).size(), 0, "eating only on rest ticks")
+
+
+## The issue asks for this character to end below 40 health or dead. At 70 health and a piercing
+## shot of 22 it does not: the archer is dead before its bluff is played (docs/balance.md, "Ring
+## three"). This pins what does hold until that is settled: it takes damage, and it still wins.
+func test_the_non_reader_trading_shots_and_eating_on_every_heavy_telegraph() -> void:
+	var fight := _trade_shots()
+	assert_true(fight["dead"], "the archer falls")
+	assert_true(fight["lowest"] < 90, "but not before it hurts: %d at the lowest" % fight["lowest"])

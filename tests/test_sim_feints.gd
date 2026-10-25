@@ -1,5 +1,5 @@
-## Feints: a telegraphed blow that never lands. No enemy feints yet, so the stand-in kinds in
-## tests/sim_helpers.gd carry the rule: a feint is telegraphed exactly as the blow it pretends
+## Feints: a telegraphed blow that never lands. Only the Snowveil archer feints so far, so the
+## stand-in kinds in tests/sim_helpers.gd carry the rule: a feint is telegraphed exactly as the blow it pretends
 ## to be, strikes nothing on its tick (no hit, no miss, no noise, no fight back, no broken
 ## channel), and the enemy's next blow is telegraphed on that tick as usual.
 extends "res://tests/run.gd".TestCase
@@ -24,13 +24,15 @@ func _feinter(kind := "stand_in_feinter", at := BESIDE) -> Sim:
 	return sim
 
 
-func test_no_enemy_feints_yet() -> void:
+func test_only_the_snowveil_archer_feints_so_far() -> void:
 	for action in CombatTable.ACTIONS:
+		if action == "feint_pierce":
+			continue
 		assert_false(CombatTable.is_feint(action), "%s is no feint" % action)
 		assert_eq(CombatTable.shown_action(action), action, "%s shows itself" % action)
 	for kind in CombatTable.ENEMIES:
 		for action in CombatTable.ENEMIES[kind]["actions"]:
-			assert_false(CombatTable.is_feint(action), "%s does not feint" % kind)
+			assert_eq(CombatTable.is_feint(action), kind == "snowveil_archer" and action == "feint_pierce", "%s: %s" % [kind, action])
 	H.add_stand_ins()
 	assert_true(CombatTable.is_feint("feint_lunge"))
 	assert_eq(CombatTable.shown_action("feint_lunge"), "lunge", "it shows the blow it pretends to be")

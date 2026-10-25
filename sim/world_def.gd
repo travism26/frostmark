@@ -394,6 +394,16 @@ static func _ring_three(w: WorldDef) -> void:
 		"kind": KIND_FIRE, "label": "Fire", "blocks": true, "height": 0.6,
 		"min": [gate_x + 5.0, 132.0], "max": [gate_x + 6.5, 133.5],
 	}
+	# Snowveil archers: a pair in the lee of the ridge that runs down the middle of the ring and
+	# one alone in the lee of the west cliff, each group more than a fight's noise from the next
+	# so they are fought one at a time.
+	var placements := [
+		["veil_archer_1", "snowveil_archer", [11.5, 145.5], "ridge_pair"],
+		["veil_archer_2", "snowveil_archer", [11.5, 147.5], "ridge_pair"],
+		["veil_archer_3", "snowveil_archer", [-54.5, 166.5], "cliff_archer"],
+	]
+	for p in placements:
+		w.enemies[p[0]] = {"kind": p[1], "home": p[2], "pack": p[3]}
 
 
 static func _place(w: WorldDef, id: String, kind: String, label: String, at: Array, size: Array, height: float) -> void:
