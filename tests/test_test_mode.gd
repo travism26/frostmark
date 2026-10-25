@@ -134,3 +134,71 @@ func test_the_ring_parameter_alone_or_beside_another_character_changes_nothing()
 	assert_eq(FieldKit.for_query("?ring=two"), "", "without the query pair it asks for nothing")
 	assert_eq(FieldKit.for_digest(FieldKit.BARE_QUERY_HASH, null, spot), FieldKit.bare_code(), "the build-from-scratch link ignores it")
 	assert_eq(FieldKit.for_digest(FieldKit.GEAR_QUERY_HASH, null, spot), FieldKit.gear_code(), "the all-gear link ignores it")
+
+
+## The test-mode character from the link with `ring=three` beside it.
+func _at_ring_three_gate() -> Sim:
+	var sim := SimScript.new()
+	var result := sim.command(Vocab.IMPORT_SAVE, {"code": FieldKit.for_digest(FieldKit.QUERY_HASH, null, FieldKit.RING_SPOTS["three"])})
+	assert_true(result["ok"], "the ring-three link imports: %s" % result["reason"])
+	return sim
+
+
+func test_the_ring_three_spot_stands_the_same_character_on_ring_twos_side_of_the_gate() -> void:
+	var sim := _at_ring_three_gate()
+	assert_eq(H.of_kind(sim.drain_events(), Vocab.EV_SAVED).size(), 1, "it imports as a save")
+	assert_eq(sim.state["version"], Sim.STATE_VERSION)
+	assert_eq(sim.state["player"]["region"], WorldDef.REGION_RING_TWO)
+	assert_eq(sim.state["player"]["pos"], FieldKit.RING_SPOTS["three"])
+	var spot: Array = FieldKit.RING_SPOTS["three"]
+	var at := Vector2(spot[0], spot[1])
+	assert_true(sim.world.is_walkable(at), "the spot is not in a footprint")
+	assert_true(at.distance_to(sim.world.object_center("ring_three_gate")) <= 5.0, "within 5 m of the gate")
+	var snap := sim.snapshot()
+	var home := _imported().snapshot()
+	snap.erase("player")
+	home.erase("player")
+	assert_eq(snap, home, "everything but where the character stands is the test-mode save")
+
+
+func test_at_the_ring_three_gate_the_hoist_is_built_and_ring_three_not_yet_reached() -> void:
+	var sim := _at_ring_three_gate()
+	assert_true((sim.state["upgrades"] as Array).has("ring_three_gate"), "the Ring-three gate hoist is built")
+	assert_true(sim.ring_gate_open("ring_three_gate"), "the ring-three gate stands open")
+	assert_true((sim.state["rings_reached"] as Array).has(WorldDef.REGION_RING_TWO))
+	assert_false((sim.state["rings_reached"] as Array).has(WorldDef.REGION_RING_THREE))
+
+
+func test_no_ring_two_home_sees_the_ring_three_spot() -> void:
+	var sim := _at_ring_three_gate()
+	var spot: Array = FieldKit.RING_SPOTS["three"]
+	var at := Vector2(spot[0], spot[1])
+	for id in sim.world.enemies:
+		var home: Array = sim.world.enemies[id]["home"]
+		if sim.world.region_at(Vector2(home[0], home[1])) != WorldDef.REGION_RING_TWO:
+			continue
+		var sight := float(CombatTable.enemy(sim.world.enemies[id]["kind"])["sight"])
+		assert_true(at.distance_to(Vector2(home[0], home[1])) > sight, "%s's home is out of sight" % id)
+	var events := H.run_until_idle(sim, 20)
+	assert_true(H.of_kind(events, Vocab.EV_ENEMY_NOTICED).is_empty(), "standing there starts no fight")
+
+
+func test_one_interact_on_the_gate_walks_the_character_into_ring_three() -> void:
+	var sim := _at_ring_three_gate()
+	sim.drain_events()
+	var result := sim.command(Vocab.INTERACT, {"object_id": "ring_three_gate"})
+	assert_true(result["ok"], result["reason"])
+	var events := H.run_until_idle(sim, 40)
+	assert_eq(sim.state["player"]["region"], WorldDef.REGION_RING_THREE)
+	var reached := H.of_kind(events, Vocab.EV_RING_THREE_REACHED)
+	assert_eq(reached.size(), 1, "the walk in is marked once")
+	assert_eq(reached[0]["object_id"], "ring_three_gate")
+
+
+func test_the_ring_two_link_an_unknown_ring_and_the_link_alone_load_what_they_did() -> void:
+	assert_eq(FieldKit.RING_SPOTS["two"], [3.5, 70.5], "ring two still stands beside the brazier")
+	assert_eq(FieldKit.RING_SPOTS.get("four", []), [], "an unknown ring names no spot")
+	assert_eq(FieldKit.for_digest(FieldKit.QUERY_HASH, null, []), FieldKit.code(), "no spot is the outpost")
+	var spot: Array = FieldKit.RING_SPOTS["three"]
+	assert_eq(FieldKit.for_digest(FieldKit.BARE_QUERY_HASH, null, spot), FieldKit.bare_code(), "the build-from-scratch link ignores it")
+	assert_eq(FieldKit.for_digest(FieldKit.GEAR_QUERY_HASH, null, spot), FieldKit.gear_code(), "the all-gear link ignores it")

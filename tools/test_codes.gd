@@ -28,12 +28,15 @@ func _init() -> void:
 	if known.has("refused"):
 		quit(1)
 		return
-	var ring_two: Array = FieldKit.RING_SPOTS["two"]
 	var entries := [
 		{"title": "Test mode", "short": "test_mode_short", "query": "test_mode_query", "code": FieldKit.code()},
 		{
 			"title": "Test mode in ring two", "query": "test_mode_query", "query_tail": "&ring=two",
-			"code": FieldKit.code(null, ring_two),
+			"code": FieldKit.code(null, FieldKit.RING_SPOTS["two"]),
+		},
+		{
+			"title": "Test mode at the ring-three gate", "query": "test_mode_query", "query_tail": "&ring=three",
+			"code": FieldKit.code(null, FieldKit.RING_SPOTS["three"]),
 		},
 		{"title": "Build from scratch", "short": "bare_short", "query": "bare_query", "code": FieldKit.bare_code()},
 		{"title": "All gear", "short": "gear_short", "query": "gear_query", "code": FieldKit.gear_code()},
