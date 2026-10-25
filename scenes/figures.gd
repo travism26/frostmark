@@ -56,14 +56,14 @@ const COLOR_SNOWVEIL_BOW := Color(0.80, 0.88, 0.94)  # with a pale, frosted bow
 const COLOR_FROSTBOUND := Color(0.66, 0.80, 0.96)  # the knight redrawn in frost-blue and pale steel
 const COLOR_SEER := Color("#7a4fb8")  # the mage in violet, without the witch's blue
 const COLOR_AURORA := Color(0.35, 1.0, 0.72)  # the green of its staff's crystal and its blade
-const COLOR_TYRANT := Color(0.94, 0.97, 1.0)  # the knight redrawn in ice-white
+const COLOR_TYRANT := Color(0.82, 0.90, 0.98)  # the knight redrawn in ice-white
 const COLOR_CAPTAIN_CAPE := Color(0.62, 0.08, 0.08)
 const COLOR_WOLF := Color(1.45, 1.5, 1.6)  # the grey coat lifted towards snow
 const COLOR_WITCH := Color("#6670b3")  # the mage in a rimed blue-violet
 const COLOR_BONE := Color(0.86, 0.82, 0.72)
 const COLOR_IRON := Color(0.30, 0.32, 0.36)
 ## Where the tyrant's visor glow sits in its head's mount frame, in metres.
-const TYRANT_VISOR := Vector3(0.0, 0.5, -0.45)
+const TYRANT_VISOR := Vector3(0.0, 0.62, -0.88)
 const ROGUE_SPARES := ["Knife", "Knife_Offhand", "1H_Crossbow", "2H_Crossbow", "Throwable"]
 const MAGE_SPARES := ["Spellbook", "Spellbook_open", "1H_Wand", "2H_Staff"]
 
@@ -106,8 +106,8 @@ static func enemy(kind: String) -> FigureBody:
 			tyrant.mount("handslot_l", "tyrant_bow").add_child(bow(COLOR_SNOWVEIL_BOW, 1.8))
 			tyrant.mount("handslot_r", "tyrant_staff").add_child(staff(Props.COLOR_DARK_WOOD, 2.0, COLOR_AURORA, 2.2))
 			var visor := BoxMesh.new()
-			visor.size = Vector3(0.36, 0.06, 0.06)
-			visor.material = Props.flat(COLOR_AURORA, 2.5)
+			visor.size = Vector3(0.6, 0.08, 0.06)
+			visor.material = Props.flat(COLOR_AURORA, 1.0)
 			part(tyrant.mount("head", "tyrant_visor"), visor, TYRANT_VISOR)
 			return tyrant
 		"frost_witch":
