@@ -11,6 +11,12 @@
 ##
 ## An item with no entry draws the plain shape of its slot all in magenta, so a missing look
 ## shows.
+##
+## The kit shapes (a peaked hood, an under-robe with coat panels, a cloak, a collar, stacked
+## plates, a crystal, a fin, a prism stack, studs and edge trim) are the layered, non-round
+## pieces the set looks are built from. Each has its numbers in SHAPES like any other shape and
+## a builder of the same name in CharacterGear; KIT_SAMPLES holds one look of each for the
+## shader warm-up and the kit shots.
 class_name GearLook
 extends RefCounted
 
@@ -37,6 +43,35 @@ const SHAPE_STAFF := "Staff"
 const SHAPE_AXE := "Axe"
 const SHAPE_PICKAXE := "Pickaxe"
 const SHAPE_ROD := "Rod"
+## The kit shapes (#160).
+const SHAPE_PEAKED_HOOD := "PeakedHood"
+const SHAPE_UNDER_ROBE := "UnderRobe"
+const SHAPE_CLOAK := "Cloak"
+const SHAPE_COLLAR := "Collar"
+const SHAPE_STACKED_PLATES := "StackedPlates"
+const SHAPE_CRYSTAL := "Crystal"
+const SHAPE_FIN := "Fin"
+const SHAPE_PRISM_STACK := "PrismStack"
+const SHAPE_STUDS := "Studs"
+const SHAPE_EDGE_TRIM := "EdgeTrim"
+const KIT_SHAPES := [
+	SHAPE_PEAKED_HOOD, SHAPE_UNDER_ROBE, SHAPE_CLOAK, SHAPE_COLLAR, SHAPE_STACKED_PLATES,
+	SHAPE_CRYSTAL, SHAPE_FIN, SHAPE_PRISM_STACK, SHAPE_STUDS, SHAPE_EDGE_TRIM,
+]
+## A cloak's outline: one straight hem, two halves parting in a V, a ragged hem, a long
+## centre tail, or a banner on a pole rising over the shoulders.
+const OUTLINE_PLAIN := "plain"
+const OUTLINE_FORKED := "forked"
+const OUTLINE_TORN := "torn"
+const OUTLINE_TAIL := "tail"
+const OUTLINE_BANNER := "banner"
+const OUTLINES := [OUTLINE_PLAIN, OUTLINE_FORKED, OUTLINE_TORN, OUTLINE_TAIL, OUTLINE_BANNER]
+## A collar's kind: a high collar, a jagged ice collar, a stone back-plate, or an upright hoop.
+const COLLAR_HIGH := "high"
+const COLLAR_JAGGED := "jagged"
+const COLLAR_PLATE := "plate"
+const COLLAR_HOOP := "hoop"
+const COLLARS := [COLLAR_HIGH, COLLAR_JAGGED, COLLAR_PLATE, COLLAR_HOOP]
 
 ## Every palette carries exactly these fields.
 ##   base         Color  the piece itself: a dome, vest, greave or fur wrap, a blade or haft
@@ -44,8 +79,9 @@ const SHAPE_ROD := "Rod"
 ##   trim         Color  bands and edges: a helm's band and nose guard, fur's pale ruff, hem
 ##                       and shin band
 ##   accent       Color  raised pieces: pauldrons, the pale hoop framing a fur hood's face
-##   glow         Color  what a glowing part shines in: a staff's crystal
-##   glow_energy  float  how bright the glow is; 0 draws it unlit
+##   glow         Color  what a glowing part shines in: a staff's crystal, and a kit shape's
+##                       highlight whenever its look's `glow` is above 0
+##   glow_energy  float  how bright the staff's glow is; 0 draws it unlit
 const PALETTE_FIELDS := ["base", "dark", "trim", "accent", "glow", "glow_energy"]
 
 const WOOD := {
@@ -73,6 +109,12 @@ const FUR := {
 	"base": Color(0.56, 0.48, 0.40), "dark": Color(0.504, 0.432, 0.36),
 	"trim": Color(0.80, 0.74, 0.64), "accent": Color(0.714, 0.662, 0.61),
 	"glow": Color.BLACK, "glow_energy": 0.0,
+}
+## The kit samples' colours: dusk violet under bone, lit aurora green.
+const KIT := {
+	"base": Color(0.24, 0.18, 0.42), "dark": Color(0.16, 0.12, 0.30),
+	"trim": Color(0.91, 0.89, 0.82), "accent": Color(0.55, 0.48, 0.35),
+	"glow": Color(0.50, 0.94, 0.77), "glow_energy": 1.5,
 }
 const MISSING := {
 	"base": Color.MAGENTA, "dark": Color.MAGENTA, "trim": Color.MAGENTA, "accent": Color.MAGENTA,
@@ -138,7 +180,100 @@ const SHAPES := {
 		"length": 1.4, "held_tilt": -1.0, "slung_lift": 0.2,
 		"sling_offset": Vector3(0.12, -0.38, 0.34), "sling_roll": 0.5,
 	},
+	# The kit shapes. Every one draws at least two tones, a base plus a darker underside or a
+	# lighter trim, so it reads lit from above without a texture; `glow` above 0 draws its
+	# highlight in the palette's glow colour, shining that bright. Metres and radians in the
+	# part's mount frame (+X right, +Y up, -Z forward).
+	# A hood crown with a peak fin swept back from its top, a drape down the neck in the dark
+	# tone and a hoop trimming the face opening, so the head is a teardrop from above.
+	SHAPE_PEAKED_HOOD: {
+		"radius": 0.5, "height": 0.5, "segments": 10, "rings": 4, "y": 0.34,
+		"peak_length": 0.6, "peak_width": 0.36, "peak_tilt": 1.2, "peak_offset": Vector3(0, 0.62, 0.2),
+		"drape_radius": 0.46, "drape_height": 0.4, "drape_offset": Vector3(0, 0.2, 0.1),
+		"hoop_inner": 0.4, "hoop_outer": 0.47, "hoop_rings": 10, "hoop_segments": 6,
+		"hoop_offset": Vector3(0, 0.2, -0.36), "glow": 0.0,
+	},
+	# A flaring under-robe in the dark tone with `bands` bands up from its hem, under a coat
+	# shell set `coat_back` behind the body so the robe shows at the open front, and two
+	# front panels hanging from the coat's hem, each its own length and flared apart.
+	SHAPE_UNDER_ROBE: {
+		"top_radius": 0.36, "bottom_radius": 0.56, "height": 1.05, "segments": 10, "y": -0.35,
+		"coat_top_radius": 0.4, "coat_bottom_radius": 0.52, "coat_height": 0.6, "coat_y": -0.12, "coat_back": 0.1,
+		"panel_left": 0.55, "panel_right": 0.4, "panel_width": 0.2, "panel_thickness": 0.04,
+		"panel_x": 0.17, "panel_z": -0.46, "panel_top": -0.3, "panel_flare": 0.12, "panel_lean": 0.2,
+		"bands": 2, "band_height": 0.05, "band_from": -0.75, "band_step": 0.2, "glow": 0.0,
+	},
+	# A fin hung from the shoulders behind the body, in two halves each its own length, with
+	# a hem band; `outline` picks plain, forked, torn, tail or banner.
+	SHAPE_CLOAK: {
+		"width": 0.6, "length_left": 0.9, "length_right": 0.9, "thickness": 0.04,
+		"offset": Vector3(0, 0.2, 0.36), "tilt": 0.12, "hem": 0.05,
+		"outline": OUTLINE_PLAIN, "fork": 0.22, "teeth": 3, "tooth": 0.12,
+		"tail_length": 0.45, "tail_width": 0.25, "banner_rise": 0.7, "banner_width": 0.3, "glow": 0.0,
+	},
+	# An upright plate behind the neck leaning `tilt` back, over a dark backing, with a lit
+	# top edge: `kind` picks a high collar, a jagged collar with `teeth` points, a wider
+	# thicker back-plate, or an upright hoop with `teeth` fins on its rim.
+	SHAPE_COLLAR: {
+		"kind": COLLAR_HIGH, "width": 0.64, "height": 0.5, "thickness": 0.05,
+		"offset": Vector3(0, 0.26, 0.3), "tilt": 0.45, "teeth": 5, "tooth": 0.18,
+		"hoop_inner": 0.3, "hoop_outer": 0.4, "hoop_rings": 10, "hoop_segments": 6, "glow": 0.0,
+	},
+	# Two or three plates on each shoulder, the top one in the base tone and each lower one
+	# darker, `step` further out and down and `grow` larger; each side has its own count and
+	# size, and a lit trim runs along the top plate's outer edge.
+	SHAPE_STACKED_PLATES: {
+		"plates_left": 2, "plates_right": 2,
+		"size_left": Vector3(0.28, 0.08, 0.32), "size_right": Vector3(0.28, 0.08, 0.32),
+		"x": 0.4, "y": 0.18, "tilt": 0.35, "step": Vector3(0.05, -0.07, 0), "grow": 0.1, "trim": 0.03, "glow": 0.0,
+	},
+	# A prism with `facets` sides, its tip in the glow colour over a dark root, tilted by
+	# `tilt`; `light` adds one small light at the tip and `motes` a few glowing motes.
+	SHAPE_CRYSTAL: {
+		"facets": 4, "length": 0.3, "radius": 0.06, "root": 0.3, "offset": Vector3.ZERO, "tilt": Vector3.ZERO,
+		"glow": 1.0, "light": false, "light_energy": 1.0, "light_range": 3.0,
+		"motes": false, "motes_count": 4, "motes_radius": 0.25, "motes_size": 0.03, "motes_rise": 0.3,
+	},
+	# A thin flat plate standing up from its root, `size` wide, long and thick, with a lit
+	# edge along its tip, or `teeth` points there when `jagged`.
+	SHAPE_FIN: {
+		"size": Vector3(0.14, 0.3, 0.04), "offset": Vector3.ZERO, "tilt": Vector3.ZERO,
+		"jagged": false, "teeth": 3, "tooth": 0.06, "edge": 0.025, "glow": 0.0,
+	},
+	# `count` prisms stacked end to end, each `bend` further round and `taper` as wide as the
+	# one below, from a dark root through the base tone to an accent (or lit) tip.
+	SHAPE_PRISM_STACK: {
+		"count": 3, "length": 0.45, "radius": 0.07, "facets": 4, "bend": 0.35, "taper": 0.7,
+		"offset": Vector3.ZERO, "tilt": Vector3.ZERO, "glow": 0.0,
+	},
+	# `count` small spheres in the accent tone spaced over `arc` of a dark band of `radius`,
+	# centred on the front.
+	SHAPE_STUDS: {
+		"count": 5, "radius": 0.42, "arc": PI, "y": -0.28, "stud": 0.035, "band_height": 0.05, "segments": 10, "glow": 0.0,
+	},
+	# A thin raised rim in the trim tone round a plate `size` across (x and z) and `size.y`
+	# tall, over a dark shadow line, so the plate catches a highlight from above; `round`
+	# draws it as a hoop of `radius` instead.
+	SHAPE_EDGE_TRIM: {
+		"size": Vector3(0.3, 0.03, 0.34), "offset": Vector3.ZERO, "tilt": Vector3.ZERO, "lip": 0.025,
+		"round": false, "radius": 0.37, "segments": 10, "glow": 0.0,
+	},
 }
+
+## One look of each kit shape, for the shader warm-up (a light and motes included) and the kit
+## shots: unequal sides where a shape has them, a jagged edge, a lit highlight.
+const KIT_SAMPLES := [
+	{"shape": SHAPE_PEAKED_HOOD, "glow": 0.6},
+	{"shape": SHAPE_UNDER_ROBE, "panel_left": 0.6, "panel_right": 0.42, "glow": 1.0},
+	{"shape": SHAPE_CLOAK, "outline": OUTLINE_FORKED, "length_left": 0.95, "length_right": 0.8, "glow": 0.8},
+	{"shape": SHAPE_COLLAR, "kind": COLLAR_JAGGED, "glow": 1.2},
+	{"shape": SHAPE_STACKED_PLATES, "plates_left": 3, "plates_right": 2, "size_left": Vector3(0.32, 0.08, 0.36), "glow": 0.8},
+	{"shape": SHAPE_CRYSTAL, "length": 0.45, "radius": 0.1, "glow": 1.6, "light": true, "light_energy": 1.5, "motes": true, "offset": Vector3(0, 0.7, 0)},
+	{"shape": SHAPE_FIN, "size": Vector3(0.2, 0.45, 0.04), "jagged": true, "offset": Vector3(0, 0.72, 0.05), "tilt": Vector3(0.4, 0, 0), "glow": 1.0},
+	{"shape": SHAPE_PRISM_STACK, "offset": Vector3(0.32, 0.55, 0), "tilt": Vector3(0, 0, -0.7), "glow": 1.2},
+	{"shape": SHAPE_STUDS, "glow": 1.0},
+	{"shape": SHAPE_EDGE_TRIM, "size": Vector3(0.3, 0.03, 0.3), "offset": Vector3(0, 0.02, -0.37), "tilt": Vector3(-1.45, 0, 0), "glow": 0.6},
+]
 
 const LOOKS := {
 	# Tools
@@ -201,6 +336,11 @@ static func piece(item: String, part: String) -> Dictionary:
 	var own: Dictionary = LOOKS.get(item, {}).get(part, _plain(item, part))
 	if own.is_empty():
 		return {}
+	return numbers(own)
+
+
+## A look to build from: the numbers of the shape `own` names, with `own`'s laid over them.
+static func numbers(own: Dictionary) -> Dictionary:
 	var out: Dictionary = (SHAPES[own["shape"]] as Dictionary).duplicate()
 	out.merge(own, true)
 	return out
