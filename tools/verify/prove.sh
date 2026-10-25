@@ -109,8 +109,9 @@ cat >"$WORK/shims/gh" <<EOF
 #!/bin/bash
 # prove.sh's stand-in for gh: ticket #$TICKET from its fixture, everything else from the real gh.
 if [ "\$1 \$2 \$3" = "issue view $TICKET" ]; then
-  exec jq -Rs 'capture("^# #(?<n>[0-9]+) (?<title>[^\n]*)\n\n(?<body>.*)\n\$"; "s")
-    | {number: (.n | tonumber), title, body, url: "https://github.com/travism26/frostmark/issues/$TICKET"}' "$FIX/ticket-$TICKET.md"
+  # The fixture is "# #<n> <title>", a blank line, then the body and a newline.
+  exec jq -Rs 'index("\n") as \$i | {number: $TICKET, title: (.[0:\$i] | ltrimstr("# #$TICKET ")),
+    body: .[\$i + 2:-1], url: "https://github.com/travism26/frostmark/issues/$TICKET"}' "$FIX/ticket-$TICKET.md"
 fi
 exec "$REAL_GH" "\$@"
 EOF
