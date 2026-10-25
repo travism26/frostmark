@@ -476,6 +476,7 @@ const ITEMS := {
 	"steelpoint_quiver": {
 		"label": "Steelpoint quiver", "stack": 1, "weight": 1, "value": 40, "slot": SLOT_QUIVER,
 		"set": SET_STEELPOINT,
+	},
 	# The magic sets (#166): Shardweaver (mid), Rimecaller (mid-high) and Glacier Warden
 	# (high), each a helm, a body, legs and a staff under the set-item rule above (the staff's
 	# head is look only; its stats are the steel staff's), and a cloak for the two upper sets
