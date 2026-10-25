@@ -3,7 +3,8 @@
 ## character stands south of the gate with one set of gear worn per scene: an axe, a pickaxe, a
 ## sword, a bow and a staff, the axe again while chopping a pine, and the armour sets (a full
 ## wooden, bronze, iron, steel and fur set, fur mixed with metal both ways, a helm alone and
-## legs alone).
+## legs alone), and the melee sets (#162): each full set, each set's helm alone over steel, and
+## pieces mixed across sets and tiers.
 ##
 ##   godot --resolution 1280x720 -s tools/gear_shots.gd -- <out_dir> [scene ...]
 ##
@@ -34,6 +35,20 @@ const SCENES := [
 	{"name": "fur_coat_steel_helm_legs", "weapon": "steel_sword", "tool": "steel_pickaxe", "helm": "steel_helm", "body": "fur_coat", "legs": "steel_legs"},
 	{"name": "helm_only", "weapon": "iron_sword", "tool": "iron_axe", "helm": "iron_helm"},
 	{"name": "legs_only", "weapon": "iron_sword", "tool": "iron_axe", "legs": "iron_legs"},
+	# The melee sets (#162): each full set, each set's helm alone over steel (the one-piece
+	# check against the tier below), and pieces mixed across sets and tiers.
+	{"name": "hearthguard_set", "weapon": "hearthguard_broadsword", "tool": "steel_pickaxe", "helm": "hearthguard_helm", "body": "hearthguard_body", "legs": "hearthguard_legs"},
+	{"name": "wolfmark_set", "weapon": "wolfmark_axe", "tool": "steel_pickaxe", "helm": "wolfmark_helm", "body": "wolfmark_body", "legs": "wolfmark_legs"},
+	{"name": "ruinwarden_set", "weapon": "ruinwarden_greatsword", "tool": "steel_pickaxe", "helm": "ruinwarden_helm", "body": "ruinwarden_body", "legs": "ruinwarden_legs"},
+	{"name": "hearthguard_helm_check", "weapon": "steel_sword", "tool": "steel_pickaxe", "helm": "hearthguard_helm", "body": "steel_body", "legs": "steel_legs"},
+	{"name": "wolfmark_helm_check", "weapon": "steel_sword", "tool": "steel_pickaxe", "helm": "wolfmark_helm", "body": "steel_body", "legs": "steel_legs"},
+	{"name": "ruinwarden_helm_check", "weapon": "steel_sword", "tool": "steel_pickaxe", "helm": "ruinwarden_helm", "body": "steel_body", "legs": "steel_legs"},
+	{"name": "mixed_sets", "weapon": "wolfmark_axe", "tool": "steel_pickaxe", "helm": "hearthguard_helm", "body": "ruinwarden_body", "legs": "wolfmark_legs"},
+	{"name": "mixed_sets_2", "weapon": "hearthguard_broadsword", "tool": "iron_axe", "helm": "ruinwarden_helm", "body": "wolfmark_body", "legs": "hearthguard_legs"},
+	{"name": "ruinwarden_helm_fur_coat_iron_legs", "weapon": "ruinwarden_greatsword", "tool": "iron_axe", "helm": "ruinwarden_helm", "body": "fur_coat", "legs": "iron_legs"},
+	{"name": "wolfmark_body_only", "weapon": "bronze_sword", "tool": "bronze_axe", "body": "wolfmark_body"},
+	{"name": "ruinwarden_legs_only", "weapon": "iron_sword", "tool": "iron_axe", "legs": "ruinwarden_legs"},
+	{"name": "hearthguard_body_fur_hood_steel_legs", "weapon": "steel_sword", "tool": "steel_axe", "helm": "fur_hood", "body": "hearthguard_body", "legs": "steel_legs"},
 ]
 
 var _out_dir := ""
