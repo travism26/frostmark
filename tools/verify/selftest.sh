@@ -80,6 +80,13 @@ check "$(holds grep -q "SCRIPT ERROR: Invalid call. Nonexistent function 'walk'"
 check "$(holds grep -q 'SCRIPT ERROR' <(sed -n '/^== drive probe_error.gd/,/^== end/p' "$RECORD/head.log"))" "records the error"
 check "$(holds grep -q 'SCRIPT ERROR' "$RECORD/drive/probe_error.head.log")" "where the verdict reads it"
 
+echo "== a grade with another id"
+out=$(drive "$RECORD" "$FIX/probe_bad_id.gd" 2>&1)
+echo "$out" | sed 's/^/  | /'
+check "$(holds grep -q 'PROBE {"id":"AC1"' <<<"$out")" "a criterion id still prints its PROBE line"
+check "$(holds test -z "$(grep 'PROBE {"id":"AC1.part"' <<<"$out")")" "any other id prints none"
+check "$(holds grep -q "'AC1.part' is not a criterion id" <<<"$out")" "  and prints why"
+
 echo "== a probe that never quits"
 out=$(VERIFY_PROBE_SECS=2 drive "$RECORD" "$FIX/probe_hang.gd" 2>&1)
 echo "$out" | sed 's/^/  | /'

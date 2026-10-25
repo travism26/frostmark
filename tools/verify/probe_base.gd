@@ -28,7 +28,11 @@ func run() -> void:
 
 ## Prints one `PROBE {json}` line, the only output the verdict reads. `observed` is what the
 ## probe saw, in whatever shape explains the grade (a number, a list of events, a dictionary).
+## `id` is a criterion's own id; the verdict reads no other, so any other id is an error.
 func grade(id: String, ok: bool, observed: Variant) -> void:
+	if not RegEx.create_from_string("^AC[1-9][0-9]*$").search(id):
+		push_error("grade: '%s' is not a criterion id (AC1, AC2, ...): to grade one in parts, call grade() with its id once per part" % id)
+		return
 	print("PROBE " + JSON.stringify({"id": id, "pass": ok, "observed": observed}))
 
 

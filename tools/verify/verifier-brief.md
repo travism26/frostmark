@@ -52,6 +52,7 @@ func run() -> void:
 ```
 
 - `grade(id, ok, observed)` prints one `PROBE {json}` line. `observed` is what the probe saw, in the shape that best explains the grade. A FAIL is sent back to the author with it, so make it say what happened.
+- `id` is the criterion's id exactly, `AC2`, never `AC2.empty`: the script reads no other, and `grade()` refuses one. To grade a criterion in parts, call `grade()` with its id once per part. It passes only if every part does.
 - One probe may grade several criteria. Name probes for what they drive (`gate_return.gd`), not `test.gd`.
 - Drive the game the way a player would: `command()`, then `step()` through the ticks.
 - Use `restore()` helpers (`set_pack`, `place`, `patch`) only to arrange the start. Every wait steps ticks against a cap. A probe that never returns is killed after 60 s.
