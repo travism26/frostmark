@@ -8,10 +8,13 @@
 ## outpost and on the ring-one and ring-two snow, each set's helm alone over steel, and pieces
 ## mixed across sets and tiers, and the ranged sets (#164): each full set, each set's helm alone
 ## over steel, pieces mixed across sets and tiers, and a quiver over other bodies and while
-## working, and the ranged top sets (#165): each set's helm alone over steel, each full set at
-## the outpost and on the ring-one and ring-two snow, pieces mixed across sets and tiers, a
-## cape over other bodies and under other quivers, and a cape and quiver while working. A
-## scene may name a `spot` to stand at; the default is south of the gate.
+## working, the ranged top sets (#165): each set's helm alone over steel, each full set at the
+## outpost and on the ring-one and ring-two snow, pieces mixed across sets and tiers, a cape
+## over other bodies and under other quivers, and a cape and quiver while working, and the magic
+## sets (#166): each full set with its staff and cloak at the outpost and on each ring's snow,
+## each set's helm alone over steel, pieces mixed across sets, lines and tiers, a cloak over
+## other bodies and alone, and a body or legs alone. A scene may name a `spot` to stand at; the
+## default is south of the gate.
 ##
 ##   godot --resolution 1280x720 -s tools/gear_shots.gd -- <out_dir> [scene ...]
 ##
@@ -139,6 +142,31 @@ const SCENES := [
 	{"name": "ruin_stalker_quiver_trapper_hood_iron_legs", "weapon": "trapper_bow", "tool": "steel_axe", "helm": "trapper_helm", "body": "trapper_body", "legs": "iron_legs", "quiver": "ruin_stalker_quiver"},
 	{"name": "glacier_sovereign_quiver_hoarfrost_body", "weapon": "iron_bow", "tool": "iron_axe", "helm": "hoarfrost_helm", "body": "hoarfrost_body", "legs": "iron_legs", "quiver": "glacier_sovereign_quiver"},
 	{"name": "chopping_with_cape_and_quiver", "weapon": "auroral_warden_bow", "tool": "steel_axe", "helm": "auroral_warden_helm", "body": "glacier_sovereign_body", "legs": "ruin_stalker_legs", "quiver": "auroral_warden_quiver", "cape": "ruin_stalker_cape", "gather": "tree_3"},
+	# The magic sets (#166): each set's helm alone over steel (the one-piece check against the
+	# tier below), each full set with its staff and cloak at the outpost and on each ring's
+	# snow, pieces mixed across sets, lines and tiers, a cloak over other bodies and alone, and
+	# a body or legs alone.
+	{"name": "shardweaver_helm_check", "weapon": "steel_staff", "tool": "steel_pickaxe", "helm": "shardweaver_helm", "body": "steel_body", "legs": "steel_legs"},
+	{"name": "rimecaller_helm_check", "weapon": "steel_staff", "tool": "steel_pickaxe", "helm": "rimecaller_helm", "body": "steel_body", "legs": "steel_legs"},
+	{"name": "glacier_warden_helm_check", "weapon": "steel_staff", "tool": "steel_pickaxe", "helm": "glacier_warden_helm", "body": "steel_body", "legs": "steel_legs"},
+	{"name": "shardweaver_set", "weapon": "shardweaver_staff", "tool": "steel_pickaxe", "helm": "shardweaver_helm", "body": "shardweaver_body", "legs": "shardweaver_legs"},
+	{"name": "rimecaller_set", "weapon": "rimecaller_staff", "tool": "steel_pickaxe", "helm": "rimecaller_helm", "body": "rimecaller_body", "legs": "rimecaller_legs", "cape": "rimecaller_cape"},
+	{"name": "glacier_warden_set", "weapon": "glacier_warden_staff", "tool": "steel_pickaxe", "helm": "glacier_warden_helm", "body": "glacier_warden_body", "legs": "glacier_warden_legs", "cape": "glacier_warden_cape"},
+	{"name": "shardweaver_set_ring_one", "spot": SPOT_RING_ONE, "weapon": "shardweaver_staff", "tool": "steel_pickaxe", "helm": "shardweaver_helm", "body": "shardweaver_body", "legs": "shardweaver_legs"},
+	{"name": "rimecaller_set_ring_one", "spot": SPOT_RING_ONE, "weapon": "rimecaller_staff", "tool": "steel_pickaxe", "helm": "rimecaller_helm", "body": "rimecaller_body", "legs": "rimecaller_legs", "cape": "rimecaller_cape"},
+	{"name": "glacier_warden_set_ring_one", "spot": SPOT_RING_ONE, "weapon": "glacier_warden_staff", "tool": "steel_pickaxe", "helm": "glacier_warden_helm", "body": "glacier_warden_body", "legs": "glacier_warden_legs", "cape": "glacier_warden_cape"},
+	{"name": "shardweaver_set_ring_two", "spot": SPOT_RING_TWO, "weapon": "shardweaver_staff", "tool": "steel_pickaxe", "helm": "shardweaver_helm", "body": "shardweaver_body", "legs": "shardweaver_legs"},
+	{"name": "rimecaller_set_ring_two", "spot": SPOT_RING_TWO, "weapon": "rimecaller_staff", "tool": "steel_pickaxe", "helm": "rimecaller_helm", "body": "rimecaller_body", "legs": "rimecaller_legs", "cape": "rimecaller_cape"},
+	{"name": "glacier_warden_set_ring_two", "spot": SPOT_RING_TWO, "weapon": "glacier_warden_staff", "tool": "steel_pickaxe", "helm": "glacier_warden_helm", "body": "glacier_warden_body", "legs": "glacier_warden_legs", "cape": "glacier_warden_cape"},
+	{"name": "magic_mixed_sets", "weapon": "rimecaller_staff", "tool": "steel_pickaxe", "helm": "shardweaver_helm", "body": "rimecaller_body", "legs": "glacier_warden_legs", "cape": "glacier_warden_cape"},
+	{"name": "magic_mixed_sets_2", "weapon": "glacier_warden_staff", "tool": "iron_axe", "helm": "rimecaller_helm", "body": "glacier_warden_body", "legs": "shardweaver_legs", "cape": "rimecaller_cape"},
+	{"name": "magic_mixed_sets_3", "weapon": "shardweaver_staff", "tool": "steel_axe", "helm": "glacier_warden_helm", "body": "shardweaver_body", "legs": "rimecaller_legs"},
+	{"name": "rimecaller_cape_over_steel", "weapon": "steel_sword", "tool": "steel_pickaxe", "helm": "steel_helm", "body": "steel_body", "legs": "steel_legs", "cape": "rimecaller_cape"},
+	{"name": "glacier_warden_cape_hoarfrost_body_quiver", "weapon": "steelpoint_bow", "tool": "steel_axe", "helm": "trapper_helm", "body": "hoarfrost_body", "legs": "steelpoint_legs", "cape": "glacier_warden_cape", "quiver": "steelpoint_quiver"},
+	{"name": "rimecaller_body_wolfmark_legs_fur_hood", "weapon": "wolfmark_axe", "tool": "iron_pickaxe", "helm": "fur_hood", "body": "rimecaller_body", "legs": "wolfmark_legs"},
+	{"name": "shardweaver_body_only", "weapon": "bronze_sword", "tool": "bronze_axe", "body": "shardweaver_body"},
+	{"name": "glacier_warden_legs_only", "weapon": "iron_sword", "tool": "iron_axe", "legs": "glacier_warden_legs"},
+	{"name": "chopping_with_cape", "weapon": "glacier_warden_staff", "tool": "steel_axe", "helm": "glacier_warden_helm", "body": "glacier_warden_body", "legs": "glacier_warden_legs", "cape": "glacier_warden_cape", "gather": "tree_3"},
 ]
 
 var _out_dir := ""
