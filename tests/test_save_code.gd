@@ -460,6 +460,25 @@ func test_a_version_9_code_in_iron_armour_imports_with_an_iron_body_worn_and_car
 	assert_eq(sim.combatant(Vocab.PLAYER)["defence"], 1, "an iron body alone takes 1 off a hit")
 
 
+func test_a_version_10_snapshot_gains_an_empty_quiver_and_cape_and_nothing_else() -> void:
+	var v10 := SimScript.new().snapshot()
+	v10["version"] = 10
+	v10["tick"] = 5100
+	v10["inventory"]["equipment"] = {
+		"weapon": "steel_bow", "helm": "fur_hood", "body": "steel_body", "legs": "", "tool": "steel_axe",
+	}
+	v10["inventory"]["pack"][0] = {"item": "arrows", "count": 60}
+	var migrated: Dictionary = SaveCode.migrate(v10, 11)
+	var expected := v10.duplicate(true)
+	expected["version"] = 11
+	expected["inventory"]["equipment"]["quiver"] = ""
+	expected["inventory"]["equipment"]["cape"] = ""
+	assert_eq(migrated, expected, "both new slots empty, everything else as it was")
+	var sim := SimScript.new()
+	assert_true(sim.command(Vocab.IMPORT_SAVE, {"code": SaveCode.encode(v10)})["ok"], "the version-10 code imports")
+	assert_eq(sim.state["inventory"]["equipment"], expected["inventory"]["equipment"])
+
+
 func test_a_full_version_2_stash_gets_no_kit() -> void:
 	var full: Array = []
 	for i in 8:

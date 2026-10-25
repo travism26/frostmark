@@ -16,10 +16,17 @@ const BODY_PARTS := [
 ]
 
 
-func _gear(weapon: String, tool: String, body := "", helm := "", legs := "") -> Dictionary:
+## No quiver or cape item exists until the ranged and magic set tickets add them, so the
+## layout and the barbarian's cape are checked with these stand-in ids.
+const A_QUIVER := "a_quiver"
+const A_CAPE := "a_cape"
+
+
+func _gear(weapon: String, tool: String, body := "", helm := "", legs := "", quiver := "", cape := "") -> Dictionary:
 	return {
 		ItemTable.SLOT_WEAPON: weapon, ItemTable.SLOT_TOOL: tool,
 		ItemTable.SLOT_HELM: helm, ItemTable.SLOT_BODY: body, ItemTable.SLOT_LEGS: legs,
+		ItemTable.SLOT_QUIVER: quiver, ItemTable.SLOT_CAPE: cape,
 	}
 
 
@@ -69,6 +76,44 @@ func test_fur_pieces_are_worn_like_armour_and_drawn_in_fur() -> void:
 	assert_eq(CharacterGearScript.colour_of("steel_body"), GearLookScript.STEEL["base"], "metal keeps its own colour")
 
 
+func test_the_quiver_and_cape_have_their_own_places_at_rest_and_at_work() -> void:
+	for working in [false, true]:
+		var layout := GearLayoutScript.place(_gear("steel_bow", "steel_axe", "steel_body", "", "", A_QUIVER, A_CAPE), working)
+		assert_eq(layout[GearLayoutScript.QUIVER], A_QUIVER, "the quiver stays on the back (working %s)" % working)
+		assert_eq(layout[GearLayoutScript.CAPE], A_CAPE, "the cape stays behind the body (working %s)" % working)
+		assert_eq(layout[GearLayoutScript.BODY], "steel_body")
+		assert_eq(layout[GearLayoutScript.BACK], "" if working else "steel_axe", "the tool still slings and comes to the hand")
+	var quiver_only := GearLayoutScript.place(_gear("", "", "", "", "", A_QUIVER), false)
+	assert_eq(quiver_only[GearLayoutScript.QUIVER], A_QUIVER, "a quiver alone is drawn")
+	assert_eq(quiver_only[GearLayoutScript.CAPE], "", "no cape drawn when none is worn")
+	var cape_only := GearLayoutScript.place(_gear("", "", "", "", "", "", A_CAPE), true)
+	assert_eq(cape_only[GearLayoutScript.CAPE], A_CAPE, "a cape alone is drawn")
+	assert_eq(cape_only[GearLayoutScript.QUIVER], "", "no quiver drawn when none is worn")
+
+
+func test_the_barbarians_own_cape_hides_while_a_body_or_cape_is_worn() -> void:
+	var root := Node3D.new()
+	var view := CharacterViewScript.new()
+	var gear := CharacterGearScript.new()
+	root.add_child(view)
+	root.add_child(gear)
+	var cape: Node3D = view.find_child("Barbarian_Cape", true, false)
+	assert_true(cape != null, "the barbarian has his own cape")
+	gear.show_equipment(_gear("", ""))
+	assert_true(cape.visible, "it shows with nothing worn")
+	gear.show_equipment(_gear("", "", "", "", "", "", A_CAPE))
+	assert_false(cape.visible, "a worn cape hides it")
+	gear.show_equipment(_gear("", "", "steel_body", "", "", "", A_CAPE))
+	assert_false(cape.visible, "a body and a cape hide it")
+	gear.show_equipment(_gear("", "", "steel_body"))
+	assert_false(cape.visible, "taking the cape off leaves it hidden while a body is worn")
+	gear.show_equipment(_gear("", "", "", "", "", "", A_CAPE))
+	assert_false(cape.visible, "the body off and the cape on keeps it hidden")
+	gear.show_equipment(_gear("", "", "", "", "", A_QUIVER))
+	assert_true(cape.visible, "it shows again once the cape is off and no body is worn, a quiver or not")
+	root.free()
+
+
 func test_bare_handed_with_a_tool() -> void:
 	var resting := GearLayoutScript.place(_gear("", "steel_axe"), false)
 	assert_eq(resting[GearLayoutScript.HAND], "", "hands empty at rest")
@@ -88,7 +133,7 @@ func test_every_item_drawn_is_one_equipped() -> void:
 	for weapon in ["", "wooden_club", "steel_sword", "iron_bow", "bronze_staff"]:
 		for tool in ["", "wooden_axe", "steel_pickaxe", "fishing_rod"]:
 			for working in [false, true]:
-				var gear := _gear(weapon, tool, "steel_body", "steel_helm", "steel_legs")
+				var gear := _gear(weapon, tool, "steel_body", "steel_helm", "steel_legs", A_QUIVER, A_CAPE)
 				var layout := GearLayoutScript.place(gear, working)
 				var drawn: Array = []
 				for place in GearLayoutScript.PLACES:
@@ -188,11 +233,11 @@ func test_every_armour_look_is_there_to_warm_up() -> void:
 	var names: Array = []
 	for child in all.get_children():
 		names.append(String(child.name))
-	for shape in [CharacterGearScript.SHAPE_FUR_HOOD, CharacterGearScript.SHAPE_FUR_COAT, CharacterGearScript.SHAPE_FUR_LEGGINGS, CharacterGearScript.SHAPE_FUR_BAND, CharacterGearScript.SHAPE_HELM, CharacterGearScript.SHAPE_VEST, CharacterGearScript.SHAPE_KILT, CharacterGearScript.SHAPE_GREAVE]:
+	for shape in [CharacterGearScript.SHAPE_FUR_HOOD, CharacterGearScript.SHAPE_FUR_COAT, CharacterGearScript.SHAPE_FUR_LEGGINGS, CharacterGearScript.SHAPE_FUR_BAND, CharacterGearScript.SHAPE_HELM, CharacterGearScript.SHAPE_VEST, CharacterGearScript.SHAPE_KILT, CharacterGearScript.SHAPE_GREAVE, CharacterGearScript.SHAPE_QUIVER, CharacterGearScript.SHAPE_CLOAK]:
 		assert_true(names.has(shape), "a %s is sampled" % shape)
 	var armour := 0
 	for item in ItemTable.ITEMS:
-		if ItemTable.ARMOUR_SLOTS.has(ItemTable.slot(item)):
+		if ItemTable.ARMOUR_SLOTS.has(ItemTable.slot(item)) or ItemTable.slot(item) in [ItemTable.SLOT_QUIVER, ItemTable.SLOT_CAPE]:
 			armour += 1
 	assert_true(all.get_child_count() >= armour, "at least one sample per armour piece (%d)" % armour)
 	for node in all.find_children("*", "MeshInstance3D", true, false):

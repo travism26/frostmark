@@ -69,6 +69,18 @@ func test_a_bronze_kit_with_three_tools_and_food_leaves_room_for_haul() -> void:
 	assert_eq(sim.carry_limit() - sim.carry_weight(), 21, "about two stacks of haul")
 
 
+func test_a_new_character_has_seven_slots_with_the_quiver_and_cape_empty() -> void:
+	assert_eq(ItemTable.EQUIPMENT_SLOTS, [
+		ItemTable.SLOT_WEAPON, ItemTable.SLOT_HELM, ItemTable.SLOT_BODY, ItemTable.SLOT_LEGS,
+		ItemTable.SLOT_TOOL, ItemTable.SLOT_QUIVER, ItemTable.SLOT_CAPE,
+	])
+	assert_eq(ItemTable.ARMOUR_SLOTS, [ItemTable.SLOT_HELM, ItemTable.SLOT_BODY, ItemTable.SLOT_LEGS], "neither new slot is armour")
+	var worn: Dictionary = SimScript.new().state["inventory"]["equipment"]
+	assert_eq(worn.keys(), Array(ItemTable.EQUIPMENT_SLOTS), "one entry per slot")
+	assert_eq(worn[ItemTable.SLOT_QUIVER], "", "no quiver")
+	assert_eq(worn[ItemTable.SLOT_CAPE], "", "no cape")
+
+
 func test_the_pack_has_12_slots() -> void:
 	var sim := SimScript.new()
 	assert_eq(sim.state["inventory"]["pack"].size(), 12)

@@ -85,6 +85,10 @@ func test_every_cloak_outline_and_collar_kind_draws_two_tones() -> void:
 		var piece := _build({"shape": GearLookScript.SHAPE_FIN, "jagged": jagged})
 		assert_true(_tones(piece).size() >= 2, "a fin (jagged %s) draws at least two tones" % jagged)
 		piece.free()
+	for tips in GearLookScript.QUIVER_TIPS:
+		var piece := _build({"shape": GearLookScript.SHAPE_QUIVER, "tips": tips})
+		assert_true(_tones(piece).size() >= 2, "a quiver with %s draws at least two tones" % tips)
+		piece.free()
 	for round in [false, true]:
 		var piece := _build({"shape": GearLookScript.SHAPE_EDGE_TRIM, "round": round})
 		assert_true(_tones(piece).size() >= 2, "edge trim (round %s) draws at least two tones" % round)

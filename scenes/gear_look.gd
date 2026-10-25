@@ -7,13 +7,14 @@
 ## An entry holds a `palette` and, for each part the item draws, a piece: a Dictionary
 ## naming its `shape` and only the numbers it changes from that shape's defaults in SHAPES.
 ## A helm draws on PART_HEAD, a body on PART_BODY, legs on PART_HIPS and PART_SHIN (an empty
-## shin piece leaves the shin bare), a weapon on PART_WEAPON and a tool on PART_TOOL.
+## shin piece leaves the shin bare), a weapon on PART_WEAPON, a tool on PART_TOOL, a quiver on
+## PART_QUIVER and a cape on PART_CAPE (a cloak shape, hung from the chest behind the body).
 ##
 ## An item with no entry draws the plain shape of its slot all in magenta, so a missing look
 ## shows.
 ##
 ## The kit shapes (a peaked hood, an under-robe with coat panels, a cloak, a collar, stacked
-## plates, a crystal, a fin, a prism stack, studs and edge trim) are the layered, non-round
+## plates, a crystal, a fin, a prism stack, studs, edge trim and a quiver) are the layered, non-round
 ## pieces the set looks are built from. Each has its numbers in SHAPES like any other shape and
 ## a builder of the same name in CharacterGear; KIT_SAMPLES holds one look of each for the
 ## shader warm-up and the kit shots.
@@ -26,6 +27,8 @@ const PART_HIPS := "hips"
 const PART_SHIN := "shin"
 const PART_WEAPON := "weapon"
 const PART_TOOL := "tool"
+const PART_QUIVER := "quiver"
+const PART_CAPE := "cape"
 
 ## The shapes, also the names of the armour nodes so a test can tell which shape a slot drew.
 const SHAPE_HELM := "Helm"
@@ -54,9 +57,11 @@ const SHAPE_FIN := "Fin"
 const SHAPE_PRISM_STACK := "PrismStack"
 const SHAPE_STUDS := "Studs"
 const SHAPE_EDGE_TRIM := "EdgeTrim"
+## The quiver slot's shape (#161).
+const SHAPE_QUIVER := "Quiver"
 const KIT_SHAPES := [
 	SHAPE_PEAKED_HOOD, SHAPE_UNDER_ROBE, SHAPE_CLOAK, SHAPE_COLLAR, SHAPE_STACKED_PLATES,
-	SHAPE_CRYSTAL, SHAPE_FIN, SHAPE_PRISM_STACK, SHAPE_STUDS, SHAPE_EDGE_TRIM,
+	SHAPE_CRYSTAL, SHAPE_FIN, SHAPE_PRISM_STACK, SHAPE_STUDS, SHAPE_EDGE_TRIM, SHAPE_QUIVER,
 ]
 ## A cloak's outline: one straight hem, two halves parting in a V, a ragged hem, a long
 ## centre tail, or a banner on a pole rising over the shoulders.
@@ -72,6 +77,10 @@ const COLLAR_JAGGED := "jagged"
 const COLLAR_PLATE := "plate"
 const COLLAR_HOOP := "hoop"
 const COLLARS := [COLLAR_HIGH, COLLAR_JAGGED, COLLAR_PLATE, COLLAR_HOOP]
+## What shows above a quiver's cap band: arrow shafts with fletching, or crystal shard tips.
+const TIPS_FLETCHING := "fletching"
+const TIPS_SHARDS := "shards"
+const QUIVER_TIPS := [TIPS_FLETCHING, TIPS_SHARDS]
 
 ## Every palette carries exactly these fields.
 ##   base         Color  the piece itself: a dome, vest, greave or fur wrap, a blade or haft
@@ -258,6 +267,15 @@ const SHAPES := {
 		"size": Vector3(0.3, 0.03, 0.34), "offset": Vector3.ZERO, "tilt": Vector3.ZERO, "lip": 0.025,
 		"round": false, "radius": 0.37, "segments": 10, "glow": 0.0,
 	},
+	# A case `length` long on the back, its root at `offset` low on the shoulder blade and turned
+	# by `tilt` so its mouth tops the right shoulder, clear of a tool slung the other way: a
+	# dark foot, a cap band round the mouth, and `tip_count` fletched shafts or shard tips
+	# standing `tip_length` out of it.
+	SHAPE_QUIVER: {
+		"length": 0.6, "radius": 0.09, "segments": 8, "offset": Vector3(0.2, -0.15, 0.4),
+		"tilt": Vector3(0.12, 0, -0.3), "foot": 0.06, "band_height": 0.05,
+		"tips": TIPS_FLETCHING, "tip_count": 3, "tip_length": 0.16, "glow": 0.0,
+	},
 }
 
 ## One look of each kit shape, for the shader warm-up (a light and motes included) and the kit
@@ -273,6 +291,7 @@ const KIT_SAMPLES := [
 	{"shape": SHAPE_PRISM_STACK, "offset": Vector3(0.32, 0.55, 0), "tilt": Vector3(0, 0, -0.7), "glow": 1.2},
 	{"shape": SHAPE_STUDS, "glow": 1.0},
 	{"shape": SHAPE_EDGE_TRIM, "size": Vector3(0.3, 0.03, 0.3), "offset": Vector3(0, 0.02, -0.37), "tilt": Vector3(-1.45, 0, 0), "glow": 0.6},
+	{"shape": SHAPE_QUIVER, "tips": TIPS_SHARDS, "tip_count": 4, "glow": 1.0},
 ]
 
 const LOOKS := {
@@ -355,6 +374,10 @@ static func _plain(item: String, part: String) -> Dictionary:
 			return {"shape": SHAPE_VEST}
 		PART_HIPS:
 			return {"shape": SHAPE_KILT}
+		PART_QUIVER:
+			return {"shape": SHAPE_QUIVER}
+		PART_CAPE:
+			return {"shape": SHAPE_CLOAK}
 		PART_WEAPON:
 			match ItemTable.ITEMS.get(item, {}).get("style", ""):
 				CombatTable.STYLE_RANGED:
