@@ -53,6 +53,10 @@ const TIERS: Array[String] = [TIER_WOODEN, TIER_BRONZE, TIER_IRON, TIER_STEEL]
 const SET_HEARTHGUARD := "hearthguard"
 const SET_WOLFMARK := "wolfmark"
 const SET_RUINWARDEN := "ruinwarden"
+## The ranged sets' keys (#164).
+const SET_TRAPPER := "trapper"
+const SET_WOLFSTALKER := "wolfstalker"
+const SET_STEELPOINT := "steelpoint"
 
 const ITEMS := {
 	# Materials
@@ -323,6 +327,66 @@ const ITEMS := {
 	"ruinwarden_greatsword": {
 		"label": "Ruinwarden greatsword", "stack": 1, "weight": 4, "value": 160, "slot": SLOT_WEAPON,
 		"style": "melee", "power": 11, "speed": 2, "reach": 1.5, "set": SET_RUINWARDEN,
+	},
+	# The ranged sets (#164): Trapper's Leathers (mid), Wolfstalker (mid-high) and Steelpoint
+	# Ranger (high), each a helm, a body, legs and a bow under the set-item rule above (the
+	# bow's stats are the steel bow's), and a quiver for the two upper sets under the quiver
+	# rule (weight 1, value 40, no defence, no warmth). The first items in the quiver slot.
+	"trapper_helm": {
+		"label": "Trapper hood", "stack": 1, "weight": 2, "value": 40, "slot": SLOT_HELM,
+		"defence": 1, "set": SET_TRAPPER,
+	},
+	"trapper_body": {
+		"label": "Trapper jerkin", "stack": 1, "weight": 3, "value": 80, "slot": SLOT_BODY,
+		"defence": 2, "set": SET_TRAPPER,
+	},
+	"trapper_legs": {
+		"label": "Trapper wraps", "stack": 1, "weight": 2, "value": 60, "slot": SLOT_LEGS,
+		"defence": 1, "set": SET_TRAPPER,
+	},
+	"trapper_bow": {
+		"label": "Trapper bow", "stack": 1, "weight": 2, "value": 168, "slot": SLOT_WEAPON,
+		"style": "ranged", "power": 10, "speed": 2, "reach": 8.0, "ammo": "arrows", "set": SET_TRAPPER,
+	},
+	"wolfstalker_helm": {
+		"label": "Wolfstalker hood", "stack": 1, "weight": 2, "value": 40, "slot": SLOT_HELM,
+		"defence": 1, "set": SET_WOLFSTALKER,
+	},
+	"wolfstalker_body": {
+		"label": "Wolfstalker mantle", "stack": 1, "weight": 3, "value": 80, "slot": SLOT_BODY,
+		"defence": 2, "set": SET_WOLFSTALKER,
+	},
+	"wolfstalker_legs": {
+		"label": "Wolfstalker leggings", "stack": 1, "weight": 2, "value": 60, "slot": SLOT_LEGS,
+		"defence": 1, "set": SET_WOLFSTALKER,
+	},
+	"wolfstalker_bow": {
+		"label": "Wolfstalker longbow", "stack": 1, "weight": 2, "value": 168, "slot": SLOT_WEAPON,
+		"style": "ranged", "power": 10, "speed": 2, "reach": 8.0, "ammo": "arrows", "set": SET_WOLFSTALKER,
+	},
+	"wolfstalker_quiver": {
+		"label": "Wolfstalker quiver", "stack": 1, "weight": 1, "value": 40, "slot": SLOT_QUIVER,
+		"set": SET_WOLFSTALKER,
+	},
+	"steelpoint_helm": {
+		"label": "Steelpoint cap", "stack": 1, "weight": 2, "value": 40, "slot": SLOT_HELM,
+		"defence": 1, "set": SET_STEELPOINT,
+	},
+	"steelpoint_body": {
+		"label": "Steelpoint jerkin", "stack": 1, "weight": 3, "value": 80, "slot": SLOT_BODY,
+		"defence": 2, "set": SET_STEELPOINT,
+	},
+	"steelpoint_legs": {
+		"label": "Steelpoint chaps", "stack": 1, "weight": 2, "value": 60, "slot": SLOT_LEGS,
+		"defence": 1, "set": SET_STEELPOINT,
+	},
+	"steelpoint_bow": {
+		"label": "Steelpoint bow", "stack": 1, "weight": 2, "value": 168, "slot": SLOT_WEAPON,
+		"style": "ranged", "power": 10, "speed": 2, "reach": 8.0, "ammo": "arrows", "set": SET_STEELPOINT,
+	},
+	"steelpoint_quiver": {
+		"label": "Steelpoint quiver", "stack": 1, "weight": 1, "value": 40, "slot": SLOT_QUIVER,
+		"set": SET_STEELPOINT,
 	},
 }
 
