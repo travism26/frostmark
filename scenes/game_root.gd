@@ -849,7 +849,8 @@ func _add_fade_twin(mesh: MeshInstance3D) -> void:
 ## compiled shader), plus the see-through fade twins and every label size with every glyph
 ## it can print. The yard pieces of every upgrade are sampled too, built or not, so none
 ## freezes the game when it first appears, and so is the build beat's puff, with the
-## particles of every fire, and a fight's shots and puffs. A look only stays compiled while
+## particles of every fire, a fight's shots and puffs, and every armour piece, metal and fur,
+## worn or not. A look only stays compiled while
 ## a material of its kind lives, so the shots made during play share materials held for the
 ## session (Projectiles). The HUD is drawn under the title too, so its text is
 ## rasterised before the first click.
@@ -860,6 +861,7 @@ func _build_warmup() -> void:
 		every_piece.add_child(WorldDressing.yard_piece(piece))
 		every_piece.add_child(BuildBeat.puff(piece))
 	every_piece.add_child(Projectiles.samples())
+	every_piece.add_child(CharacterGear.samples())
 	for root: Node in [_world, _enemy_layer, _character, every_piece, _click_marker]:
 		for node in root.find_children("*", "GeometryInstance3D", true, false):
 			var mesh: Mesh = null

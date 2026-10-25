@@ -3,11 +3,17 @@
 ## while the hands are free of it, and each worn armour piece in its place (the helm on the
 ## head, the body on the chest, the legs on the hips and shins), each in its tier's colour
 ## (wood, bronze, iron, steel) and hung on the CharacterView's bone slots so it swings with the
-## animation; a fur piece, which has no tier, in fur. While the view chops, mines or fishes, the tool moves to the right hand (the rod
+## animation. While the view chops, mines or fishes, the tool moves to the right hand (the rod
 ## tipped forward over the water) and the weapon is put away. A piece shows because it is worn,
 ## whatever its tier; the tier changes its shape (pauldrons on a body from bronze, a band on a
 ## helm from bronze and a nose guard from iron, greaves under the kilt from iron), so progress
-## reads at a glance from the top-down camera.
+## reads at a glance from the top-down camera. A fur piece, which has no tier, has its own
+## shape in fur: a rounded hood with a pale trim round the face, a coat with a thick collar
+## ruff, and leggings with a fur band at each shin.
+##
+## The armour shapes are static builders (`head_piece`, `body_piece`, `hips_piece`,
+## `shin_piece`) so the shader warm-up can draw one of every armour look (`samples`) before
+## play; the node mounts them on the view.
 ##
 ## Presentation only: GameRoot hands it the equipment slots from the state after every
 ## `equipped` event and on load. The slots come lazily from a sibling CharacterView, so the
@@ -20,8 +26,19 @@ const TIER_COLORS := {
 	ItemTable.TIER_IRON: Color(0.58, 0.62, 0.68),
 	ItemTable.TIER_STEEL: Color(0.42, 0.50, 0.62),
 }
-## Tierless armour is fur, drawn in a pelt grey-brown on the metal shapes.
+## Tierless armour is fur, drawn in a pelt grey-brown with a pale trim.
 const FUR_COLOR := Color(0.56, 0.48, 0.40)
+const FUR_TRIM_COLOR := Color(0.80, 0.74, 0.64)
+
+## The names of the armour shape nodes, so a test can tell which shape a slot drew.
+const SHAPE_HELM := "Helm"
+const SHAPE_FUR_HOOD := "FurHood"
+const SHAPE_VEST := "Vest"
+const SHAPE_FUR_COAT := "FurCoat"
+const SHAPE_KILT := "Kilt"
+const SHAPE_FUR_LEGGINGS := "FurLeggings"
+const SHAPE_GREAVE := "Greave"
+const SHAPE_FUR_BAND := "FurBand"
 
 ## How far up its own height a tool in the hand is gripped.
 const TOOL_GRIP := 0.22
@@ -126,28 +143,32 @@ func _build_weapon(view: CharacterView, place: String, item: String) -> void:
 	_pieces[place].append(sword)
 
 
-## A vest round the chest; from bronze, pauldrons on the shoulders.
 func _build_body(view: CharacterView, place: String, item: String) -> void:
-	var colour := colour_of(item)
-	var chest := _mount(view, place, "chest")
-	var vest := CylinderMesh.new()
-	vest.top_radius = 0.34
-	vest.bottom_radius = 0.36
-	vest.height = 0.5
-	vest.radial_segments = 8
-	vest.material = Props.flat(colour)
-	Figures.part(chest, vest, Vector3(0, -0.06, 0))
-	if _rank(item) >= 1:
-		for side in [-1, 1]:
-			var pad := Figures.part(chest, Props.box(Vector3(0.26, 0.1, 0.32), colour.lightened(0.1)), Vector3(side * 0.4, 0.16, 0))
-			pad.rotation.z = side * -0.35
+	_mount(view, place, "chest").add_child(body_piece(item))
 
 
-## A dome over the crown; from bronze, a band round its rim; from iron, a nose guard.
 func _build_helm(view: CharacterView, place: String, item: String) -> void:
+	_mount(view, place, "head").add_child(head_piece(item))
+
+
+func _build_legs(view: CharacterView, place: String, item: String) -> void:
+	_mount(view, place, "hips").add_child(hips_piece(item))
+	for side in ["l", "r"]:
+		var shin := shin_piece(item)
+		if shin == null:
+			return
+		_mount(view, place, "lowerleg_" + side).add_child(shin)
+
+
+## What `item` draws on the head: a fur hood for fur, else a dome over the crown; from
+## bronze, a band round its rim; from iron, a nose guard.
+static func head_piece(item: String) -> Node3D:
 	var colour := colour_of(item)
+	if is_fur(item):
+		return _fur_hood(colour)
 	var rank := _rank(item)
-	var head := _mount(view, place, "head")
+	var head := Node3D.new()
+	head.name = SHAPE_HELM
 	var helm := SphereMesh.new()
 	helm.radius = 0.47
 	helm.height = 0.42
@@ -166,12 +187,38 @@ func _build_helm(view: CharacterView, place: String, item: String) -> void:
 		Figures.part(head, band, Vector3(0, 0.42, 0))
 	if rank >= 2:
 		Figures.part(head, Props.box(Vector3(0.07, 0.2, 0.06), colour.darkened(0.2)), Vector3(0, 0.34, -0.47))
+	return head
 
 
-## A kilt round the hips; from iron, greaves on both shins as well.
-func _build_legs(view: CharacterView, place: String, item: String) -> void:
+## What `item` draws on the chest: a fur coat for fur, else a vest round the chest; from
+## bronze, pauldrons on the shoulders.
+static func body_piece(item: String) -> Node3D:
 	var colour := colour_of(item)
-	var hips := _mount(view, place, "hips")
+	if is_fur(item):
+		return _fur_coat(colour)
+	var chest := Node3D.new()
+	chest.name = SHAPE_VEST
+	var vest := CylinderMesh.new()
+	vest.top_radius = 0.34
+	vest.bottom_radius = 0.36
+	vest.height = 0.5
+	vest.radial_segments = 8
+	vest.material = Props.flat(colour)
+	Figures.part(chest, vest, Vector3(0, -0.06, 0))
+	if _rank(item) >= 1:
+		for side in [-1, 1]:
+			var pad := Figures.part(chest, Props.box(Vector3(0.26, 0.1, 0.32), colour.lightened(0.1)), Vector3(side * 0.4, 0.16, 0))
+			pad.rotation.z = side * -0.35
+	return chest
+
+
+## What `item` draws on the hips: fur leggings for fur, else a kilt.
+static func hips_piece(item: String) -> Node3D:
+	var colour := colour_of(item)
+	if is_fur(item):
+		return _fur_leggings(colour)
+	var hips := Node3D.new()
+	hips.name = SHAPE_KILT
 	var kilt := CylinderMesh.new()
 	kilt.top_radius = 0.38
 	kilt.bottom_radius = 0.46
@@ -179,17 +226,140 @@ func _build_legs(view: CharacterView, place: String, item: String) -> void:
 	kilt.radial_segments = 8
 	kilt.material = Props.flat(colour.darkened(0.1))
 	Figures.part(hips, kilt, Vector3(0, -0.08, 0))
+	return hips
+
+
+## What `item` draws on each shin: a fur band for fur, a greave from iron, nothing below.
+static func shin_piece(item: String) -> Node3D:
+	var colour := colour_of(item)
+	if is_fur(item):
+		return _fur_band(colour)
 	if _rank(item) < 2:
-		return
-	for side in ["l", "r"]:
-		var shin := _mount(view, place, "lowerleg_" + side)
-		var greave := CylinderMesh.new()
-		greave.top_radius = 0.16
-		greave.bottom_radius = 0.14
-		greave.height = 0.22
-		greave.radial_segments = 8
-		greave.material = Props.flat(colour)
-		Figures.part(shin, greave, Vector3(0, -0.12, 0))
+		return null
+	var shin := Node3D.new()
+	shin.name = SHAPE_GREAVE
+	var greave := CylinderMesh.new()
+	greave.top_radius = 0.16
+	greave.bottom_radius = 0.14
+	greave.height = 0.22
+	greave.radial_segments = 8
+	greave.material = Props.flat(colour)
+	Figures.part(shin, greave, Vector3(0, -0.12, 0))
+	return shin
+
+
+## A rounded hood: a full round crown, a drape down the back of the head and a pale trim
+## framing the face.
+static func _fur_hood(colour: Color) -> Node3D:
+	var hood := Node3D.new()
+	hood.name = SHAPE_FUR_HOOD
+	var crown := SphereMesh.new()
+	crown.radius = 0.5
+	crown.height = 0.5
+	crown.radial_segments = 10
+	crown.rings = 4
+	crown.is_hemisphere = true
+	crown.material = Props.flat(colour)
+	Figures.part(hood, crown, Vector3(0, 0.34, 0))
+	var drape := SphereMesh.new()
+	drape.radius = 0.5
+	drape.height = 0.5
+	drape.radial_segments = 10
+	drape.rings = 4
+	drape.is_hemisphere = true
+	drape.material = Props.flat(colour)
+	var back := Figures.part(hood, drape, Vector3(0, 0.24, 0.02))
+	back.rotation.x = PI * 0.5  # the dome points behind the head, down the neck
+	var trim := TorusMesh.new()
+	trim.inner_radius = 0.38
+	trim.outer_radius = 0.5
+	trim.rings = 10
+	trim.ring_segments = 6
+	trim.material = Props.flat(colour.lightened(0.35))
+	var face := Figures.part(hood, trim, Vector3(0, 0.2, -0.36))
+	face.rotation.x = PI * 0.5  # a hoop framing the face, flush with the crown's front edge
+	return hood
+
+
+## A coat: a bulky body flaring to the hem, a thick pale collar ruff and a pale hem.
+static func _fur_coat(colour: Color) -> Node3D:
+	var coat := Node3D.new()
+	coat.name = SHAPE_FUR_COAT
+	var body := CylinderMesh.new()
+	body.top_radius = 0.40
+	body.bottom_radius = 0.46
+	body.height = 0.6
+	body.radial_segments = 10
+	body.material = Props.flat(colour)
+	Figures.part(coat, body, Vector3(0, -0.1, 0))
+	var ruff := TorusMesh.new()
+	ruff.inner_radius = 0.24
+	ruff.outer_radius = 0.54
+	ruff.rings = 10
+	ruff.ring_segments = 6
+	ruff.material = Props.flat(FUR_TRIM_COLOR)
+	Figures.part(coat, ruff, Vector3(0, 0.22, 0))
+	var hem := CylinderMesh.new()
+	hem.top_radius = 0.47
+	hem.bottom_radius = 0.47
+	hem.height = 0.08
+	hem.radial_segments = 10
+	hem.material = Props.flat(FUR_TRIM_COLOR)
+	Figures.part(coat, hem, Vector3(0, -0.38, 0))
+	return coat
+
+
+## Leggings round the hips: a close fur wrap, not a flaring kilt.
+static func _fur_leggings(colour: Color) -> Node3D:
+	var legs := Node3D.new()
+	legs.name = SHAPE_FUR_LEGGINGS
+	var wrap := CylinderMesh.new()
+	wrap.top_radius = 0.40
+	wrap.bottom_radius = 0.41
+	wrap.height = 0.3
+	wrap.radial_segments = 10
+	wrap.material = Props.flat(colour)
+	Figures.part(legs, wrap, Vector3(0, -0.1, 0))
+	return legs
+
+
+## A fur band at the shin: a wrap down the shin with a thick pale band at its top.
+static func _fur_band(colour: Color) -> Node3D:
+	var shin := Node3D.new()
+	shin.name = SHAPE_FUR_BAND
+	var wrap := CylinderMesh.new()
+	wrap.top_radius = 0.165
+	wrap.bottom_radius = 0.15
+	wrap.height = 0.24
+	wrap.radial_segments = 8
+	wrap.material = Props.flat(colour)
+	Figures.part(shin, wrap, Vector3(0, -0.12, 0))
+	var band := CylinderMesh.new()
+	band.top_radius = 0.19
+	band.bottom_radius = 0.19
+	band.height = 0.12
+	band.radial_segments = 8
+	band.material = Props.flat(FUR_TRIM_COLOR)
+	Figures.part(shin, band, Vector3(0, -0.04, 0))
+	return shin
+
+
+## One of every armour look (every helm, body and legs in the item table, metal and fur,
+## with whatever each puts on the shin), for the warm-up to compile before play.
+static func samples() -> Node3D:
+	var all := Node3D.new()
+	for item in ItemTable.ITEMS:
+		match ItemTable.slot(item):
+			ItemTable.SLOT_HELM:
+				all.add_child(head_piece(item))
+			ItemTable.SLOT_BODY:
+				all.add_child(body_piece(item))
+			ItemTable.SLOT_LEGS:
+				all.add_child(hips_piece(item))
+				var shin := shin_piece(item)
+				if shin != null:
+					all.add_child(shin)
+	return all
 
 
 ## The tool slung across the back: Kenney's axe or pickaxe, or the fishing rod.
@@ -235,9 +405,14 @@ static func _rank(item: String) -> int:
 	return ItemTable.tier_rank(ItemTable.tier(item))
 
 
+## Fur is the armour with no tier.
+static func is_fur(item: String) -> bool:
+	return ItemTable.tier(item) == "" and ItemTable.ARMOUR_SLOTS.has(ItemTable.slot(item))
+
+
 ## The colour `item` is drawn in: its tier's, fur for tierless armour, magenta for anything
 ## else so a missing colour shows.
 static func colour_of(item: String) -> Color:
-	if ItemTable.tier(item) == "" and ItemTable.ARMOUR_SLOTS.has(ItemTable.slot(item)):
+	if is_fur(item):
 		return FUR_COLOR
 	return TIER_COLORS.get(ItemTable.tier(item), Color.MAGENTA)
