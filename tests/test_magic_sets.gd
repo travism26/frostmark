@@ -298,11 +298,25 @@ func test_a_worn_cloak_hides_the_barbarian_cape_and_hangs_behind_any_body() -> v
 			var hung := CharacterGearScript.hang_cape(look, body)
 			assert_true((hung["offset"] as Vector3).z >= (look["offset"] as Vector3).z, "%s hangs behind %s" % [item, body])
 			if body != "":
-				var under := CharacterGearScript.mesh_bounds(CharacterGearScript.body_piece(body))
-				var back := -INF
-				for box in under:
-					back = maxf(back, box.end.z)
-				assert_true((hung["offset"] as Vector3).z - look["thickness"] * 0.5 >= back - 0.001 or (hung["offset"] as Vector3).y > back, "%s's top hangs clear of %s" % [item, body])
+				# the hang rule: at every step down its run, the cloak's back face stands behind
+				# each body box its width and height reach (a pauldron beside the hem is no clip)
+				var piece: Node3D = CharacterGearScript.body_piece(body)
+				var under := CharacterGearScript.mesh_bounds(piece)
+				piece.free()
+				var top := hung["offset"] as Vector3
+				var down := Vector3(0, -cos(look["tilt"]), sin(look["tilt"]))
+				var half_width: float = look["width"] * 0.5
+				var length: float = maxf(look["length_left"], look["length_right"])
+				var clear := true
+				for i in 17:
+					var p := top + down * (length * i / 16.0)
+					for box in under:
+						if p.y < box.position.y or p.y > box.end.y:
+							continue
+						if p.x + half_width < box.position.x or p.x - half_width > box.end.x:
+							continue
+						clear = clear and p.z - look["thickness"] * 0.5 >= box.end.z - 0.001
+				assert_true(clear, "%s hangs clear of %s down its run" % [item, body])
 		gear.show_equipment({ItemTable.SLOT_TOOL: "steel_axe"})
 		assert_true(_live_shape(view.bone_slot(CharacterGearScript.CAPE_SLOT), GearLookScript.SHAPE_CLOAK) == null, "taking %s off clears the back" % item)
 		assert_true(own_cape.visible, "the barbarian's cape shows again with nothing worn")
@@ -383,12 +397,23 @@ func test_the_builders_know_no_set_and_every_number_is_in_the_look() -> void:
 
 func test_the_samples_and_the_shot_tool_cover_every_piece_on_every_ring() -> void:
 	var all := CharacterGearScript.samples()
+	# a second sibling of one name loses it, so each piece is found by the colours it draws
+	var drawn: Array = []
 	var names: Array = []
 	for child in all.get_children():
+		drawn.append(_colours(child))
 		names.append(String(child.name))
-	assert_eq(names.count(GearLookScript.SHAPE_MAGE_STAFF), STAVES.size() + 1, "the warm-up samples the three staves and the kit's own")
+	for item in STAVES:
+		var staff: Node3D = CharacterGearScript.weapon_piece(item)
+		assert_true(drawn.has(_colours(staff)), "the warm-up samples %s" % item)
+		staff.free()
+	for item in CAPES:
+		var cloak: Node3D = CharacterGearScript.cape_piece(item)
+		assert_true(drawn.has(_colours(cloak)), "the warm-up samples %s" % item)
+		cloak.free()
+	assert_true(names.has(GearLookScript.SHAPE_MAGE_STAFF), "the warm-up samples the kit's own mage staff")
 	assert_true(names.has(GearLookScript.SHAPE_POUCH), "the warm-up samples a pouch")
-	assert_true(names.count(GearLookScript.SHAPE_CLOAK) >= CAPES.size() + 1, "the warm-up samples the two cloaks and the kit's own")
+	assert_true(names.has(GearLookScript.SHAPE_CLOAK), "the warm-up samples the kit's own cloak")
 	all.free()
 	var script := load("res://tools/gear_shots.gd") as Script
 	var consts := script.get_script_constant_map()
@@ -397,6 +422,8 @@ func test_the_samples_and_the_shot_tool_cover_every_piece_on_every_ring() -> voi
 	var armour := [ItemTable.SLOT_HELM, ItemTable.SLOT_BODY, ItemTable.SLOT_LEGS]
 	for set_key in SETS:
 		var full := scenes.filter(func(scene: Dictionary) -> bool:
+			if scene.has("gather"):  # the working scenes wear what they like
+				return false
 			for slot in SETS[set_key]:
 				if scene.get(slot, "") != SETS[set_key][slot]:
 					return false
