@@ -13,8 +13,10 @@
 ## over other bodies and under other quivers, and a cape and quiver while working, and the magic
 ## sets (#166): each full set with its staff and cloak at the outpost and on each ring's snow,
 ## each set's helm alone over steel, pieces mixed across sets, lines and tiers, a cloak over
-## other bodies and alone, and a body or legs alone. A scene may name a `spot` to stand at; the
-## default is south of the gate.
+## other bodies and alone, and a body or legs alone, and the magic top sets (#167): the same
+## coverage again, with each cloak over other bodies and under a quiver, a body, legs or a
+## cloak alone, and a cloak while working. A scene may name a `spot` to stand at; the default
+## is south of the gate.
 ##
 ##   godot --resolution 1280x720 -s tools/gear_shots.gd -- <out_dir> [scene ...]
 ##
@@ -167,6 +169,47 @@ const SCENES := [
 	{"name": "shardweaver_body_only", "weapon": "bronze_sword", "tool": "bronze_axe", "body": "shardweaver_body"},
 	{"name": "glacier_warden_legs_only", "weapon": "iron_sword", "tool": "iron_axe", "legs": "glacier_warden_legs"},
 	{"name": "chopping_with_cape", "weapon": "glacier_warden_staff", "tool": "steel_axe", "helm": "glacier_warden_helm", "body": "glacier_warden_body", "legs": "glacier_warden_legs", "cape": "glacier_warden_cape", "gather": "tree_3"},
+	# The magic top sets (#167): each set's helm alone over steel (the one-piece check against
+	# the tier below), each full set with its staff and cloak at the outpost and on each
+	# ring's snow, pieces mixed across sets, lines and tiers, a cloak over other bodies and
+	# alone, and a body or legs alone.
+	{"name": "hoarfrost_sovereign_helm_check", "weapon": "steel_staff", "tool": "steel_pickaxe", "helm": "hoarfrost_sovereign_helm", "body": "steel_body", "legs": "steel_legs"},
+	{"name": "hearthfire_magus_helm_check", "weapon": "steel_staff", "tool": "steel_pickaxe", "helm": "hearthfire_magus_helm", "body": "steel_body", "legs": "steel_legs"},
+	{"name": "aurora_shaman_helm_check", "weapon": "steel_staff", "tool": "steel_pickaxe", "helm": "aurora_shaman_helm", "body": "steel_body", "legs": "steel_legs"},
+	{"name": "ruinwarden_mage_helm_check", "weapon": "steel_staff", "tool": "steel_pickaxe", "helm": "ruinwarden_mage_helm", "body": "steel_body", "legs": "steel_legs"},
+	{"name": "hoarfrost_sovereign_set", "weapon": "hoarfrost_sovereign_staff", "tool": "steel_pickaxe", "helm": "hoarfrost_sovereign_helm", "body": "hoarfrost_sovereign_body", "legs": "hoarfrost_sovereign_legs", "cape": "hoarfrost_sovereign_cape"},
+	{"name": "hearthfire_magus_set", "weapon": "hearthfire_magus_staff", "tool": "steel_pickaxe", "helm": "hearthfire_magus_helm", "body": "hearthfire_magus_body", "legs": "hearthfire_magus_legs", "cape": "hearthfire_magus_cape"},
+	{"name": "aurora_shaman_set", "weapon": "aurora_shaman_staff", "tool": "steel_pickaxe", "helm": "aurora_shaman_helm", "body": "aurora_shaman_body", "legs": "aurora_shaman_legs", "cape": "aurora_shaman_cape"},
+	{"name": "ruinwarden_mage_set", "weapon": "ruinwarden_mage_staff", "tool": "steel_pickaxe", "helm": "ruinwarden_mage_helm", "body": "ruinwarden_mage_body", "legs": "ruinwarden_mage_legs", "cape": "ruinwarden_mage_cape"},
+	{"name": "hoarfrost_sovereign_set_ring_one", "spot": SPOT_RING_ONE, "weapon": "hoarfrost_sovereign_staff", "tool": "steel_pickaxe", "helm": "hoarfrost_sovereign_helm", "body": "hoarfrost_sovereign_body", "legs": "hoarfrost_sovereign_legs", "cape": "hoarfrost_sovereign_cape"},
+	{"name": "hearthfire_magus_set_ring_one", "spot": SPOT_RING_ONE, "weapon": "hearthfire_magus_staff", "tool": "steel_pickaxe", "helm": "hearthfire_magus_helm", "body": "hearthfire_magus_body", "legs": "hearthfire_magus_legs", "cape": "hearthfire_magus_cape"},
+	{"name": "aurora_shaman_set_ring_one", "spot": SPOT_RING_ONE, "weapon": "aurora_shaman_staff", "tool": "steel_pickaxe", "helm": "aurora_shaman_helm", "body": "aurora_shaman_body", "legs": "aurora_shaman_legs", "cape": "aurora_shaman_cape"},
+	{"name": "ruinwarden_mage_set_ring_one", "spot": SPOT_RING_ONE, "weapon": "ruinwarden_mage_staff", "tool": "steel_pickaxe", "helm": "ruinwarden_mage_helm", "body": "ruinwarden_mage_body", "legs": "ruinwarden_mage_legs", "cape": "ruinwarden_mage_cape"},
+	{"name": "hoarfrost_sovereign_set_ring_two", "spot": SPOT_RING_TWO, "weapon": "hoarfrost_sovereign_staff", "tool": "steel_pickaxe", "helm": "hoarfrost_sovereign_helm", "body": "hoarfrost_sovereign_body", "legs": "hoarfrost_sovereign_legs", "cape": "hoarfrost_sovereign_cape"},
+	{"name": "hearthfire_magus_set_ring_two", "spot": SPOT_RING_TWO, "weapon": "hearthfire_magus_staff", "tool": "steel_pickaxe", "helm": "hearthfire_magus_helm", "body": "hearthfire_magus_body", "legs": "hearthfire_magus_legs", "cape": "hearthfire_magus_cape"},
+	{"name": "aurora_shaman_set_ring_two", "spot": SPOT_RING_TWO, "weapon": "aurora_shaman_staff", "tool": "steel_pickaxe", "helm": "aurora_shaman_helm", "body": "aurora_shaman_body", "legs": "aurora_shaman_legs", "cape": "aurora_shaman_cape"},
+	{"name": "ruinwarden_mage_set_ring_two", "spot": SPOT_RING_TWO, "weapon": "ruinwarden_mage_staff", "tool": "steel_pickaxe", "helm": "ruinwarden_mage_helm", "body": "ruinwarden_mage_body", "legs": "ruinwarden_mage_legs", "cape": "ruinwarden_mage_cape"},
+	{"name": "magic_top_mixed_sets", "weapon": "hearthfire_magus_staff", "tool": "steel_pickaxe", "helm": "hoarfrost_sovereign_helm", "body": "aurora_shaman_body", "legs": "ruinwarden_mage_legs", "cape": "hearthfire_magus_cape"},
+	{"name": "magic_top_mixed_sets_2", "weapon": "ruinwarden_mage_staff", "tool": "iron_axe", "helm": "aurora_shaman_helm", "body": "hearthfire_magus_body", "legs": "hoarfrost_sovereign_legs", "cape": "ruinwarden_mage_cape"},
+	{"name": "magic_top_mixed_sets_3", "weapon": "aurora_shaman_staff", "tool": "steel_axe", "helm": "ruinwarden_mage_helm", "body": "hoarfrost_sovereign_body", "legs": "hearthfire_magus_legs", "cape": "aurora_shaman_cape"},
+	{"name": "magic_top_mixed_sets_4", "weapon": "hoarfrost_sovereign_staff", "tool": "steel_pickaxe", "helm": "hearthfire_magus_helm", "body": "ruinwarden_mage_body", "legs": "aurora_shaman_legs", "cape": "hoarfrost_sovereign_cape"},
+	{"name": "hoarfrost_sovereign_cape_over_steel", "weapon": "steel_sword", "tool": "steel_pickaxe", "helm": "steel_helm", "body": "steel_body", "legs": "steel_legs", "cape": "hoarfrost_sovereign_cape"},
+	{"name": "hearthfire_magus_cape_glacier_warden_body_quiver", "weapon": "ember_hawk_bow", "tool": "steel_axe", "helm": "ember_hawk_helm", "body": "glacier_warden_body", "legs": "ember_hawk_legs", "cape": "hearthfire_magus_cape", "quiver": "ember_hawk_quiver"},
+	{"name": "aurora_shaman_cape_over_rimecaller", "weapon": "rimecaller_staff", "tool": "steel_pickaxe", "helm": "rimecaller_helm", "body": "rimecaller_body", "legs": "rimecaller_legs", "cape": "aurora_shaman_cape"},
+	{"name": "ruinwarden_mage_cape_over_steel", "weapon": "steel_sword", "tool": "steel_pickaxe", "helm": "steel_helm", "body": "steel_body", "legs": "steel_legs", "cape": "ruinwarden_mage_cape"},
+	{"name": "hoarfrost_sovereign_helm_emberheart_body", "weapon": "emberheart_hammer", "tool": "steel_pickaxe", "helm": "hoarfrost_sovereign_helm", "body": "emberheart_body", "legs": "emberheart_legs"},
+	{"name": "ruinwarden_mage_body_wolfmark_legs_fur_hood", "weapon": "wolfmark_axe", "tool": "iron_pickaxe", "helm": "fur_hood", "body": "ruinwarden_mage_body", "legs": "wolfmark_legs"},
+	{"name": "hoarfrost_sovereign_body_only", "weapon": "bronze_sword", "tool": "bronze_axe", "body": "hoarfrost_sovereign_body"},
+	{"name": "hearthfire_magus_body_only", "weapon": "iron_sword", "tool": "iron_axe", "body": "hearthfire_magus_body"},
+	{"name": "aurora_shaman_body_only", "weapon": "bronze_sword", "tool": "bronze_axe", "body": "aurora_shaman_body"},
+	{"name": "ruinwarden_mage_body_only", "weapon": "iron_sword", "tool": "iron_axe", "body": "ruinwarden_mage_body"},
+	{"name": "hoarfrost_sovereign_legs_only", "weapon": "iron_sword", "tool": "iron_axe", "legs": "hoarfrost_sovereign_legs"},
+	{"name": "hearthfire_magus_legs_only", "weapon": "bronze_sword", "tool": "bronze_axe", "legs": "hearthfire_magus_legs"},
+	{"name": "aurora_shaman_legs_only", "weapon": "iron_sword", "tool": "iron_axe", "legs": "aurora_shaman_legs"},
+	{"name": "ruinwarden_mage_legs_only", "weapon": "bronze_sword", "tool": "bronze_axe", "legs": "ruinwarden_mage_legs"},
+	{"name": "hearthfire_magus_cape_only", "weapon": "steel_staff", "tool": "steel_pickaxe", "cape": "hearthfire_magus_cape"},
+	{"name": "aurora_shaman_cape_only", "weapon": "steel_staff", "tool": "steel_pickaxe", "cape": "aurora_shaman_cape"},
+	{"name": "chopping_with_magic_top_cape", "weapon": "ruinwarden_mage_staff", "tool": "steel_axe", "helm": "ruinwarden_mage_helm", "body": "ruinwarden_mage_body", "legs": "ruinwarden_mage_legs", "cape": "ruinwarden_mage_cape", "gather": "tree_3"},
 ]
 
 var _out_dir := ""

@@ -377,7 +377,7 @@ func test_the_all_gear_stash_holds_every_piece() -> void:
 	assert_true(sim.command(SimVocab.IMPORT_SAVE, {"code": FieldKit.gear_code()})["ok"], "the all-gear code imports")
 	for item in STAVES.keys() + CAPES:
 		assert_eq(Inventory.count_of(sim.state["stash"]["slots"], item), 1, "the imported stash holds %s" % item)
-	assert_eq(sim.state["stash"]["slots"].size(), 116, "the all-gear stash fills 116 slots (docs/testing.md)")
+	assert_eq(sim.state["stash"]["slots"].size(), 136, "the all-gear stash fills 136 slots (docs/testing.md)")
 
 
 func test_the_builders_know_no_set_and_every_number_is_in_the_look() -> void:
