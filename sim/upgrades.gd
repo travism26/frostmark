@@ -63,7 +63,23 @@ const UPGRADES := {
 	# building this opens it.
 	"ring_three_gate": {
 		"label": "Ring-three gate hoist", "cost": {"steel_bar": 8, "troll_hide": 4, "coal": 12, "logs": 16},
-		"requires": ["blast_furnace"], "effects": {"ring_gate": "ring_three_gate"}, "locked": "",
+		"requires": ["blast_furnace"], "locked": "",
+		"effects": {
+			"ring_gate": "ring_three_gate",
+			# The top-set pieces (#184): ring three's rare materials at the workbench.
+			"recipes": [
+				"emberheart_helm", "emberheart_body", "emberheart_legs", "emberheart_hammer", "hoarfrost_helm", "hoarfrost_body",
+				"hoarfrost_legs", "hoarfrost_greatsword", "auroral_helm", "auroral_body", "auroral_legs", "auroral_glaive",
+				"trollbone_helm", "trollbone_body", "trollbone_legs", "trollbone_cleaver", "ember_hawk_helm", "ember_hawk_body",
+				"ember_hawk_legs", "ember_hawk_bow", "ember_hawk_quiver", "auroral_warden_helm", "auroral_warden_body", "auroral_warden_legs",
+				"auroral_warden_bow", "auroral_warden_quiver", "auroral_warden_cape", "ruin_stalker_helm", "ruin_stalker_body", "ruin_stalker_legs",
+				"ruin_stalker_bow", "ruin_stalker_quiver", "ruin_stalker_cape", "glacier_sovereign_helm", "glacier_sovereign_body", "glacier_sovereign_legs",
+				"glacier_sovereign_bow", "glacier_sovereign_quiver", "hoarfrost_sovereign_helm", "hoarfrost_sovereign_body", "hoarfrost_sovereign_legs", "hoarfrost_sovereign_staff",
+				"hoarfrost_sovereign_cape", "hearthfire_magus_helm", "hearthfire_magus_body", "hearthfire_magus_legs", "hearthfire_magus_staff", "hearthfire_magus_cape",
+				"aurora_shaman_helm", "aurora_shaman_body", "aurora_shaman_legs", "aurora_shaman_staff", "aurora_shaman_cape", "ruinwarden_mage_helm",
+				"ruinwarden_mage_body", "ruinwarden_mage_legs", "ruinwarden_mage_staff", "ruinwarden_mage_cape",
+			],
+		},
 	},
 	# Shortcuts home from deep in the rings. Travel is not a return: the walk through the gate is.
 	"waystone": {

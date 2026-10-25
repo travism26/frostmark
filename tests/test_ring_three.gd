@@ -191,7 +191,7 @@ func test_the_hoist_costs_steel_hides_coal_and_logs_and_needs_the_blast_furnace(
 	assert_eq(hoist["label"], "Ring-three gate hoist")
 	assert_eq(hoist["cost"], {"steel_bar": 8, "troll_hide": 4, "coal": 12, "logs": 16})
 	assert_eq(hoist["requires"], ["blast_furnace"])
-	assert_eq(hoist["effects"], {"ring_gate": "ring_three_gate"})
+	assert_eq(hoist["effects"]["ring_gate"], "ring_three_gate")
 	var sim := SimScript.new()
 	H.patch(sim, {"upgrades": ["stash_shelves", "forge", "armoury", "ring_two_gate"]})
 	_hoist_ready(sim)

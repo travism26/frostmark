@@ -175,7 +175,7 @@ func test_the_twenty_two_items_follow_the_set_item_quiver_and_cape_rules() -> vo
 					assert_eq(ItemTable.ITEMS[item].get(stat), ItemTable.ITEMS[steel].get(stat), "%s's %s is %s's" % [item, stat, steel])
 				assert_eq(IconTable.path(item), IconTable.path(steel), "%s uses its slot's glyph" % item)
 			assert_true(ItemTable.label(item).begins_with(set_key.capitalize() + " "), "%s is labelled with its set: %s" % [item, ItemTable.label(item)])
-			assert_false(RecipeTable.has(item), "%s has no recipe" % item)
+			assert_true(RecipeTable.has(item), "%s is crafted at the workbench (#184)" % item)
 			assert_true(GearLookScript.has(item), "%s has a look" % item)
 			assert_eq(GearLookScript.palette(item), PALETTES[set_key], "%s wears its set's palette" % item)
 			assert_true(IconTable.has(item), "%s has an icon" % item)

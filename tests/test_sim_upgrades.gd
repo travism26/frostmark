@@ -539,6 +539,14 @@ func test_three_visible_gear_tiers_for_every_slot_and_style() -> void:
 			assert_true(seen.has("%s/%s" % [group, tier]), "a %s %s" % [tier, group])
 
 
+## The twelve top sets (#163, #165, #167), the only set items with a workbench recipe (#184).
+const TOP_SETS: Array[String] = [
+	"emberheart", "hoarfrost", "auroral", "trollbone",
+	"ember_hawk", "auroral_warden", "ruin_stalker", "glacier_sovereign",
+	"hoarfrost_sovereign", "hearthfire_magus", "aurora_shaman", "ruinwarden_mage",
+]
+
+
 ## The steel item a set item stands in for: the same slot, and the same style or tool.
 func _steel_of(kind: String) -> String:
 	for other in ItemTable.ITEMS:
@@ -549,7 +557,7 @@ func _steel_of(kind: String) -> String:
 	return ""
 
 
-func test_a_set_item_has_no_tier_takes_the_steel_stats_and_is_neither_made_nor_dropped() -> void:
+func test_a_set_item_has_no_tier_takes_the_steel_stats_and_is_not_dropped_and_only_a_top_set_is_made() -> void:
 	var dropped := {}
 	for enemy in CombatTable.ENEMIES.values():
 		for loot in enemy.get("loot", []):
@@ -574,7 +582,7 @@ func test_a_set_item_has_no_tier_takes_the_steel_stats_and_is_neither_made_nor_d
 			assert_true(steel != "", "%s has a steel item of its slot and style" % kind)
 			for stat in ["weight", "value", "defence", "power", "speed", "reach", "ammo"]:
 				assert_eq(ItemTable.ITEMS[kind].get(stat), ItemTable.ITEMS.get(steel, {}).get(stat), "%s's %s is %s's" % [kind, stat, steel])
-		assert_false(RecipeTable.has(kind), "%s has no recipe" % kind)
+		assert_eq(RecipeTable.has(kind), TOP_SETS.has(ItemTable.set_of(kind)), "%s has a recipe only if it is a top-set piece (#184)" % kind)
 		assert_false(dropped.has(kind), "%s drops from nothing" % kind)
 	assert_eq(ItemTable.set_of("steel_body"), "", "an item in no set has no set key")
 	assert_eq(ItemTable.set_of("fur_coat"), "", "fur is in no set")
