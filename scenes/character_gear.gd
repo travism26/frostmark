@@ -21,14 +21,16 @@
 ##
 ## The kit builders (`peaked_hood`, `under_robe`, `cloak`, `collar`, `stacked_plates`,
 ## `crystal`, `fin`, `prism_stack`, `studs`, `edge_trim`, `quiver`, `sash`, `ruff`, `faulds`,
-## `tassets`, `broadsword`, `bearded_axe`, `greatsword`) are the layered, non-round shapes the
-## set looks are built from. Each takes a look (its shape's numbers, from `GearLook.numbers` or
+## `tassets`, `seam`, `shard_crown`, `antlers`, `broadsword`, `bearded_axe`, `greatsword`,
+## `forge_hammer`, `glaive`, `cleaver`) are the layered, non-round shapes the set looks are
+## built from. Each takes a look (its shape's numbers, from `GearLook.numbers` or
 ## `GearLook.piece`) and a palette, names its root after its shape, and draws at least two
 ## tones (a base plus a darker underside or a lighter trim) so it reads lit from above. Which
 ## palette field a part takes is the look's tone number (`tone`, `edge_tone`...), or a Color
 ## of the look's own. A look's `glow` above 0 draws the builder's highlight in the palette's
-## glow colour, shining that bright, through `Props.flat`. A crystal alone carries the one
-## small light and the few motes a top set is allowed, and only when its look asks for them.
+## glow colour, shining that bright, through `Props.flat`. A crystal, a shard crown or a forge
+## hammer carries the one small light and the few motes a top set is allowed (`_glow_fx`), and
+## only when its look asks for them.
 ##
 ## A piece's `layers` are built the same way and added under its root, so a set helm is a
 ## helm with studs, cheek guards and a crest layered on from its one entry; no builder knows
@@ -74,10 +76,17 @@ const SHAPE_TASSETS := GearLook.SHAPE_TASSETS
 const SHAPE_BROADSWORD := GearLook.SHAPE_BROADSWORD
 const SHAPE_BEARDED_AXE := GearLook.SHAPE_BEARDED_AXE
 const SHAPE_GREATSWORD := GearLook.SHAPE_GREATSWORD
+const SHAPE_SEAM := GearLook.SHAPE_SEAM
+const SHAPE_SHARD_CROWN := GearLook.SHAPE_SHARD_CROWN
+const SHAPE_ANTLERS := GearLook.SHAPE_ANTLERS
+const SHAPE_FORGE_HAMMER := GearLook.SHAPE_FORGE_HAMMER
+const SHAPE_GLAIVE := GearLook.SHAPE_GLAIVE
+const SHAPE_CLEAVER := GearLook.SHAPE_CLEAVER
 ## The names of a two-sided builder's side nodes, so a test can measure each side.
 const SIDE_LEFT := "Left"
 const SIDE_RIGHT := "Right"
-## The names of the glow nodes a crystal carries when its look asks for them.
+## The names of the glow nodes a crystal, a shard crown or a forge hammer carries when its look
+## asks for them.
 const GLOW_LIGHT := "Light"
 const GLOW_MOTES := "Motes"
 
@@ -244,7 +253,8 @@ static func shin_piece(item: String) -> Node3D:
 
 
 ## What `item` draws in the hand when its weapon is a kit shape (a broadsword, a bearded axe,
-## a greatsword), or null for a weapon drawn from a model (a sword, a bow, a staff, a club).
+## a greatsword, a forge hammer, a glaive, a cleaver), or null for a weapon drawn from a model
+## (a sword, a bow, a staff, a club).
 static func weapon_piece(item: String) -> Node3D:
 	var look := GearLook.piece(item, GearLook.PART_WEAPON)
 	if not GearLook.WEAPON_SHAPES.has(look["shape"]):
@@ -523,6 +533,18 @@ static func kit_builder(shape: String) -> Callable:
 			return bearded_axe
 		SHAPE_GREATSWORD:
 			return greatsword
+		SHAPE_SEAM:
+			return seam
+		SHAPE_SHARD_CROWN:
+			return shard_crown
+		SHAPE_ANTLERS:
+			return antlers
+		SHAPE_FORGE_HAMMER:
+			return forge_hammer
+		SHAPE_GLAIVE:
+			return glaive
+		SHAPE_CLEAVER:
+			return cleaver
 	return Callable()
 
 
@@ -725,6 +747,15 @@ static func crystal(look: Dictionary, colours: Dictionary) -> Node3D:
 	var glow: float = look["glow"]
 	Figures.part(stand, _cone(look["radius"], length - join, facets, Props.flat(colour, glow)), Vector3(0, join + (length - join) * 0.5, 0))
 	Figures.part(stand, _cylinder(look["radius"], look["radius"] * 0.5, join, facets, _tone(look, colours, "root_tone")), Vector3(0, join * 0.5, 0))
+	_glow_fx(stand, look, colour, glow, join)
+	return root
+
+
+## The one small light and the few motes a top set's piece may carry, each only when `look`
+## asks (`light`, `motes`), hung under `stand` at `y` in `colour` (the palette's glow): a warm
+## point that lights the snow round the wearer, and `motes_count` glowing specks drifting up
+## from a sphere of `motes_radius` round the piece, as bright as `glow` or brighter.
+static func _glow_fx(stand: Node3D, look: Dictionary, colour: Color, glow: float, y: float) -> void:
 	if look["light"]:
 		var light := OmniLight3D.new()
 		light.name = GLOW_LIGHT
@@ -732,7 +763,7 @@ static func crystal(look: Dictionary, colours: Dictionary) -> Node3D:
 		light.light_energy = look["light_energy"]
 		light.omni_range = look["light_range"]
 		light.omni_attenuation = 1.3
-		light.position.y = join
+		light.position.y = y
 		stand.add_child(light)
 	if look["motes"]:
 		var motes := CPUParticles3D.new()
@@ -752,9 +783,8 @@ static func crystal(look: Dictionary, colours: Dictionary) -> Node3D:
 		mote.size = Vector3.ONE * look["motes_size"]
 		mote.material = Props.flat(colour, maxf(glow, 1.0))
 		motes.mesh = mote
-		motes.position.y = join
+		motes.position.y = y
 		stand.add_child(motes)
-	return root
 
 
 ## A thin flat plate standing up from its root at `offset`, turned by `tilt`: `size` wide,
@@ -1079,6 +1109,225 @@ static func greatsword(look: Dictionary, colours: Dictionary) -> Node3D:
 	Figures.part(hilt, _cylinder(grip_radius, grip_radius, grip, 6, _tone(look, colours, "grip_tone")), Vector3(0, rise - grip * 0.5, 0))
 	Figures.part(hilt, _cylinder(grip_radius * 1.3, grip_radius * 1.3, 0.03, 6, _tone(look, colours, "ring_tone")), Vector3(0, rise - grip * 0.5, 0))
 	Figures.part(hilt, _ball(look["pommel"], _tone(look, colours, "pommel_tone")), Vector3(0, rise - grip, 0))
+	return root
+
+
+## A raised strip `size` wide, tall and thick at `offset` turned by `tilt`, its face toward
+## -Z, drawn whole in the highlight (`tone`: the glow colour, lit, when `glow` is above 0)
+## over a `shadow_tone` backing `lip` wider behind it, so the strip reads as cut into the
+## plate: a glowing seam or crack, an eye slit, an eye socket, a lashing.
+static func seam(look: Dictionary, colours: Dictionary) -> Node3D:
+	var root := Node3D.new()
+	root.name = SHAPE_SEAM
+	var stand := Node3D.new()
+	stand.position = look["offset"]
+	stand.rotation = look["tilt"]
+	root.add_child(stand)
+	var size: Vector3 = look["size"]
+	var lip: float = look["lip"]
+	Figures.part(stand, _box(size, _highlight(look, colours, "tone")), Vector3.ZERO)
+	Figures.part(stand, _box(Vector3(size.x + lip * 2.0, size.y + lip * 2.0, size.z * 0.5), _tone(look, colours, "shadow_tone")), Vector3(0, 0, size.z * 0.5))
+	return root
+
+
+## `count` shards standing round a ring of `radius` at `offset` turned by `tilt`, spread over
+## `arc` (a full turn for a crown, less for a cluster centred on the front), each leaning out
+## `lean` and every other one `short` as long as its neighbours: a `facets`-sided shard in
+## `tone` with the top `tip` of its length in the highlight (`tip_tone`: the glow colour,
+## lit, when `glow` is above 0). A frost crown, a crystal cluster. `light` and `motes` as a
+## crystal takes them, at the ring's centre.
+static func shard_crown(look: Dictionary, colours: Dictionary) -> Node3D:
+	var root := Node3D.new()
+	root.name = SHAPE_SHARD_CROWN
+	var stand := Node3D.new()
+	stand.position = look["offset"]
+	stand.rotation = look["tilt"]
+	root.add_child(stand)
+	var count := int(look["count"])
+	var radius: float = look["radius"]
+	var arc: float = look["arc"]
+	var length: float = look["length"]
+	var shard: float = look["shard"]
+	var facets := int(look["facets"])
+	var tip: float = look["tip"]
+	var tone := _tone(look, colours, "tone")
+	var point := _highlight(look, colours, "tip_tone")
+	var ring := is_equal_approx(arc, TAU)
+	for i in count:
+		var a: float = i * arc / count if ring else (i - (count - 1) * 0.5) * (arc / maxf(count - 1, 1))
+		var spike := Node3D.new()
+		spike.position = Vector3(sin(a) * radius, 0, -cos(a) * radius)
+		spike.rotation.y = -a  # the shard faces out from the ring
+		spike.rotation.x = -look["lean"]  # and leans out
+		stand.add_child(spike)
+		var long: float = length if i % 2 == 0 else length * float(look["short"])
+		var body: float = long * (1.0 - tip)
+		Figures.part(spike, _cylinder(shard * 0.6, shard, body, facets, tone), Vector3(0, body * 0.5, 0))
+		Figures.part(spike, _cone(shard * 0.6, long - body, facets, point), Vector3(0, body + (long - body) * 0.5, 0))
+	_glow_fx(stand, look, colours["glow"], look["glow"], 0.0)
+	return root
+
+
+## Two antlers (`Left` and `Right`) `x` either side of `offset` turned by `tilt`: each a thin
+## `facets`-sided beam its own length (`length_left`, `length_right`) leaning out `spread` and
+## back `sweep`, with its own count of tines (`tines_left`, `tines_right`) branching forward
+## `tine_spread` along it, each `tine_length` long and swinging to alternate sides of the
+## beam; the beams and tines in `tone` with every tip in the highlight (`tip_tone`: the glow
+## colour, lit, when `glow` is above 0).
+static func antlers(look: Dictionary, colours: Dictionary) -> Node3D:
+	var root := Node3D.new()
+	root.name = SHAPE_ANTLERS
+	var stand := Node3D.new()
+	stand.position = look["offset"]
+	stand.rotation = look["tilt"]
+	root.add_child(stand)
+	var radius: float = look["radius"]
+	var facets := int(look["facets"])
+	var tone := _tone(look, colours, "tone")
+	var point := _highlight(look, colours, "tip_tone")
+	var tine_length: float = look["tine_length"]
+	var tine_radius: float = look["tine_radius"]
+	for side in [[-1, SIDE_LEFT, look["length_left"], look["tines_left"]], [1, SIDE_RIGHT, look["length_right"], look["tines_right"]]]:
+		var s: int = side[0]
+		var beam := Node3D.new()
+		beam.name = side[1]
+		beam.position = Vector3(s * look["x"], 0, 0)
+		beam.rotation = Vector3(look["sweep"], 0, -s * look["spread"])  # out to its side and back
+		stand.add_child(beam)
+		var length: float = side[2]
+		var shaft: float = length * 0.8
+		Figures.part(beam, _cylinder(radius * 0.6, radius, shaft, facets, tone), Vector3(0, shaft * 0.5, 0))
+		Figures.part(beam, _cone(radius * 0.6, length - shaft, facets, point), Vector3(0, shaft + (length - shaft) * 0.5, 0))
+		var tines := int(side[3])
+		for i in tines:
+			var joint := Node3D.new()
+			joint.position = Vector3(0, shaft * (i + 1) / (tines + 1), 0)
+			joint.rotation = Vector3(-look["tine_spread"], 0, s * 0.3 * (1 if i % 2 == 0 else -1))  # forward, to alternate sides
+			beam.add_child(joint)
+			var stem: float = tine_length * 0.6
+			Figures.part(joint, _cylinder(tine_radius * 0.7, tine_radius, stem, facets, tone), Vector3(0, stem * 0.5, 0))
+			Figures.part(joint, _cone(tine_radius * 0.7, tine_length - stem, facets, point), Vector3(0, stem + (tine_length - stem) * 0.5, 0))
+	return root
+
+
+## A forge hammer held head up in the hand's mount frame, turned by `tilt`: a haft
+## `haft_length` long in `haft_tone` with a ball at its foot, a block head `head_size` across
+## (x along the hand, y tall, z deep) in `tone` sitting on the haft's top, a band `band` wide
+## round the head `band_x` of its half-width out each side in `band_tone`, and `cracks`
+## strips `crack` wide leaning across its faces in the highlight (`crack_tone`: the glow
+## colour, lit, when `glow` is above 0). `light` and `motes` as a crystal takes them, at the
+## head.
+static func forge_hammer(look: Dictionary, colours: Dictionary) -> Node3D:
+	var root := Node3D.new()
+	root.name = SHAPE_FORGE_HAMMER
+	var hilt := Node3D.new()
+	hilt.rotation = look["tilt"]
+	root.add_child(hilt)
+	var rise: float = look["rise"]
+	var length: float = look["haft_length"]
+	var radius: float = look["haft_radius"]
+	var top := rise + length
+	var head: Vector3 = look["head_size"]
+	var band_tone := _tone(look, colours, "band_tone")
+	Figures.part(hilt, _cylinder(radius, radius * 1.1, length, 6, _tone(look, colours, "haft_tone")), Vector3(0, rise + length * 0.5, 0))
+	Figures.part(hilt, _ball(radius * 1.6, band_tone), Vector3(0, rise, 0))
+	Figures.part(hilt, _box(head, _tone(look, colours, "tone")), Vector3(0, top + head.y * 0.5, 0))
+	var band: float = look["band"]
+	for s in [-1, 1]:
+		Figures.part(hilt, _box(Vector3(band, head.y + 0.012, head.z + 0.012), band_tone), Vector3(s * head.x * look["band_x"], top + head.y * 0.5, 0))
+	var cracks := int(look["cracks"])
+	var crack := _highlight(look, colours, "crack_tone")
+	for i in cracks:
+		var x := head.x * 0.25 * ((i + 0.5) / cracks * 2.0 - 1.0)
+		var strip := Figures.part(hilt, _box(Vector3(look["crack"], head.y * 0.75, head.z + 0.014), crack), Vector3(x, top + head.y * 0.5, 0))
+		strip.rotation.z = 0.35 * (1 if i % 2 == 0 else -1)  # the cracks lean, no two the same way
+	_glow_fx(hilt, look, colours["glow"], look["glow"], top + head.y * 0.5)
+	return root
+
+
+## A glaive held blade up in the hand's mount frame, turned by `tilt`: a long haft
+## `haft_length` long in `haft_tone` with a `cap_tone` ball at its foot and a `ferrule` tall
+## ferrule in `ferrule_tone` under the blade; the blade `blade_length` long and `blade_width`
+## across standing off one side of the haft's top, leaning `curve` out and ending in a `tip`
+## bent further, in `tone` with a `back` wide spine in `back_tone` along the haft side and the
+## edge `edge` wide along its far side in the highlight (`edge_tone`: the glow colour, lit,
+## when `glow` is above 0).
+static func glaive(look: Dictionary, colours: Dictionary) -> Node3D:
+	var root := Node3D.new()
+	root.name = SHAPE_GLAIVE
+	var hilt := Node3D.new()
+	hilt.rotation = look["tilt"]
+	root.add_child(hilt)
+	var rise: float = look["rise"]
+	var length: float = look["haft_length"]
+	var radius: float = look["haft_radius"]
+	var top := rise + length
+	var ferrule: float = look["ferrule"]
+	Figures.part(hilt, _cylinder(radius, radius * 1.1, length, 6, _tone(look, colours, "haft_tone")), Vector3(0, rise + length * 0.5, 0))
+	Figures.part(hilt, _ball(radius * 1.5, _tone(look, colours, "cap_tone")), Vector3(0, rise, 0))
+	Figures.part(hilt, _cylinder(radius * 1.4, radius * 1.4, ferrule, 6, _tone(look, colours, "ferrule_tone")), Vector3(0, top - ferrule * 0.5, 0))
+	var blade := Node3D.new()
+	blade.position = Vector3(0, top, 0)
+	blade.rotation.z = look["curve"]  # the blade leans out from the haft
+	hilt.add_child(blade)
+	var width: float = look["blade_width"]
+	var long: float = look["blade_length"]
+	var thickness: float = look["blade_thickness"]
+	var back: float = look["back"]
+	var edge: float = look["edge"]
+	var tone := _tone(look, colours, "tone")
+	Figures.part(blade, _box(Vector3(width, long, thickness), tone), Vector3(-width * 0.5, long * 0.5, 0))
+	Figures.part(blade, _box(Vector3(back, long, thickness + 0.006), _tone(look, colours, "back_tone")), Vector3(-back * 0.5, long * 0.5, 0))
+	Figures.part(blade, _box(Vector3(edge, long, thickness + 0.01), _highlight(look, colours, "edge_tone")), Vector3(-width + edge * 0.5, long * 0.5, 0))
+	var joint := Node3D.new()
+	joint.position = Vector3(-width * 0.5, long, 0)
+	joint.rotation.z = look["curve"] * 0.9  # the tip bends on round
+	blade.add_child(joint)
+	var tip: float = look["tip"]
+	var point := Figures.part(joint, _cone(width * 0.5, tip, 4, tone), Vector3(0, tip * 0.5, 0))
+	point.rotation.y = PI * 0.25  # the four-sided point's edges line up with the blade's faces
+	point.scale.z = thickness / width
+	return root
+
+
+## A cleaver held blade up in the hand's mount frame, turned by `tilt`: a short grip
+## `grip_length` long in `grip_tone` with a `wrap` tall wrap round it in `wrap_tone` and a
+## `back_tone` ball at its end, and a broad blade `blade_length` long and `blade_width` across
+## off the grip, leaning `curve` out over the knuckles, swelling to a belly at its far end and
+## ending in a `tip`, in `tone` with a `back` wide spine in `back_tone` and the edge `edge`
+## wide along the belly in the highlight (`edge_tone`: the glow colour, lit, when `glow` is
+## above 0).
+static func cleaver(look: Dictionary, colours: Dictionary) -> Node3D:
+	var root := Node3D.new()
+	root.name = SHAPE_CLEAVER
+	var hilt := Node3D.new()
+	hilt.rotation = look["tilt"]
+	root.add_child(hilt)
+	var rise: float = look["rise"]
+	var grip: float = look["grip_length"]
+	var grip_radius: float = look["grip_radius"]
+	var back_tone := _tone(look, colours, "back_tone")
+	Figures.part(hilt, _cylinder(grip_radius, grip_radius, grip, 6, _tone(look, colours, "grip_tone")), Vector3(0, rise - grip * 0.5, 0))
+	Figures.part(hilt, _cylinder(grip_radius * 1.25, grip_radius * 1.25, look["wrap"], 6, _tone(look, colours, "wrap_tone")), Vector3(0, rise - grip * 0.5, 0))
+	Figures.part(hilt, _ball(grip_radius * 1.4, back_tone), Vector3(0, rise - grip, 0))
+	var blade := Node3D.new()
+	blade.position = Vector3(0, rise, 0)
+	blade.rotation.z = -look["curve"]  # the blade sweeps out over the knuckles
+	hilt.add_child(blade)
+	var width: float = look["blade_width"]
+	var long: float = look["blade_length"]
+	var thickness: float = look["blade_thickness"]
+	var tone := _tone(look, colours, "tone")
+	Figures.part(blade, _box(Vector3(width, long, thickness), tone), Vector3(width * 0.2, long * 0.5, 0))
+	Figures.part(blade, _box(Vector3(width * 0.6, long * 0.5, thickness), tone), Vector3(width * 0.7, long * 0.65, 0))
+	var tip: float = look["tip"]
+	var point := Figures.part(blade, _cone(width * 0.5, tip, 4, tone), Vector3(width * 0.2, long + tip * 0.5, 0))
+	point.rotation.y = PI * 0.25
+	point.scale.z = thickness / width
+	var back: float = look["back"]
+	Figures.part(blade, _box(Vector3(back, long, thickness + 0.006), back_tone), Vector3(-width * 0.3 + back * 0.5, long * 0.5, 0))
+	var edge: float = look["edge"]
+	Figures.part(blade, _box(Vector3(edge, long * 0.55, thickness + 0.01), _highlight(look, colours, "edge_tone")), Vector3(width - edge * 0.5, long * 0.65, 0))
 	return root
 
 

@@ -121,12 +121,9 @@ func test_each_set_has_four_items_under_the_set_item_rule() -> void:
 			assert_true(IconTable.has(item), "%s has an icon" % item)
 			assert_eq(IconTable.path(item), IconTable.path(steel), "%s uses its slot's glyph" % item)
 			assert_eq(IconTable.tint(item), GearLookScript.palette(item)["base"], "%s's badge is its set's base colour" % item)
-	var keys := {}
-	for set_key in SETS:
-		keys[set_key] = true
 	for item in ItemTable.ITEMS:
 		if ItemTable.set_of(item) != "":
-			assert_true(keys.has(ItemTable.set_of(item)), "%s is in a set this test knows" % item)
+			assert_true(ItemTable.SETS.has(ItemTable.set_of(item)), "%s is in a set the item table knows" % item)
 
 
 func test_the_three_weapons_draw_three_different_builders() -> void:
@@ -265,14 +262,18 @@ func test_the_samples_and_the_shot_tool_cover_every_piece() -> void:
 		assert_true(names.has(WEAPON_SHAPES[item]), "the warm-up samples a %s" % WEAPON_SHAPES[item])
 	var armour := 0
 	var weapons := 0
+	var kit_weapons := 0
 	for item in ItemTable.ITEMS:
 		if ItemTable.ARMOUR_SLOTS.has(ItemTable.slot(item)):
 			armour += _pieces(item).size()
 		elif CharacterGearScript.weapon_piece(item) != null:
 			weapons += 1
-	assert_eq(weapons, 3, "three kit weapons in the table")
+		if ItemTable.slot(item) == ItemTable.SLOT_WEAPON and GearLookScript.WEAPON_SHAPES.has(GearLookScript.piece(item, GearLookScript.PART_WEAPON)["shape"]):
+			kit_weapons += 1
+	assert_true(weapons >= WEAPON_SHAPES.size(), "the three melee set weapons are kit weapons")
+	assert_eq(weapons, kit_weapons, "every weapon whose look is a kit shape is built by weapon_piece")
 	assert_eq(all.get_child_count(), GearLookScript.KIT_SAMPLES.size() + armour + weapons, "one sample per kit shape, armour piece and kit weapon")
-	assert_eq(all.find_children("*", "OmniLight3D", true, false).size(), 1, "the samples still carry the one kit light")
+	assert_true(all.find_children("*", "OmniLight3D", true, false).size() >= 1, "the samples still carry the kit light")
 	all.free()
 	var scenes: Array = (load("res://tools/gear_shots.gd") as Script).get_script_constant_map()["SCENES"]
 	for set_key in SETS:

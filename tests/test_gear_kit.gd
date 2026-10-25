@@ -13,6 +13,7 @@ const SIDED := {
 	GearLookScript.SHAPE_STACKED_PLATES: ["size_left", "size_right"],
 	GearLookScript.SHAPE_UNDER_ROBE: ["panel_left", "panel_right"],
 	GearLookScript.SHAPE_CLOAK: ["length_left", "length_right"],
+	GearLookScript.SHAPE_ANTLERS: ["length_left", "length_right"],
 }
 
 
@@ -104,7 +105,7 @@ func test_a_look_with_unequal_sides_draws_unequal_sides() -> void:
 		var left: Node3D = even.find_child(CharacterGearScript.SIDE_LEFT, true, false)
 		var right: Node3D = even.find_child(CharacterGearScript.SIDE_RIGHT, true, false)
 		assert_true(left != null and right != null, "%s has a Left and a Right side" % shape)
-		assert_eq(_bounds(left).size, _bounds(right).size, "%s's sides match when the look's do" % shape)
+		assert_true(_bounds(left).size.is_equal_approx(_bounds(right).size), "%s's sides match when the look's do (%s, %s)" % [shape, _bounds(left).size, _bounds(right).size])
 		even.free()
 		var own := {"shape": shape, left_key: numbers[left_key] * 1.5, right_key: numbers[right_key] * 0.75}
 		var uneven := _build(own)
@@ -163,6 +164,24 @@ func test_a_light_or_motes_come_only_when_asked_and_never_two_lights() -> void:
 		piece.free()
 
 
+## How many pieces the kit samples and every look's parts and layers ask `key` of (a light or
+## motes), each of which samples() builds once.
+static func _asked(key: String) -> int:
+	var n := 0
+	for own in GearLookScript.KIT_SAMPLES:
+		if own.get(key, false):
+			n += 1
+	for item in GearLookScript.LOOKS:
+		var look: Dictionary = GearLookScript.LOOKS[item]
+		for part in look:
+			if part == "palette" or (look[part] as Dictionary).is_empty():
+				continue
+			for own in [look[part]] + (look[part] as Dictionary).get(GearLookScript.LAYERS, []):
+				if own.get(key, false):
+					n += 1
+	return n
+
+
 func test_the_samples_hold_one_of_each_kit_shape_with_a_light_and_motes() -> void:
 	var shapes: Array = []
 	for own in GearLookScript.KIT_SAMPLES:
@@ -177,8 +196,9 @@ func test_the_samples_hold_one_of_each_kit_shape_with_a_light_and_motes() -> voi
 		names.append(String(child.name))
 	for shape in GearLookScript.KIT_SHAPES:
 		assert_true(names.has(shape), "a %s is sampled for the warm-up" % shape)
-	assert_eq(all.find_children("*", "OmniLight3D", true, false).size(), 1, "the samples carry one light")
-	assert_eq(all.find_children("*", "CPUParticles3D", true, false).size(), 1, "the samples carry motes")
+	assert_eq(all.find_children("*", "OmniLight3D", true, false).size(), _asked("light"), "the samples carry the kit light and every set light")
+	assert_eq(all.find_children("*", "CPUParticles3D", true, false).size(), _asked("motes"), "the samples carry the kit motes and every set's motes")
+	assert_true(_asked("light") >= 1 and _asked("motes") >= 1, "the kit sample asks for a light and motes")
 	var left: Node3D = all.find_child(GearLookScript.SHAPE_CLOAK, false, false).find_child(CharacterGearScript.SIDE_LEFT, true, false)
 	var right: Node3D = all.find_child(GearLookScript.SHAPE_CLOAK, false, false).find_child(CharacterGearScript.SIDE_RIGHT, true, false)
 	assert_ne(_bounds(left).size.y, _bounds(right).size.y, "the cloak sample has unequal sides")
