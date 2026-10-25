@@ -361,13 +361,16 @@ func test_the_ring_two_gate_is_at_the_far_edge_with_the_captain() -> void:
 
 
 ## Everything nearer than the ring-two gate is walked to from the outpost; everything in ring two
-## from just past the gate.
+## from just past its gate, and everything in ring three from just past the ring-three gate.
 func test_everything_placed_can_be_reached_from_its_side_of_the_gate() -> void:
 	var w := WorldDefScript.outpost()
+	var start_of := {
+		WorldDef.REGION_RING_TWO: w.cell_of(Vector2(0.5, 64.5)),
+		WorldDef.REGION_RING_THREE: w.cell_of(Vector2(-39.5, 130.5)),
+	}
 	var outpost := w.cell_of(Vector2(w.spawn[0], w.spawn[1]))
-	var beyond := w.cell_of(Vector2(0.5, 64.5))
 	for id in w.objects:
-		var from := beyond if w.region_at(w.object_center(id)) == WorldDef.REGION_RING_TWO else outpost
+		var from: Vector2i = start_of.get(w.region_at(w.object_center(id)), outpost)
 		var reachable := false
 		for cell in w.approach_cells(id):
 			if not GridPath.find(w, from, cell).is_empty():
@@ -377,7 +380,7 @@ func test_everything_placed_can_be_reached_from_its_side_of_the_gate() -> void:
 	for id in w.enemies:
 		var at: Array = w.enemies[id]["home"]
 		var home := Vector2(at[0], at[1])
-		var from := beyond if w.region_at(home) == WorldDef.REGION_RING_TWO else outpost
+		var from: Vector2i = start_of.get(w.region_at(home), outpost)
 		assert_false(GridPath.find(w, from, w.cell_of(home)).is_empty(), "%s's home can be walked to" % id)
 
 

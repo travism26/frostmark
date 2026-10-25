@@ -95,8 +95,9 @@ const EV_COOKED := "cooked"                      # {item, output, burnt, xp}  ou
 const EV_FIRE_LIT := "fire_lit"                  # {fire_id, pos, expires_tick}
 const EV_FIRE_OUT := "fire_out"                  # {fire_id}
 const EV_BUILT := "built"                        # {upgrade, effects}
-const EV_RING_GATE_OPENED := "ring_gate_opened"  # {object_id}  its guardian is dead and its upgrade built
+const EV_RING_GATE_OPENED := "ring_gate_opened"  # {object_id}  its upgrade built and its guardian, if it has one, dead
 const EV_RING_TWO_REACHED := "ring_two_reached"  # {object_id}  first walked into ring two, through that gate; once per character
+const EV_RING_THREE_REACHED := "ring_three_reached"  # {object_id}  first walked into ring three, through that gate; once per character
 # Waystones
 const EV_WAYSTONE_ATTUNED := "waystone_attuned"  # {object_id}  first visit to a waystone; once per waystone
 const EV_TRAVEL_STARTED := "travel_started"      # {object_id, ticks}  channelling began; done in `ticks` ticks unless interrupted

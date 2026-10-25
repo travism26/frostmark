@@ -81,6 +81,15 @@ const BURN_DROP_PER_LEVEL := 5
 const SMITHING_TIER_CAP := ItemTable.TIER_BRONZE
 ## Passing an open ring gate walks the player this far past the gate's centre on the far side.
 const RING_GATE_STEP := 3.0
+## The bands the ring gates part the world into: the outpost, the inner ring and ring one are
+## band 0 (any region not listed), ring two band 1 and ring three band 2.
+const BANDS := {WorldDef.REGION_RING_TWO: 1, WorldDef.REGION_RING_THREE: 2}
+## The rings whose first walk in is marked, with the event that marks it. The arrival is a
+## save point whose reason is the ring's name.
+const FIRST_ARRIVALS := {
+	WorldDef.REGION_RING_TWO: SimVocab.EV_RING_TWO_REACHED,
+	WorldDef.REGION_RING_THREE: SimVocab.EV_RING_THREE_REACHED,
+}
 ## Waystone travel channels this many ticks (three seconds) standing by the stone; a blow taken
 ## in that time breaks it, so it is a way home, not a way out of a fight. It ends this far
 ## outside the outpost gate, so the last step through the gate, the return, is the player's.
@@ -568,10 +577,10 @@ func _step_movement() -> void:
 		# Walls leave the gate as the only way in, so walking into the outpost is crossing it.
 		if region == WorldDef.REGION_OUTPOST:
 			_return()
-		elif region == WorldDef.REGION_RING_TWO and not (state["rings_reached"] as Array).has(region):
+		elif FIRST_ARRIVALS.has(region) and not (state["rings_reached"] as Array).has(region):
 			(state["rings_reached"] as Array).append(region)
-			_emit({"kind": SimVocab.EV_RING_TWO_REACHED, "object_id": _nearest_ring_gate(pos)})
-			_save_due = "ring_two"
+			_emit({"kind": FIRST_ARRIVALS[region], "object_id": _nearest_ring_gate(pos)})
+			_save_due = region
 	if path.is_empty():
 		var object_id: String = player["target_object"]
 		player["target_object"] = ""
@@ -651,20 +660,24 @@ func _buildable_now(stores: Array) -> Array[String]:
 
 # --- The ring gate ----------------------------------------------------------------------
 
-## Whether a ring gate stands open: its guardian has fallen at least once and the outpost has
-## built the upgrade that works it. Both stay true for good, so an open gate never closes.
+## Whether a ring gate stands open: the outpost has built the upgrade that works it and, for a
+## gate with a `guardian`, that guardian has fallen at least once. Both stay true for good, so
+## an open gate never closes.
 func ring_gate_open(object_id: String) -> bool:
 	if not world.objects.has(object_id) or world.objects[object_id]["kind"] != WorldDef.KIND_RING_GATE:
 		return false
 	var gate: Dictionary = world.objects[object_id]
-	return (state["bosses_defeated"] as Array).has(gate["guardian"]) and (state["upgrades"] as Array).has(gate["upgrade"])
+	var guardian: String = gate.get("guardian", "")
+	if guardian != "" and not (state["bosses_defeated"] as Array).has(guardian):
+		return false
+	return (state["upgrades"] as Array).has(gate["upgrade"])
 
 
 ## Whether `enemy_id` is the guardian of a ring gate that stands open. Such a guardian, once
 ## dead, stays down: the outpost holds the gate now, so the way home is not barred again.
 func _guards_an_open_gate(enemy_id: String) -> bool:
 	for id in _open_ring_gates():
-		if world.objects[id]["guardian"] == enemy_id:
+		if world.objects[id].get("guardian", "") == enemy_id:
 			return true
 	return false
 
@@ -712,11 +725,16 @@ func _nearest_ring_gate(pos: Vector2) -> String:
 	return best
 
 
-## Whether the player and an enemy's home lie on the same side of the ring gates: both in ring
-## two or both nearer the outpost. Nothing fights, notices or chases across a ring gate.
+## Whether the player and an enemy's home lie in the same band between the ring gates (BANDS).
+## Nothing fights, notices or chases across a ring gate.
 func _same_side(enemy_id: String) -> bool:
-	var home_beyond := world.region_at(_home(enemy_id)) == WorldDef.REGION_RING_TWO
-	return home_beyond == (state["player"]["region"] == WorldDef.REGION_RING_TWO)
+	return _band(world.region_at(_home(enemy_id))) == _band(state["player"]["region"])
+
+
+## Which band between the ring gates a region lies in: 0 nearest the outpost, one more past
+## each ring gate.
+static func _band(region: String) -> int:
+	return int(BANDS.get(region, 0))
 
 
 # --- Waystones --------------------------------------------------------------------------
@@ -2073,7 +2091,7 @@ func restore(snap: Dictionary) -> bool:
 	var reached: Array = []
 	if copy.get("rings_reached") is Array:
 		for r in copy["rings_reached"]:
-			if r == WorldDef.REGION_RING_TWO and not reached.has(r):
+			if FIRST_ARRIVALS.has(r) and not reached.has(r):
 				reached.append(r)
 	copy["rings_reached"] = reached
 	var attuned: Array = []

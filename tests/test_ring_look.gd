@@ -1,5 +1,6 @@
 ## The ring-look table: one look per ring and for the outpost, colder and darker the farther
-## out, blended across a fixed band at every boundary so nothing jumps.
+## out, blended across a fixed band at every boundary so nothing jumps; ring three's glacier
+## is a clear night under the aurora rather than a deeper blizzard.
 extends "res://tests/run.gd".TestCase
 
 const WorldDefScript := preload("res://sim/world_def.gd")
@@ -11,13 +12,14 @@ const DEEP := {
 	WorldDef.REGION_INNER_RING: Vector2(0.5, 17.0),
 	WorldDef.REGION_RING_ONE: Vector2(0.5, 42.0),
 	WorldDef.REGION_RING_TWO: Vector2(0.5, 100.0),
+	WorldDef.REGION_RING_THREE: Vector2(0.5, 160.0),
 }
 
 
 func test_every_ring_and_the_outpost_has_a_complete_look() -> void:
 	var w := WorldDefScript.outpost()
 	var rings := RingLookScript.rings(w)
-	assert_eq(rings, [WorldDef.REGION_OUTPOST, WorldDef.REGION_INNER_RING, WorldDef.REGION_RING_ONE, WorldDef.REGION_RING_TWO])
+	assert_eq(rings, [WorldDef.REGION_OUTPOST, WorldDef.REGION_INNER_RING, WorldDef.REGION_RING_ONE, WorldDef.REGION_RING_TWO, WorldDef.REGION_RING_THREE])
 	for ring in rings:
 		var look := RingLookScript.entry(ring)
 		for field in RingLookScript.FIELDS:
@@ -40,11 +42,27 @@ func test_looks_get_colder_and_darker_outward() -> void:
 		var outer := RingLookScript.entry(rings[i])
 		assert_true(RingLookScript.brightness(outer) < RingLookScript.brightness(inner), "%s is darker than %s" % [rings[i], rings[i - 1]])
 		assert_true(RingLookScript.warmth(outer) < RingLookScript.warmth(inner), "%s is colder than %s" % [rings[i], rings[i - 1]])
+		if rings[i] == WorldDef.REGION_RING_THREE:
+			continue  # the glacier's clear sky: test_ring_three_is_a_clear_night_under_the_aurora
 		assert_true(float(outer["snow_density"]) > float(inner["snow_density"]), "snow thickens into %s" % rings[i])
 		assert_true(float(outer["fog_distance"]) < float(inner["fog_distance"]), "fog closes in into %s" % rings[i])
 		assert_true(float(outer["wind"]) >= float(inner["wind"]), "the wind does not drop into %s" % rings[i])
 	assert_eq(float(RingLookScript.entry(WorldDef.REGION_OUTPOST)["aurora"]), 0.0, "no aurora over the outpost")
 	assert_true(float(RingLookScript.entry(WorldDef.REGION_RING_TWO)["aurora"]) > float(RingLookScript.entry(WorldDef.REGION_INNER_RING)["aurora"]), "the aurora hangs over the outer rings")
+
+
+func test_ring_three_is_a_clear_night_under_the_aurora() -> void:
+	var two := RingLookScript.entry(WorldDef.REGION_RING_TWO)
+	var three := RingLookScript.entry(WorldDef.REGION_RING_THREE)
+	assert_eq(float(three["aurora"]), 1.0, "the full aurora")
+	assert_true(float(three["snow_density"]) < float(two["snow_density"]), "less snow than ring two's blizzard, so the sky shows")
+	assert_true(float(three["fog_distance"]) > float(two["fog_distance"]), "and the fog stands farther off")
+	var sky: Color = three["sky"]
+	assert_true(sky.b > sky.r and sky.r > sky.g, "a violet sky")
+	var sun: Color = three["sun_color"]
+	assert_true(sun.g > sun.r, "lit green by the aurora rather than a dusk sun")
+	var ice: Color = three["snow_tone"]
+	assert_true(ice.b > ice.r and ice.get_luminance() > (two["snow_tone"] as Color).get_luminance(), "blue-white ice, paler than ring two's grey snow")
 
 
 func test_deep_inside_a_ring_the_look_is_the_entry() -> void:
@@ -62,6 +80,7 @@ func test_the_look_blends_across_every_boundary() -> void:
 		[10.0, WorldDef.REGION_OUTPOST, WorldDef.REGION_INNER_RING],
 		[24.0, WorldDef.REGION_INNER_RING, WorldDef.REGION_RING_ONE],
 		[60.0, WorldDef.REGION_RING_ONE, WorldDef.REGION_RING_TWO],
+		[128.0, WorldDef.REGION_RING_TWO, WorldDef.REGION_RING_THREE],
 	]
 	for c in crossings:
 		var edge: float = c[0]
@@ -86,7 +105,7 @@ func test_the_look_never_jumps_on_the_walk_out() -> void:
 	var w := WorldDefScript.outpost()
 	var previous := RingLookScript.at(w, Vector2(0.5, 0.5))
 	var z := 0.5
-	while z < 120.0:
+	while z < 186.0:
 		z += 0.25
 		var look := RingLookScript.at(w, Vector2(0.5, z))
 		assert_true(RingLookScript.distance(previous, look) < 0.08, "a quarter metre at z=%.2f changes the look by %.3f" % [z, RingLookScript.distance(previous, look)])
@@ -97,8 +116,17 @@ func test_past_the_last_ring_the_last_look_holds() -> void:
 	var w := WorldDefScript.outpost()
 	var beyond := Vector2(100.0, 100.0)
 	assert_eq(w.region_at(beyond), "", "past every region")
-	assert_eq(RingLookScript.at(w, beyond), RingLookScript.entry(WorldDef.REGION_RING_TWO))
-	assert_eq(RingLookScript.at(w, Vector2(0.5, 500.0)), RingLookScript.entry(WorldDef.REGION_RING_TWO))
+	assert_eq(RingLookScript.at(w, beyond), RingLookScript.entry(WorldDef.REGION_RING_THREE))
+	assert_eq(RingLookScript.at(w, Vector2(0.5, 500.0)), RingLookScript.entry(WorldDef.REGION_RING_THREE))
+
+
+## Ring two's polygon runs to the grid's edges east and west, beside ring three's own: its
+## cliffs there take ring two's look, not a blend with the glacier's.
+func test_ring_two_blends_into_ring_three_only_across_their_shared_edge() -> void:
+	var w := WorldDefScript.outpost()
+	for at in [Vector2(63.5, 90.0), Vector2(-63.5, 100.0), Vector2(-63.5, 120.0)]:
+		assert_eq(w.region_at(at), WorldDef.REGION_RING_TWO)
+		assert_eq(RingLookScript.at(w, at), RingLookScript.entry(WorldDef.REGION_RING_TWO), "ring two's look at %s" % at)
 
 
 func test_blend_lerps_numbers_and_colours_and_picks_the_nearer_cue() -> void:

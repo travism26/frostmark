@@ -72,15 +72,15 @@ static func apply_tint(tint: Color) -> void:
 ## the snow itself says where one ring ends and the next begins.
 static func paint_rings(material: ShaderMaterial, world: WorldDef) -> void:
 	var names := RingLook.rings(world)
-	var edges := Vector3.ZERO
-	for i in mini(3, names.size()):
+	var edges := Vector4.ZERO
+	for i in mini(4, names.size()):
 		var reach := 0.0
 		for p in world.regions[i]["polygon"]:
 			reach = maxf(reach, maxf(absf(p[0]), absf(p[1])))
 		edges[i] = reach
 	material.set_shader_parameter("ring_tones", true)
 	material.set_shader_parameter("ring_edges", edges)
-	var slots := ["tone_outpost", "tone_inner", "tone_one", "tone_two"]
+	var slots := ["tone_outpost", "tone_inner", "tone_one", "tone_two", "tone_three"]
 	for i in slots.size():
 		var ring: String = names[mini(i, names.size() - 1)]
 		material.set_shader_parameter(slots[i], RingLook.entry(ring)["snow_tone"])
@@ -149,7 +149,8 @@ static func path_stones(from: Vector2, to: Vector2) -> MultiMeshInstance3D:
 
 ## The look of a blocking solid: a palisade of sharpened logs for a wall, jagged ice for a
 ## cliff (its snow in the snow tone of the ring it stands in), a broken wall or pillar from the
-## ruin kit (in the stone of the ring it stands in) for a ruin, or null to keep the plain box.
+## ruin kit (in the stone of the ring it stands in) for a ruin, slabs of ice shoved up on end
+## for a pressure ridge, or null to keep the plain box.
 ## The mesh is centred on the footprint with the ground at -height/2, matching GameRoot's block
 ## placement, and carries one StandardMaterial3D on its only surface so the occluder fade can
 ## still see through it.
@@ -165,6 +166,9 @@ static func solid_mesh(world: WorldDef, solid: Dictionary) -> ArrayMesh:
 		WorldDef.KIND_CLIFF:
 			var tone: Color = RingLook.at(world, centre)["snow_tone"]
 			return _ice_cliff(size, centre, COLOR_SNOW_CAP * tone)
+		WorldDef.KIND_RIDGE:
+			var tone: Color = RingLook.at(world, centre)["snow_tone"]
+			return _pressure_ridge(size, centre, COLOR_SNOW_CAP * tone)
 		WorldDef.KIND_RUIN:
 			var stone: Color = RingLook.at(world, centre)["stone"]
 			if RingDressing.ruin_piece(solid) == "pillar":
@@ -252,6 +256,32 @@ static func _ice_cliff(size: Vector3, centre: Vector2, snow: Color) -> ArrayMesh
 		var h := rng.randf_range(1.2, 2.6) if on_top else rng.randf_range(0.5, 1.1)
 		var y := top_y + rng.randf_range(0.3, 1.0) if on_top else base_y
 		MeshKit.shard(st, MeshKit.local(u, v, along_x) + Vector3(0, y, 0), rng.randf_range(0.4, 0.8), h, rng.randf() * TAU, COLOR_ICE if on_top else COLOR_ICE_DEEP)
+	return MeshKit.finish(st)
+
+
+## A pressure ridge in the glacier: slabs of ice shoved up along the footprint, each tilted
+## across the ridge one way or the other and capped in `snow`, with shards standing between
+## them. Nothing reaches past the footprint, so the ice around it stays open ground.
+static func _pressure_ridge(size: Vector3, centre: Vector2, snow: Color) -> ArrayMesh:
+	var along_x := size.x >= size.z
+	var length := size.x if along_x else size.z
+	var thick := size.z if along_x else size.x
+	var rng := MeshKit.rng(centre)
+	var st := MeshKit.begin()
+	var base_y := -size.y * 0.5
+	var count := maxi(int(length / 0.9), 2)
+	for i in count:
+		var u := -length * 0.5 + (i + 0.5) * length / count + rng.randf_range(-0.15, 0.15)
+		var v := rng.randf_range(-thick, thick) * 0.15
+		var h := size.y * rng.randf_range(0.6, 1.1)
+		var turn := (0.0 if along_x else PI * 0.5) + rng.randf_range(-0.25, 0.25)
+		var colour := COLOR_ICE.lerp(COLOR_ICE_PALE, rng.randf())
+		var slab := Vector3(length / count * rng.randf_range(1.0, 1.3), h, thick * rng.randf_range(0.35, 0.6))
+		MeshKit.block(st, MeshKit.local(u, v, along_x) + Vector3(0, base_y + h * 0.45, 0), slab, turn, rng.randf_range(-0.4, 0.4), colour, snow)
+	for i in int(length / 1.2):
+		var u := rng.randf_range(-length * 0.5 + 0.4, length * 0.5 - 0.4)
+		var v := rng.randf_range(-thick, thick) * 0.3
+		MeshKit.shard(st, MeshKit.local(u, v, along_x) + Vector3(0, base_y, 0), rng.randf_range(0.25, 0.45), size.y * rng.randf_range(0.7, 1.3), rng.randf() * TAU, COLOR_ICE_DEEP if i % 2 == 0 else COLOR_ICE)
 	return MeshKit.finish(st)
 
 
@@ -748,6 +778,8 @@ static func yard_mesh(kind: String, size: Vector3) -> ArrayMesh:
 			return _weapon_rack(size)
 		"winch_frame":
 			return _winch_frame(size)
+		"hoist_frame":
+			return _hoist_frame(size)
 		"forge_hearth":
 			return _forge_hearth(size)
 		"bloomery_shaft":
@@ -923,6 +955,44 @@ static func _winch_frame(size: Vector3) -> ArrayMesh:
 		MeshKit.block(st, p, Vector3(0.05, 0.03, 0.12) if i % 2 == 0 else Vector3(0.015, 0.06, 0.12), 0.0, 0.0, COLOR_STEEL, COLOR_STEEL)
 	MeshKit.prism(st, Vector3(0.0, 0.0, half.z - 0.12), 6, 0.16, 0.12, 0.0, 0.16, 0.3, COLOR_PATH_STONE, COLOR_PATH_STONE, MeshKit.SNOW)
 	MeshKit.box(st, Vector3(0.0, 0.2, half.z - 0.12), Vector3(0.12, 0.1, 0.03), COLOR_IRON_DARK, COLOR_IRON_DARK)
+	return MeshKit.finish(st)
+
+
+## An iron hoist: two timber posts on iron feet, an iron-shod beam across their tops, a pulley
+## wheel hung from its middle, and the chain run over it, down to an iron counterweight on the
+## ground in front (+z) and back up behind to an anchor on the beam's far side.
+static func _hoist_frame(size: Vector3) -> ArrayMesh:
+	var st := MeshKit.begin()
+	var half := size * 0.5
+	var top := size.y - 0.12
+	for side in [-1.0, 1.0]:
+		var x: float = side * (half.x - 0.15)
+		MeshKit.box(st, Vector3(x, 0.06, 0.0), Vector3(0.3, 0.12, 0.3), COLOR_IRON_DARK, COLOR_IRON_EDGE)
+		MeshKit.log_post(st, Vector3(x, 0.0, 0.0), 0.0, top, 0.08, 0.1, Vector2.ZERO, COLOR_TIMBER)
+	MeshKit.box(st, Vector3(0.0, top + 0.04, 0.0), Vector3(size.x - 0.1, 0.14, 0.18), COLOR_TIMBER_DARK, MeshKit.SNOW)
+	MeshKit.box(st, Vector3(0.0, top - 0.05, 0.0), Vector3(size.x - 0.3, 0.04, 0.2), COLOR_IRON, COLOR_IRON)
+	# The pulley: a wheel turning about x, in its iron yoke under the beam.
+	var wheel_y := top - 0.3
+	_cylinder_x(st, Vector3(0.0, wheel_y, 0.0), 0.05, 0.2, 10, COLOR_IRON)
+	_cylinder_x(st, Vector3(0.0, wheel_y, 0.0), 0.09, 0.04, 6, COLOR_IRON_EDGE)
+	for x in [-0.1, 0.1]:
+		MeshKit.box(st, Vector3(x, (wheel_y + top) * 0.5, 0.0), Vector3(0.03, top - wheel_y, 0.06), COLOR_IRON_DARK, COLOR_IRON_DARK)
+	# The chain: down the front of the wheel to the counterweight, which sits on the ground.
+	var weight := Vector3(0.0, 0.0, half.z - 0.22)
+	var from := Vector3(0.0, wheel_y, 0.2)
+	var to := weight + Vector3(0.0, 0.34, 0.0)
+	var links := 8
+	for i in links:
+		var p := from.lerp(to, (i + 0.5) / links)
+		MeshKit.block(st, p, Vector3(0.05, 0.12, 0.03) if i % 2 == 0 else Vector3(0.015, 0.12, 0.06), 0.0, 0.0, COLOR_STEEL, COLOR_STEEL)
+	MeshKit.box(st, weight + Vector3(0.0, 0.15, 0.0), Vector3(0.36, 0.3, 0.3), COLOR_IRON_DARK, COLOR_IRON_EDGE)
+	MeshKit.box(st, weight + Vector3(0.0, 0.32, 0.0), Vector3(0.1, 0.06, 0.03), COLOR_IRON, COLOR_IRON)
+	# Behind, the chain's other end runs back down to a ring on the near post.
+	var anchor := Vector3(half.x - 0.15, top * 0.45, -0.1)
+	var back := Vector3(0.0, wheel_y, -0.2)
+	for i in 6:
+		var p := back.lerp(anchor, (i + 0.5) / 6.0)
+		MeshKit.block(st, p, Vector3(0.12, 0.05, 0.03) if i % 2 == 0 else Vector3(0.12, 0.015, 0.06), 0.0, 0.0, COLOR_STEEL, COLOR_STEEL)
 	return MeshKit.finish(st)
 
 

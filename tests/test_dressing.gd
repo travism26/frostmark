@@ -16,6 +16,7 @@ const FROM := {
 	WorldDef.REGION_INNER_RING: Vector2(0.5, 17.0),
 	WorldDef.REGION_RING_ONE: Vector2(0.5, 42.0),
 	WorldDef.REGION_RING_TWO: Vector2(0.5, 70.0),
+	WorldDef.REGION_RING_THREE: Vector2(-40.5, 135.5),
 }
 const KINDS := [
 	"fallen_pine", "split_rock", "cairn", "dead_giant", "frozen_waterfall", "caravan_wreck",
@@ -107,13 +108,36 @@ func test_every_cliff_is_capped_in_the_snow_of_its_ring() -> void:
 		assert_true(top <= maxf(snow.get_luminance(), WorldDressingScript.COLOR_ICE_PALE.get_luminance()) + 0.001, "nothing on %s is brighter than its snow or pale ice" % s["id"])
 		assert_true(snow.get_luminance() > WorldDressingScript.COLOR_ICE_DEEP.get_luminance(), "%s still reads as snow-capped over its deep ice" % s["id"])
 		# Ring one's edge cliffs stand just past its polygon, where region_at already says ring
-		# two, so a cliff's ring is the one it walls in: ring two's are named for it.
-		var ring := WorldDef.REGION_RING_TWO if (s["id"] as String).begins_with("cliff_ring_two") else WorldDef.REGION_RING_ONE
+		# two, so a cliff's ring is the one it walls in: ring two's and three's are named for it.
+		var ring := WorldDef.REGION_RING_ONE
+		if (s["id"] as String).begins_with("cliff_ring_two"):
+			ring = WorldDef.REGION_RING_TWO
+		elif (s["id"] as String).begins_with("cliff_ring_three"):
+			ring = WorldDef.REGION_RING_THREE
 		if not tones.has(ring):
 			tones[ring] = []
 		tones[ring].append(snow.get_luminance())
 	assert_true(tones.has(WorldDef.REGION_RING_ONE) and tones.has(WorldDef.REGION_RING_TWO), "both rings have cliffs")
 	assert_true(tones[WorldDef.REGION_RING_TWO].max() < tones[WorldDef.REGION_RING_ONE].min(), "ring two's cliffs are capped darker than ring one's")
+	assert_true(tones[WorldDef.REGION_RING_THREE].min() > tones[WorldDef.REGION_RING_TWO].max(), "ring three's cliffs carry the glacier's paler ice")
+
+
+func test_ring_threes_pressure_ridges_are_ice_in_their_own_footprint() -> void:
+	var w := WorldDefScript.outpost()
+	var count := 0
+	for s in w.solids:
+		if s["kind"] != WorldDef.KIND_RIDGE:
+			continue
+		count += 1
+		var centre := Vector2((s["min"][0] + s["max"][0]) * 0.5, (s["min"][1] + s["max"][1]) * 0.5)
+		assert_eq(w.region_at(centre), WorldDef.REGION_RING_THREE, "%s is in ring three" % s["id"])
+		var mesh := WorldDressingScript.solid_mesh(w, s)
+		assert_true(mesh != null, "%s has its own look" % s["id"])
+		var box := mesh.get_aabb()
+		var half := Vector2(s["max"][0] - s["min"][0], s["max"][1] - s["min"][1]) * 0.5
+		assert_true(absf(box.position.x) <= half.x + 0.6 and absf(box.end.x) <= half.x + 0.6, "%s keeps to its footprint across x" % s["id"])
+		assert_true(absf(box.position.z) <= half.y + 0.6 and absf(box.end.z) <= half.y + 0.6, "%s keeps to its footprint across z" % s["id"])
+	assert_true(count >= 4, "a few ridges break up the ice")
 
 
 func test_camps_mark_the_packs_the_sim_places() -> void:
@@ -143,7 +167,10 @@ func test_scatter_thickens_outward_and_every_ring_has_a_table() -> void:
 	for ring in rings:
 		var look := RingLookScript.entry(ring)
 		assert_true(RingDressingScript.SCATTER.has(ring), "%s has scatter" % ring)
-		assert_true(float(look["density"]) > previous, "dressing is denser in %s" % ring)
+		if ring == WorldDef.REGION_RING_THREE:
+			assert_true(float(look["density"]) < previous, "the glacier lies barer than the ruins")
+		else:
+			assert_true(float(look["density"]) > previous, "dressing is denser in %s" % ring)
 		previous = look["density"]
 		for entry in RingDressingScript.SCATTER[ring]:
 			assert_true(RingDressingScript.scaled_count(entry, look["density"]) > 0, "%s lays down some %s" % [ring, entry["what"]])

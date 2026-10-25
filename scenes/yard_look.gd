@@ -20,6 +20,8 @@ const SPOTS := {
 	# The winch: just inside the south gate, west of the path and the signpost, far enough
 	# in from the palisade that the wall never hides it from the camera.
 	"south_gate": {"at": [-5.0, 6.9], "turn": PI},
+	# The hoist: just inside the south gate, east of the path, between it and the tent's fence.
+	"south_gate_east": {"at": [3.6, 6.8], "turn": PI},
 	# The smithy: the north band, east of the workbench; its back is the north wall.
 	"smithy": {"at": [0.9, -7.4], "turn": 0.0},
 	# The pack frame: the east wall's free stretch north of the planks and firewood.
@@ -27,7 +29,7 @@ const SPOTS := {
 }
 
 ## The hand-made meshes a part can name (WorldDressing builds them), beside the kit models.
-const MESHES := ["shelf_rack", "hatch", "iron_chest", "weapon_rack", "winch_frame", "forge_hearth", "bloomery_shaft", "furnace_stack"]
+const MESHES := ["shelf_rack", "hatch", "iron_chest", "weapon_rack", "winch_frame", "hoist_frame", "forge_hearth", "bloomery_shaft", "furnace_stack"]
 
 ## Each upgrade's look: its `line` and `step` in that line, the `spot` it builds in, its
 ## `offset` [x, z] in the spot's frame, its `size` [along, out] on the ground, and its
@@ -101,6 +103,14 @@ const LOOKS := {
 			{"mesh": "winch_frame", "size": [2.0, 1.6, 1.2], "at": [0.0, 0.0], "y": 0.0, "turn": 0.0},
 		],
 	},
+	# An iron hoist: a pulley wheel on an iron-shod beam between two posts, its chain hanging to
+	# a counterweight, east of the gate path across from the winch. Low like the winch.
+	"ring_three_gate": {
+		"line": "hoist", "step": 1, "spot": "south_gate_east", "offset": [0.0, 0.0], "size": [1.4, 1.0],
+		"parts": [
+			{"mesh": "hoist_frame", "size": [1.4, 1.7, 1.0], "at": [0.0, 0.0], "y": 0.0, "turn": 0.0},
+		],
+	},
 	# A stone hearth with a bed of glowing coals, bellows on its west side and a short flue at
 	# its back, a quench bucket beside it: the smithy's first step, in front of the spot.
 	"forge": {
@@ -144,6 +154,7 @@ const MATERIALS := {
 	"pack_frame": TIMBER,
 	"bloomery": STONE,
 	"ring_two_gate": TIMBER,
+	"ring_three_gate": IRON,
 	"blast_furnace": STONE,
 	"waystone": STONE,
 	"stash_vault": IRON,

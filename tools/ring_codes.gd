@@ -7,6 +7,7 @@ extends SceneTree
 const H := preload("res://tests/sim_helpers.gd")
 const SPOTS := {
 	"outpost": [0.5, 4.5], "inner_ring": [-1.5, 16.5], "ring_one": [-11.5, 36.5], "ring_two": [2.5, 71.5],
+	"ring_three": [-33.5, 136.5],
 }
 ## The warmth `ring_one_cold` is left with.
 const COLD_WARMTH := 70

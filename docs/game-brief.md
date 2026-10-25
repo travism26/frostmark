@@ -83,11 +83,12 @@ Magic, farming and the other skills come in later slices. Shipping fewer skills 
 
 The zones are concentric rings around the outpost, so danger grows with distance and "how far do I push" is easy to read.
 
-| Ring     | Contents                                               |
-|----------|--------------------------------------------------------|
-| Inner    | Safe but cold: trees, rocks, a fishing hole            |
-| Ring one | Wolves (melee) and bandit archers (ranged)             |
-| Ring two | Ruins and real monsters                                |
+| Ring       | Contents                                                                                        |
+|------------|-------------------------------------------------------------------------------------------------|
+| Inner      | Safe but cold: trees, rocks, a fishing hole                                                     |
+| Ring one   | Wolves (melee) and bandit archers (ranged)                                                      |
+| Ring two   | Ruins and real monsters                                                                         |
+| Ring three | A glacier under the aurora, behind a gate in ring two's cliffs; enemies that are harder to read |
 
 ### Gear tiers
 

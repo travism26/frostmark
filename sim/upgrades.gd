@@ -4,8 +4,8 @@
 ## outpost). `requires` lists upgrade ids that must be built first. `effects` says what the
 ## upgrade changes: `stash` adds that many stash slots, `carry` adds that many kilograms to the
 ## carry limit, `recipes` names the workbench recipes it unlocks (RecipeTable entries whose
-## `upgrade` is this id), `smithing_tier` raises the highest metal tier the workbench works, `ring_gate` names the ring gate it readies (it
-## opens once that ring's guardian has fallen too), and `waystones` lists the waystone objects it
+## `upgrade` is this id), `smithing_tier` raises the highest metal tier the workbench works, `ring_gate` names the ring gate it readies (a
+## gate with a guardian opens once that guardian has fallen too), and `waystones` lists the waystone objects it
 ## wakes (each still has to be visited once before it carries anyone home). An upgrade with
 ## `locked` set is listed but cannot be built in this version; the text says why. Listed in the
 ## order the upgrades panel shows them. Engine-free.
@@ -58,6 +58,12 @@ const UPGRADES := {
 			"smithing_tier": ItemTable.TIER_STEEL,
 		},
 		"locked": "",
+	},
+	# Iron and troll hide hoist the gate in ring two's southern cliffs: it has no guardian, so
+	# building this opens it.
+	"ring_three_gate": {
+		"label": "Ring-three gate hoist", "cost": {"steel_bar": 8, "troll_hide": 4, "coal": 12, "logs": 16},
+		"requires": ["blast_furnace"], "effects": {"ring_gate": "ring_three_gate"}, "locked": "",
 	},
 	# Shortcuts home from deep in the rings. Travel is not a return: the walk through the gate is.
 	"waystone": {
