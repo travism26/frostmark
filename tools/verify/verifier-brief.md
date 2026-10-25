@@ -93,7 +93,7 @@ Before you finish, write `grades.json` in your work folder:
   - for `gate`, leave it empty.
 - A criterion you can't support with evidence gets INCONCLUSIVE and a `note` saying what's missing. That is an honest answer, not a failure of yours.
 - **Flags** are for a person to look at, and each must carry one of four reasons. A flag with any other reason becomes a note.
-  - `ticket_contradiction`: two criteria, or a criterion and the game's documented rules, can't both hold.
+  - `ticket_contradiction`: two criteria, or a criterion and the game's documented rules, can't both hold. The documented rules are the docs and `GLOSSARY.md`. The head's code, its comments and its tests are what you're grading, never an oracle: when they disagree with a criterion, that's a FAIL, not a contradiction.
   - `uninterpretable`: you can't tell what a criterion asks, or you can't grade it without seeing the change.
   - `gaming_suspected`: the game seems built to satisfy a probe rather than the player, such as special-casing a test helper.
   - `oracle_dispute`: the only way to grade a criterion conflicts with how the ticket reads.

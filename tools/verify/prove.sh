@@ -155,9 +155,13 @@ check "$(holds cmp "$REC_PLANTED/head.patch" "$FIX/plant-$TICKET.patch")" "the p
 check "$(holds test "$(jq -r .binding.head_patch "$REC_PLANTED/verdict.json")" = "$(shasum -a 256 "$FIX/plant-$TICKET.patch" | cut -d' ' -f1)")" "  and its verdict is bound to it"
 
 echo "== what each session saw"
-# Every path a session's tools named, with macOS's /private prefix dropped.
+# Every path a session's tools named in a call the permissions let through, then (with "refused"
+# for $2) in one they refused, with macOS's /private prefix dropped.
 touched() {
-  jq -r -R 'fromjson? | select(.type == "assistant") | .message.content[]? | select(.type == "tool_use")
+  local denied
+  denied=$(jq -c -R -s '[split("\n")[] | fromjson? | select(.type == "result") | .permission_denials[]?.tool_use_id]' "$1/transcript.jsonl")
+  jq -r -R --argjson denied "$denied" --arg want "${2:-}" 'fromjson? | select(.type == "assistant") | .message.content[]?
+    | select(.type == "tool_use" and (.id | IN($denied[])) == ($want == "refused"))
     | .input | (.file_path // .path // .notebook_path // empty)' "$1/transcript.jsonl" | sed 's#^/private/#/#'
 }
 for side in shipped planted; do
@@ -178,6 +182,8 @@ for side in shipped planted; do
     [ "$inside" = 1 ] || outside="$outside $p"
   done < <(touched "$rec")
   check "$(holds test -z "$outside")" "the $side session's tools touched only its head copy and work folder${outside:+:$outside}"
+  refused=$(touched "$rec" refused | grep -c .)
+  [ "$refused" = 0 ] || echo "  (and its permissions refused $refused more: $(touched "$rec" refused | paste -sd ' ' -))"
   check "$(holds test "$(grep -c -e "plant-$TICKET" -e "$KIT/fixtures" -e "${PROVE#/private}/$other" "$rec/transcript.jsonl" "$rec/prompt.md" | awk -F: '{s += $NF} END {print s}')" = 0)" \
     "  and its prompt and transcript never name the patch, the fixtures or the $other run's home"
 done
