@@ -1,0 +1,716 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Frostmark — ranged gear sets (mock-up board)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  :where(.grid, .flex) > * { min-width: 0; }
+  :where(p, h1, h2, h3, h4, li, td, th, dd, figcaption) { overflow-wrap: anywhere; }
+  :where(img, svg, video, canvas) { max-width: 100%; height: auto; }
+
+  :root {
+    --bg: #121826;
+    --panel: #1b2434;
+    --panel-2: #222d40;
+    --timber: #4b3526;
+    --timber-light: #7a5a3c;
+    --iron: #5b6472;
+    --text: #e9e6f2;
+    --muted: #a9a6bd;
+    --amber: #f0a444;
+    --amber-deep: #c77a1e;
+    --violet: #8a7fc0;
+    --frost: #8cd9ff;
+    --snow: #c9c6e6;
+    --ok: #7fd1a0;
+    --warn: #f0c060;
+    --bad: #e07a7a;
+  }
+  html { background: var(--bg); }
+  body {
+    margin: 0; color: var(--text); background: var(--bg);
+    font-family: Inter, system-ui, sans-serif; font-size: 15px; line-height: 1.5;
+  }
+  h1, h2, h3 { font-family: Cinzel, serif; font-weight: 700; letter-spacing: .02em; margin: 0 0 .4em; }
+  h1 { font-size: 30px; color: var(--amber); }
+  h2 { font-size: 22px; color: var(--text); border-bottom: 2px solid var(--timber-light); padding-bottom: .25em; margin-top: 0; }
+  h3 { font-size: 18px; color: var(--amber); }
+  p { margin: .4em 0; }
+  a { color: var(--frost); }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; background: #0e131d; padding: 1px 5px; border-radius: 4px; }
+  header {
+    padding: 28px 32px 20px; border-bottom: 3px solid var(--timber);
+    background: linear-gradient(180deg, #1a2030 0%, var(--bg) 100%);
+  }
+  header .sub { color: var(--muted); max-width: 980px; }
+  main { padding: 20px 32px 60px; max-width: 1500px; margin: 0 auto; }
+  section { margin: 26px 0 38px; }
+
+  .frame {
+    background: var(--panel); border: 2px solid var(--timber-light); border-radius: 14px;
+    box-shadow: inset 0 0 0 2px #2a1d14, 0 6px 24px rgba(0,0,0,.35);
+    padding: 18px 20px;
+  }
+  .frame.iron { border-color: var(--iron); box-shadow: inset 0 0 0 2px #2b3140, 0 6px 24px rgba(0,0,0,.35); }
+
+  .grid { display: grid; gap: 16px; }
+  .cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  @media (max-width: 1100px) { .cols-3 { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+  @media (max-width: 760px) { .cols-3, .cols-2 { grid-template-columns: minmax(0,1fr); } }
+
+  .pill {
+    display: inline-block; font-family: Cinzel, serif; font-size: 12px; letter-spacing: .08em;
+    text-transform: uppercase; padding: 3px 10px; border-radius: 999px; border: 1px solid;
+  }
+  .pill.mid { color: #d9b48a; border-color: #8a6a46; }
+  .pill.midhigh { color: #c8cbd6; border-color: #7f8aa3; }
+  .pill.high { color: #a9c0e6; border-color: #5b7cb0; }
+  .pill.top { color: var(--amber); border-color: var(--amber-deep); background: rgba(240,164,68,.08); }
+
+  /* set cards */
+  .set { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 300px) minmax(0, 1fr); gap: 18px; }
+  @media (max-width: 1100px) { .set { grid-template-columns: minmax(0,1fr) minmax(0,1fr); } .set .info { grid-column: 1 / -1; } }
+  @media (max-width: 700px) { .set { grid-template-columns: minmax(0,1fr); } }
+  .view { background: #0e131d; border-radius: 10px; padding: 8px; }
+  .view figcaption { font-size: 12px; color: var(--muted); text-align: center; margin-top: 4px; font-family: Cinzel, serif; letter-spacing: .06em; }
+  .view svg { display: block; width: 100%; height: auto; border-radius: 6px; }
+  .info dl { display: grid; grid-template-columns: max-content minmax(0,1fr); gap: 4px 12px; margin: 8px 0; }
+  .info dt { color: var(--muted); font-size: 13px; }
+  .info dd { margin: 0; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 10px; }
+  .sw { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+  .sw b { color: var(--text); font-weight: 500; }
+  .sw i { display: inline-block; width: 22px; height: 22px; border-radius: 5px; border: 1px solid rgba(255,255,255,.18); }
+  .sw.glow i { box-shadow: 0 0 10px 2px var(--c); }
+  .theme { font-style: italic; color: #d8d4ea; margin: 2px 0 8px; }
+  .note { font-size: 13px; color: var(--muted); }
+  .risk { font-size: 13px; color: var(--warn); }
+
+  /* forms */
+  form.verdict {
+    margin-top: 12px; padding: 12px 14px; border-radius: 10px; background: var(--panel-2);
+    border: 1px dashed var(--iron);
+  }
+  form.verdict .opts { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 8px; }
+  form label { cursor: pointer; }
+  form input[type=radio], form input[type=checkbox] { accent-color: var(--amber); margin-right: 4px; }
+  textarea, input[type=text] {
+    width: 100%; background: #0e131d; color: var(--text); border: 1px solid var(--iron); border-radius: 8px;
+    padding: 8px; font: inherit; font-size: 14px; resize: vertical;
+  }
+  textarea { min-height: 56px; }
+  button {
+    font-family: Cinzel, serif; font-weight: 700; letter-spacing: .04em; font-size: 13px;
+    color: #1a1208; background: linear-gradient(180deg, #f6b85e, #d98a28); border: 1px solid #7a4a10;
+    border-radius: 8px; padding: 8px 14px; cursor: pointer; margin-top: 8px;
+  }
+  button:hover { filter: brightness(1.08); }
+  .queued { font-size: 12px; color: var(--ok); margin-left: 10px; }
+
+  /* principles */
+  .card { background: var(--panel-2); border-radius: 10px; padding: 12px 14px; border: 1px solid #2d3850; }
+  .card h3 { font-size: 15px; margin-bottom: .3em; }
+  .card p { font-size: 13.5px; color: #d8d4ea; }
+  .card .src { font-size: 12px; color: var(--muted); }
+
+  /* readability strips */
+  .strip { border-radius: 10px; padding: 14px 16px 10px; margin-bottom: 14px; position: relative; overflow: hidden; }
+  .strip.fire { background: radial-gradient(ellipse 60% 140% at 8% 50%, #d98a3a 0%, #a66a48 30%, #4b4470 70%, #3b3764 100%); }
+  .strip.ring2 { background: radial-gradient(ellipse 90% 160% at 50% 110%, #2a2e4c 0%, #171a30 70%, #0f1120 100%); }
+  .strip.safe { background: linear-gradient(90deg, #8f8cc0, #a7a6d6 50%, #8f8cc0); }
+  .strip .row { display: flex; align-items: flex-end; justify-content: space-around; gap: 6px; }
+  .strip .cell { text-align: center; }
+  .strip .cell span { display: block; font-size: 11px; color: rgba(255,255,255,.85); margin-top: 2px; font-family: Cinzel, serif; letter-spacing: .04em; }
+  .strip .lbl { position: absolute; top: 8px; left: 12px; font-size: 12px; color: rgba(255,255,255,.75); font-family: Cinzel, serif; letter-spacing: .06em; }
+  .strip svg { display: inline-block; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #2d3850; vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  ol.sources li { margin: 4px 0; font-size: 13px; }
+  .kbd { font-size: 12px; color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Frostmark — ranged gear sets</h1>
+  <p class="sub">
+    Seven ranged sets for the grill in <a href="https://github.com/travism26/frostmark/issues/138">#138</a>: one each at
+    <span class="pill mid">mid</span> <span class="pill midhigh">mid-high</span> <span class="pill high">high</span>,
+    then four distinct <span class="pill top">top</span> sets. Every figure is drawn the way the game draws gear: flat-shaded
+    primitives (spheres, cylinders, boxes, hoops, flat fins) hung on the barbarian's bone slots, lit by the fixed dusk sun with blue-violet
+    shadows. Each set is shown face-on and from the play camera (55° pitch), and again at 1:1 play size so you can judge what actually reads.
+  </p>
+  <p class="sub kbd">How to answer: annotate anything on a figure, or use the verdict box under each set (Pick / Rework / Reject + a note),
+    then the three board-level questions at the bottom. Queue answers, then <strong>Send to Agent</strong>. When you are happy, mark the board final.</p>
+</header>
+
+<main>
+
+<section id="principles">
+  <h2>What was borrowed (principles, not designs)</h2>
+  <div class="grid cols-3">
+    <div class="card">
+      <h3>Silhouette first</h3>
+      <p>At the play camera a character is ~45 px tall, so the read is silhouette, then colour blocks, then nothing else. The tier ladder here is a <em>silhouette</em> ladder: round hood → hood with ear points → cap with feather and quiver → crest, wings, crown or trailing cloak that extend past the body.</p>
+      <p class="src">RocketBrush on shape language ("~70% of a design's impact comes from its silhouette"; test in greyscale, at distance, in motion). Elden Ring's Raptor's set and Black Knife set read at a glance from one feature each: the feather ruff and the hooded cloak.</p>
+    </div>
+    <div class="card">
+      <h3>Value contrast against snow</h3>
+      <p>Frostmark's ground is lavender-blue snow and the shadows are violet. Warm or dark gear pops; pale cool gear sinks. Each set keeps a dark or warm anchor (hood, underside, straps) so the figure stays a shape on the snow. The cool top set is the deliberate exception and is flagged as a risk.</p>
+      <p class="src">Readability sources agree value beats hue; Monster Hunter's Legiana ("glistens a piercing blue") versus Nargacuga (black fur, pale mask) shows two opposite anchors that both read.</p>
+    </div>
+    <div class="card">
+      <h3>60 / 30 / 10 colour blocking</h3>
+      <p>One body colour, one secondary (straps, pelt, plates), one accent. The accent is the only thing allowed to glow, and only on top sets: tips, hems, eyes, nocks. Never a whole surface, so the GL-compatibility renderer gets one emissive flat material per piece, as the frost staff tip already does.</p>
+      <p class="src">RuneScape's ranged line (leathers → god-hides → Armadyl/Masori) escalates by trim and crest, not by changing the leather base. Path of Exile players describe "high tier" as trims, added layers and glowing runes, and as being physically bigger.</p>
+    </div>
+    <div class="card">
+      <h3>Ranged has its own shape</h3>
+      <p>Hoods and caps instead of helms; a quiver over the right shoulder; a bow in the left hand; narrower shoulders than melee until the top tier adds wings or a mantle. Legs stay slim (wraps, chaps) so the archer never reads as a knight.</p>
+      <p class="src">Diablo IV's rogue (hood, layered leathers), Valheim's Fenris (hooded fur, light), Monster Hunter bow sets (cloth and hide with one hard plate).</p>
+    </div>
+    <div class="card">
+      <h3>Warm light in a cold world</h3>
+      <p>Two of the four top sets carry the game's own palette: amber (firelight) and aurora teal (the outer rings' sky). Glow colours are the existing <code>COLOR_FROST</code> and the fire's amber, so the sets look like they belong to this world, not to a shop.</p>
+      <p class="src">#40 art direction; <code>scenes/ring_look.gd</code> sun (1.0, 0.8, 0.6) and ambient (0.52, 0.47, 0.70).</p>
+    </div>
+    <div class="card">
+      <h3>Each tier visibly grander</h3>
+      <p>Grandeur steps: more pieces that stick out, a second colour, then a glow. Mid has none of those, mid-high has one, high has two, top has all three. The ladder strip below is the test: cover the labels and the order should still be obvious.</p>
+      <p class="src">Valheim's biome ladder (leather → troll → root/iron → wolf/fenris → padded) reads by material and bulk, not by stat.</p>
+    </div>
+  </div>
+</section>
+
+<section id="ladder">
+  <h2>The ladder at play size</h2>
+  <p class="note">Play camera: pitch 55°, default distance 32 m, vertical FOV 40° on a 1280×720 frame ≈ 31 px per metre, so a 1.8 m figure is ~45 px tall on screen. Each strip is at that scale. Below it, the same figures at the closest zoom (14 m, ≈ 71 px/m).</p>
+  <div id="strips"></div>
+</section>
+
+<section id="sets">
+  <h2>The sets</h2>
+  <div id="cards"></div>
+</section>
+
+<section id="global" class="frame iron">
+  <h2>Board-level calls</h2>
+  <div class="grid cols-3">
+    <form class="verdict" data-lavish-question="tier-mapping" onsubmit="queueQ(event, 'tier-mapping', 'Tier mapping')">
+      <h3>1. Where the four tier names sit</h3>
+      <p class="note">Assumed for this board: <strong>mid</strong> = the iron era (ring one), <strong>mid-high</strong> = the steel era (ring two), <strong>high</strong> = a new smithable tier past steel, <strong>top</strong> = named sets that are found, not smithed. Sibling boards (melee, magic) use the same names.</p>
+      <div class="opts">
+        <label><input type="radio" name="answer" value="keep mapping"> Keep that mapping</label>
+        <label><input type="radio" name="answer" value="top is also craftable"> Top sets should also be craftable</label>
+        <label><input type="radio" name="answer" value="other (see note)"> Other (note below)</label>
+      </div>
+      <textarea name="note" placeholder="Optional note"></textarea>
+      <button type="submit">Queue answer</button><span class="queued"></span>
+    </form>
+
+    <form class="verdict" data-lavish-question="extras-slots" onsubmit="queueQ(event, 'extras-slots', 'Quiver and cloak')">
+      <h3>2. Quivers, mantles and cloaks</h3>
+      <p class="note">The mid-high set and above carry a quiver; the top sets add a mantle, wings or a cloak. On this board they are drawn as part of the <em>body</em> piece (no new slot). #138 question 1 asks whether a cape slot should exist.</p>
+      <div class="opts">
+        <label><input type="radio" name="answer" value="part of body piece"> Keep them part of the body piece</label>
+        <label><input type="radio" name="answer" value="new slots"> Make quiver / cape their own slots</label>
+        <label><input type="radio" name="answer" value="drop extras"> Drop the extras, keep helm/body/legs/weapon only</label>
+      </div>
+      <textarea name="note" placeholder="Optional note"></textarea>
+      <button type="submit">Queue answer</button><span class="queued"></span>
+    </form>
+
+    <form class="verdict" data-lavish-question="board-final" onsubmit="queueQ(event, 'board-final', 'Board status')">
+      <h3>3. Is this board final?</h3>
+      <p class="note">Final means: the picks and reworks you marked above go into the report as the ranged line, and tickets can be cut from it. Another round means I redraw whatever you annotated and re-present.</p>
+      <div class="opts">
+        <label><input type="radio" name="answer" value="final"> Final — write the picks up</label>
+        <label><input type="radio" name="answer" value="another round"> Another round with my notes</label>
+      </div>
+      <textarea name="note" placeholder="Anything to carry into the write-up or the next round"></textarea>
+      <button type="submit">Queue answer</button><span class="queued"></span>
+    </form>
+  </div>
+</section>
+
+<section id="sources">
+  <h2>Sources consulted</h2>
+  <ol class="sources">
+    <li>Frostmark: <code>docs/game-brief.md</code> (art direction, reference games), issue #40 (warm light in a cold world), <code>sim/items.gd</code> (tiers), <code>scenes/character_gear.gd</code> (primitive-built gear on bone slots), <code>scenes/orbit_camera.gd</code> (pitch 55°, distance 14–60 m, FOV 40°), <code>scenes/ring_look.gd</code> (sun and ambient colours), <code>scenes/figures.gd</code> (bow and staff builders, <code>COLOR_FROST</code> glow).</li>
+    <li>Old School RuneScape wiki: <a href="https://oldschool.runescape.wiki/w/Masori_armour">Masori armour</a> (community-voted concept, crocodile-skin texture; fortified variant "more distinct"), <a href="https://oldschool.runescape.wiki/w/Armadyl_armour">Armadyl armour</a>, <a href="https://oldschool.runescape.wiki/w/Range_set">Ranged armour overview</a> (god-themed hide recolours with trim).</li>
+    <li>Elden Ring wiki: <a href="https://eldenring.wiki.gg/wiki/Raptor%27s_Set">Raptor's set</a> (feather ruff + skeletal mask), <a href="https://eldenring.wiki.fextralife.com/Black+Knife+Set">Black Knife set</a> (hooded, near-transparent cloak as the single defining feature).</li>
+    <li>Monster Hunter: <a href="https://monsterhunterwiki.org/wiki/Legiana_Set_(MHWI)">Legiana set</a> ("glistens a piercing blue"), <a href="https://www.monsterhunterwiki.org/wiki/Nargacuga_%CE%B1%2B_Set_(MHWI)">Nargacuga α+ set</a> (black fur, mask with unsettling eyes).</li>
+    <li>Valheim: <a href="https://valheim.fandom.com/wiki/Fenris_Set">Fenris set</a> (light hooded fur, speed over armour) and the biome armour ladder (<a href="https://www.exitlag.com/blog/valheim-armor/">guide</a>).</li>
+    <li>Diablo IV: <a href="https://www.sportskeeda.com/mmo/best-rogue-cosmetics-diablo-4">rogue cosmetics</a> (hooded, layered leather with one metallic accent), <a href="https://www.thegamer.com/diablo-4-in-game-models-character-art/">in-game model reveal</a> (componentised, dyeable armour).</li>
+    <li>Path of Exile forum: <a href="https://www.pathofexile.com/forum/view-thread/3716441">Armor progression &amp; high-level visual identity</a> ("gold/silver trims, glowing energy runes", "larger, heavier, more dominant").</li>
+    <li>Readability: <a href="https://rocketbrush.com/blog/shape-language-in-game-character-design-how-to-make-characters-readable-and-consistent">RocketBrush, shape language</a>; the three-read rule (silhouette → colour blocks → detail) and value-over-hue from general character-design guidance.</li>
+  </ol>
+</section>
+
+</main>
+
+<script>
+// ---------- colour helpers ----------
+function hex2rgb(h){ h=h.replace('#',''); return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)]; }
+function rgb2hex(r){ return '#'+r.map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join(''); }
+function mix(a,b,t){ const A=hex2rgb(a),B=hex2rgb(b); return rgb2hex(A.map((v,i)=>v+(B[i]-v)*t)); }
+const SUN='#ffd6a6', SHADOW='#4a4590';
+const lit = c => mix(c, SUN, .22);
+const shd = c => mix(c, SHADOW, .26);
+const godot = h => { const [r,g,b]=hex2rgb(h); return `Color(${(r/255).toFixed(2)}, ${(g/255).toFixed(2)}, ${(b/255).toFixed(2)})`; };
+
+// ---------- projection ----------
+const P = 55*Math.PI/180, SIN=Math.sin(P), COS=Math.cos(P);
+const S = 100; // px per metre inside the SVG viewBox
+const VIEWS = {
+  front: { w:260, h:280, px:(x)=> (x+1.3)*S, py:(y)=> (2.7-y)*S, v:(y,z)=>y, near:(y,z)=>z,
+           bg:'#2f2f4d' },
+  top:   { w:260, h:250, px:(x)=> (x+1.3)*S, py:(v)=> (1.72-v)*S, v:(y,z)=> y*COS - z*SIN, near:(y,z)=> y*SIN + z*COS,
+           bg:'#a3a0cf' },
+};
+
+// ---------- primitive renderer ----------
+let clipN = 0;
+function render(prims, viewName, opts={}) {
+  const V = VIEWS[viewName];
+  const defs = [];
+  const out = [];
+  const sorted = prims.map((p,i)=>({p,i})).sort((a,b)=>{
+    const ka = nearOf(a.p, V) + (a.p.o||0)*0.012, kb = nearOf(b.p, V) + (b.p.o||0)*0.012;
+    return ka-kb || a.i-b.i;
+  });
+  if (viewName==='top' && opts.bg!=='none') {
+    // long dusk shadow on the snow
+    out.push(`<ellipse cx="${V.px(0.45)}" cy="${V.py(-0.22)}" rx="${0.95*S}" ry="${0.3*S}" fill="#4a4682" opacity=".55" transform="rotate(-28 ${V.px(0.45)} ${V.py(-0.22)})"/>`);
+    out.push(`<ellipse cx="${V.px(0)}" cy="${V.py(-0.05)}" rx="${0.42*S}" ry="${0.2*S}" fill="#4a4682" opacity=".45"/>`);
+  } else if (viewName==='top') {
+    out.push(`<ellipse cx="${V.px(0.4)}" cy="${V.py(-0.2)}" rx="${0.9*S}" ry="${0.28*S}" fill="#2e2a5a" opacity=".45" transform="rotate(-28 ${V.px(0.4)} ${V.py(-0.2)})"/>`);
+  } else {
+    out.push(`<rect x="0" y="${V.py(-0.02)}" width="${V.w}" height="${V.h}" fill="#8d8bbd"/>`);
+    out.push(`<ellipse cx="${V.px(0)}" cy="${V.py(-0.02)}" rx="${0.6*S}" ry="${0.08*S}" fill="#5a5690" opacity=".6"/>`);
+  }
+  for (const {p} of sorted) out.push(draw(p, V, viewName, defs));
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${V.w} ${V.h}" width="${opts.width||V.w}" ${opts.height?`height="${opts.height}"`:''}>
+    <defs><filter id="g" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="7"/></filter>${defs.join('')}</defs>
+    ${opts.bg==='none'?'':`<rect width="${V.w}" height="${V.h}" fill="${opts.bg||V.bg}"/>`}${out.join('')}</svg>`;
+}
+function nearOf(p, V){
+  switch(p.t){
+    case 'cyl': return V.near((p.y0+p.y1)/2, p.z);
+    case 'box': return V.near(p.y, p.z);
+    case 'vplane': { const ys=p.pts.map(q=>q[1]); return V.near((Math.min(...ys)+Math.max(...ys))/2, p.z); }
+    case 'hplane': { const zs=p.pts.map(q=>q[1]); return V.near(p.y, (Math.min(...zs)+Math.max(...zs))/2); }
+    case 'line': return V.near((p.a[1]+p.b[1])/2, (p.a[2]+p.b[2])/2);
+    case 'hood': return V.near(p.yc, p.z);
+    default: return V.near(p.y, p.z);
+  }
+}
+function shadedShape(shape, c, clipX, defs, p){
+  // shape(fill) -> markup; shade the right-hand part with a hard-edged blue-violet facet
+  const id = 'c'+(clipN++);
+  defs.push(`<clipPath id="${id}"><rect x="${clipX}" y="-999" width="9999" height="9999"/></clipPath>`);
+  let s = '';
+  if (p.glow) s += `<g filter="url(#g)" opacity=".9">${shape(p.c)}</g>`;
+  s += shape(p.glow ? lit(c) : c);
+  if (!p.glow) s += `<g clip-path="url(#${id})">${shape(shd(c))}</g>`;
+  return s;
+}
+function draw(p, V, view, defs){
+  const c = p.c;
+  const px=V.px, py=V.py;
+  switch(p.t){
+    case 'sphere': {
+      const cx=px(p.x), cy=py(V.v(p.y,p.z)), r=p.r*S;
+      return shadedShape(f=>`<circle cx="${cx}" cy="${cy}" r="${r}" fill="${f}"/>`, c, cx+r*0.38, defs, p);
+    }
+    case 'dome': {
+      const cx=px(p.x), cy=py(V.v(p.y,p.z)), r=p.r*S;
+      if (view==='front') return shadedShape(f=>`<path d="M${cx-r},${cy} A${r},${r} 0 0 1 ${cx+r},${cy} Z" fill="${f}"/>`, c, cx+r*0.38, defs, p);
+      return shadedShape(f=>`<circle cx="${cx}" cy="${cy}" r="${r}" fill="${f}"/>`, c, cx+r*0.45, defs, p);
+    }
+    case 'hood': {
+      const cx=px(p.x), cy=py(V.v(p.yc,p.z)), R=p.R*S;
+      if (view==='front') {
+        const hole = `M${cx-0.25*S},${cy-0.03*S} a${0.25*S},${0.28*S} 0 1 0 ${0.5*S},0 a${0.25*S},${0.28*S} 0 1 0 ${-0.5*S},0`;
+        return shadedShape(f=>`<path fill-rule="evenodd" d="M${cx-R},${cy} a${R},${R} 0 1 0 ${2*R},0 a${R},${R} 0 1 0 ${-2*R},0 ${hole}" fill="${f}"/>`, c, cx+R*0.4, defs, p);
+      }
+      const hy = py(V.v(p.yc-0.08, p.z+0.3));
+      const hole = `M${cx-0.21*S},${hy} a${0.21*S},${0.12*S} 0 1 0 ${0.42*S},0 a${0.21*S},${0.12*S} 0 1 0 ${-0.42*S},0`;
+      return shadedShape(f=>`<path fill-rule="evenodd" d="M${cx-R},${cy} a${R},${R} 0 1 0 ${2*R},0 a${R},${R} 0 1 0 ${-2*R},0 ${hole}" fill="${f}"/>`, c, cx+R*0.45, defs, p);
+    }
+    case 'cyl': {
+      const cx=px(p.x);
+      if (view==='front') {
+        const y0=py(p.y0), y1=py(p.y1), r0=p.r0*S, r1=p.r1*S;
+        return shadedShape(f=>`<polygon points="${cx-r0},${y0} ${cx+r0},${y0} ${cx+r1},${y1} ${cx-r1},${y1}" fill="${f}"/>`, c, cx+Math.max(r0,r1)*0.4, defs, p);
+      }
+      const yb = py(V.v(p.y0,p.z) - p.r0*SIN), yt = py(V.v(p.y1,p.z)), r0=p.r0*S, r1=p.r1*S;
+      const side = shadedShape(f=>`<polygon points="${cx-r0},${yb} ${cx+r0},${yb} ${cx+r1},${yt} ${cx-r1},${yt}" fill="${f}"/>`, c, cx+Math.max(r0,r1)*0.45, defs, p);
+      const topf = p.glow ? lit(c) : lit(c);
+      return side + `<ellipse cx="${cx}" cy="${yt}" rx="${r1}" ry="${r1*SIN}" fill="${topf}"/>`;
+    }
+    case 'box': {
+      const cx=px(p.x), w=p.w*S;
+      if (view==='front') {
+        const y=py(p.y+p.h/2), h=p.h*S;
+        return shadedShape(f=>`<rect x="${cx-w/2}" y="${y}" width="${w}" height="${h}" fill="${f}"/>`, c, cx+w*0.35, defs, p);
+      }
+      const yTopFront = py(V.v(p.y+p.h/2, p.z+p.d/2)), yBotFront = py(V.v(p.y-p.h/2, p.z+p.d/2)), yTopBack = py(V.v(p.y+p.h/2, p.z-p.d/2));
+      const front = shadedShape(f=>`<rect x="${cx-w/2}" y="${yTopFront}" width="${w}" height="${Math.max(1,yBotFront-yTopFront)}" fill="${f}"/>`, c, cx+w*0.4, defs, p);
+      return front + `<rect x="${cx-w/2}" y="${yTopBack}" width="${w}" height="${Math.max(1,yTopFront-yTopBack)}" fill="${lit(c)}"/>`;
+    }
+    case 'ring': {
+      const cx=px(p.x), r=p.r*S, w=p.w*S;
+      if (view==='front') { const y=py(p.y+p.w/2); return shadedShape(f=>`<rect x="${cx-r-w/2}" y="${y}" width="${2*r+w}" height="${w}" fill="${f}"/>`, c, cx+r*0.18, defs, p); }
+      const cy=py(V.v(p.y,p.z));
+      return `<ellipse cx="${cx}" cy="${cy}" rx="${r}" ry="${r*SIN}" fill="none" stroke="${lit(c)}" stroke-width="${w}"/>`;
+    }
+    case 'vring': { // vertical hoop facing the camera (a hood's face trim)
+      const cx=px(p.x), r=p.r*S, w=p.w*S;
+      if (view==='front') { const cy=py(p.y); return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${c}" stroke-width="${w}"/>`; }
+      const cy=py(V.v(p.y,p.z));
+      return `<ellipse cx="${cx}" cy="${cy}" rx="${r}" ry="${r*COS}" fill="none" stroke="${lit(c)}" stroke-width="${w}"/>`;
+    }
+    case 'vplane': {
+      const pts = p.pts.map(([x,y])=>`${px(x)},${py(V.v(y,p.z))}`).join(' ');
+      const xs = p.pts.map(q=>px(q[0]));
+      const cx = (Math.min(...xs)+Math.max(...xs))/2, half=(Math.max(...xs)-Math.min(...xs))/2;
+      return shadedShape(f=>`<polygon points="${pts}" fill="${f}"/>`, c, cx+half*0.5, defs, p);
+    }
+    case 'hplane': {
+      if (view==='front') {
+        const xs=p.pts.map(q=>q[0]); const x0=px(Math.min(...xs)), x1=px(Math.max(...xs)); const y=py(p.y);
+        return `<rect x="${x0}" y="${y-0.02*S}" width="${x1-x0}" height="${0.04*S}" fill="${c}"/>`;
+      }
+      const pts = p.pts.map(([x,z])=>`${px(x)},${py(V.v(p.y,z))}`).join(' ');
+      let s=''; if (p.glow) s+=`<g filter="url(#g)" opacity=".9"><polygon points="${pts}" fill="${c}"/></g>`;
+      return s+`<polygon points="${pts}" fill="${p.glow?lit(c):lit(c)}"/>`;
+    }
+    case 'line': {
+      const a=[px(p.a[0]), py(V.v(p.a[1],p.a[2]))], b=[px(p.b[0]), py(V.v(p.b[1],p.b[2]))];
+      let s=''; if (p.glow) s+=`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${c}" stroke-width="${p.w*S*2}" stroke-linecap="round" filter="url(#g)" opacity=".9"/>`;
+      return s+`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${p.glow?lit(c):c}" stroke-width="${p.w*S}" stroke-linecap="round"/>`;
+    }
+    case 'poly3': { // polyline through 3D points (bow stave)
+      const pts = p.pts.map(([x,y,z])=>`${px(x)},${py(V.v(y,z))}`).join(' ');
+      return `<polyline points="${pts}" fill="none" stroke="${c}" stroke-width="${p.w*S}" stroke-linecap="round" stroke-linejoin="round"/>`;
+    }
+  }
+  return '';
+}
+
+// ---------- the base barbarian ----------
+const SKIN='#e8b592', TROUSERS='#3b3344', BOOTS='#2a2430', BEARD='#6b4a2e', EYE='#241c24';
+function base(){
+  return [
+    {t:'cyl',x:-.16,y0:0,y1:.66,z:0,r0:.14,r1:.14,c:TROUSERS,o:1},
+    {t:'cyl',x:.16,y0:0,y1:.66,z:0,r0:.14,r1:.14,c:TROUSERS,o:1},
+    {t:'cyl',x:-.16,y0:0,y1:.14,z:.02,r0:.155,r1:.15,c:BOOTS,o:2},
+    {t:'cyl',x:.16,y0:0,y1:.14,z:.02,r0:.155,r1:.15,c:BOOTS,o:2},
+    {t:'cyl',x:0,y0:.6,y1:1.22,z:0,r0:.3,r1:.32,c:'#5a4638',o:1},
+    {t:'cyl',x:-.44,y0:.66,y1:1.14,z:0,r0:.105,r1:.11,c:SKIN,o:2},
+    {t:'cyl',x:.44,y0:.66,y1:1.14,z:.05,r0:.105,r1:.11,c:SKIN,o:2},
+    {t:'sphere',x:-.47,y:.62,z:.02,r:.11,c:SKIN,o:3},
+    {t:'sphere',x:.5,y:.64,z:.14,r:.11,c:SKIN,o:3},
+    {t:'sphere',x:0,y:1.5,z:0,r:.33,c:SKIN,o:1},
+    {t:'vplane',pts:[[-.2,1.42],[.2,1.42],[.16,1.24],[0,1.2],[-.16,1.24]],z:.3,c:BEARD,o:3},
+    {t:'sphere',x:-.11,y:1.53,z:.31,r:.03,c:EYE,o:4},
+    {t:'sphere',x:.11,y:1.53,z:.31,r:.03,c:EYE,o:4},
+  ];
+}
+// ---------- gear builders ----------
+function hood(c, trimC, trimW=.05){ return [
+  {t:'hood',x:0,yc:1.47,z:0,R:.42,c,o:5},
+  {t:'vring',x:0,y:1.45,z:.34,r:.3,w:trimW,c:trimC,o:6},
+];}
+function jerkin(c){ return {t:'cyl',x:0,y0:.62,y1:1.22,z:0,r0:.36,r1:.35,c,o:3}; }
+function belt(c){ return {t:'ring',x:0,y:.74,z:0,r:.36,w:.07,c,o:4}; }
+function kilt(c,y0=.38,y1=.66,r0=.44,r1=.37){ return {t:'cyl',x:0,y0,y1,z:0,r0,r1,c,o:4}; }
+function shins(c,r=.15,y0=.1,y1=.42,o=3){ return [
+  {t:'cyl',x:-.16,y0,y1,z:.01,r0:r,r1:r,c,o},
+  {t:'cyl',x:.16,y0,y1,z:.01,r0:r,r1:r,c,o},
+];}
+function shinBands(c,y=.4,r=.17,w=.08){ return [
+  {t:'ring',x:-.16,y,z:.01,r,w,c,o:4},
+  {t:'ring',x:.16,y,z:.01,r,w,c,o:4},
+];}
+function pauldrons(c,w=.28,h=.1,d=.32,y=1.17){ return [
+  {t:'box',x:-.42,y,z:0,w,h,d,c,o:5},
+  {t:'box',x:.42,y,z:0,w,h,d,c,o:5},
+];}
+function quiver(c, fletchC, glow=false){ return [
+  {t:'cyl',x:-.4,y0:.85,y1:1.4,z:-.33,r0:.09,r1:.095,c,o:0},
+  {t:'sphere',x:-.44,y:1.5,z:-.36,r:.1,c:fletchC,glow,o:0},
+];}
+function bow({len=1.2, c, x=.6, y=1.0, z=.25, w=.07, stringC='#ebe7d6', tipC=null, tipGlow=false, gripC=null, stringGlow=false}){
+  const pts=[]; const n=8;
+  for (let i=0;i<=n;i++){ const a=-1+2*i/n; pts.push([x+.08*(1-a*a), y+a*len/2, z+.2*(1-a*a)]); }
+  const out=[{t:'poly3',pts,w,c,o:7}];
+  out.push({t:'line',a:[x,y+len/2,z-.02],b:[x,y-len/2,z-.02],w:.015,c:stringC,glow:stringGlow,o:6});
+  if (gripC) out.push({t:'poly3',pts:pts.slice(3,6),w:w*1.5,c:gripC,o:8});
+  if (tipC){ out.push({t:'sphere',x,y:y+len/2,z:z-.01,r:.045,c:tipC,glow:tipGlow,o:9}); out.push({t:'sphere',x,y:y-len/2,z:z-.01,r:.045,c:tipC,glow:tipGlow,o:9}); }
+  return out;
+}
+
+// ---------- the sets ----------
+const SETS = [
+  {
+    id:'trapper', tier:'mid', tierClass:'mid', name:"Trapper's Leathers",
+    theme:'Ring-one hide, tanned at the outpost: the honest kit every archer starts the frontier in.',
+    pieces:{ helm:'Trapper hood (tan hide, pale fur edge round the face)', body:'Laced jerkin (hide, dark lacing down the chest, dark belt)', legs:'Hide wraps (hip wrap and dark shin straps)', weapon:'Ash recurve (plain stave, pale string)' },
+    palette:[['Hide','#a8784a'],['Lacing','#4a3324'],['Fur edge','#d8c9a8'],['Ash stave','#8a6a46']],
+    silhouette:'Round hood, slim shoulders, bow. Nothing sticks out: the floor of the ladder.',
+    build:'hood = hemisphere + torus trim (as the fur hood); jerkin = cylinder + belt torus + one thin box for lacing; wraps = short cylinder + torus bands; bow = the existing Figures.bow in hide brown.',
+    prims(){ const P=this.palette.map(p=>p[1]); return [
+      ...base(), ...hood(P[0],P[2],.05), jerkin(P[0]), belt(P[1]),
+      {t:'box',x:0,y:.98,z:.36,w:.05,h:.36,d:.02,c:P[1],o:6},
+      {t:'box',x:0,y:1.08,z:.37,w:.16,h:.03,d:.02,c:P[1],o:6},{t:'box',x:0,y:.96,z:.37,w:.16,h:.03,d:.02,c:P[1],o:6},{t:'box',x:0,y:.84,z:.37,w:.16,h:.03,d:.02,c:P[1],o:6},
+      kilt(mix(P[0],'#000',.15),.5,.66,.4,.37), ...shinBands(P[1],.38,.16,.06),
+      ...bow({len:1.1,c:P[3],stringC:'#ebe7d6'}),
+    ];},
+  },
+  {
+    id:'wolfstalker', tier:'mid-high', tierClass:'midhigh', name:'Wolfstalker Set',
+    theme:"Ring one's wolves, worn: a pelt mantle over dark leather, ears still on the hood, bone at the bow tips.",
+    pieces:{ helm:'Wolf hood (grey pelt, two ear points, pale face trim)', body:'Pelt mantle over a dark leather jerkin, bone toggle; quiver with pale fletching', legs:'Leather hips with ragged pelt flaps, dark shin wraps with bone bands', weapon:'Bone-tipped longbow (dark yew, bone nocks)' },
+    palette:[['Wolf pelt','#9c9ca8'],['Dark leather','#3b2f2a'],['Bone','#dcd6c0'],['Yew','#4f3a2c']],
+    silhouette:'Hood gains two ear points; shoulders widen with the mantle; the quiver tops the right shoulder. One step grander.',
+    build:'ears = two flat triangular fins on the hood; mantle = one flat shoulder plate + a jagged front fin; pelt flaps = jagged fin on the kilt; quiver = cylinder + sphere on the chest slot behind the shoulder; bone tips = two small spheres on the bow.',
+    prims(){ const P=this.palette.map(p=>p[1]); return [
+      ...base(), ...hood(P[0],P[2],.05),
+      {t:'vplane',pts:[[-.34,1.72],[-.14,1.74],[-.26,2.0]],z:-.05,c:P[0],o:7},
+      {t:'vplane',pts:[[.34,1.72],[.14,1.74],[.26,2.0]],z:-.05,c:P[0],o:7},
+      {t:'vplane',pts:[[-.3,1.75],[-.19,1.76],[-.25,1.93]],z:-.03,c:mix(P[0],'#000',.35),o:8},
+      {t:'vplane',pts:[[.3,1.75],[.19,1.76],[.25,1.93]],z:-.03,c:mix(P[0],'#000',.35),o:8},
+      jerkin(P[1]), belt(mix(P[1],'#000',.3)),
+      {t:'hplane',pts:[[-.6,.2],[-.66,-.1],[-.5,-.35],[0,-.42],[.5,-.35],[.66,-.1],[.6,.2],[0,.3]],y:1.24,c:P[0],o:6},
+      {t:'vplane',pts:[[-.62,1.28],[.62,1.28],[.6,1.05],[.45,1.12],[.3,1.0],[.15,1.1],[0,1.0],[-.15,1.1],[-.3,1.0],[-.45,1.12],[-.6,1.05]],z:.2,c:P[0],o:6},
+      {t:'box',x:0,y:1.0,z:.37,w:.1,h:.05,d:.03,c:P[2],o:7},
+      kilt(P[1],.5,.66,.4,.37),
+      {t:'vplane',pts:[[-.4,.66],[.4,.66],[.38,.4],[.25,.48],[.1,.38],[-.1,.42],[-.25,.36],[-.38,.44]],z:.4,c:P[0],o:6},
+      ...shins(P[1],.15,.1,.42), ...shinBands(P[2],.4,.165,.06),
+      ...quiver(P[1],P[2]),
+      ...bow({len:1.25,c:P[3],tipC:P[2]}),
+    ];},
+  },
+  {
+    id:'steelpoint', tier:'high', tierClass:'high', name:'Steelpoint Ranger',
+    theme:"Ring two's smithed steel on a hunter's frame: a capped crown, studded pine-green leather, and one amber feather.",
+    pieces:{ helm:'Steel cap (brimmed, pointed crown, amber feather)', body:'Pine leather jerkin with steel pauldrons and three chest studs; steel-capped quiver', legs:'Pine leather chaps with steel greaves and knee plates', weapon:'Steel-capped recurve (pine stave, steel limb caps and grip)' },
+    palette:[['Steel','#6b80a0'],['Pine leather','#2f4a3a'],['Amber feather','#e8a040'],['Dark strap','#1f2a24']],
+    silhouette:'The cap breaks the round hood line; the feather is a diagonal; pauldrons square the shoulders; greaves add a second metal block low down.',
+    build:'cap = hemisphere + torus brim + cone (CylinderMesh with top radius 0); feather = one flat leaf fin; pauldrons = the existing bronze boxes in steel; studs = three small boxes; greaves = the existing iron greave cylinder; bow tips = steel boxes.',
+    prims(){ const P=this.palette.map(p=>p[1]); return [
+      ...base(),
+      {t:'dome',x:0,y:1.5,z:0,r:.36,c:P[0],o:5},
+      {t:'ring',x:0,y:1.52,z:0,r:.38,w:.07,c:mix(P[0],'#000',.3),o:6},
+      {t:'cyl',x:0,y0:1.78,y1:2.08,z:0,r0:.3,r1:.03,c:P[0],o:6},
+      {t:'vplane',pts:[[.14,1.86],[.3,1.84],[.62,2.22],[.6,2.3],[.46,2.26],[.2,2.0]],z:-.05,c:P[2],o:7},
+      jerkin(P[1]), belt(P[0]),
+      ...pauldrons(P[0]),
+      {t:'box',x:0,y:1.1,z:.36,w:.08,h:.08,d:.04,c:P[0],o:6},{t:'box',x:0,y:.96,z:.36,w:.08,h:.08,d:.04,c:P[0],o:6},{t:'box',x:0,y:.82,z:.36,w:.08,h:.08,d:.04,c:P[0],o:6},
+      kilt(P[1],.42,.66,.42,.37),
+      ...shins(P[0],.16,.1,.42), {t:'box',x:-.16,y:.46,z:.14,w:.16,h:.1,d:.08,c:mix(P[0],'#000',.2),o:5},{t:'box',x:.16,y:.46,z:.14,w:.16,h:.1,d:.08,c:mix(P[0],'#000',.2),o:5},
+      ...quiver(P[1],P[2]), {t:'ring',x:-.4,y:1.38,z:-.33,r:.1,w:.04,c:P[0],o:1},
+      ...bow({len:1.25,c:P[1],tipC:P[0],gripC:P[0]}),
+    ];},
+  },
+  {
+    id:'emberhawk', tier:'top', tierClass:'top', name:'Ember Hawk',
+    theme:'The warmth you carry out of the gate: charred leather inlaid with ember-glow, a hawk crest, and wings on the shoulders.',
+    pieces:{ helm:'Hawk hood (charcoal, beaked visor with gold edge, five-feather crest with ember tips)', body:'Charred jerkin with glowing amber chevrons, gold collar, wing pauldrons with ember-tipped feathers; quiver with ember fletching', legs:'Charcoal kilt with gold hem, shin wraps with ember knee studs', weapon:'Ember bow (black stave, gold grip, glowing limb tips)' },
+    palette:[['Charcoal','#2b2422'],['Ember (glow)','#ffa033'],['Gold trim','#c9922e'],['Warm string','#f3d7a6']],
+    glowIdx:[1],
+    silhouette:'The crest fans above the head and the wings double the shoulder width: the widest silhouette on the board, and warm against the snow so it reads from anywhere.',
+    build:'crest and wings = flat fins (thin boxes or quads) in charcoal with tiny emissive spheres at the tips (Props.flat with glow); chevrons = two thin emissive fins on the chest; everything else is the hood/jerkin/kilt primitives. Emissive count per set: ~16 tiny spheres, no lights.',
+    risk:'Wings are the most mesh per piece on the board (two fins + six tip spheres). Still trivial for the renderer; the question is taste.',
+    prims(){ const P=this.palette.map(p=>p[1]); const F=[[-.52,2.06],[-.29,2.3],[0,2.4],[.29,2.3],[.52,2.06]]; const out=[
+      ...base(), ...hood(P[0],P[2],.03),
+      {t:'vplane',pts:[[-.22,1.52],[.22,1.52],[.08,1.36],[-.08,1.36]],z:.35,c:P[0],o:7},
+      {t:'vplane',pts:[[-.22,1.52],[.22,1.52],[.2,1.49],[-.2,1.49]],z:.36,c:P[2],o:8},
+      jerkin(P[0]), {t:'ring',x:0,y:1.2,z:0,r:.36,w:.06,c:P[2],o:5}, belt(P[2]),
+      {t:'vplane',pts:[[-.22,1.02],[0,.88],[.22,1.02],[.22,.95],[0,.81],[-.22,.95]],z:.36,c:P[1],glow:true,o:7},
+      {t:'vplane',pts:[[-.22,.86],[0,.72],[.22,.86],[.22,.79],[0,.65],[-.22,.79]],z:.36,c:P[1],glow:true,o:7},
+      kilt(P[0],.4,.66,.43,.37), {t:'ring',x:0,y:.4,z:0,r:.43,w:.05,c:P[2],o:5},
+      ...shins(P[0],.15,.1,.42), {t:'sphere',x:-.16,y:.46,z:.16,r:.05,c:P[1],glow:true,o:6},{t:'sphere',x:.16,y:.46,z:.16,r:.05,c:P[1],glow:true,o:6},
+      ...quiver(P[0],P[1],true),
+      ...bow({len:1.3,c:P[0],tipC:P[1],tipGlow:true,gripC:P[2],stringC:P[3]}),
+    ];
+    for (const [tx,ty] of F){ out.push({t:'vplane',pts:[[-.05,1.84],[.05,1.84],[tx,ty]],z:-.15,c:P[0],o:7}); out.push({t:'sphere',x:tx,y:ty,z:-.15,r:.045,c:P[1],glow:true,o:9}); }
+    for (const s of [-1,1]){
+      const W=[[s*.4,1.1],[s*.42,1.42],[s*.72,1.48],[s*.8,1.38],[s*.96,1.28],[s*.86,1.16],[s*.92,1.0],[s*.76,1.0],[s*.62,.95]];
+      out.push({t:'vplane',pts:W,z:-.05,c:P[0],o:5});
+      for (const [tx,ty] of [[s*.72,1.48],[s*.96,1.28],[s*.92,1.0]]) out.push({t:'sphere',x:tx,y:ty,z:-.05,r:.045,c:P[1],glow:true,o:9});
+    }
+    return out; },
+  },
+  {
+    id:'auroral', tier:'top', tierClass:'top', name:'Auroral Warden',
+    theme:"A bow blessed under the outer rings' aurora: the magic-hunter in snow-white hide, silver, and a banner of green light.",
+    pieces:{ helm:'White hood with silver circlet and a tall aurora banner rising from the back', body:'White hide jerkin, silver clasps, long white mantle lined violet with an aurora-glow hem; white quiver with glowing fletching', legs:'Long white kilt with an aurora hem, silver greaves', weapon:'Silver bow strung with light (glowing teal string and nocks)' },
+    palette:[['Snow hide','#ece9f5'],['Aurora (glow)','#5ff0c8'],['Violet lining','#3d2d6b'],['Silver','#b9c3d6']],
+    glowIdx:[1],
+    silhouette:'The banner is the tallest thing on the board, a vertical line above the head; the mantle widens the figure from above. The white body is anchored by the violet lining and the dark hood interior.',
+    build:'banner = one tall flat fin with emissive teal and a violet core fin; mantle = shoulder plate + a draped fin behind the body (as the barbarian cape is hung); string glow = emissive thin box. The rest is the hood/jerkin/kilt primitives in white and silver.',
+    risk:'White on lavender snow is the lowest value contrast of the four top sets. The violet lining and teal glow carry it; check the ring-two strip above.',
+    prims(){ const P=this.palette.map(p=>p[1]); return [
+      ...base(),
+      {t:'vplane',pts:[[-.55,1.3],[-.74,1.0],[-.62,.4],[0,.46],[.62,.4],[.74,1.0],[.55,1.3]],z:-.3,c:P[0],o:1},
+      {t:'vplane',pts:[[-.62,.4],[0,.46],[.62,.4],[.6,.33],[0,.39],[-.6,.33]],z:-.29,c:P[1],glow:true,o:2},
+      {t:'vplane',pts:[[-.5,1.2],[-.6,1.0],[-.52,.5],[-.38,.55],[-.36,1.1]],z:-.28,c:P[2],o:2},
+      {t:'vplane',pts:[[.5,1.2],[.6,1.0],[.52,.5],[.38,.55],[.36,1.1]],z:-.28,c:P[2],o:2},
+      ...hood(P[0],P[2],.04), {t:'ring',x:0,y:1.6,z:0,r:.4,w:.05,c:P[3],o:7},
+      {t:'vplane',pts:[[-.1,1.82],[.1,1.82],[.14,2.1],[.05,2.35],[.1,2.62],[-.06,2.5],[-.14,2.2]],z:-.2,c:P[1],glow:true,o:8},
+      {t:'vplane',pts:[[-.04,1.9],[.04,1.9],[.05,2.3],[-.03,2.45],[-.06,2.2]],z:-.19,c:P[2],o:9},
+      jerkin(P[0]), belt(P[3]),
+      {t:'hplane',pts:[[-.6,.25],[-.66,-.05],[-.45,-.3],[0,-.36],[.45,-.3],[.66,-.05],[.6,.25],[0,.32]],y:1.25,c:P[0],o:6},
+      {t:'box',x:-.15,y:1.08,z:.36,w:.08,h:.08,d:.03,c:P[3],o:6},{t:'box',x:.15,y:1.08,z:.36,w:.08,h:.08,d:.03,c:P[3],o:6},
+      kilt(P[0],.3,.66,.46,.37), {t:'ring',x:0,y:.3,z:0,r:.46,w:.05,c:P[1],glow:true,o:5},
+      ...shins(P[3],.16,.1,.42),
+      ...quiver(P[0],P[1],true),
+      ...bow({len:1.35,c:P[3],tipC:P[1],tipGlow:true,stringC:P[1],stringGlow:true}),
+    ];},
+  },
+  {
+    id:'ruinstalker', tier:'top', tierClass:'top', name:"Ruin Stalker's Shroud",
+    theme:"The ruin stalker's own hide and bone turned back on it: ink-black leathers, a bone mask, a tattered shroud, and violet eyes.",
+    pieces:{ helm:'Low ink hood with a bone skull mask (violet-glow eyes) and two short bone spurs', body:'Ink jerkin with three bone rib plates and a long tattered shroud; bone-capped quiver', legs:'Ink kilt with a bone-spike hem, ink shin wraps with bone bands', weapon:'Bone bow (pale stave, ink grip, violet-glow nocks)' },
+    palette:[['Ink','#15141c'],['Bone','#dcd4bc'],['Violet (glow)','#9a6cff'],['Ash grey','#6a6878']],
+    glowIdx:[2],
+    silhouette:'The shroud trails behind as a dark teardrop from the play camera, the biggest footprint of any set; the pale mask and ribs give it a face at 45 px. The darkest set on the snow.',
+    build:'mask and ribs = flat bone fins on the head and chest slots; shroud = one jagged draped fin behind the body (the cape hang); spurs = two small fins; eyes and nocks = four emissive spheres. The lightest emissive budget of the top four.',
+    prims(){ const P=this.palette.map(p=>p[1]); return [
+      ...base(),
+      {t:'vplane',pts:[[-.4,1.25],[-.64,1.1],[-.58,.18],[-.34,.34],[-.1,.1],[.12,.3],[.3,.14],[.58,.24],[.64,1.1],[.4,1.25]],z:-.42,c:P[0],o:1},
+      {t:'sphere',x:-.5,y:.6,z:-.41,r:.035,c:P[2],glow:true,o:2},{t:'sphere',x:.52,y:.5,z:-.41,r:.035,c:P[2],glow:true,o:2},{t:'sphere',x:0,y:.3,z:-.41,r:.035,c:P[2],glow:true,o:2},
+      ...hood(P[0],P[3],.03),
+      {t:'vplane',pts:[[-.24,1.3],[-.27,1.6],[0,1.7],[.27,1.6],[.24,1.3],[.12,1.19],[-.12,1.19]],z:.34,c:P[1],o:7},
+      {t:'sphere',x:-.1,y:1.5,z:.36,r:.045,c:P[2],glow:true,o:8},{t:'sphere',x:.1,y:1.5,z:.36,r:.045,c:P[2],glow:true,o:8},
+      {t:'vplane',pts:[[-.3,1.72],[-.18,1.76],[-.46,1.98]],z:-.02,c:P[1],o:7},{t:'vplane',pts:[[.3,1.72],[.18,1.76],[.46,1.98]],z:-.02,c:P[1],o:7},
+      jerkin(P[0]), belt(P[3]),
+      {t:'vplane',pts:[[-.3,1.1],[.3,1.1],[.3,1.05],[-.3,1.05]],z:.36,c:P[1],o:6},
+      {t:'vplane',pts:[[-.28,.98],[.28,.98],[.28,.93],[-.28,.93]],z:.36,c:P[1],o:6},
+      {t:'vplane',pts:[[-.25,.86],[.25,.86],[.25,.81],[-.25,.81]],z:.36,c:P[1],o:6},
+      kilt(P[0],.4,.66,.43,.37),
+      {t:'vplane',pts:[[-.4,.42],[.4,.42],[.3,.3],[.2,.4],[.1,.28],[0,.4],[-.1,.28],[-.2,.4],[-.3,.3]],z:.4,c:P[1],o:5},
+      ...shins(P[0],.15,.1,.42), ...shinBands(P[1],.4,.165,.05),
+      ...quiver(P[0],P[1]), {t:'ring',x:-.4,y:1.38,z:-.33,r:.1,w:.04,c:P[1],o:1},
+      ...bow({len:1.3,c:P[1],tipC:P[2],tipGlow:true,gripC:P[0],stringC:P[3]}),
+    ];},
+  },
+  {
+    id:'glacier', tier:'top', tierClass:'top', name:'Glacier Sovereign',
+    theme:"Ring two's ice crystals grown into a crown: deep-sea hide under ice plates, crystal spurs on the shoulders, and frost shards for arrows.",
+    pieces:{ helm:'Deep-sea hood with a five-spike crystal crown (frost glow)', body:'Ice-blue jerkin on deep-sea straps, crystal pauldrons with glowing spurs, a frost gem at the chest; deep-sea quiver bristling with frost shards', legs:'Deep-sea kilt with an ice hem, ice greaves with crystal knee spurs', weapon:'Crystal bow (ice limbs edged in frost glow, light string, frost-shard tips)' },
+    palette:[['Ice hide','#b7d4ea'],['Frost (glow)','#8cd9ff'],['Deep sea','#1e3a5a'],['Crystal face','#d9f0ff']],
+    glowIdx:[1],
+    silhouette:'Angular everywhere the others are round: the crown and spurs are diamonds, so the outline is spiky. Deep-sea hood and kilt give the value anchor; the glow is the same frost as the staff tip.',
+    build:'crown, spurs and shard tips = the staff-tip crystal box (rotated BoxMesh with Props.flat(COLOR_FROST, glow)) repeated; pauldrons = the bronze boxes in ice; the rest is hood/jerkin/kilt in two blues.',
+    risk:'Cool-on-cool: in ring two\'s blue-black it could sink; the deep-sea pieces and the glow are what keep it a shape. If it fails the strip test, swap the deep-sea to charcoal.',
+    prims(){ const P=this.palette.map(p=>p[1]); const out=[
+      ...base(), ...hood(P[2],P[0],.04),
+      jerkin(P[0]), belt(P[2]), {t:'box',x:0,y:1.0,z:.35,w:.1,h:.5,d:.02,c:P[2],o:6},
+      {t:'sphere',x:0,y:1.05,z:.37,r:.07,c:P[1],glow:true,o:7},
+      ...pauldrons(P[3],.3,.12,.32),
+      kilt(P[2],.4,.66,.43,.37), {t:'ring',x:0,y:.4,z:0,r:.43,w:.05,c:P[0],o:5},
+      ...shins(P[0],.16,.1,.42),
+      ...quiver(P[2],P[1],true),
+      ...bow({len:1.35,c:P[3],tipC:P[1],tipGlow:true,gripC:P[2],stringC:P[1]}),
+    ];
+    const crown=[[-.32,1.68,2.0],[-.16,1.74,2.18],[0,1.78,2.36],[.16,1.74,2.18],[.32,1.68,2.0]];
+    for (const [cx,by,ty] of crown){ out.push({t:'vplane',pts:[[cx-.08,by],[cx,by+.04],[cx+.08,by],[cx+.04,(by+ty)/2],[cx,ty],[cx-.04,(by+ty)/2]],z:-.02,c:P[1],glow:true,o:8}); }
+    for (const s of [-1,1]){
+      out.push({t:'vplane',pts:[[s*.36,1.22],[s*.5,1.2],[s*.66,1.6],[s*.42,1.4]],z:0,c:P[1],glow:true,o:7});
+      out.push({t:'vplane',pts:[[s*.46,1.22],[s*.58,1.22],[s*.5,1.5]],z:.05,c:P[3],o:7});
+      out.push({t:'vplane',pts:[[s*.1,.5],[s*.24,.5],[s*.26,.68],[s*.17,.62]],z:.16,c:P[1],glow:true,o:6});
+    }
+    for (const [sx,sy] of [[-.5,1.56],[-.42,1.6],[-.34,1.55]]) out.push({t:'vplane',pts:[[sx-.03,sy-.1],[sx+.03,sy-.1],[sx,sy+.08]],z:-.36,c:P[1],glow:true,o:0});
+    return out; },
+  },
+];
+
+// ---------- build the page ----------
+function card(set){
+  const sw = set.palette.map(([n,h],i)=>`<span class="sw ${set.glowIdx&&set.glowIdx.includes(i)?'glow':''}" style="--c:${h}"><i style="background:${h}"></i><b>${n}</b> <code>${h}</code> <span>${godot(h)}</span></span>`).join('');
+  const prims = set.prims();
+  return `<article class="frame" id="set-${set.id}" data-set="${set.id}">
+    <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:8px">
+      <h3 style="margin:0">${set.name}</h3><span class="pill ${set.tierClass}">${set.tier}</span>
+    </div>
+    <p class="theme">${set.theme}</p>
+    <div class="set">
+      <figure class="view" style="margin:0"><div>${render(prims,'front')}</div><figcaption>Front</figcaption></figure>
+      <figure class="view" style="margin:0"><div>${render(prims,'top')}</div><figcaption>Play camera (55° pitch)</figcaption></figure>
+      <div class="info">
+        <dl>
+          <dt>Helm</dt><dd>${set.pieces.helm}</dd>
+          <dt>Body</dt><dd>${set.pieces.body}</dd>
+          <dt>Legs</dt><dd>${set.pieces.legs}</dd>
+          <dt>Weapon</dt><dd>${set.pieces.weapon}</dd>
+        </dl>
+        <div class="swatches">${sw}</div>
+        <p><strong>Silhouette.</strong> ${set.silhouette}</p>
+        <p class="note"><strong>Build.</strong> ${set.build}</p>
+        ${set.risk?`<p class="risk"><strong>Risk.</strong> ${set.risk}</p>`:''}
+        <form class="verdict" data-lavish-question="set:${set.id}" onsubmit="queueSet(event, '${set.id}', '${set.name.replace(/'/g,"\\'")}', '${set.tier}')">
+          <div class="opts">
+            <label><input type="radio" name="verdict" value="pick"> Pick</label>
+            <label><input type="radio" name="verdict" value="rework"> Rework (say what)</label>
+            <label><input type="radio" name="verdict" value="reject"> Reject</label>
+          </div>
+          <textarea name="note" placeholder="What to change, or why it works / fails. Annotating the figure itself also works."></textarea>
+          <button type="submit">Queue verdict</button><span class="queued"></span>
+        </form>
+      </div>
+    </div>
+  </article>`;
+}
+document.getElementById('cards').innerHTML = SETS.map(card).join('');
+
+function stripRow(cls, label, pxPerM, bg){
+  const cells = SETS.map(s=>{
+    const w = Math.round(260*pxPerM/100);
+    return `<div class="cell">${render(s.prims(),'top',{width:w,bg})}<span>${s.name}</span></div>`;
+  }).join('');
+  return `<div class="strip ${cls}"><div class="lbl">${label}</div><div class="row" style="padding-top:14px">${cells}</div></div>`;
+}
+document.getElementById('strips').innerHTML =
+  stripRow('fire', 'By the outpost fire — 1:1 at default zoom (31 px/m)', 31, 'none') +
+  stripRow('safe', 'Inner ring snow — 1:1 at default zoom', 31, 'none') +
+  stripRow('ring2', 'Ring two blizzard — 1:1 at default zoom', 31, 'none') +
+  stripRow('safe', 'Closest zoom (14 m, 71 px/m)', 71, 'none');
+
+// ---------- feedback plumbing ----------
+function mark(form, text){ const q=form.querySelector('.queued'); if(q) q.textContent = 'queued: '+text; }
+function queueSet(ev, id, name, tier){
+  ev.preventDefault();
+  const fd = new FormData(ev.currentTarget);
+  const verdict = fd.get('verdict'); const note = (fd.get('note')||'').trim();
+  if (!verdict) { mark(ev.currentTarget, 'choose Pick, Rework or Reject first'); return; }
+  const text = `${name} (${tier}): ${verdict}${note?' — '+note:''}`;
+  if (window.lavish && window.lavish.queuePrompt) {
+    window.lavish.queuePrompt(`Set verdict — ${text}`, { tag:'choice', text, element: ev.currentTarget, queueKey:'set:'+id,
+      data:{ question:'set:'+id, answer: verdict, note, set:name, tier } });
+  }
+  mark(ev.currentTarget, verdict);
+}
+function queueQ(ev, key, label){
+  ev.preventDefault();
+  const fd = new FormData(ev.currentTarget);
+  const answer = fd.get('answer'); const note = (fd.get('note')||'').trim();
+  if (!answer) { mark(ev.currentTarget, 'pick an option first'); return; }
+  const text = `${label}: ${answer}${note?' — '+note:''}`;
+  if (window.lavish && window.lavish.queuePrompt) {
+    window.lavish.queuePrompt(text, { tag:'choice', text, element: ev.currentTarget, queueKey:key, data:{ question:key, answer, note } });
+  }
+  mark(ev.currentTarget, answer);
+}
+</script>
+</body>
+</html>
