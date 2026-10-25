@@ -28,7 +28,7 @@ const UPGRADES := {
 	},
 	"armoury": {
 		"label": "Armoury", "cost": {"logs": 6, "bronze_bar": 2, "wolf_pelt": 3}, "requires": ["forge"],
-		"effects": {"recipes": ["bronze_helm", "bronze_body", "bronze_legs"]}, "locked": "",
+		"effects": {"recipes": ["bronze_helm", "bronze_body", "bronze_legs", "fur_hood", "fur_coat", "fur_legs"]}, "locked": "",
 	},
 	# Optional: a frame to lash a heavier load to, so every trip out carries more. Nothing
 	# else needs it.

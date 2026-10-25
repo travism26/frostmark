@@ -61,6 +61,8 @@ const TIER_TINTS := {
 	ItemTable.TIER_IRON: Color(0.50, 0.54, 0.60),
 	ItemTable.TIER_STEEL: Color(0.66, 0.74, 0.84),
 }
+## Fur has no tier, so its badges take a pelt brown of their own.
+const TINT_FUR := Color(0.60, 0.52, 0.44)
 const TINT_TAB := Color(0.30, 0.36, 0.46)
 const TINT_RAW := Color(0.34, 0.54, 0.70)
 const TINT_COOKED := Color(0.82, 0.50, 0.20)
@@ -135,6 +137,10 @@ const ICONS := {
 	"bronze_legs": {"icon": "delapouite/leg-armor"},
 	"iron_legs": {"icon": "delapouite/leg-armor"},
 	"steel_legs": {"icon": "delapouite/leg-armor"},
+	# Fur pieces: the armour glyphs, in fur.
+	"fur_hood": {"icon": "lorc/visored-helm", "tint": TINT_FUR},
+	"fur_coat": {"icon": "lorc/breastplate", "tint": TINT_FUR},
+	"fur_legs": {"icon": "delapouite/leg-armor", "tint": TINT_FUR},
 	# The side panel's tabs.
 	TAB_PACK: {"icon": "lorc/knapsack", "tint": TINT_TAB},
 	TAB_EQUIPMENT: {"icon": "lorc/battle-gear", "tint": TINT_TAB},

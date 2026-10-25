@@ -6,6 +6,7 @@ extends "res://tests/run.gd".TestCase
 
 const GearLayoutScript := preload("res://scenes/gear_layout.gd")
 const CharacterViewScript := preload("res://scenes/character_view.gd")
+const CharacterGearScript := preload("res://scenes/character_gear.gd")
 
 ## The barbarian's own body: every other mesh in the glb is a prop to hide.
 const BODY_PARTS := [
@@ -54,6 +55,17 @@ func test_each_armour_piece_has_its_own_place_and_shows_only_when_worn() -> void
 	var legs_only := GearLayoutScript.place(_gear("", "", "", "", "steel_legs"), true)
 	assert_eq(legs_only[GearLayoutScript.HEAD], "", "no helm drawn when none is worn")
 	assert_eq(legs_only[GearLayoutScript.LEGS], "steel_legs", "the legs stay on at work")
+
+
+func test_fur_pieces_are_worn_like_armour_and_drawn_in_fur() -> void:
+	var full := GearLayoutScript.place(_gear("", "", "fur_coat", "fur_hood", "fur_legs"), false)
+	assert_eq(full[GearLayoutScript.HEAD], "fur_hood")
+	assert_eq(full[GearLayoutScript.BODY], "fur_coat")
+	assert_eq(full[GearLayoutScript.LEGS], "fur_legs")
+	for kind in ["fur_hood", "fur_coat", "fur_legs"]:
+		assert_eq(CharacterGearScript.colour_of(kind), CharacterGearScript.FUR_COLOR, "%s is drawn in fur" % kind)
+		assert_ne(CharacterGearScript.colour_of(kind), Color.MAGENTA, "%s is not the missing-colour magenta" % kind)
+	assert_eq(CharacterGearScript.colour_of("steel_body"), CharacterGearScript.TIER_COLORS[ItemTable.TIER_STEEL], "metal keeps its tier colour")
 
 
 func test_bare_handed_with_a_tool() -> void:

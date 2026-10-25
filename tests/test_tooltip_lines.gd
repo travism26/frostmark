@@ -41,3 +41,15 @@ func test_the_builds_line_comes_straight_after_crafts_into() -> void:
 func test_an_item_that_builds_nothing_has_no_builds_line() -> void:
 	assert_eq(_builds_line(UiTooltip.item_lines("cooked_trout")), "")
 	assert_eq(_builds_line(UiTooltip.item_lines("bronze_sword")), "")
+
+
+func test_a_wolf_pelt_crafts_into_the_fur_pieces() -> void:
+	assert_true(UiTooltip.item_lines("wolf_pelt").has("Crafts into fur hood, fur coat, fur leggings."), str(UiTooltip.item_lines("wolf_pelt")))
+
+
+func test_a_fur_piece_shows_no_tier_and_takes_nothing_off_a_hit() -> void:
+	for kind in ["fur_hood", "fur_coat", "fur_legs"]:
+		var lines := UiTooltip.item_lines(kind)
+		assert_true(lines.has("Takes nothing off a hit on its own."), "%s: %s" % [kind, lines])
+		assert_false("\n".join(lines).contains("tier"), "%s shows no tier: %s" % [kind, lines])
+	assert_true(UiTooltip.item_lines("bronze_helm")[0].begins_with("Bronze tier"), "metal still shows its tier")
