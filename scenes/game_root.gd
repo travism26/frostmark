@@ -30,7 +30,7 @@ const COLOR_BY_ENEMY := {
 	"bandit_captain": Color(0.30, 0.10, 0.12), "frost_witch": Color(0.40, 0.48, 0.66),
 	"ice_troll": Color(0.58, 0.70, 0.78), "ruin_stalker": Color(0.24, 0.26, 0.30),
 	"snowveil_archer": Color(0.82, 0.90, 0.96), "frostbound_knight": Color(0.55, 0.72, 0.92),
-	"aurora_seer": Color(0.52, 0.40, 0.78),
+	"aurora_seer": Color(0.52, 0.40, 0.78), "frost_tyrant": Color(0.86, 0.94, 0.98),
 }
 ## Telegraph cues take the style's colour from the icon table, so the ring on the ground, the
 ## name over the enemy and the style badge in the panel always agree.
@@ -106,6 +106,8 @@ const WaystonePanel := preload("res://scenes/waystone_panel.gd")
 
 var sim: Sim
 var _accumulator := 0.0
+## The bosses already fallen before the tick being shown, so a boss's first fall can be told.
+var _bosses_before: Array = []
 ## Polyline the character walked during the last tick, replayed over the current one.
 var _segment: Array[Vector2] = []
 var _segment_length := 0.0
@@ -261,6 +263,7 @@ func _process(delta: float) -> void:
 		_segment = []
 		for id in _enemies:
 			_enemies[id]["segment"] = []
+		_bosses_before = (sim.state["bosses_defeated"] as Array).duplicate()
 		sim.step()
 		if _save_watch.advance():
 			if _save_watch.storage_ok:
@@ -668,6 +671,8 @@ func _apply_events(events: Array[Dictionary]) -> void:
 				_last_event = "%s falls." % _sentence(_enemy_name(e["enemy_id"]))
 				if e["enemy_kind"] == "bandit_captain" and not sim.ring_gate_open("ring_two_gate"):
 					_hud.banner("The bandit captain falls. Build the ring-two gate winch at the outpost to open his gate.")
+				elif e["enemy_kind"] == "frost_tyrant" and not _bosses_before.has(e["enemy_id"]):
+					_hud.banner("The Frost tyrant falls. Its rime steel, frost sinew and aurora glass lie in the snow.")
 			SimVocab.EV_LOOT_DROPPED:
 				_add_loot(e["loot_id"])
 			SimVocab.EV_PICKED_UP:
@@ -1275,7 +1280,8 @@ func _flicker() -> void:
 
 ## One figure per placed enemy: an animated model from Figures (the captain's sabre, bow and
 ## staff are its `captain_sabre`, `captain_bow` and `captain_staff` nodes, the Aurora seer's
-## its `aurora_staff` and `seer_blade`; the one in hand follows the stance),
+## its `aurora_staff` and `seer_blade`, the Frost tyrant's its `tyrant_greatblade`, `tyrant_bow`
+## and `tyrant_staff`; the one in hand follows the stance),
 ## a click volume that becomes `attack`, a name-and-health label and a telegraph cue above it.
 func _build_enemies(world: WorldDef) -> void:
 	for id in world.enemies:
@@ -1287,7 +1293,10 @@ func _build_enemies(world: WorldDef) -> void:
 		figure.name = "Figure"
 		root.add_child(figure)
 		var weapons := {}
-		for w in ["captain_sabre", "captain_bow", "captain_staff", "aurora_staff", "seer_blade"]:
+		for w in [
+			"captain_sabre", "captain_bow", "captain_staff", "aurora_staff", "seer_blade",
+			"tyrant_greatblade", "tyrant_bow", "tyrant_staff",
+		]:
 			var piece := figure.find_child(w, true, false)
 			if piece != null:
 				weapons[w] = piece

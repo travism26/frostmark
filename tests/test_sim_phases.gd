@@ -1,5 +1,6 @@
 ## Fight phases: below a mark on its health an enemy changes into a quicker cycle. Only the
-## Frostbound knight has a phase so far (its own fight is in tests/test_ring_three.gd), so the
+## Frostbound knight and the Frost tyrant have a phase so far (their own fights are in
+## tests/test_ring_three.gd), so the
 ## stand-in phaser in tests/sim_helpers.gd carries the rule: it winds up a tick before its
 ## crush, below half health it crushes with no wind-up, and below 45 % it draws a bow. A phase
 ## starts on the first declaration from the cycle after the mark is crossed, announced by a
@@ -62,9 +63,9 @@ func _phase(sim: Sim) -> int:
 	return int(sim.state["enemies"]["foe"]["phase"])
 
 
-func test_only_the_frostbound_knight_has_a_phase_so_far() -> void:
+func test_only_the_frostbound_knight_and_the_frost_tyrant_have_a_phase_so_far() -> void:
 	for kind in CombatTable.ENEMIES:
-		assert_eq(CombatTable.phase_count(kind), 1 if kind == "frostbound_knight" else 0, "%s's phases" % kind)
+		assert_eq(CombatTable.phase_count(kind), 1 if kind in ["frostbound_knight", "frost_tyrant"] else 0, "%s's phases" % kind)
 		assert_eq(CombatTable.cycle(kind), CombatTable.ENEMIES[kind]["actions"], "%s keeps its own cycle" % kind)
 	H.add_stand_ins()
 	assert_eq(CombatTable.phase_count("stand_in_phaser"), 2)

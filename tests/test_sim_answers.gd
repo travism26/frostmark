@@ -1,9 +1,10 @@
 ## Answers: an enemy the player has just countered switches style in reply, early, instead of at
 ## its place in the cycle, announced a tick ahead like any change of weapon, and cannot switch in
-## reply again for `answer_ticks`. That gap is the player's opening. No enemy answers yet, so the
-## stand-in answerers in tests/sim_helpers.gd carry the rule: the answerer fights through sabre,
-## bow and staff and answers a staff with its bow and a blade with its staff; the late answerer
-## answers the same way, but only in its second phase.
+## reply again for `answer_ticks`. That gap is the player's opening. Ring three's Aurora seer
+## and Frost tyrant answer (their fights are in tests/test_ring_three.gd); the stand-in
+## answerers in tests/sim_helpers.gd carry the rule: the answerer fights through sabre, bow and
+## staff and answers a staff with its bow and a blade with its staff; the late answerer answers
+## the same way, but only in its second phase.
 extends "res://tests/run.gd".TestCase
 
 const H := preload("res://tests/sim_helpers.gd")
@@ -83,10 +84,14 @@ func _player_has_edge(sim: Sim) -> bool:
 	return CombatTable.multiplier(sim.player_style(), _foe_style(sim), distance) > 1.0
 
 
-func test_only_the_aurora_seer_answers_yet() -> void:
+func test_only_the_aurora_seer_and_the_frost_tyrant_answer_yet() -> void:
+	var answering := {
+		"aurora_seer": [{"ranged": 5, "magic": 10}],
+		"frost_tyrant": [{"magic": 5, "ranged": 15, "melee": 10}, {"magic": 5, "ranged": 14, "melee": 9}],
+	}
 	for kind in CombatTable.ENEMIES:
 		for phase in CombatTable.phase_count(kind) + 1:
-			var answers := {"ranged": 5, "magic": 10} if kind == "aurora_seer" else {}
+			var answers: Dictionary = answering[kind][phase] if answering.has(kind) else {}
 			assert_eq(CombatTable.answers(kind, phase), answers, "%s's answers" % kind)
 	H.add_stand_ins()
 	assert_eq(CombatTable.answers("stand_in_answerer"), {"magic": 5, "melee": 10})

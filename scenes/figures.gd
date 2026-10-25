@@ -7,7 +7,8 @@
 ## Presentation only. `enemy` returns a FigureBody standing on the ground at its origin with a
 ## `height` metadata for the click volume and labels; the captain carries nodes named
 ## `captain_sabre`, `captain_bow` and `captain_staff` that GameRoot shows by his stance, and the Aurora seer
-## `aurora_staff` and `seer_blade`. Hand pieces are
+## `aurora_staff` and `seer_blade`, and the Frost tyrant `tyrant_greatblade`, `tyrant_bow` and
+## `tyrant_staff`. Hand pieces are
 ## authored in a FigureBody `mount` frame: +Y up, -Z forward, the grip on the origin.
 class_name Figures
 extends RefCounted
@@ -55,11 +56,14 @@ const COLOR_SNOWVEIL_BOW := Color(0.80, 0.88, 0.94)  # with a pale, frosted bow
 const COLOR_FROSTBOUND := Color(0.66, 0.80, 0.96)  # the knight redrawn in frost-blue and pale steel
 const COLOR_SEER := Color("#7a4fb8")  # the mage in violet, without the witch's blue
 const COLOR_AURORA := Color(0.35, 1.0, 0.72)  # the green of its staff's crystal and its blade
+const COLOR_TYRANT := Color(0.82, 0.90, 0.98)  # the knight redrawn in ice-white
 const COLOR_CAPTAIN_CAPE := Color(0.62, 0.08, 0.08)
 const COLOR_WOLF := Color(1.45, 1.5, 1.6)  # the grey coat lifted towards snow
 const COLOR_WITCH := Color("#6670b3")  # the mage in a rimed blue-violet
 const COLOR_BONE := Color(0.86, 0.82, 0.72)
 const COLOR_IRON := Color(0.30, 0.32, 0.36)
+## Where the tyrant's visor glow sits in its head's mount frame, in metres.
+const TYRANT_VISOR := Vector3(0.0, 0.62, -0.88)
 const ROGUE_SPARES := ["Knife", "Knife_Offhand", "1H_Crossbow", "2H_Crossbow", "Throwable"]
 const MAGE_SPARES := ["Spellbook", "Spellbook_open", "1H_Wand", "2H_Staff"]
 
@@ -70,7 +74,8 @@ const MAGE_SPARES := ["Spellbook", "Spellbook_open", "1H_Wand", "2H_Staff"]
 ## bow), a Frostbound knight (the armoured knight in frost-blue with a long blade), an Aurora seer (the hatless
 ## mage in violet, with an aurora staff or a conjured blade by its stance), an ice troll (the yeti, 3.1 m of pale fur with an ice club) or
 ## the armoured captain with a sabre, a war bow and a rime staff (one shown at a time, by his
-## stance).
+## stance), or the Frost tyrant (the captain's knight a third bigger again, in ice-white with an
+## aurora-green visor, with a greatblade, a warbow and a staff, one at a time by its stance).
 static func enemy(kind: String) -> FigureBody:
 	match kind:
 		"wolf":
@@ -91,6 +96,20 @@ static func enemy(kind: String) -> FigureBody:
 			var staff_hand := captain.mount("handslot_r", "captain_staff")
 			staff_hand.add_child(staff(Props.COLOR_DARK_WOOD, 1.7))
 			return captain
+		"frost_tyrant":
+			var tyrant := humanoid("knight.glb", 1.8 * 1.15 * 1.3, ["1H_Sword", "1H_Sword_Offhand", "Badge_Shield", "Rectangle_Shield", "Round_Shield", "Spike_Shield"])
+			tyrant.recolour(COLOR_TYRANT)
+			tyrant.impact = 0.5
+			var greatblade := tyrant.bone_slot("handslot_r").get_node("2H_Sword") as Node3D
+			greatblade.name = "tyrant_greatblade"
+			FigureBody.tint_meshes(greatblade, COLOR_AURORA)
+			tyrant.mount("handslot_l", "tyrant_bow").add_child(bow(COLOR_SNOWVEIL_BOW, 1.8))
+			tyrant.mount("handslot_r", "tyrant_staff").add_child(staff(Props.COLOR_DARK_WOOD, 2.0, COLOR_AURORA, 2.2))
+			var visor := BoxMesh.new()
+			visor.size = Vector3(0.6, 0.08, 0.06)
+			visor.material = Props.flat(COLOR_AURORA, 1.0)
+			part(tyrant.mount("head", "tyrant_visor"), visor, TYRANT_VISOR)
+			return tyrant
 		"frost_witch":
 			var witch := humanoid("mage.glb", 1.8, MAGE_SPARES, WITCH_CLIPS)
 			witch.recolour(COLOR_WITCH)

@@ -278,6 +278,24 @@ With the other numbers held and only the seer's health raised, the same fights c
 
 So the bar of below 40 for a non-reader that does not eat is met somewhere between 150 and 180 health, and the reader still clears 60 by a wide margin: at 180 the reader is baited into the blade, swaps to the staff, and is read again on the second answer. Health was settled at 60 for this ticket (the recommendations were accepted as written), so the numbers are not changed here; the choice between a higher health and a lower bar belongs with [#198](https://github.com/travism26/frostmark/issues/198), which asks what the non-reader's bar should be for all of ring three. The non-reader that eats on every heavy ends well above 40 at every health, as for the archer and the knight; the tests pin what holds (the seer falls on the third tick, unhurt).
 
+### The Frost tyrant
+
+[#183](https://github.com/travism26/frostmark/issues/183): ring three's boss. 600 health, three weapons by stance (greatblade, warbow, staff), slash 12, glacier cleave 32 (heavy, wound up), loose 10, hail volley 28 (heavy, bluffed once), rime bolt 10, whiteout 28 (heavy), answers to every counter-swap with 10 ticks between them, and below 300 health a second phase with no wind-up, fewer rests, two bluffs and 6 ticks between answers. The reference character carries a steel sword, bow and staff and five trout. The numbers below are what the tests print (`test_the_reader_reads_every_stance_and_beats_the_tyrant`, `test_the_non_reader_holding_one_style_dies`).
+
+| Fight | Result |
+|-------|--------|
+| Reader: opens with the staff beside it, swaps to the counter on every stance, steps back on the wind-up, does nothing on a feint, eats on rest ticks below 70 | The tyrant falls on the 34th tick; 67 health at the lowest, 75 at the end, one trout eaten. It answered 5 times, and 8 of the reader's swaps came inside an answer's cooldown |
+| Non-reader: steel sword throughout, eating below half health | Dies on the 43rd tick, with the tyrant on 132 |
+| Non-reader: steel bow throughout, the same | Dies on the 39th tick, with the tyrant on 273 |
+| Non-reader: steel staff throughout, the same | Dies on the 41st tick, with the tyrant on 215 |
+
+The reader wins and every non-reader dies at the ticket's numbers, so nothing was tuned. Two things the numbers show:
+
+- **Health matters here, unlike for the ring's other three.** At 600 the tyrant outlasts every single style. Whichever weapon the non-reader holds, the tyrant answers its edge with the weapon that beats it, so much of the fight is spent on the wrong side of the triangle, taking the heavies at 1.5 times and dealing at half. The reader re-counters every answer inside the cooldown, so it spends almost all of the fight on the right side. That is the whole difference: about 18 damage a tick for the reader against 11 at best for a non-reader (the sword's 468 in 43 ticks), and the reader takes its blows mostly at half.
+- **The reader never meets the wind-up.** Its opening staff on the greatblade is answered at once by the warbow, and after that each greatblade it faces is an answer it re-counters with the staff, so the tyrant is drawn off the greatblade before its cleave comes round. The step back is pinned on its own (`test_stepping_back_from_its_wind_up_makes_the_committed_cleave_miss`). A player who holds the greatblade's counter less eagerly meets it.
+
+The non-reader's bar here is death, the ticket's wording, and it holds with a meal in the pack: five trout do not carry one style through a 600-health fight. The meal question of [#198](https://github.com/travism26/frostmark/issues/198) does not arise for the tyrant.
+
 ## Off the timed route
 
 What the run deliberately leaves out, and why.

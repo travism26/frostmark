@@ -1,7 +1,7 @@
 ## Ring three's rare materials (#179): rime steel, frost sinew and aurora glass are materials
 ## like a troll hide, which stack, weigh, and go in and out of the stash, and which only the top
-## sets' recipes spend (#184); so far only the Frostbound knight, the Snowveil archer and the
-## Aurora seer drop one.
+## sets' recipes spend (#184); so far the Frostbound knight, the Snowveil archer and the Aurora
+## seer drop one each, and the Frost tyrant one of every one.
 extends "res://tests/run.gd".TestCase
 
 const H := preload("res://tests/sim_helpers.gd")
@@ -10,7 +10,10 @@ const Vocab := preload("res://sim/vocab.gd")
 
 const RARES: Array[String] = ["rime_steel", "frost_sinew", "aurora_glass"]
 ## The enemy kinds that drop each one so far.
-const DROPPED_BY := {"rime_steel": ["frostbound_knight"], "frost_sinew": ["snowveil_archer"], "aurora_glass": ["aurora_seer"]}
+const DROPPED_BY := {
+	"rime_steel": ["frostbound_knight", "frost_tyrant"], "frost_sinew": ["snowveil_archer", "frost_tyrant"],
+	"aurora_glass": ["aurora_seer", "frost_tyrant"],
+}
 
 
 func test_each_is_a_material_with_no_slot_or_tier_weighing_1_worth_25_in_stacks_of_10() -> void:
