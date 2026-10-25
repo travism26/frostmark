@@ -1,8 +1,11 @@
 #!/bin/bash
 # Runs one verify probe on the head copy and the base copy of a record, and prints what each printed.
 # usage: tools/verify/drive.sh <record> <probe.gd>
+#        tools/verify/drive.sh <record> --prepare
 #   <record>  a verify record folder; created if missing
 #   <probe>   a probe script that extends res://tools/verify/probe_base.gd
+# --prepare only sets up the copies and prints where they are (tools/verify/run.sh calls it
+# before the verifier starts, to hand it the head copy).
 #
 # On the first call for a record it exports the head and base commits with `git archive` to a
 # temp folder outside any repo (so neither copy has a .git) and imports each once; later calls
@@ -36,8 +39,8 @@ fail() {
   exit 1
 }
 
-[ $# -eq 2 ] || fail "usage: tools/verify/drive.sh <record> <probe.gd>"
-[ -f "$2" ] || fail "no probe at $2"
+[ $# -eq 2 ] || fail "usage: tools/verify/drive.sh <record> <probe.gd>|--prepare"
+[ "$2" = --prepare ] || [ -f "$2" ] || fail "no probe at $2"
 mkdir -p "$1" || fail "cannot make the record at $1"
 RECORD=$(cd "$1" && pwd)
 PROBE=$2
@@ -88,6 +91,10 @@ else
   done
   touch "$COPIES/head/.verify-imported" "$COPIES/base/.verify-imported"
   echo "$COPIES" >"$RECORD/copies"
+fi
+if [ "$PROBE" = --prepare ]; then
+  echo "drive: copies ready: $COPIES/head and $COPIES/base"
+  exit 0
 fi
 
 mkdir -p "$RECORD/probes" "$RECORD/drive"
