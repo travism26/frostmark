@@ -5,11 +5,13 @@
 ## equipment slot the item goes in, or "" for materials. `tool` names what a tool counts as
 ## for gathering ("axe" for woodcutting, "pickaxe" for mining, "rod" for fishing). `tier` is
 ## the gear tier the brief shows on the character (wooden, bronze, iron, steel); a better tool
-## gathers faster and surer. Fur pieces are armour with no tier: a sideways choice, not a rung. A weapon carries its combat `style`, `power` (damage per hit
-## before the style edge), `speed` (ticks between swings), `reach` (metres) and, for a ranged
-## weapon, the `ammo` item each shot uses (arrows for a bow, frost shards for a staff's cast).
-## Armour (a helm, a body and legs, each worn in its own slot) carries `defence`, and the
-## worn pieces' defence added up is taken off every hit. Food
+## gathers faster and surer. Fur pieces are armour with no tier: a sideways choice, not a
+## rung. A weapon carries its combat `style`, `power` (damage per hit before the style edge),
+## `speed` (ticks between swings), `reach` (metres) and, for a ranged weapon, the `ammo` item
+## each shot uses (arrows for a bow, frost shards for a staff's cast). Armour (a helm, a body
+## and legs, each worn in its own slot) carries `defence`, and the worn pieces' defence added
+## up is taken off every hit. `warmth` is points of cold kept out while worn (1 on each fur
+## piece); the more is worn, the slower warmth drains outside (see Sim.WARMTH_PACE). Food
 ## carries `heal`, the health it restores spread over `heal_ticks` ticks. Engine-free like sim/.
 class_name ItemTable
 extends RefCounted
@@ -243,15 +245,15 @@ const ITEMS := {
 	# Fur, from wolf pelts once the Armoury is built: armour slots, no tier and no defence.
 	"fur_hood": {
 		"label": "Fur hood", "stack": 1, "weight": 1, "value": 20, "slot": SLOT_HELM,
-		"defence": 0,
+		"defence": 0, "warmth": 1,
 	},
 	"fur_coat": {
 		"label": "Fur coat", "stack": 1, "weight": 2, "value": 30, "slot": SLOT_BODY,
-		"defence": 0,
+		"defence": 0, "warmth": 1,
 	},
 	"fur_legs": {
 		"label": "Fur leggings", "stack": 1, "weight": 1, "value": 20, "slot": SLOT_LEGS,
-		"defence": 0,
+		"defence": 0, "warmth": 1,
 	},
 }
 
@@ -319,6 +321,11 @@ static func is_kit(kind: String) -> bool:
 ## Health taken off every hit while the item is worn, or 0.
 static func defence(kind: String) -> int:
 	return int(ITEMS[kind].get("defence", 0)) if ITEMS.has(kind) else 0
+
+
+## Points of cold the item keeps out while worn, or 0.
+static func warmth(kind: String) -> int:
+	return int(ITEMS[kind].get("warmth", 0)) if ITEMS.has(kind) else 0
 
 
 ## Health taken off every hit by everything worn: the armour pieces' defence added up.
