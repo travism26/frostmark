@@ -358,6 +358,9 @@ capped=""
 [ -e "$SESS/capped-drive" ] && capped=${capped:-drive}
 RESULT=$(jq -c -R 'fromjson? | select(.type == "result")' "$RECORD/transcript.jsonl" 2>/dev/null | tail -n 1)
 [ -n "$RESULT" ] || RESULT="{}"
+# What the session itself reports at start: its cwd, model, tools and permission mode.
+INIT=$(jq -c -R 'fromjson? | select(.type == "system" and .subtype == "init") | {cwd, model, tools, permissionMode}' "$RECORD/transcript.jsonl" 2>/dev/null | head -n 1)
+[ -n "$INIT" ] || INIT=null
 VERIFIER_MODEL=$(jq -r '(.modelUsage // {}) | keys | join(",") | if . == "" then "'"$MODEL"'" else . end' <<<"$RESULT")
 
 FREEZE=0
@@ -378,8 +381,9 @@ write_inputs "$(jq -n --arg cwd "$WORK" --arg model "$MODEL" --arg tools "$TOOLS
   --argjson calls "$(wc -l <"$RECORD/drive-calls.log" | tr -d ' ')" \
   --argjson env "$(env -i "${SESSION_ENV[@]}" env | cut -d= -f1 | jq -R . | jq -s -c .)" \
   --argjson git_vars "$(awk '{sub("git_vars=", "", $3); print $3}' "$RECORD/drive-calls.log" | tr , '\n' | sort -u | jq -R 'select(length > 0)' | jq -s -c .)" \
-  --argjson result "$RESULT" \
+  --argjson result "$RESULT" --argjson init "$INIT" \
   '{started: true, why: $why, cwd: $cwd, model: $model, models_used: (($result.modelUsage // {}) | keys),
+    reported_at_start: $init,
     tools: $tools, readable: [$cwd, $head], writable: [$cwd], bash: "drive <probe.gd> only",
     env_at_start: $env, git_vars_at_start: ($env | map(select(startswith("GIT_")))),
     git_vars_set_by_the_bash_tool: $git_vars, exit: $rc, wall_secs: $wall, drive_calls: $calls,

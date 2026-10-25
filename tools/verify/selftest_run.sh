@@ -101,6 +101,7 @@ cat >grades.json <<'JSON'
   {"id": "AC2", "kind": "gate", "new": false, "grade": "PASS", "evidence": "ci", "observed": ""}
 ], "flags": [], "notes": []}
 JSON
+echo "{\"type\":\"system\",\"subtype\":\"init\",\"cwd\":\"\$(pwd -P)\",\"model\":\"selftest-model\",\"tools\":[],\"permissionMode\":\"dontAsk\"}"
 echo '{"type":"result","num_turns":1,"total_cost_usd":0,"modelUsage":{"selftest-model":{"inputTokens":1,"outputTokens":1}}}'
 EOF
 chmod +x "$SHIMS/gh" "$SHIMS/claude"
@@ -135,6 +136,7 @@ NOTE=$DATA/claude.1
 check "$(holds grep -qx 'in_repo=no' "$NOTE")" "the session starts outside any repo"
 check "$(holds grep -qx 'git_vars=0' "$NOTE")" "  with no GIT_* variables"
 check "$(holds grep -qx "cwd=$(jq -r .cwd "$REC1/session.json")" "$NOTE")" "  and the record notes its cwd"
+check "$(holds test "$(jq -r .reported_at_start.cwd "$REC1/session.json")" = "$(jq -r .cwd "$REC1/session.json")")" "  as the session itself reports it"
 check "$(holds test "$(jq -r .model "$REC1/session.json")" = sonnet -a "$(jq -r .verifier_model "$REC1/inputs.json")" = selftest-model)" "  and its model"
 for a in --print --restricted "Bash(drive *)" "Edit(./**)" --strict-mcp-config; do
   check "$(holds grep -qxF "arg=$a" "$NOTE")" "  claude gets $a"
