@@ -124,6 +124,9 @@ func test_each_set_has_four_items_under_the_set_item_rule() -> void:
 	var keys := {}
 	for set_key in SETS:
 		keys[set_key] = true
+	# the ranged sets (#164) are tests/test_gear_ranged_sets.gd's
+	for set_key in [ItemTable.SET_TRAPPER, ItemTable.SET_WOLFSTALKER, ItemTable.SET_STEELPOINT]:
+		keys[set_key] = true
 	for item in ItemTable.ITEMS:
 		if ItemTable.set_of(item) != "":
 			assert_true(keys.has(ItemTable.set_of(item)), "%s is in a set this test knows" % item)
@@ -265,13 +268,16 @@ func test_the_samples_and_the_shot_tool_cover_every_piece() -> void:
 		assert_true(names.has(WEAPON_SHAPES[item]), "the warm-up samples a %s" % WEAPON_SHAPES[item])
 	var armour := 0
 	var weapons := 0
+	var back := 0
 	for item in ItemTable.ITEMS:
 		if ItemTable.ARMOUR_SLOTS.has(ItemTable.slot(item)):
 			armour += _pieces(item).size()
+		elif ItemTable.slot(item) == ItemTable.SLOT_QUIVER or ItemTable.slot(item) == ItemTable.SLOT_CAPE:
+			back += 1
 		elif CharacterGearScript.weapon_piece(item) != null:
 			weapons += 1
-	assert_eq(weapons, 3, "three kit weapons in the table")
-	assert_eq(all.get_child_count(), GearLookScript.KIT_SAMPLES.size() + armour + weapons, "one sample per kit shape, armour piece and kit weapon")
+	assert_eq(weapons, 6, "six kit weapons in the table: the three melee weapons and the three ranged bows (#164)")
+	assert_eq(all.get_child_count(), GearLookScript.KIT_SAMPLES.size() + armour + back + weapons, "one sample per kit shape, armour piece, quiver or cape, and kit weapon")
 	assert_eq(all.find_children("*", "OmniLight3D", true, false).size(), 1, "the samples still carry the one kit light")
 	all.free()
 	var scenes: Array = (load("res://tools/gear_shots.gd") as Script).get_script_constant_map()["SCENES"]
