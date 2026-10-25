@@ -2,7 +2,7 @@
 ## with the real game loop running, for the equipped-gear PR's before and after evidence. A new
 ## character stands south of the gate with one set of gear worn per scene: an axe, a pickaxe, a
 ## sword, a bow and a staff, the axe again while chopping a pine, and the armour sets (a full
-## wooden, bronze, iron and steel set, a helm alone and legs alone).
+## wooden, bronze, iron, steel and fur set, a helm alone and legs alone).
 ##
 ##   godot --resolution 1280x720 -s tools/gear_shots.gd -- <out_dir> [scene ...]
 ##
@@ -28,6 +28,7 @@ const SCENES := [
 	{"name": "bronze_set", "weapon": "bronze_sword", "tool": "bronze_axe", "helm": "bronze_helm", "body": "bronze_body", "legs": "bronze_legs"},
 	{"name": "iron_set", "weapon": "iron_sword", "tool": "iron_pickaxe", "helm": "iron_helm", "body": "iron_body", "legs": "iron_legs"},
 	{"name": "steel_set", "weapon": "steel_sword", "tool": "steel_pickaxe", "helm": "steel_helm", "body": "steel_body", "legs": "steel_legs"},
+	{"name": "fur_set", "weapon": "bronze_sword", "tool": "bronze_axe", "helm": "fur_hood", "body": "fur_coat", "legs": "fur_legs"},
 	{"name": "helm_only", "weapon": "iron_sword", "tool": "iron_axe", "helm": "iron_helm"},
 	{"name": "legs_only", "weapon": "iron_sword", "tool": "iron_axe", "legs": "iron_legs"},
 ]
