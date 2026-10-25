@@ -1,0 +1,45 @@
+diff --git a/sim/sim.gd b/sim/sim.gd
+index 448de85..d26314a 100644
+--- a/sim/sim.gd
++++ b/sim/sim.gd
+@@ -619,8 +619,8 @@ func _action_for(object_id: String) -> String:
+ ## Crossing the gate inward: nothing moves. Inside the walls nothing can be lost, and the pack
+ ## rides out again as it is. `items` is the merged pack at the moment of return, empty for an
+ ## empty pack. `newly_affordable` lists, in table order, the upgrades that can be built now
+-## from the stash and the pack and could not from the stash alone just before. Always a save
+-## point, even with an empty pack.
++## from the stash and the pack and could not from the stash alone just before. A save point
++## when the pack holds something.
+ func _return() -> void:
+ 	var before := _buildable_now([state["stash"]["slots"]])
+ 	var carried: Array = []
+@@ -632,7 +632,8 @@ func _return() -> void:
+ 		if not before.has(id):
+ 			newly.append(id)
+ 	_emit({"kind": SimVocab.EV_RETURNED, "items": _merged(carried), "newly_affordable": newly})
+-	_save_due = "gate"
++	if not carried.is_empty():
++		_save_due = "gate"
+ 
+ 
+ ## The ids that can be built now from `stores`, in table order.
+diff --git a/tests/test_sim_gate.gd b/tests/test_sim_gate.gd
+index 41fe3ff..a6826c8 100644
+--- a/tests/test_sim_gate.gd
++++ b/tests/test_sim_gate.gd
+@@ -38,13 +38,13 @@ func test_worn_equipment_is_untouched() -> void:
+ 	assert_eq(sim.state["inventory"]["equipment"]["tool"], "wooden_axe", "the axe stays in hand")
+ 
+ 
+-func test_an_empty_pack_still_returns_and_saves() -> void:
++func test_an_empty_pack_still_returns() -> void:
+ 	var sim := _outside_with([])
+ 	var events := H.walk_to(sim, [0.5, 6.5])
+ 	var returned := H.of_kind(events, Vocab.EV_RETURNED)
+ 	assert_eq(returned.size(), 1)
+ 	assert_eq(returned[0]["items"], [], "nothing carried")
+-	assert_eq(H.where(events, Vocab.EV_SAVED, "reason", "gate").size(), 1)
++	assert_eq(H.where(events, Vocab.EV_SAVED, "reason", "gate").size(), 0, "nothing to save")
+ 
+ 
+ func test_a_full_stash_changes_nothing_at_the_gate() -> void:
