@@ -235,3 +235,7 @@ What the run deliberately leaves out, and why.
 - **The target measures the shortest way to the captain.** Putting an optional detour on the timed route would measure a player who chose to take longer.
 
 So the measured run and `tests/test_pacing.gd` don't change: 12:58 of sim time and a 28:48 estimate, and the planner's captain falls at tick 1715 with its ring-two half taking 1715 ticks. Iron drops are unchanged too. A rare drop or the captain's guaranteed piece is still a shortcut past the smithing.
+
+### Fur pieces
+
+[#142](https://github.com/travism26/frostmark/issues/142) lets worn fur slow the warmth drain: a full fur set makes a full gauge last 540 ticks instead of 360. Fur is optional and stays off the timed route. The run doesn't make it: its trips already turn home on the cold tip with warmth to spare, fur takes nothing off a hit, and the pelts it would cost are the Armoury's, the Pack frame's and the winch's. So the measured run and `tests/test_pacing.gd` don't change.
