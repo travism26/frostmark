@@ -237,6 +237,24 @@ Ring three's enemies are deadlier by being harder to read, not by having more he
 
 The reader clears the bar of more than 60 health left. The non-reader does not come near the bar of below 40 or dead: a 70-health archer dies to the reference character's first piercing shot, six or seven ticks in, before its bluff is ever played, and a meal heals 40 over five ticks against a piercing shot that lands for 18 (22 less 4 armour) at neutral range. Giving the archer more health does not close it: with the other numbers held, the bow-trader that eats on every heavy ends below 40 only with 300 health and two meals in the pack, and still at 74 with five. See the decision in the PR.
 
+### The Frostbound knight
+
+[#180](https://github.com/travism26/frostmark/issues/180): 120 health, hack 12, rime cleave 28 (heavy), a wind-up before the first cleave, a bluffed second cleave and a quick phase below 50 % health (no wind-ups). The numbers below are what the tests print.
+
+| Fight | Result |
+|-------|--------|
+| Reader: steel staff, in the blade's reach | The knight falls on the seventh tick; 86 health at the end (two hacks of 2 and one cleave of 10, all into the staff's edge) |
+| Reader: steel staff, from 5.5 m | The knight falls on the seventh tick; 98 health at the end |
+| Non-reader: steel sword, in reach, swinging, no meal | The knight falls on the ninth tick; 36 health at the end (hack 8, cleave 24, hack 8, cleave 24) |
+| Non-reader: the same, eating a trout the tick after any heavy is told | The knight falls on the tenth tick; 76 health at the lowest, 92 at the end |
+
+The reader clears the bar of more than 60 health left, and the non-reader swinging without a meal clears the bar of below 40. That took one retune: with the ticket's hack of 10 the swinger ended at exactly 40, not below it, so the hack is 12. Health stayed at 120.
+
+Two things the numbers show:
+
+- **The reference staff outruns the knight's first wind-up.** Four casts of 35 (23, 1.5 times for the staff's edge) fell a 120-health knight in seven ticks, and the second takes it under 60 on the third tick, the tick it would declare its first wind-up. The reader's step back from a wind-up is pinned on its own (`test_stepping_back_from_the_wind_up_makes_the_committed_cleave_miss`) rather than by the fight, which never gets there. The wind-ups and the bluff are for a player who deals less than the reference character, with a lower tier or fewer levels.
+- **A meal still decides a swinger's fight**, as for the archer: a trout heals 40 over five ticks in a fight of ten, so the non-reader that eats on every heavy ends at 92. The bar holds only for a swinger that does not eat, the ticket's wording. This is the same open question as [#198](https://github.com/travism26/frostmark/issues/198), which asks what the non-reader's bar should be for all of ring three; the test pins what holds (it wins and is hurt) until that is settled.
+
 ## Off the timed route
 
 What the run deliberately leaves out, and why.

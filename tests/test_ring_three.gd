@@ -2,7 +2,7 @@
 ## the Ring-three gate hoist opens on its own. The gate is walked through both ways and nothing
 ## follows; the first arrival is marked once; a fire burns past the gate; and nothing notices,
 ## chases or fights across either ring gate. Its enemies' fights follow, the Snowveil archer's
-## first.
+## first and the Frostbound knight's after it.
 extends "res://tests/run.gd".TestCase
 
 const H := preload("res://tests/sim_helpers.gd")
@@ -336,16 +336,16 @@ func _set_level(sim: Sim, skill: String, level: int) -> void:
 	sim.restore(snap)
 
 
-## One archer at the ridge, alone in the real ring-three ground, with a player at `at` holding
-## `weapon`, five cooked trout and arrows in the pack. `reference` makes the player the
-## reference character: steel armour and combat skills at 40.
-func _duel(weapon: String, at: Array, reference := true) -> Sim:
-	var sim := H.arena({"foe": {"kind": "snowveil_archer", "home": RIDGE_HOME}})
+## One `kind` (the archer by default) at `home`, alone in the real ring-three ground, with a
+## player at `at` holding `weapon`, five cooked trout, arrows and frost shards in the pack.
+## `reference` makes the player the reference character: steel armour and combat skills at 40.
+func _duel(weapon: String, at: Array, reference := true, kind := "snowveil_archer", home := RIDGE_HOME) -> Sim:
+	var sim := H.arena({"foe": {"kind": kind, "home": home}})
 	if reference:
 		for skill in [SkillTable.MELEE, SkillTable.RANGED, SkillTable.MAGIC]:
 			_set_level(sim, skill, REFERENCE_LEVEL)
 	H.place(sim, at)
-	H.arm(sim, weapon, [{"item": "cooked_trout", "count": 5}, {"item": "arrows", "count": 100}])
+	H.arm(sim, weapon, [{"item": "cooked_trout", "count": 5}, {"item": "arrows", "count": 100}, {"item": "frost_shards", "count": 100}])
 	if reference:
 		_sturdy(sim)
 		var snap := sim.snapshot()
@@ -556,3 +556,341 @@ func test_the_non_reader_trading_shots_and_eating_on_every_heavy_telegraph() -> 
 	var fight := _trade_shots()
 	assert_true(fight["dead"], "the archer falls")
 	assert_true(fight["lowest"] < 90, "but not before it hurts: %d at the lowest" % fight["lowest"])
+
+
+# --- The Frostbound knight ----------------------------------------------------------------
+
+## Open ice south of the first ridge, where the pair of knights keeps it, and a spot 1.2 m north
+## of it for the player: inside the blade's reach, where a knight that has closed in stands.
+const KNIGHT_HOME := [-24.5, 152.0]
+const IN_REACH := [-24.5, 150.8]
+## Well out of its sight and the blade's reach, a staff's range from it.
+const STAFF_RANGE := [-24.5, 146.5]
+
+
+func _knight(weapon := "", at := IN_REACH, reference := false) -> Sim:
+	var sim := _duel(weapon, at, reference, "frostbound_knight", KNIGHT_HOME)
+	sim.command(Vocab.SET_AUTO_RETALIATE, {"on": false})
+	return sim
+
+
+func test_the_frostbound_knight_is_a_feinting_blade_with_its_own_loot_and_one_phase() -> void:
+	var def := CombatTable.enemy("frostbound_knight")
+	assert_eq(def["label"], "Frostbound knight")
+	assert_eq([def["health"], def["speed"], def["sight"]], [120, 2.0, 7.0])
+	assert_eq(def["weapon"], "rime_blade")
+	var blade := CombatTable.weapon("rime_blade")
+	assert_eq([blade["style"], blade["reach"]], [CombatTable.STYLE_MELEE, 1.5], "a natural blade, 1.5 m")
+	assert_false(ItemTable.has("rime_blade"), "and not an item")
+	assert_eq(def["loot"], [{"item": "rime_steel", "count": 1}])
+	assert_eq([def["rare_percent"], def["respawn_ticks"]], [0, 400])
+	assert_eq(def["actions"], [
+		"hack", "rest", "raise_blade", "rime_cleave", "rest",
+		"hack", "rest", "raise_blade", "feint_cleave", "rime_cleave", "rest",
+	])
+	assert_eq(CombatTable.phase_count("frostbound_knight"), 1)
+	assert_eq(def["phases"][0]["below"], 50)
+	assert_eq(CombatTable.cycle("frostbound_knight", 1), ["knight_quickens", "hack", "rime_cleave", "rest", "feint_cleave", "rime_cleave", "rest"])
+	assert_eq(CombatTable.phase_problems(def), [] as Array[String])
+	assert_eq([CombatTable.action_label("hack"), CombatTable.action_damage("hack")], ["Hack", 12])
+	assert_eq([CombatTable.action_label("rime_cleave"), CombatTable.action_damage("rime_cleave")], ["Rime cleave", 28])
+	assert_true(CombatTable.is_heavy("rime_cleave"))
+	assert_false(CombatTable.is_heavy("hack"))
+	assert_eq(CombatTable.action_label("raise_blade"), "Raises its blade")
+	assert_true(CombatTable.is_stance("raise_blade") and CombatTable.is_windup("raise_blade"), "a stance and a wind-up, like the troll's")
+	assert_true(CombatTable.is_feint("feint_cleave"))
+	assert_eq(CombatTable.shown_action("feint_cleave"), "rime_cleave")
+	assert_false(CombatTable.is_attack("feint_cleave"), "a feint deals nothing itself")
+	assert_eq(CombatTable.action_label("knight_quickens"), "Its frost cracks")
+	assert_true(CombatTable.is_stance("knight_quickens") and not CombatTable.is_windup("knight_quickens"), "a stance, announced a tick ahead")
+
+
+## The knight's beats by tick, as "tick:what": what it told (an attack by its name, a stance by
+## its own), and each tick's hit, miss or feint.
+func _beats(events: Array[Dictionary]) -> Array:
+	var out: Array = []
+	for e in events:
+		if e.get("enemy_id", e.get("attacker", "")) != "foe":
+			continue
+		match e["kind"]:
+			Vocab.EV_ENEMY_TELEGRAPHED, Vocab.EV_ENEMY_STANCE:
+				out.append("%d:told %s" % [e["tick"], e["action"]])
+			Vocab.EV_HIT:
+				out.append("%d:hit %d" % [e["tick"], e["amount"]])
+			Vocab.EV_MISSED:
+				out.append("%d:miss" % e["tick"])
+			Vocab.EV_ENEMY_FEINTED:
+				out.append("%d:feint" % e["tick"])
+	return out
+
+
+func test_the_knight_plays_its_cycle_in_order() -> void:
+	var sim := _knight("", IN_REACH, true)
+	var beats := _beats(H.run_stamped(sim, 24))
+	# Noticed on tick 1: a hack, a rest, the wind-up and the cleave it commits to two ticks
+	# after it, a rest, a hack, a rest, the second wind-up, the feint with the real cleave told
+	# on its tick, a rest, and round again.
+	assert_eq(beats.slice(0, 16), [
+		"1:told hack", "2:hit 8",
+		"3:told raise_blade", "4:told rime_cleave", "5:hit 24",
+		"6:told hack", "7:hit 8",
+		"8:told raise_blade", "9:told rime_cleave", "10:feint",
+		"10:told rime_cleave", "11:hit 24",
+		"12:told hack", "13:hit 8",
+		"14:told raise_blade", "15:told rime_cleave",
+	], "%s" % [beats])
+
+
+func test_the_first_cleave_is_wound_up_and_lands_two_ticks_after_the_wind_up() -> void:
+	var sim := _knight("", IN_REACH, true)
+	var events := H.run_stamped(sim, 8)
+	var wind_up := H.where(events, Vocab.EV_ENEMY_STANCE, "action", "raise_blade")[0]
+	var cleave := H.where(events, Vocab.EV_ENEMY_TELEGRAPHED, "action", "rime_cleave")[0]
+	assert_eq(wind_up["style"], CombatTable.STYLE_MELEE)
+	assert_eq(int(cleave["tick"]), int(wind_up["tick"]) + 1, "the cleave is told the tick after the wind-up")
+	assert_eq(int(cleave["at"]), int(wind_up["tick"]) + 2, "and lands two ticks after the first warning")
+	assert_true(cleave["heavy"] and cleave["damage"] == 28)
+	assert_eq(H.where(events, Vocab.EV_HIT, "tick", cleave["at"])[0]["amount"], 24, "28, less the steel's 4")
+
+
+func test_the_feinted_cleave_lands_nothing_and_the_real_one_is_told_on_the_feint_tick() -> void:
+	var sim := _knight("", IN_REACH, true)
+	var events := H.run_stamped(sim, 12)
+	var told := H.where(events, Vocab.EV_ENEMY_TELEGRAPHED, "action", "rime_cleave")
+	assert_eq(told.size(), 3, "the wound-up one, the bluff and the real one")
+	var feint := H.of_kind(events, Vocab.EV_ENEMY_FEINTED)
+	assert_eq(feint.size(), 1)
+	assert_eq(feint[0]["action"], "rime_cleave", "told as the cleave it pretends to be")
+	assert_eq(feint[0]["tick"], told[1]["at"], "on the tick it was told for")
+	assert_true(told[1]["heavy"] and told[1]["damage"] == 28, "told as heavy as the real one")
+	assert_eq(told[2]["tick"], feint[0]["tick"], "the real one is told on the feint tick")
+	assert_eq(told[2]["at"], feint[0]["tick"] + 1, "to land the tick after")
+	assert_eq(H.where(events, Vocab.EV_HIT, "tick", feint[0]["tick"]).size(), 0, "nothing lands on the feint tick")
+	assert_eq(H.where(events, Vocab.EV_MISSED, "tick", feint[0]["tick"]).size(), 0)
+	assert_eq(H.where(events, Vocab.EV_HIT, "tick", told[2]["at"])[0]["amount"], 24, "the real one lands in full")
+
+
+## Steps until the knight's `wind_up`-th wind-up is announced, so the next command is the player's
+## answer to it.
+func _until_wind_up(sim: Sim, nth: int) -> void:
+	var seen := 0
+	for i in 40:
+		sim.step()
+		for e in sim.drain_events():
+			if e["kind"] == Vocab.EV_ENEMY_STANCE and e["action"] == "raise_blade":
+				seen += 1
+		if seen == nth:
+			return
+	assert_true(false, "the knight winds up %d times" % nth)
+
+
+func test_stepping_back_from_the_wind_up_makes_the_committed_cleave_miss() -> void:
+	var sim := _knight("", IN_REACH, true)
+	_until_wind_up(sim, 1)
+	assert_true(sim.command(Vocab.MOVE_TO, {"pos": [KNIGHT_HOME[0], 145.5]})["ok"])
+	var events := H.run_stamped(sim, 2)
+	var missed := H.where(events, Vocab.EV_MISSED, "attacker", "foe")
+	assert_eq(missed.size(), 1, "the cleave finds nobody there")
+	assert_eq(missed[0]["action"], "rime_cleave")
+	assert_eq(H.where(events, Vocab.EV_HIT, "attacker", "foe").size(), 0, "and nothing lands")
+	assert_eq(int(sim.state["health"]), Sim.HEALTH_MAX - 8, "only the opening hack ever hurt")
+
+
+func test_a_player_who_steps_back_and_in_again_on_the_feint_is_in_reach_for_it() -> void:
+	var sim := _knight("", IN_REACH, true)
+	_until_wind_up(sim, 1)
+	H.run(sim, 3)
+	_until_wind_up(sim, 1)
+	# One step back (2 m, out of the blade's reach) on the second wind-up, one step in on the
+	# cleave it tells next, which is the bluff.
+	assert_true(sim.command(Vocab.MOVE_TO, {"pos": [KNIGHT_HOME[0], 148.8]})["ok"])
+	var events := H.run_stamped(sim, 1)
+	assert_eq(H.where(events, Vocab.EV_ENEMY_TELEGRAPHED, "action", "rime_cleave").size(), 1, "the bluff is told")
+	assert_true(sim.command(Vocab.MOVE_TO, {"pos": IN_REACH})["ok"])
+	events = H.run_stamped(sim, 2)
+	assert_eq(_beats(events), ["10:feint", "10:told rime_cleave", "11:hit 24"], "in reach for the real cleave told on the feint tick")
+
+
+func _quicken(sim: Sim) -> void:
+	H.patch_enemy(sim, "foe", {"health": 59})
+
+
+func test_below_half_health_the_knight_starts_its_quick_phase_with_knight_quickens() -> void:
+	var sim := _knight("", IN_REACH, true)
+	H.run(sim, 1)  # noticed; its hack is told
+	_quicken(sim)
+	var events := H.run_stamped(sim, 1)
+	assert_eq(_beats(events), ["2:hit 8", "2:told knight_quickens"], "the first declaration after the mark is the stance")
+	assert_eq(int(sim.state["enemies"]["foe"]["phase"]), 1)
+	assert_eq(H.of_kind(events, Vocab.EV_ENEMY_STANCE)[0]["style"], CombatTable.STYLE_MELEE)
+
+
+func test_a_cleave_already_wound_up_is_still_committed_before_the_knight_quickens() -> void:
+	var sim := _knight("", IN_REACH, true)
+	_until_wind_up(sim, 1)
+	_quicken(sim)
+	var events := H.run_stamped(sim, 4)
+	assert_eq(_beats(events).slice(0, 3), ["4:told rime_cleave", "5:hit 24", "5:told knight_quickens"], "the wound-up cleave lands, then it quickens")
+
+
+func test_in_the_quick_phase_each_cleave_is_told_one_tick_before_it_lands_with_no_wind_up() -> void:
+	var sim := _knight("", IN_REACH, true)
+	H.run(sim, 1)
+	_quicken(sim)
+	var events := H.run_stamped(sim, 16)
+	var beats := _beats(events)
+	# Quickens, a hack, a cleave straight after it, a rest, a feinted cleave with the real one told
+	# on its tick, and round again.
+	assert_eq(beats.slice(0, 15), [
+		"2:hit 8", "2:told knight_quickens",
+		"3:told hack", "4:hit 8",
+		"4:told rime_cleave", "5:hit 24",
+		"6:told rime_cleave", "7:feint",
+		"7:told rime_cleave", "8:hit 24",
+		"9:told knight_quickens", "10:told hack", "11:hit 8",
+		"11:told rime_cleave", "12:hit 24",
+	], "%s" % [beats])
+	assert_eq(H.where(events, Vocab.EV_ENEMY_STANCE, "action", "raise_blade").size(), 0, "no wind-ups left")
+	for t in H.of_kind(events, Vocab.EV_ENEMY_TELEGRAPHED):
+		if t["action"] == "rime_cleave":
+			assert_eq(H.where(events, Vocab.EV_HIT, "tick", t["at"]).size() + H.where(events, Vocab.EV_ENEMY_FEINTED, "tick", t["at"]).size(), 1, "each is told exactly one tick out")
+
+
+func test_a_staff_has_the_edge_on_the_knight_at_any_range_and_a_bow_at_distance() -> void:
+	var knight: String = CombatTable.weapon(CombatTable.enemy("frostbound_knight")["weapon"])["style"]
+	assert_eq(knight, CombatTable.STYLE_MELEE)
+	for distance in [1.0, 3.0, 5.5]:
+		assert_eq(CombatTable.multiplier(CombatTable.STYLE_MAGIC, knight, distance), 1.5, "a staff deals half as much again at %s m" % distance)
+		assert_eq(CombatTable.multiplier(knight, CombatTable.STYLE_MAGIC, distance), 0.5, "and the knight's blows into it are halved")
+	assert_eq(CombatTable.multiplier(CombatTable.STYLE_RANGED, knight, 4.0), 1.5, "a bow at distance has the edge")
+	assert_eq(CombatTable.multiplier(CombatTable.STYLE_RANGED, knight, 1.0), 0.5, "and the knight's own edge up close")
+
+
+func test_a_dead_knight_drops_one_rime_steel_and_no_iron_and_comes_back_400_ticks_later() -> void:
+	var sim := _knight("steel_sword", IN_REACH, true)
+	H.patch_enemy(sim, "foe", {"health": 1})
+	sim.command(Vocab.ATTACK, {"enemy_id": "foe"})
+	var events := H.run(sim, 3)
+	var drops := H.of_kind(events, Vocab.EV_LOOT_DROPPED)
+	assert_eq(drops.size(), 1, "one pile")
+	assert_eq([drops[0]["item"], drops[0]["count"]], ["rime_steel", 1])
+	for item in CombatTable.RARE_LOOT:
+		assert_eq(H.where(events, Vocab.EV_LOOT_DROPPED, "item", item).size(), 0, "no %s" % item)
+	H.place(sim, PAST_THE_GATE)  # well out of its sight
+	var back := H.run(sim, int(CombatTable.enemy("frostbound_knight")["respawn_ticks"]))
+	assert_eq(H.of_kind(back, Vocab.EV_ENEMY_RESPAWNED).size(), 1, "back at home")
+	assert_eq(int(sim.state["enemies"]["foe"]["health"]), 120)
+	assert_eq(Vector2(sim.state["enemies"]["foe"]["pos"][0], sim.state["enemies"]["foe"]["pos"][1]), Vector2(KNIGHT_HOME[0], KNIGHT_HOME[1]))
+	# Every kill drops exactly one, across a run of them.
+	for i in 5:
+		var again := _knight("steel_sword", IN_REACH, true)
+		H.patch_enemy(again, "foe", {"health": 1})
+		again.command(Vocab.ATTACK, {"enemy_id": "foe"})
+		var loot := H.run(again, 3)
+		assert_eq(H.where(loot, Vocab.EV_LOOT_DROPPED, "item", "rime_steel").size(), 1)
+		assert_eq(H.of_kind(loot, Vocab.EV_LOOT_DROPPED).size(), 1, "and nothing else")
+
+
+func test_every_knights_home_is_in_ring_three_out_of_earshot_of_the_next_group_and_out_of_sight_of_the_fire() -> void:
+	var w := WorldDefScript.outpost()
+	var from := w.cell_of(Vector2(PAST_THE_GATE[0], PAST_THE_GATE[1]))
+	var fire := w.object_center("ring_three_fire")
+	var sight := float(CombatTable.enemy("frostbound_knight")["sight"])
+	var count := 0
+	for a in w.enemies:
+		if w.enemies[a]["kind"] != "frostbound_knight":
+			continue
+		count += 1
+		var ha := Vector2(w.enemies[a]["home"][0], w.enemies[a]["home"][1])
+		assert_eq(w.region_at(ha), WorldDef.REGION_RING_THREE, "%s is in ring three" % a)
+		assert_false(GridPath.find(w, from, w.cell_of(ha)).is_empty(), "%s's home can be walked to from the gate and the fire" % a)
+		assert_true(ha.distance_to(fire) > sight, "%s does not see the fire (%.1f m)" % [a, ha.distance_to(fire)])
+		for b in w.enemies:
+			if w.enemies[a]["pack"] == w.enemies[b]["pack"]:
+				continue
+			var hb := Vector2(w.enemies[b]["home"][0], w.enemies[b]["home"][1])
+			assert_true(ha.distance_to(hb) > 12.0, "%s and %s are %.1f m apart" % [a, b, ha.distance_to(hb)])
+	assert_eq(count, 3, "a pair a little way past the fire and one alone farther in")
+	assert_eq(w.enemies["frost_knight_1"]["pack"], w.enemies["frost_knight_2"]["pack"])
+	assert_true(w.enemies["frost_knight_3"]["pack"] != w.enemies["frost_knight_1"]["pack"])
+	var gate := w.object_center("ring_three_gate")
+	var pair := Vector2(w.enemies["frost_knight_1"]["home"][0], w.enemies["frost_knight_1"]["home"][1])
+	var lone := Vector2(w.enemies["frost_knight_3"]["home"][0], w.enemies["frost_knight_3"]["home"][1])
+	assert_true(pair.distance_to(fire) < lone.distance_to(fire), "the pair is nearer the fire than the lone one")
+	assert_true(pair.distance_to(gate) < 40.0, "a little way past it")
+
+
+# --- Reader and non-reader (the knight) ---------------------------------------------------
+
+## The reader holds a steel staff at its range, steps straight back on each wind-up so the
+## committed cleave finds nobody, answers the feint with nothing, and eats only on a rest tick
+## once hurt. `lowest` is the least health it was ever left with.
+func _read_the_knight(weapon := "steel_staff", at := IN_REACH) -> Dictionary:
+	var sim := _knight(weapon, at, true)
+	sim.command(Vocab.ATTACK, {"enemy_id": "foe"})
+	var stepped := 0
+	var ticks := 0
+	var lowest := int(sim.state["health"])
+	while ticks < 160 and sim.state["enemies"]["foe"]["mode"] != Sim.MODE_DEAD and int(sim.state["health"]) > 0:
+		H.patch(sim, {"warmth": Sim.WARMTH_MAX})
+		sim.step()
+		for e in sim.drain_events():
+			if e["kind"] == Vocab.EV_ENEMY_STANCE and e["action"] == "raise_blade":
+				var away: Vector2 = (sim.player_pos() - sim.combatant("foe")["pos"]).normalized()
+				var to: Vector2 = sim.player_pos() + away * 2.0
+				if sim.command(Vocab.MOVE_TO, {"pos": [to.x, to.y]})["ok"]:
+					stepped += 1
+		if not sim.is_attacking() and not sim.is_moving():
+			sim.command(Vocab.ATTACK, {"enemy_id": "foe"})
+		lowest = mini(lowest, int(sim.state["health"]))
+		ticks += 1
+	return {"health": int(sim.state["health"]), "lowest": lowest, "stepped": stepped, "ticks": ticks, "dead": sim.state["enemies"]["foe"]["mode"] == Sim.MODE_DEAD}
+
+
+## The non-reader stands in the knight's reach swinging a steel sword, and eats a trout the tick
+## after any heavy blow is told, as a fighter does who sees the danger but not what it means.
+func _trade_blows(eats: bool) -> Dictionary:
+	var sim := _knight("steel_sword", IN_REACH, true)
+	sim.command(Vocab.ATTACK, {"enemy_id": "foe"})
+	var eat_next := false
+	var ticks := 0
+	var lowest := int(sim.state["health"])
+	while ticks < 160 and sim.state["enemies"]["foe"]["mode"] != Sim.MODE_DEAD and int(sim.state["health"]) > 0:
+		H.patch(sim, {"warmth": Sim.WARMTH_MAX})
+		if eat_next and eats:
+			sim.command(Vocab.EAT, {"index": 0})
+		eat_next = false
+		sim.step()
+		for e in sim.drain_events():
+			if e["kind"] == Vocab.EV_ENEMY_TELEGRAPHED and e["heavy"]:
+				eat_next = true
+		lowest = mini(lowest, int(sim.state["health"]))
+		ticks += 1
+	return {"health": int(sim.state["health"]), "lowest": lowest, "ticks": ticks, "dead": sim.state["enemies"]["foe"]["mode"] == Sim.MODE_DEAD}
+
+
+func test_the_reader_holds_a_staff_and_wins_with_over_60_health_left() -> void:
+	var fight := _read_the_knight()
+	assert_true(fight["dead"], "the knight falls")
+	assert_true(fight["health"] > 60, "with %d health left" % fight["health"])
+	# From a staff's range it is the same fight, only the walk in is added.
+	var ranged := _read_the_knight("steel_staff", STAFF_RANGE)
+	assert_true(ranged["dead"] and ranged["health"] > 60, "from range: %d health left" % ranged["health"])
+
+
+## The issue's non-reader: the reference character standing in reach with a steel sword and
+## swinging. It is the knight's cycle against 12 hits a tick of its own, and it ends below 40
+## health without a meal.
+func test_the_non_reader_standing_in_reach_swinging_a_sword_ends_below_40_health() -> void:
+	var fight := _trade_blows(false)
+	assert_true(fight["dead"], "the knight still falls")
+	assert_true(fight["health"] < 40, "but the swinger is left with %d" % fight["health"])
+
+
+## With a meal after every heavy blow told, the same swinger wins and is hurt: a trout heals 40
+## over five ticks, in a fight of nine to ten. This is the archer's problem too (#198, and
+## docs/balance.md, "Ring three"); this pins what holds until the threshold is settled.
+func test_the_non_reader_that_eats_on_every_heavy_telegraph_wins_but_is_hurt() -> void:
+	var fight := _trade_blows(true)
+	assert_true(fight["dead"], "the knight falls")
+	assert_true(fight["lowest"] < 80, "but not before it hurts: %d at the lowest" % fight["lowest"])

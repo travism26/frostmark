@@ -29,7 +29,7 @@ const COLOR_BY_ENEMY := {
 	"wolf": Color(0.42, 0.40, 0.40), "bandit_archer": Color(0.55, 0.24, 0.20),
 	"bandit_captain": Color(0.30, 0.10, 0.12), "frost_witch": Color(0.40, 0.48, 0.66),
 	"ice_troll": Color(0.58, 0.70, 0.78), "ruin_stalker": Color(0.24, 0.26, 0.30),
-	"snowveil_archer": Color(0.82, 0.90, 0.96),
+	"snowveil_archer": Color(0.82, 0.90, 0.96), "frostbound_knight": Color(0.55, 0.72, 0.92),
 }
 ## Telegraph cues take the style's colour from the icon table, so the ring on the ground, the
 ## name over the enemy and the style badge in the panel always agree.
