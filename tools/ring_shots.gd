@@ -1,5 +1,6 @@
-## Board-only, not shipped: renders the four rings under a palette for the ring-palette
-## board, from the real scene with the HUD hidden.
+## Board-only, not shipped: renders the outpost and each ring under a palette for the
+## ring-palette board, from the real scene with the HUD hidden. A palette with no entry for a
+## ring shows that ring as the table has it.
 ##
 ##   godot --resolution 1280x720 -s tools/ring_shots.gd -- <out_dir> [palette]
 ##
@@ -14,6 +15,7 @@ const SPOTS := {
 	WorldDef.REGION_INNER_RING: [-1.5, 16.5],
 	WorldDef.REGION_RING_ONE: [-11.5, 36.5],
 	WorldDef.REGION_RING_TWO: [2.5, 71.5],
+	WorldDef.REGION_RING_THREE: [-33.5, 136.5],
 }
 const CAMERA_DISTANCE := 26.0
 const SETTLE_FRAMES := 90
@@ -121,7 +123,7 @@ func _run() -> void:
 		main._camera_rig.yaw = 0.0
 		var look: Variant = null
 		if _palette != "table":
-			look = PALETTES[_palette][ring]
+			look = PALETTES[_palette].get(ring)
 		main._atmosphere.set_look_override(look)
 		for i in SETTLE_FRAMES:
 			await process_frame

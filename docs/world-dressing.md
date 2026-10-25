@@ -10,8 +10,9 @@ What stands on the ground in each ring, and why. Decided in the graphics grill (
 | Safe ring | Pale snow, flat drifts, sparse snow-capped small pines at the edge, rocks, logs, a frozen rim around the fishing hole | Open, with clear sight lines back to the palisade |
 | Ring one | Grey-blue snow, deeper drifts, dead trees across the ring and tall pines from 38 m out, wolf dens and bandit camps | Tighter and darker: wolf and bandit country |
 | Ring two | Blue-black snow, rubble and ice shards, a few dead trees, a frozen lake under the deep holes, the ruins | The most dangerous place there is |
+| Ring three | Blue-white glacier ice under a violet sky and the full aurora, thinner snow, ice shards, a few stones, pressure ridges of ice slabs shoved up on end | A place apart from the ruins at a glance; still colder and darker than ring two |
 
-The snowfield is painted by ring: the ring look's `snow_tone` holds out to each ring's edge and steps to the next across a 2.5 m band, so the ground itself says where one ring ends. The look that follows the character (sun, fog, grade) still blends over 8 m.
+The snowfield is painted by ring: the ring look's `snow_tone` holds out to each ring's edge and steps to the next across a 2.5 m band, so the ground itself says where one ring ends. The look that follows the character (sun, fog, grade) still blends over 8 m, and only across an edge two rings share: ring three lies beside ring two rather than around it, so ring two's other edges keep ring two's look.
 
 ## Boundaries and landmarks
 
@@ -24,6 +25,7 @@ The snowfield is painted by ring: the ring look's `snow_tone` holds out to each 
 | Safe ring | A fallen pine | A split rock | A cairn by the road | A dead giant |
 | Ring one | A frozen waterfall down the north cliff | A fallen giant pine past the iron | The caravan wreck on the road to the gate | A ruined watch post |
 | Ring two | A collapsed tower in the gate yard | A fallen arch over the east gap in the outer wall | A ring of old stones around the waystone | A spire of ice on the frozen lake |
+| Ring three | A cairn on the way in from the gate | A spire of ice out on the glacier | A frozen fall down the south cliff | A split erratic boulder |
 
 Every landmark's foot is reachable by click-to-move (`tests/test_dressing.gd` routes to each), and every one stands where paths rarely run.
 
