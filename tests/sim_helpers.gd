@@ -120,9 +120,9 @@ static func where(events: Array[Dictionary], kind: String, field: String, value:
 	return out
 
 
-## Stand-in kinds for the feint and fight-phase rules, which no enemy uses yet. A feint pretends
-## to be a lunge (or, for the kiting kind, a dart); `add_stand_ins()` puts them in CombatTable for
-## a test.
+## Stand-in kinds for the feint, fight-phase and answer rules, which no enemy uses yet. A feint
+## pretends to be a lunge (or, for the kiting kind, a dart); `add_stand_ins()` puts them in
+## CombatTable for a test.
 const STAND_IN_ACTIONS := {
 	"feint_lunge": {"label": "Lunge", "damage": 0, "feint": "lunge"},
 	"feint_dart": {"label": "Dart", "damage": 0, "feint": "dart"},
@@ -151,6 +151,48 @@ const STAND_IN_KINDS := {
 			{
 				"below": 45, "actions": ["draw_bow", "loose", CombatTable.ACTION_REST, "volley", CombatTable.ACTION_REST],
 				"stances": ["captain_bow", "captain_bow", "captain_bow", "captain_bow", "captain_bow"],
+			},
+		],
+		"loot": [], "rare_percent": 0, "respawn_ticks": 100,
+	},
+	# Fights through sabre, bow and staff like the captain, winding up before its cleave, and
+	# answers a counter: a staff with its bow, a blade with its staff. It has no answer to a bow.
+	"stand_in_answerer": {
+		"label": "Answerer", "health": 500, "weapon": "captain_sabre", "speed": 2.0, "sight": 7.0,
+		"actions": [
+			"slash", CombatTable.ACTION_REST, "wind_up", "cleave", CombatTable.ACTION_REST,
+			"draw_bow", "loose", CombatTable.ACTION_REST, "volley", CombatTable.ACTION_REST,
+			"draw_staff", "rime_bolt", CombatTable.ACTION_REST, "blizzard", CombatTable.ACTION_REST,
+			"draw_sabre",
+		],
+		"stances": [
+			"captain_sabre", "captain_sabre", "captain_sabre", "captain_sabre", "captain_sabre",
+			"captain_bow", "captain_bow", "captain_bow", "captain_bow", "captain_bow",
+			"captain_staff", "captain_staff", "captain_staff", "captain_staff", "captain_staff",
+			"captain_sabre",
+		],
+		"answers": {CombatTable.STYLE_MAGIC: 5, CombatTable.STYLE_MELEE: 10},
+		"answer_ticks": 8,
+		"loot": [], "rare_percent": 0, "respawn_ticks": 100,
+	},
+	# Slashes with its sabre and answers nothing until below half health, where it draws sabre,
+	# bow and staff in turn and answers a staff with its bow and a blade with its staff.
+	"stand_in_late_answerer": {
+		"label": "Late answerer", "health": 100, "weapon": "captain_sabre", "speed": 2.0, "sight": 7.0,
+		"actions": ["slash", CombatTable.ACTION_REST, "cleave", CombatTable.ACTION_REST],
+		"phases": [
+			{
+				"below": 50,
+				"actions": [
+					"draw_sabre", "slash", CombatTable.ACTION_REST, "draw_bow", "loose", CombatTable.ACTION_REST,
+					"draw_staff", "rime_bolt", CombatTable.ACTION_REST,
+				],
+				"stances": [
+					"captain_sabre", "captain_sabre", "captain_sabre", "captain_bow", "captain_bow", "captain_bow",
+					"captain_staff", "captain_staff", "captain_staff",
+				],
+				"answers": {CombatTable.STYLE_MAGIC: 3, CombatTable.STYLE_MELEE: 6},
+				"answer_ticks": 8,
 			},
 		],
 		"loot": [], "rare_percent": 0, "respawn_ticks": 100,

@@ -1,9 +1,10 @@
 ## The readability floor: whatever the player does, every enemy blow is telegraphed exactly one
 ## tick ahead, every change of an enemy's style is announced, and a feint deals no damage.
-## Every kind in CombatTable.ENEMIES, and the stand-in feinting and phased kinds, fights a long
-## seeded fight against a player who swaps style and steps in and out of reach, and strikes a
-## kind with fight phases so it comes to them. It reads the table, so a kind added later is
-## covered without editing this file.
+## Every kind in CombatTable.ENEMIES, and the stand-in feinting, phased and answering kinds,
+## fights a long seeded fight against a player who swaps style and steps in and out of reach,
+## strikes a kind with fight phases so it comes to them, and swaps to the counter of a kind that
+## answers so it answers. It reads the table, so a kind added later is covered without editing
+## this file.
 extends "res://tests/run.gd".TestCase
 
 const H := preload("res://tests/sim_helpers.gd")
@@ -46,10 +47,13 @@ func _fight(kind: String, seed: int) -> void:
 	var feints := 0
 	var phases := CombatTable.phase_count(kind)
 	var deepest := 0
+	var answering := range(phases + 1).any(func(p: int) -> bool: return not CombatTable.answers(kind, p).is_empty())
+	var answered := -1
+	var answers := 0
 	for t in TICKS:
 		if int(sim.state["health"]) < TOP_UP or int(sim.state["warmth"]) < TOP_UP:
 			H.patch(sim, {"health": Sim.HEALTH_MAX, "warmth": Sim.WARMTH_MAX})
-		_player_turn(sim, rng, phases > 0)
+		_player_turn(sim, rng, phases > 0, answering)
 		sim.step()
 		var tick := int(sim.state["tick"])
 		var events := sim.drain_events()
@@ -85,21 +89,28 @@ func _fight(kind: String, seed: int) -> void:
 			assert_true(stanced, "%s: the change to %s on tick %d was announced" % [kind, now, tick])
 			style = now
 		deepest = maxi(deepest, int(sim.state["enemies"]["foe"]["phase"]))
+		var last := int(sim.state["enemies"]["foe"]["answered_tick"])
+		if last != answered and last >= 0:
+			answers += 1
+		answered = last
 	assert_true(blows > 10, "%s: the fight came to blows (%d)" % [kind, blows])
 	if (CombatTable.enemy(kind).get("stances", []) as Array).size() > 0:
 		assert_true(changes > 0, "%s: it changed style in the fight" % kind)
 	if (CombatTable.enemy(kind)["actions"] as Array).any(CombatTable.is_feint):
 		assert_true(feints > 0, "%s: it feinted in the fight" % kind)
 	assert_eq(deepest, phases, "%s: it fought into its last phase" % kind)
+	if answering:
+		assert_true(answers > 0, "%s: it answered in the fight" % kind)
 
 
-## The player's move this tick: stay, swap to another weapon, step up close, step back out, or,
-## when `strikes`, attack.
-func _player_turn(sim: Sim, rng: RandomNumberGenerator, strikes: bool) -> void:
+## The player's move this tick: stay, swap to another weapon (to the style with the edge on the
+## foe's, when `counters`), step up close, step back out, or, when `strikes`, attack.
+func _player_turn(sim: Sim, rng: RandomNumberGenerator, strikes: bool, counters: bool) -> void:
 	var foe: Vector2 = sim.combatant("foe")["pos"]
 	match rng.randi_range(0, 5):
 		0:
-			sim.command(Vocab.EQUIP, {"index": rng.randi_range(0, 1)})
+			var counter := _counter(sim) if counters else -1
+			sim.command(Vocab.EQUIP, {"index": counter if counter >= 0 else rng.randi_range(0, 1)})
 		1:
 			_walk(sim, foe + Vector2(rng.randf_range(-1.0, 1.0), rng.randf_range(-1.0, 1.0)))
 		2:
@@ -108,6 +119,18 @@ func _player_turn(sim: Sim, rng: RandomNumberGenerator, strikes: bool) -> void:
 		3:
 			if strikes:
 				sim.command(Vocab.ATTACK, {"enemy_id": "foe"})
+
+
+## The pack slot of a weapon whose style has the edge on the foe's where they stand, or -1.
+func _counter(sim: Sim) -> int:
+	var foe := sim.combatant("foe")
+	var distance := sim.player_pos().distance_to(foe["pos"])
+	var pack: Array = sim.state["inventory"]["pack"]
+	for i in 2:
+		var style: String = CombatTable.weapon(pack[i]["item"] if pack[i] != null else "")["style"]
+		if CombatTable.multiplier(style, foe["style"], distance) > 1.0:
+			return i
+	return -1
 
 
 func _walk(sim: Sim, to: Vector2) -> void:

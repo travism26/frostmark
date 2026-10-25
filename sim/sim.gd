@@ -21,7 +21,7 @@ const WALK_PER_TICK := WALK_SPEED * TICK_SECONDS
 const SNAP_RADIUS_CELLS := 2
 ## Bumped whenever the state shape changes. `restore()` migrates older snapshots forward
 ## (SaveCode.migrate) and refuses ones it cannot read.
-const STATE_VERSION := 12
+const STATE_VERSION := 13
 
 ## The pack: a fixed number of slots, and a carried weight (pack plus equipment, in kg)
 ## above which walking slows to OVERWEIGHT_SPEED of normal. BASE_CARRY_LIMIT is that weight
@@ -213,6 +213,7 @@ func _fresh_enemy(id: String) -> Dictionary:
 		"next": {},
 		"step": 0,
 		"phase": 0,
+		"answered_tick": -1,
 		"respawn_tick": 0,
 	}
 
@@ -1210,6 +1211,7 @@ func _step_enemy(id: String) -> void:
 				e["health"] = int(CombatTable.enemy(e["kind"])["health"])
 				e["step"] = 0
 				e["phase"] = 0
+				e["answered_tick"] = -1
 
 
 ## Why an idle enemy notices the player this tick ("sight" or "noise"), or "" when it does not.
@@ -1306,23 +1308,30 @@ func _kite(id: String) -> void:
 ## An attack is telegraphed now, exactly one tick before it lands, and a feint is telegraphed
 ## as the attack it pretends to be: the same action, style, damage and weight. Once its health
 ## is below a phase's mark, the next action it takes from the cycle (but never the blow a
-## wind-up committed) is that phase's first, and its cycle is that phase's from then on.
+## wind-up committed) is that phase's first, and its cycle is that phase's from then on. An
+## enemy the player has just countered answers, in reach or not, with the stance its answers
+## name instead, and its cycle carries on from there; a phase starting wins over an answer.
 func _enemy_declare(id: String, acted := "") -> void:
 	var e: Dictionary = state["enemies"][id]
 	var me := combatant(id)
 	var action := CombatTable.ACTION_MOVE
 	var style: String = me["style"]
-	if (me["pos"] as Vector2).distance_to(player_pos()) <= float(me["reach"]) or CombatTable.is_windup(acted):
+	var at := int(state["tick"]) + 1
+	var answer := -1 if CombatTable.is_windup(acted) else _answer(id, me)
+	if answer >= 0 or (me["pos"] as Vector2).distance_to(player_pos()) <= float(me["reach"]) or CombatTable.is_windup(acted):
 		var phase := CombatTable.phase_at(e["kind"], int(e["health"]), int(e["phase"]))
 		if phase != int(e["phase"]) and not CombatTable.is_windup(acted):
 			e["phase"] = phase
 			e["step"] = 0
+			answer = -1
 		var actions := CombatTable.cycle(e["kind"], int(e["phase"]))
 		var index := int(e["step"]) % actions.size()
+		if answer >= 0:
+			index = answer
+			e["answered_tick"] = at
 		action = actions[index]
 		style = CombatTable.weapon(CombatTable.stance_weapon(e["kind"], index, int(e["phase"])))["style"]
 		e["step"] = (index + 1) % actions.size()
-	var at := int(state["tick"]) + 1
 	e["next"] = {"action": action, "at": at}
 	var shown := CombatTable.shown_action(action)
 	if CombatTable.is_attack(shown):
@@ -1333,6 +1342,28 @@ func _enemy_declare(id: String, acted := "") -> void:
 		})
 	elif CombatTable.is_stance(action):
 		_emit({"kind": SimVocab.EV_ENEMY_STANCE, "enemy_id": id, "action": action, "style": style, "at": at})
+
+
+## The cycle index of the stance enemy `id` (`me`, its combatant) answers the player with on
+## this declaration, or -1: the player's style has the edge on its own where they stand, its
+## answers name that style, that stance changes its weapon and is not next in its cycle anyway,
+## and `answer_ticks` have passed since its last answer.
+func _answer(id: String, me: Dictionary) -> int:
+	var e: Dictionary = state["enemies"][id]
+	var phase := int(e["phase"])
+	var answered := CombatTable.answers(e["kind"], phase)
+	var countered := player_style()
+	var distance := (me["pos"] as Vector2).distance_to(player_pos())
+	if not answered.has(countered) or CombatTable.multiplier(countered, me["style"], distance) <= 1.0:
+		return -1
+	var last := int(e["answered_tick"])
+	if last >= 0 and int(state["tick"]) + 1 - last < CombatTable.answer_ticks(e["kind"], phase):
+		return -1
+	var index := int(answered[countered])
+	var cycle := CombatTable.cycle(e["kind"], phase)
+	if CombatTable.stance_weapon(e["kind"], index, phase) == me["weapon"] or index == int(e["step"]) % cycle.size():
+		return -1
+	return index
 
 
 ## Moves an engaged enemy toward a point just inside its reach of the player, on the side it
@@ -2255,6 +2286,8 @@ func _restored_enemies(saved: Variant) -> Dictionary:
 		e["phase"] = phase if phase >= 0 and phase <= CombatTable.phase_count(e["kind"]) else 0
 		var cycle := CombatTable.cycle(e["kind"], int(e["phase"])).size()
 		e["step"] = posmod(int(entry["step"]), cycle) if _is_number(entry.get("step")) else 0
+		var answered := int(entry["answered_tick"]) if _is_number(entry.get("answered_tick")) else -1
+		e["answered_tick"] = answered if answered >= 0 else -1
 		e["respawn_tick"] = int(entry["respawn_tick"]) if _is_number(entry.get("respawn_tick")) else 0
 	return out
 
