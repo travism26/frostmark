@@ -19,6 +19,8 @@ const SILENT := AudioCues.SILENT_DB
 ## A heavy telegraph is the same cue, lower and louder, so the big blow is heard coming.
 const HEAVY_PITCH := 0.8
 const HEAVY_GAIN := 4.0
+## A cue cut short (a feint's) fades out over this long rather than clicking off.
+const CUT_FADE := 0.05
 
 const SNOW_PITCH := 1.8
 
@@ -31,6 +33,7 @@ var _started := false
 var _streams := {}  # clip path -> AudioStream, loaded once
 var _voices: Array[AudioStreamPlayer] = []
 var _next_voice := 0
+var _cuts := {}  # voice -> the tween cutting its cue short
 var _wind: AudioStreamPlayer
 var _snow: AudioStreamPlayer
 var _music := {}  # music cue key -> its player
@@ -114,7 +117,7 @@ func handle(events: Array[Dictionary]) -> void:
 	for e in events:
 		for key in AudioCues.event_cues(e):
 			var heavy: bool = e.get("heavy", false)
-			play(key, HEAVY_GAIN if heavy else 0.0, HEAVY_PITCH if heavy else 1.0)
+			play(key, HEAVY_GAIN if heavy else 0.0, HEAVY_PITCH if heavy else 1.0, AudioCues.cut_seconds(e))
 		match e["kind"]:
 			SimVocab.EV_INTERACTED:
 				if e["action"] == SimVocab.ACTION_GATHER:
@@ -187,16 +190,25 @@ func remove_fire(id: String) -> void:
 		_fires.erase(id)
 
 
-## Plays one clip of a cue on the next free voice, `gain` dB over its level.
-func play(key: String, gain := 0.0, pitch := 1.0) -> void:
+## Plays one clip of a cue on the next free voice, `gain` dB over its level, cut off after
+## `cut` seconds when that is above zero.
+func play(key: String, gain := 0.0, pitch := 1.0, cut := 0.0) -> void:
 	if not _started:
 		return
 	var voice := _voices[_next_voice]
 	_next_voice = (_next_voice + 1) % _voices.size()
+	if _cuts.has(voice):
+		(_cuts[voice] as Tween).kill()
+		_cuts.erase(voice)
 	voice.stream = _stream(key)
 	voice.volume_db = float(AudioCues.GAIN.get(key, 0.0)) + gain
 	voice.pitch_scale = pitch
 	voice.play()
+	if cut > 0.0:
+		var fade := create_tween()
+		fade.tween_property(voice, "volume_db", SILENT, CUT_FADE).set_delay(cut)
+		fade.tween_callback(voice.stop)
+		_cuts[voice] = fade
 
 
 # --- Inside ----------------------------------------------------------------------------

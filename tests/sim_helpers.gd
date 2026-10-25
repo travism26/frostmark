@@ -118,3 +118,39 @@ static func where(events: Array[Dictionary], kind: String, field: String, value:
 		if e.get(field) == value:
 			out.append(e)
 	return out
+
+
+## Stand-in kinds for the feint rule, which no enemy uses yet. A feint pretends to be a lunge
+## (or, for the kiting kind, a dart); `add_stand_ins()` puts them in CombatTable for a test.
+const STAND_IN_ACTIONS := {
+	"feint_lunge": {"label": "Lunge", "damage": 0, "feint": "lunge"},
+	"feint_dart": {"label": "Dart", "damage": 0, "feint": "dart"},
+}
+const STAND_IN_KINDS := {
+	# Feints a lunge, then lunges for real, rests, winds up into another feint, and rests.
+	"stand_in_feinter": {
+		"label": "Feinter", "health": 500, "weapon": "fangs", "speed": 2.0, "sight": 6.0,
+		"actions": ["feint_lunge", "lunge", CombatTable.ACTION_REST, "wind_up", "feint_lunge", CombatTable.ACTION_REST],
+		"loot": [], "rare_percent": 0, "respawn_ticks": 100,
+	},
+	# Backs away inside 4 m like a ruin stalker, and feints its first dart.
+	"stand_in_kiting_feinter": {
+		"label": "Kiting feinter", "health": 500, "weapon": "stalker_bow", "speed": 1.5, "sight": 10.0,
+		"kite": 4.0, "actions": ["feint_dart", CombatTable.ACTION_REST, "dart", CombatTable.ACTION_REST],
+		"loot": [], "rare_percent": 0, "respawn_ticks": 100,
+	},
+}
+
+
+static func add_stand_ins() -> void:
+	CombatTable.add_stand_ins(STAND_IN_KINDS, STAND_IN_ACTIONS)
+
+
+## A sim of the real world with only `enemies` in it (id -> {kind, home}), each its own pack,
+## in the order given.
+static func arena(enemies: Dictionary) -> Sim:
+	var world := WorldDef.outpost()
+	world.enemies = {}
+	for id in enemies:
+		world.enemies[id] = {"kind": enemies[id]["kind"], "home": enemies[id]["home"], "pack": id}
+	return SimScript.new(world)

@@ -37,6 +37,8 @@ const HOVER_RAY_LENGTH := 500.0
 const COLOR_LOOT := Color(0.85, 0.68, 0.2)
 const CUE_FONT := 72
 const CUE_FONT_HEAVY := 120
+## What the word over an enemy's head turns to when the blow it named was a feint.
+const FEINT_CUE := "Feint"
 const LOOT_FONT := 40
 ## Frames the warm-up stage is drawn behind the title screen before it is freed.
 const WARMUP_FRAMES := 6
@@ -141,8 +143,9 @@ var _ui_settings: UiSettings
 var _hover_point: Variant = null  # mouse position whose world label to show, or null
 var _hovered_label: Label3D
 var _clock := 0.0  # seconds of play, for flicker
-## Enemy id -> {root, body, label, cue, cue_at, segment, length}: its drawing, its telegraph
-## cue (shown until the tick `cue_at` resolves) and the polyline it walked last tick.
+## Enemy id -> {root, body, label, cue, cue_at, feint_tick, segment, length}: its drawing, its
+## telegraph cue (shown until the tick `cue_at` resolves), the tick it last feinted on and the
+## polyline it walked last tick.
 var _enemies := {}
 var _loot := {}  # loot id -> its pile's node
 var _enemy_layer := Node3D.new()
@@ -643,6 +646,12 @@ func _apply_events(events: Array[Dictionary]) -> void:
 					_projectiles.loose(_character, _enemies[e["target"]]["root"], e["style"], 0.0, -1.0, "", true, _flinch.bind(e["target"]))
 				else:
 					_flinch(e["target"])
+			SimVocab.EV_ENEMY_FEINTED:
+				_last_event = "%s's %s was a feint." % [
+					_sentence(_enemy_name(e["enemy_id"])), CombatTable.action_label(e["action"]).to_lower(),
+				]
+				_show_feint(e)
+				_projectiles.fade(e["enemy_id"])
 			SimVocab.EV_MISSED:
 				_last_event = "%s's %s misses. You stepped clear." % [
 					_sentence(_enemy_name(e["attacker"])), CombatTable.action_label(e["action"]).to_lower(),
@@ -1285,7 +1294,7 @@ func _build_enemies(world: WorldDef) -> void:
 		cue.visible = false
 		root.add_child(cue)
 		_enemies[id] = {
-			"root": root, "body": click, "label": label, "cue": cue, "cue_at": 0,
+			"root": root, "body": click, "label": label, "cue": cue, "cue_at": 0, "feint_tick": -1,
 			"segment": [], "length": 0.0, "weapons": weapons,
 		}
 
@@ -1320,9 +1329,11 @@ func _sync_enemy(id: String) -> void:
 	if weapons.size() > 1:
 		for w in weapons:
 			(weapons[w] as Node3D).visible = w == c["weapon"]
-	var next: Dictionary = e["next"]
-	var announced := CombatTable.is_attack(str(next.get("action", ""))) or CombatTable.is_stance(str(next.get("action", "")))
-	if not alive or e["mode"] != Sim.MODE_ENGAGED or not announced:
+	var next := CombatTable.shown_action(str((e["next"] as Dictionary).get("action", "")))
+	var announced := CombatTable.is_attack(next) or CombatTable.is_stance(next)
+	# A feint's word stays up for the tick it was revealed on.
+	var feinting := int(drawn["feint_tick"]) == int(sim.state["tick"])
+	if not alive or e["mode"] != Sim.MODE_ENGAGED or not (announced or feinting):
 		(drawn["cue"] as Label3D).visible = false
 		_cues.clear_ring(id)
 
@@ -1333,7 +1344,7 @@ func _show_cue(e: Dictionary) -> void:
 	var drawn: Dictionary = _enemies[e["enemy_id"]]
 	var cue: Label3D = drawn["cue"]
 	var heavy: bool = e.get("heavy", false)
-	cue.text = "%s%s" % [CombatTable.action_label(e["action"]).to_upper(), "!" if heavy else ""]
+	cue.text = cue_text(e)
 	cue.font_size = CUE_FONT_HEAVY if heavy else CUE_FONT
 	cue.modulate = COLOR_BY_STYLE.get(e["style"], Color.WHITE)
 	cue.visible = true
@@ -1346,6 +1357,27 @@ func _show_cue(e: Dictionary) -> void:
 		_projectiles.loose(drawn["root"], _character, e["style"], 0.0, Sim.TICK_SECONDS - _accumulator, e["enemy_id"], false)
 	elif CombatTable.is_windup(e["action"]):
 		figure.wind_up(e["style"])
+
+
+## The telegraphed blow was a feint: the ring under the enemy breaks off and the word over its
+## head reads "Feint" until the tick ends, unless the same tick telegraphs its next blow.
+func _show_feint(e: Dictionary) -> void:
+	var drawn: Dictionary = _enemies[e["enemy_id"]]
+	var cue: Label3D = drawn["cue"]
+	cue.text = cue_text(e)
+	cue.font_size = CUE_FONT
+	cue.visible = true
+	drawn["cue_at"] = int(e["at"]) + 1
+	drawn["feint_tick"] = int(e["at"])
+	_cues.clear_ring(e["enemy_id"])
+
+
+## The word over an enemy's head: the name of the blow it telegraphed or the stance it takes,
+## shouted with a "!" when heavy, or "Feint" once a telegraphed blow turns out to be one.
+static func cue_text(e: Dictionary) -> String:
+	if e["kind"] == SimVocab.EV_ENEMY_FEINTED:
+		return FEINT_CUE
+	return "%s%s" % [CombatTable.action_label(e["action"]).to_upper(), "!" if e.get("heavy", false) else ""]
 
 
 ## The one the blow landed on recoils: the character, or an enemy whose rig has a flinch.

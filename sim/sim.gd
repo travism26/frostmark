@@ -992,8 +992,9 @@ func _rand(n: int) -> int:
 
 ## The player and every enemy as one combatant shape: {id, kind, pos, health, health_max,
 ## weapon, style, reach, defence, next}. The style comes from the weapon. `next` is the action
-## declared for the coming tick as {action, at}, or {} when nothing is lined up. Every blow
-## is resolved through this view, so the player and an enemy are hit by the same arithmetic.
+## declared for the coming tick as {action, at}, or {} when nothing is lined up; a feint shows
+## the attack it pretends to be. Every blow is resolved through this view, so the player and an
+## enemy are hit by the same arithmetic.
 func combatant(id: String) -> Dictionary:
 	if id == SimVocab.PLAYER:
 		var weapon := player_weapon()
@@ -1013,10 +1014,13 @@ func combatant(id: String) -> Dictionary:
 	# The weapon of the action declared last: a captain holds his bow from "draws his bow" on.
 	var held := CombatTable.stance_weapon(e["kind"], int(e["step"]) - 1)
 	var enemy_stats := CombatTable.weapon(held)
+	var shown := (e["next"] as Dictionary).duplicate()
+	if shown.has("action"):
+		shown["action"] = CombatTable.shown_action(shown["action"])
 	return {
 		"id": id, "kind": e["kind"], "pos": _pos(e), "health": int(e["health"]),
 		"health_max": int(def["health"]), "weapon": held, "style": enemy_stats["style"],
-		"reach": enemy_stats["reach"], "defence": 0, "next": (e["next"] as Dictionary).duplicate(),
+		"reach": enemy_stats["reach"], "defence": 0, "next": shown,
 	}
 
 
@@ -1224,8 +1228,9 @@ func _disengage(id: String) -> void:
 	_emit({"kind": SimVocab.EV_ENEMY_DISENGAGED, "enemy_id": id})
 
 
-## Carries out what the enemy declared last tick: closes in, rests, or strikes. A strike whose
-## target has stepped out of reach since it was telegraphed is a miss. Returns the action.
+## Carries out what the enemy declared last tick: closes in, rests, feints or strikes. A strike
+## whose target has stepped out of reach since it was telegraphed is a miss. A feint turns on
+## the player and strikes nothing: no hit, no miss, no noise. Returns the action.
 func _enemy_act(id: String) -> String:
 	var e: Dictionary = state["enemies"][id]
 	var next: Dictionary = e["next"]
@@ -1236,12 +1241,19 @@ func _enemy_act(id: String) -> String:
 	if action == CombatTable.ACTION_MOVE:
 		_chase(id)
 		return action
-	if not CombatTable.is_attack(action):
+	var feint := CombatTable.is_feint(action)
+	if not CombatTable.is_attack(action) and not feint:
 		return action
 	var me := combatant(id)
 	var toward := player_pos() - (me["pos"] as Vector2)
 	if toward != Vector2.ZERO:
 		e["facing"] = _xz(toward.normalized())
+	if feint:
+		_emit({
+			"kind": SimVocab.EV_ENEMY_FEINTED, "enemy_id": id, "action": CombatTable.shown_action(action),
+			"style": me["style"], "at": int(state["tick"]),
+		})
+		return action
 	if toward.length() > float(me["reach"]):
 		_emit({"kind": SimVocab.EV_MISSED, "attacker": id, "target": SimVocab.PLAYER, "action": action})
 		return action
@@ -1271,7 +1283,8 @@ func _kite(id: String) -> void:
 
 ## Declares what the enemy does next tick: the next action of its cycle while the player is in
 ## its reach, or straight after a wind-up (`acted` is what it did this tick), else closing in.
-## An attack is telegraphed now, exactly one tick before it lands.
+## An attack is telegraphed now, exactly one tick before it lands, and a feint is telegraphed
+## as the attack it pretends to be: the same action, style, damage and weight.
 func _enemy_declare(id: String, acted := "") -> void:
 	var e: Dictionary = state["enemies"][id]
 	var me := combatant(id)
@@ -1285,11 +1298,12 @@ func _enemy_declare(id: String, acted := "") -> void:
 		e["step"] = (index + 1) % actions.size()
 	var at := int(state["tick"]) + 1
 	e["next"] = {"action": action, "at": at}
-	if CombatTable.is_attack(action):
+	var shown := CombatTable.shown_action(action)
+	if CombatTable.is_attack(shown):
 		_emit({
-			"kind": SimVocab.EV_ENEMY_TELEGRAPHED, "enemy_id": id, "action": action,
-			"style": style, "damage": CombatTable.action_damage(action),
-			"heavy": CombatTable.is_heavy(action), "at": at,
+			"kind": SimVocab.EV_ENEMY_TELEGRAPHED, "enemy_id": id, "action": shown,
+			"style": style, "damage": CombatTable.action_damage(shown),
+			"heavy": CombatTable.is_heavy(shown), "at": at,
 		})
 	elif CombatTable.is_stance(action):
 		_emit({"kind": SimVocab.EV_ENEMY_STANCE, "enemy_id": id, "action": action, "style": style, "at": at})
@@ -2209,7 +2223,7 @@ func _restored_enemies(saved: Variant) -> Dictionary:
 		e["facing"] = _xz(Vector2(facing[0], facing[1])) if _is_xz(facing) else e["facing"]
 		e["health"] = clampi(int(entry["health"]), 0, int(CombatTable.enemy(e["kind"])["health"]))
 		e["mode"] = mode
-		if next is Dictionary and CombatTable.ACTIONS.has(str(next.get("action", ""))) and _is_number(next.get("at")):
+		if next is Dictionary and CombatTable.has_action(str(next.get("action", ""))) and _is_number(next.get("at")):
 			e["next"] = {"action": str(next["action"]), "at": int(next["at"])}
 		var cycle: int = (CombatTable.enemy(e["kind"])["actions"] as Array).size()
 		e["step"] = posmod(int(entry["step"]), cycle) if _is_number(entry.get("step")) else 0

@@ -80,7 +80,9 @@ const NOTICE_HIT := "hit"
 ## is announced a tick ahead like an attack: the captain changing weapon, so the change of
 ## style can be read and countered, or a troll winding up, so its crush can be seen coming
 ## two ticks out. A `windup` commits the enemy: the next action of its cycle is declared even
-## if the player has stepped out of reach, and a blow that finds nobody misses.
+## if the player has stepped out of reach, and a blow that finds nobody misses. A `feint` names
+## the attack it pretends to be: it is declared and telegraphed exactly as that attack, then
+## lands nothing (no enemy feints yet; ring three's will).
 const ACTION_MOVE := "move"
 const ACTION_REST := "rest"
 const ACTIONS := {
@@ -181,37 +183,71 @@ const RARE_LOOT: Array[String] = [
 ]
 
 
+## Stand-in kinds and actions, on top of ENEMIES and ACTIONS: a test of a mechanic that no
+## enemy uses yet defines its own kind here rather than in the tables. Empty in the game.
+static var _stand_in_kinds := {}
+static var _stand_in_actions := {}
+
+
+## Adds stand-in `kinds` and `actions`, shaped like ENEMIES and ACTIONS entries, for a test.
+static func add_stand_ins(kinds: Dictionary, actions: Dictionary) -> void:
+	_stand_in_kinds.merge(kinds, true)
+	_stand_in_actions.merge(actions, true)
+
+
+static func clear_stand_ins() -> void:
+	_stand_in_kinds.clear()
+	_stand_in_actions.clear()
+
+
 static func is_enemy_kind(kind: String) -> bool:
-	return ENEMIES.has(kind)
+	return ENEMIES.has(kind) or _stand_in_kinds.has(kind)
 
 
 static func enemy(kind: String) -> Dictionary:
-	return ENEMIES[kind]
+	return ENEMIES[kind] if ENEMIES.has(kind) else _stand_in_kinds[kind]
+
+
+static func has_action(action: String) -> bool:
+	return ACTIONS.has(action) or _stand_in_actions.has(action)
+
+
+static func _action(action: String) -> Dictionary:
+	return ACTIONS.get(action, _stand_in_actions.get(action, {}))
 
 
 static func is_attack(action: String) -> bool:
-	return ACTIONS.has(action) and int(ACTIONS[action]["damage"]) > 0
+	return int(_action(action).get("damage", 0)) > 0
 
 
 static func is_heavy(action: String) -> bool:
-	return ACTIONS.has(action) and bool(ACTIONS[action].get("heavy", false))
+	return bool(_action(action).get("heavy", false))
 
 
 static func action_damage(action: String) -> int:
-	return int(ACTIONS[action]["damage"]) if ACTIONS.has(action) else 0
+	return int(_action(action).get("damage", 0))
 
 
 static func is_stance(action: String) -> bool:
-	return ACTIONS.has(action) and bool(ACTIONS[action].get("stance", false))
+	return bool(_action(action).get("stance", false))
 
 
 static func is_windup(action: String) -> bool:
-	return ACTIONS.has(action) and bool(ACTIONS[action].get("windup", false))
+	return bool(_action(action).get("windup", false))
+
+
+static func is_feint(action: String) -> bool:
+	return _action(action).has("feint")
+
+
+## What an action shows the player: the attack a feint pretends to be, else the action itself.
+static func shown_action(action: String) -> String:
+	return str(_action(action)["feint"]) if is_feint(action) else action
 
 
 ## The weapon an enemy of `kind` holds for the action at `index` of its cycle.
 static func stance_weapon(kind: String, index: int) -> String:
-	var def: Dictionary = ENEMIES[kind]
+	var def := enemy(kind)
 	var stances: Array = def.get("stances", [])
 	if stances.is_empty():
 		return def["weapon"]
@@ -219,7 +255,7 @@ static func stance_weapon(kind: String, index: int) -> String:
 
 
 static func action_label(action: String) -> String:
-	return ACTIONS[action]["label"] if ACTIONS.has(action) else action
+	return _action(action).get("label", action)
 
 
 ## A weapon's stats: {label, style, power, speed, reach, ammo}. Unknown or empty ids are fists.
