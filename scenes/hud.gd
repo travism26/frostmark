@@ -335,14 +335,13 @@ func _refresh_stash() -> void:
 ## Recipe rows are built once and updated in place, so a Craft button is never freed
 ## between the press and the release of a click.
 func _refresh_craft() -> void:
-	var pack: Array = sim.state["inventory"]["pack"]
 	for id in RecipeTable.ids():
 		if not _craft_rows.has(id):
 			_add_craft_row(id)
 		var r := RecipeTable.get_recipe(id)
 		var inputs: PackedStringArray = []
 		for kind in r["inputs"]:
-			inputs.append("%d %s (%d)" % [r["inputs"][kind], ItemTable.label(kind), Inventory.count_of(pack, kind)])
+			inputs.append("%d %s (%d)" % [r["inputs"][kind], ItemTable.label(kind), sim.smithing_count(kind)])
 		var row: Dictionary = _craft_rows[id]
 		var out: Dictionary = r["output"]
 		var made: String = r["label"] if int(out["count"]) <= 1 else "%d %s" % [out["count"], r["label"]]
@@ -952,7 +951,7 @@ func _build_craft() -> void:
 	box.add_theme_constant_override("separation", 8)
 	_craft_panel.add_child(box)
 	box.add_child(_header("Workbench", close_panels))
-	box.add_child(UiTheme.muted("Smithing: crafts from what is in your pack.", 13))
+	box.add_child(UiTheme.muted("Smithing: takes from your stash first, then your pack.", 13))
 	var scroll := ScrollContainer.new()
 	scroll.custom_minimum_size = Vector2(548, 380)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
