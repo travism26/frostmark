@@ -6,6 +6,7 @@
 ## that must be built first, or "" when none is needed. `xp` is experience granted to `skill` per craft.
 ## `tier` is the metal tier the recipe works; the simulation refuses any recipe above its
 ## smithing cap (bronze until the Bloomery raises it to iron, or the blast furnace to steel).
+## Fur works no metal: its tier is "", which ranks below every tier, so the cap never refuses it.
 ##
 ## A cooking entry is keyed by the raw item and gives the cooked `output`, the cooking
 ## `level` required, the `xp` per success, and the `burn` percent at that level, which falls
@@ -91,6 +92,19 @@ const RECIPES := {
 	"bronze_legs": {
 		"label": "Bronze legs", "inputs": {"bronze_bar": 1}, "output": {"item": "bronze_legs", "count": 1},
 		"skill": SkillTable.SMITHING, "level": 3, "upgrade": "armoury", "xp": 10, "tier": ItemTable.TIER_BRONZE,
+	},
+	# Fur: wolf pelts, with the bronze armour once the Armoury is built.
+	"fur_hood": {
+		"label": "Fur hood", "inputs": {"wolf_pelt": 2}, "output": {"item": "fur_hood", "count": 1},
+		"skill": SkillTable.SMITHING, "level": 3, "upgrade": "armoury", "xp": 10, "tier": "",
+	},
+	"fur_coat": {
+		"label": "Fur coat", "inputs": {"wolf_pelt": 3}, "output": {"item": "fur_coat", "count": 1},
+		"skill": SkillTable.SMITHING, "level": 3, "upgrade": "armoury", "xp": 20, "tier": "",
+	},
+	"fur_legs": {
+		"label": "Fur leggings", "inputs": {"wolf_pelt": 2}, "output": {"item": "fur_legs", "count": 1},
+		"skill": SkillTable.SMITHING, "level": 3, "upgrade": "armoury", "xp": 10, "tier": "",
 	},
 	# Iron: ring one's iron ore, once the Bloomery is built.
 	"iron_bar": {

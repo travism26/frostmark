@@ -525,6 +525,8 @@ func test_three_visible_gear_tiers_for_every_slot_and_style() -> void:
 		if slot == "":
 			continue
 		var tier := ItemTable.tier(kind)
+		if tier == "" and ItemTable.ARMOUR_SLOTS.has(slot):
+			continue  # fur: a sideways choice in an armour slot, with no tier
 		assert_true(ItemTable.tier_rank(tier) >= 0, "%s has a gear tier" % kind)
 		var group := slot
 		if slot == ItemTable.SLOT_WEAPON:

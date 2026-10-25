@@ -22,6 +22,8 @@ func test_recipe_table_shape() -> void:
 			assert_true(r.has(key), "%s has %s" % [id, key])
 		assert_true(SkillTable.NAMES.has(r["skill"]))
 		assert_true(ItemTable.has(r["output"]["item"]))
+		assert_true(r.has("tier"), "%s has a tier" % id)
+		assert_true(r["tier"] == "" or ItemTable.TIERS.has(r["tier"]), "%s's tier is a gear tier or none" % id)
 
 
 func test_craft_consumes_inputs_and_produces_output() -> void:
@@ -116,3 +118,75 @@ func test_craft_needs_the_workbench() -> void:
 	assert_eq(sim.command(Vocab.SMITH, {"recipe": "wooden_club"})["reason"], Vocab.REASON_NOT_AT_WORKBENCH, "at the spawn")
 	H.walk_to(sim, H.OUTSIDE)
 	assert_eq(sim.command(Vocab.SMITH, {"recipe": "wooden_club"})["reason"], Vocab.REASON_NOT_AT_WORKBENCH, "outside")
+
+
+# --- Fur pieces ----------------------------------------------------------------------------
+
+## The three fur pieces as the ticket gives them (#141): wolf pelts and xp, all at smithing 3.
+const FUR := {"fur_hood": [2, 10], "fur_coat": [3, 20], "fur_legs": [2, 10]}
+
+
+## At the workbench with `upgrades` built, at smithing `level`, `pack` in the pack and `stash`
+## in the stash.
+func _at_workbench_for_fur(upgrades: Array, level: int, pack: Array, stash: Array = []) -> Sim:
+	var sim := _at_workbench_with_stash(pack, stash)
+	var snap := sim.snapshot()
+	snap["upgrades"] = upgrades
+	snap["skills"][SkillTable.SMITHING] = {"xp": SkillTable.xp_for_level(level), "level": level}
+	sim.restore(snap)
+	sim.drain_events()
+	return sim
+
+
+func test_fur_pieces_are_tierless_wolf_pelt_recipes_at_smithing_3() -> void:
+	for id in FUR:
+		var r := RecipeTable.get_recipe(id)
+		assert_eq(r["inputs"], {"wolf_pelt": FUR[id][0]}, "%s's pelts" % id)
+		assert_eq(int(r["xp"]), FUR[id][1], "%s's xp" % id)
+		assert_eq(int(r["level"]), 3, "%s's smithing level" % id)
+		assert_eq(r["skill"], SkillTable.SMITHING)
+		assert_eq(r["upgrade"], "armoury")
+		assert_eq(r["tier"], "", "%s has no tier" % id)
+		assert_eq(r["output"], {"item": id, "count": 1})
+		assert_eq(ItemTable.tier(id), "", "the %s itself has no tier" % id)
+		assert_true(UpgradeTable.get_upgrade("armoury")["effects"]["recipes"].has(id), "the Armoury unlocks %s" % id)
+
+
+func test_fur_pieces_are_refused_before_the_armoury_and_made_after_it() -> void:
+	for id in FUR:
+		var pelts: int = FUR[id][0]
+		var sim := _at_workbench_for_fur(["forge"], 3, [{"item": "wolf_pelt", "count": pelts}])
+		assert_eq(sim.command(Vocab.SMITH, {"recipe": id})["reason"], Vocab.REASON_UPGRADE_MISSING, "%s needs the Armoury" % id)
+		sim = _at_workbench_for_fur(["forge", "armoury"], 3, [{"item": "wolf_pelt", "count": pelts}])
+		var xp_before := int(sim.state["skills"][SkillTable.SMITHING]["xp"])
+		assert_true(sim.command(Vocab.SMITH, {"recipe": id})["ok"], "%s is made after the Armoury" % id)
+		var events := H.run(sim, 1)
+		assert_eq(H.of_kind(events, Vocab.EV_CRAFTED)[0]["item"], id)
+		assert_eq(H.pack_count(sim, id), 1, "one %s made" % id)
+		assert_eq(H.pack_count(sim, "wolf_pelt"), 0, "%s took its %d pelts" % [id, pelts])
+		assert_eq(int(sim.state["skills"][SkillTable.SMITHING]["xp"]) - xp_before, FUR[id][1], "%s grants its xp" % id)
+
+
+func test_fur_pieces_take_their_pelts_from_the_stash_then_the_pack() -> void:
+	var sim := _at_workbench_for_fur(["forge", "armoury"], 3, [{"item": "wolf_pelt", "count": 2}], [{"item": "wolf_pelt", "count": 2}])
+	assert_true(sim.command(Vocab.SMITH, {"recipe": "fur_coat"})["ok"], "the stash and the pack make 3 pelts")
+	H.run(sim, 1)
+	assert_eq(H.stash_count(sim, "wolf_pelt"), 0, "the stash pays first")
+	assert_eq(H.pack_count(sim, "wolf_pelt"), 1, "the pack pays the rest")
+	assert_eq(H.pack_count(sim, "fur_coat"), 1)
+
+
+func test_fur_pieces_need_smithing_3() -> void:
+	for id in FUR:
+		var sim := _at_workbench_for_fur(["forge", "armoury"], 2, [{"item": "wolf_pelt", "count": 3}])
+		assert_eq(sim.command(Vocab.SMITH, {"recipe": id})["reason"], Vocab.REASON_LEVEL_TOO_LOW, "%s at smithing 2" % id)
+
+
+func test_fur_is_never_refused_for_the_smithing_cap() -> void:
+	var sim := _at_workbench_for_fur(["forge", "armoury"], 3, [{"item": "wolf_pelt", "count": 3}])
+	assert_eq(sim.smithing_cap(), ItemTable.TIER_BRONZE, "the starting cap")
+	for id in FUR:
+		assert_eq(sim.check(Vocab.SMITH, {"recipe": id}), "", "%s at the bronze cap" % id)
+	H.patch(sim, {"upgrades": ["forge", "armoury", "bloomery", "ring_two_gate", "blast_furnace"]})
+	for id in FUR:
+		assert_eq(sim.check(Vocab.SMITH, {"recipe": id}), "", "%s at the steel cap" % id)

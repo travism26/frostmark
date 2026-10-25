@@ -5,7 +5,7 @@
 ## equipment slot the item goes in, or "" for materials. `tool` names what a tool counts as
 ## for gathering ("axe" for woodcutting, "pickaxe" for mining, "rod" for fishing). `tier` is
 ## the gear tier the brief shows on the character (wooden, bronze, iron, steel); a better tool
-## gathers faster and surer. A weapon carries its combat `style`, `power` (damage per hit
+## gathers faster and surer. Fur pieces are armour with no tier: a sideways choice, not a rung. A weapon carries its combat `style`, `power` (damage per hit
 ## before the style edge), `speed` (ticks between swings), `reach` (metres) and, for a ranged
 ## weapon, the `ammo` item each shot uses (arrows for a bow, frost shards for a staff's cast).
 ## Armour (a helm, a body and legs, each worn in its own slot) carries `defence`, and the
@@ -240,6 +240,19 @@ const ITEMS := {
 		"label": "Steel legs", "stack": 1, "weight": 2, "value": 60, "slot": SLOT_LEGS,
 		"defence": 1, "tier": TIER_STEEL,
 	},
+	# Fur, from wolf pelts once the Armoury is built: armour slots, no tier and no defence.
+	"fur_hood": {
+		"label": "Fur hood", "stack": 1, "weight": 1, "value": 20, "slot": SLOT_HELM,
+		"defence": 0,
+	},
+	"fur_coat": {
+		"label": "Fur coat", "stack": 1, "weight": 2, "value": 30, "slot": SLOT_BODY,
+		"defence": 0,
+	},
+	"fur_legs": {
+		"label": "Fur leggings", "stack": 1, "weight": 1, "value": 20, "slot": SLOT_LEGS,
+		"defence": 0,
+	},
 }
 
 
@@ -271,7 +284,7 @@ static func tool(kind: String) -> String:
 	return ITEMS[kind].get("tool", "")
 
 
-## The item's gear tier ("wooden", "bronze", "iron", "steel"), or "" for materials and food.
+## The item's gear tier ("wooden", "bronze", "iron", "steel"), or "" for materials, food and fur.
 static func tier(kind: String) -> String:
 	return ITEMS[kind].get("tier", "") if ITEMS.has(kind) else ""
 
