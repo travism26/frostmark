@@ -83,10 +83,11 @@ func _player_has_edge(sim: Sim) -> bool:
 	return CombatTable.multiplier(sim.player_style(), _foe_style(sim), distance) > 1.0
 
 
-func test_no_enemy_answers_yet() -> void:
+func test_only_the_aurora_seer_answers_yet() -> void:
 	for kind in CombatTable.ENEMIES:
 		for phase in CombatTable.phase_count(kind) + 1:
-			assert_eq(CombatTable.answers(kind, phase), {}, "%s has no answers" % kind)
+			var answers := {"ranged": 5, "magic": 10} if kind == "aurora_seer" else {}
+			assert_eq(CombatTable.answers(kind, phase), answers, "%s's answers" % kind)
 	H.add_stand_ins()
 	assert_eq(CombatTable.answers("stand_in_answerer"), {"magic": 5, "melee": 10})
 	assert_eq(CombatTable.answer_ticks("stand_in_answerer"), ANSWER_TICKS)

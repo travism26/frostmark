@@ -409,6 +409,13 @@ static func _ring_three(w: WorldDef) -> void:
 		["frost_knight_2", "frostbound_knight", [-24.5, 154.5], "knight_pair"],
 		["frost_knight_3", "frostbound_knight", [-8.0, 180.0], "knight_alone"],
 	])
+	# Aurora seers, three alone in the south half of the ring between the archers and the far
+	# cliff, each more than a fight's noise from every other group.
+	placements.append_array([
+		["seer_1", "aurora_seer", [30.5, 166.5], "seer_1"],
+		["seer_2", "aurora_seer", [50.5, 177.5], "seer_2"],
+		["seer_3", "aurora_seer", [-34.5, 170.5], "seer_3"],
+	])
 	for p in placements:
 		w.enemies[p[0]] = {"kind": p[1], "home": p[2], "pack": p[3]}
 

@@ -894,3 +894,321 @@ func test_the_non_reader_that_eats_on_every_heavy_telegraph_wins_but_is_hurt() -
 	var fight := _trade_blows(true)
 	assert_true(fight["dead"], "the knight falls")
 	assert_true(fight["lowest"] < 80, "but not before it hurts: %d at the lowest" % fight["lowest"])
+
+
+# --- The Aurora seer ----------------------------------------------------------------------
+
+## Open ice in the south of the ring, where the first seer keeps it, a spot 5 m south of it for
+## the player (inside its sight and the staff's reach, past the blade's) and one 1.2 m from it
+## (inside the blade's).
+const SEER_HOME := [30.5, 166.5]
+const SEER_STAFF_RANGE := [30.5, 171.5]
+const SEER_IN_REACH := [30.5, 167.7]
+## What the player carries: a meal, and the weapon of each style to swap to.
+const SEER_PACK := [
+	{"item": "cooked_trout", "count": 5}, {"item": "steel_bow", "count": 1}, {"item": "steel_staff", "count": 1},
+	{"item": "arrows", "count": 100}, {"item": "frost_shards", "count": 100},
+]
+## The player is topped up below this, so a fight runs as long as a test needs.
+const SEER_TOP_UP := 50
+
+
+## One seer at its home, with a player at `at` holding `weapon`, not fighting back.
+func _seer(weapon := "", at := SEER_STAFF_RANGE, reference := false) -> Sim:
+	var sim := _duel(weapon, at, reference, "aurora_seer", SEER_HOME)
+	H.set_pack(sim, SEER_PACK)
+	sim.command(Vocab.SET_AUTO_RETALIATE, {"on": false})
+	return sim
+
+
+## Steps `ticks` ticks like H.run_stamped, topping health and warmth up as it goes.
+func _seer_run(sim: Sim, ticks: int) -> Array[Dictionary]:
+	var events: Array[Dictionary] = []
+	for i in ticks:
+		if int(sim.state["health"]) < SEER_TOP_UP or int(sim.state["warmth"]) < SEER_TOP_UP:
+			H.patch(sim, {"health": Sim.HEALTH_MAX, "warmth": Sim.WARMTH_MAX})
+		events.append_array(H.run_stamped(sim, 1))
+	return events
+
+
+## The seer's declarations (stances and attacks) among `events`, as "tick:action".
+func _declared_by_the_seer(events: Array[Dictionary]) -> Array:
+	return events.filter(func(e: Dictionary) -> bool:
+		return e.get("enemy_id") == "foe" and e["kind"] in [Vocab.EV_ENEMY_STANCE, Vocab.EV_ENEMY_TELEGRAPHED]
+	).map(func(e: Dictionary) -> String: return "%d:%s" % [e["tick"], e["action"]])
+
+
+## Just the actions of those declarations, in order.
+func _seer_actions(events: Array[Dictionary]) -> Array:
+	return _declared_by_the_seer(events).map(func(d: String) -> String: return d.split(":")[1])
+
+
+## Asks for the steel weapon of `style` from the pack; it is in hand from the next tick.
+func _seer_swap_to(sim: Sim, style: String) -> void:
+	var pack: Array = sim.state["inventory"]["pack"]
+	for i in pack.size():
+		if pack[i] != null and ItemTable.ITEMS[pack[i]["item"]].get("style", "") == style:
+			assert_true(sim.command(Vocab.EQUIP, {"index": i})["ok"], "equip the %s weapon" % style)
+			return
+	assert_true(false, "a %s weapon in the pack" % style)
+
+
+func _held(sim: Sim) -> String:
+	return sim.combatant("foe")["weapon"]
+
+
+func test_the_aurora_seer_is_a_caster_that_reads_the_player_back_with_its_own_loot() -> void:
+	var def := CombatTable.enemy("aurora_seer")
+	assert_eq(def["label"], "Aurora seer")
+	assert_eq([def["health"], def["speed"], def["sight"]], [60, 1.5, 8.0])
+	assert_eq(def["weapon"], "aurora_staff")
+	var staff := CombatTable.weapon("aurora_staff")
+	assert_eq([staff["style"], staff["reach"]], [CombatTable.STYLE_MAGIC, 6.0], "a natural staff, 6 m")
+	var blade := CombatTable.weapon("seer_blade")
+	assert_eq([blade["style"], blade["reach"]], [CombatTable.STYLE_MELEE, 1.5], "and a natural blade, 1.5 m")
+	assert_false(ItemTable.has("aurora_staff") or ItemTable.has("seer_blade"), "neither an item")
+	assert_eq(def["loot"], [{"item": "aurora_glass", "count": 1}])
+	assert_eq([def["rare_percent"], def["respawn_ticks"]], [0, 300])
+	assert_eq(def["actions"], [
+		"aurora_bolt", "rest", "aurora_lance", "rest", "rest",
+		"conjure_blade", "ice_slash", "rest", "ice_rend", "rest", "raise_aurora",
+	])
+	assert_eq(def["stances"], [
+		"aurora_staff", "aurora_staff", "aurora_staff", "aurora_staff", "aurora_staff",
+		"seer_blade", "seer_blade", "seer_blade", "seer_blade", "seer_blade", "aurora_staff",
+	])
+	assert_eq(def["answers"], {"ranged": 5, "magic": 10})
+	assert_eq(def["answer_ticks"], 8)
+	assert_eq(CombatTable.answer_problems(def), [] as Array[String])
+	assert_eq([CombatTable.action_label("aurora_bolt"), CombatTable.action_damage("aurora_bolt")], ["Aurora bolt", 8])
+	assert_eq([CombatTable.action_label("aurora_lance"), CombatTable.action_damage("aurora_lance")], ["Aurora lance", 22])
+	assert_eq([CombatTable.action_label("ice_slash"), CombatTable.action_damage("ice_slash")], ["Ice slash", 10])
+	assert_eq([CombatTable.action_label("ice_rend"), CombatTable.action_damage("ice_rend")], ["Ice rend", 24])
+	assert_true(CombatTable.is_heavy("aurora_lance") and CombatTable.is_heavy("ice_rend"))
+	assert_false(CombatTable.is_heavy("aurora_bolt") or CombatTable.is_heavy("ice_slash"))
+	assert_eq(CombatTable.action_label("conjure_blade"), "Conjures a blade")
+	assert_eq(CombatTable.action_label("raise_aurora"), "Raises its staff")
+	assert_true(CombatTable.is_stance("conjure_blade") and CombatTable.is_stance("raise_aurora"))
+	assert_false(CombatTable.is_windup("conjure_blade") or CombatTable.is_windup("raise_aurora"), "an answer is not a wind-up")
+
+
+func test_left_alone_the_seer_works_through_both_stances_in_cycle_order() -> void:
+	var sim := _seer()
+	var events := _seer_run(sim, 40)
+	var cycle := ["aurora_bolt", "aurora_lance", "conjure_blade", "ice_slash", "ice_rend", "raise_aurora"]
+	assert_eq(_seer_actions(events).slice(0, 18), cycle + cycle + cycle, "bolt, lance, a blade, slash, rend, a staff, and round again")
+	assert_eq(H.of_kind(events, Vocab.EV_ENEMY_STANCE).size() >= 4, true)
+	assert_eq(int(sim.state["enemies"]["foe"]["answered_tick"]), -1, "and never answered anything")
+
+
+func test_its_style_and_reach_follow_its_stance() -> void:
+	var sim := _seer()
+	var seen := {}
+	for i in 30:
+		var events := _seer_run(sim, 1)
+		var c := sim.combatant("foe")
+		seen["%s %s %.1f" % [c["weapon"], c["style"], c["reach"]]] = true
+		for e in H.of_kind(events, Vocab.EV_ENEMY_STANCE):
+			assert_eq(e["style"], CombatTable.STYLE_MELEE if e["action"] == "conjure_blade" else CombatTable.STYLE_MAGIC, "%s is told in its new style" % e["action"])
+		for e in H.of_kind(events, Vocab.EV_ENEMY_TELEGRAPHED):
+			var blade: bool = e["action"] in ["ice_slash", "ice_rend"]
+			assert_eq(e["style"], CombatTable.STYLE_MELEE if blade else CombatTable.STYLE_MAGIC, "%s reads as %s" % [e["action"], e["style"]])
+	assert_eq(seen.keys().size(), 2, "it holds the staff or the blade and nothing else")
+	assert_true(seen.has("aurora_staff magic 6.0") and seen.has("seer_blade melee 1.5"))
+
+
+func test_a_bow_turned_on_the_staff_is_answered_with_a_conjured_blade_and_it_closes_in() -> void:
+	var sim := _seer()
+	_seer_run(sim, 1)  # noticed: the bolt is told for the tick after
+	assert_eq(_held(sim), "aurora_staff")
+	_seer_swap_to(sim, CombatTable.STYLE_RANGED)
+	var events := _seer_run(sim, 1)
+	assert_eq(_declared_by_the_seer(events), ["2:conjure_blade"], "told a tick ahead on its next declaration, in the blade's colour")
+	assert_eq(H.of_kind(events, Vocab.EV_ENEMY_STANCE)[0]["style"], CombatTable.STYLE_MELEE)
+	assert_eq(H.of_kind(events, Vocab.EV_ENEMY_STANCE)[0]["at"], 3)
+	assert_eq(int(sim.state["enemies"]["foe"]["answered_tick"]), 3)
+	assert_eq(_held(sim), "seer_blade", "and it holds the blade (melee, 1.5 m)")
+	assert_eq(sim.combatant("foe")["style"], CombatTable.STYLE_MELEE)
+	var before := (sim.combatant("foe")["pos"] as Vector2).distance_to(sim.player_pos())
+	_seer_run(sim, 3)
+	assert_true((sim.combatant("foe")["pos"] as Vector2).distance_to(sim.player_pos()) < before - 2.0, "and it closes in")
+
+
+func test_a_staff_turned_on_the_blade_is_answered_by_raising_its_staff() -> void:
+	var sim := _seer("", SEER_IN_REACH)
+	var events := _seer_run(sim, 6)  # through the bolt and the lance, to the blade drawn on its own
+	assert_eq(_held(sim), "seer_blade", "it holds the blade")
+	assert_eq(int(sim.state["enemies"]["foe"]["answered_tick"]), -1, "of its own accord")
+	_seer_swap_to(sim, CombatTable.STYLE_MAGIC)
+	events = _seer_run(sim, 1)
+	assert_eq(_declared_by_the_seer(events).map(func(d: String) -> String: return d.split(":")[1]), ["raise_aurora"], "raise_aurora on its next declaration")
+	assert_eq(H.of_kind(events, Vocab.EV_ENEMY_STANCE)[0]["style"], CombatTable.STYLE_MAGIC)
+	_seer_run(sim, 1)
+	assert_eq(_held(sim), "aurora_staff", "the staff is up")
+
+
+## A seer a bow has been turned on: it has noticed the player on tick 1, told its bolt, and been
+## answered on tick 2 with a conjured blade for tick 3. The player is beside it, not fighting back.
+func _baited(weapon_after := "") -> Sim:
+	var sim := _seer("", SEER_IN_REACH)
+	_seer_run(sim, 1)
+	_seer_swap_to(sim, CombatTable.STYLE_RANGED)
+	var events := _seer_run(sim, 1)
+	assert_eq(_declared_by_the_seer(events), ["2:conjure_blade"], "the bow draws the blade")
+	assert_eq(int(sim.state["enemies"]["foe"]["answered_tick"]), 3)
+	return sim
+
+
+func test_no_answer_comes_inside_8_ticks_of_the_last_whatever_the_player_swaps_to() -> void:
+	var sim := _baited()
+	# Every tick the player swaps between the staff and the bow, 7 times over.
+	var styles := [CombatTable.STYLE_MAGIC, CombatTable.STYLE_RANGED]
+	var events: Array[Dictionary] = []
+	for i in 7:
+		_seer_swap_to(sim, styles[i % 2])
+		events.append_array(_seer_run(sim, 1))
+		assert_eq(int(sim.state["enemies"]["foe"]["answered_tick"]), 3, "no answer on tick %d" % (3 + i))
+	# It plays the blade's cycle and then its own staff's, whatever it is shown.
+	assert_eq(_declared_by_the_seer(events), ["3:ice_slash", "5:ice_rend", "7:raise_aurora", "8:aurora_bolt"])
+
+
+func test_the_bait_pays_off_a_staff_inside_the_cooldown_cannot_be_answered_and_beats_the_blade() -> void:
+	var baited := _baited()
+	_seer_swap_to(baited, CombatTable.STYLE_MAGIC)
+	var staff_events := _seer_run(baited, 2)  # the slash is told on tick 3 and lands on tick 4
+	assert_eq(_declared_by_the_seer(staff_events), ["3:ice_slash"], "the blade stays out, with a staff turned on it")
+	assert_true(CombatTable.multiplier(baited.player_style(), baited.combatant("foe")["style"], 1.2) > 1.0, "and the staff has the edge")
+	var staff_hit := int(H.of_kind(staff_events, Vocab.EV_HIT)[0]["amount"])
+	# The same slash on a player who stayed on the bow lands harder, the blade having the edge up close.
+	var bow := _baited()
+	var bow_hit := int(H.of_kind(_seer_run(bow, 3), Vocab.EV_HIT)[0]["amount"])
+	assert_true(staff_hit < CombatTable.action_damage("ice_slash") and bow_hit > CombatTable.action_damage("ice_slash"), "the slash lands for %d on the staff and %d on the bow" % [staff_hit, bow_hit])
+
+
+func test_it_answers_again_once_8_ticks_have_passed() -> void:
+	var sim := _baited()
+	# The bow stays in hand. The seer works through the blade and raises its staff on its own
+	# (tick 7), all inside the cooldown, and declares its bolt on tick 8.
+	var events := _seer_run(sim, 7)
+	assert_eq(_declared_by_the_seer(events), ["3:ice_slash", "5:ice_rend", "7:raise_aurora", "8:aurora_bolt"], "the bow is not answered inside the cooldown")
+	events = _seer_run(sim, 1)  # tick 10, after a rest on tick 9: 8 ticks on from the answer told for tick 3
+	assert_eq(_declared_by_the_seer(events), ["10:conjure_blade"], "and answered again, in place of its lance")
+	assert_eq(int(sim.state["enemies"]["foe"]["answered_tick"]), 11)
+
+
+func test_a_dead_seer_drops_one_aurora_glass_and_no_iron_and_comes_back_300_ticks_later() -> void:
+	var sim := _seer("steel_sword", [30.5, 167.4], true)
+	sim.command(Vocab.SET_AUTO_RETALIATE, {"on": true})
+	H.patch_enemy(sim, "foe", {"health": 1, "pos": [30.5, 166.5]})
+	sim.command(Vocab.ATTACK, {"enemy_id": "foe"})
+	var events := H.run(sim, 3)
+	var drops := H.of_kind(events, Vocab.EV_LOOT_DROPPED)
+	assert_eq(drops.size(), 1, "one pile")
+	assert_eq([drops[0]["item"], drops[0]["count"]], ["aurora_glass", 1])
+	for item in CombatTable.RARE_LOOT:
+		assert_eq(H.where(events, Vocab.EV_LOOT_DROPPED, "item", item).size(), 0, "no %s" % item)
+	H.place(sim, PAST_THE_GATE)  # well out of its sight
+	var back := H.run(sim, int(CombatTable.enemy("aurora_seer")["respawn_ticks"]))
+	assert_eq(H.of_kind(back, Vocab.EV_ENEMY_RESPAWNED).size(), 1, "back at home")
+	assert_eq(int(sim.state["enemies"]["foe"]["health"]), 60)
+	assert_eq(Vector2(sim.state["enemies"]["foe"]["pos"][0], sim.state["enemies"]["foe"]["pos"][1]), Vector2(SEER_HOME[0], SEER_HOME[1]))
+	# Every kill drops exactly one, across a run of them.
+	for i in 5:
+		var again := _seer("steel_sword", [30.5, 167.4], true)
+		H.patch_enemy(again, "foe", {"health": 1})
+		again.command(Vocab.ATTACK, {"enemy_id": "foe"})
+		assert_eq(H.where(H.run(again, 3), Vocab.EV_LOOT_DROPPED, "item", "aurora_glass").size(), 1)
+
+
+func test_every_seers_home_is_alone_in_the_south_of_ring_three_out_of_earshot_of_every_other_group_and_reached_from_its_fire() -> void:
+	var w := WorldDefScript.outpost()
+	var from := w.cell_of(Vector2(PAST_THE_GATE[0], PAST_THE_GATE[1]))
+	var fire := w.object_center("ring_three_fire")
+	var sight := float(CombatTable.enemy("aurora_seer")["sight"])
+	var count := 0
+	var packs := {}
+	for a in w.enemies:
+		if w.enemies[a]["kind"] != "aurora_seer":
+			continue
+		count += 1
+		packs[w.enemies[a]["pack"]] = true
+		var ha := Vector2(w.enemies[a]["home"][0], w.enemies[a]["home"][1])
+		assert_eq(w.region_at(ha), WorldDef.REGION_RING_THREE, "%s is in ring three" % a)
+		assert_true(ha.y > 158.0, "%s keeps to the south half of the ring" % a)
+		assert_false(GridPath.find(w, from, w.cell_of(ha)).is_empty(), "%s's home can be walked to from the gate and the fire" % a)
+		assert_true(ha.distance_to(fire) > sight, "%s does not see the fire (%.1f m)" % [a, ha.distance_to(fire)])
+		for b in w.enemies:
+			if w.enemies[a]["pack"] == w.enemies[b]["pack"]:
+				continue
+			var hb := Vector2(w.enemies[b]["home"][0], w.enemies[b]["home"][1])
+			assert_true(ha.distance_to(hb) > 12.0, "%s and %s are %.1f m apart" % [a, b, ha.distance_to(hb)])
+	assert_eq(count, 3, "three seers")
+	assert_eq(packs.size(), 3, "each alone")
+
+
+# --- Reader and non-reader (the seer) -----------------------------------------------------
+
+## The reader opens with a steel bow from 5 m, swaps to a steel staff on the `conjure_blade`
+## stance, swaps back to the bow once the seer raises its staff, and eats only on a rest tick
+## once hurt. `lowest` is the least health it was ever left with.
+func _read_the_seer() -> Dictionary:
+	var sim := _seer("steel_bow", SEER_STAFF_RANGE, true)
+	sim.command(Vocab.ATTACK, {"enemy_id": "foe"})
+	var swaps: Array = []
+	var ticks := 0
+	var lowest := int(sim.state["health"])
+	while ticks < 120 and sim.state["enemies"]["foe"]["mode"] != Sim.MODE_DEAD and int(sim.state["health"]) > 0:
+		H.patch(sim, {"warmth": Sim.WARMTH_MAX})
+		var raw_next: String = str(sim.state["enemies"]["foe"].get("next", {}).get("action", ""))
+		if raw_next == CombatTable.ACTION_REST and int(sim.state["health"]) < 90:
+			sim.command(Vocab.EAT, {"index": 0})
+		sim.step()
+		ticks += 1
+		for e in sim.drain_events():
+			if e["kind"] == Vocab.EV_ENEMY_STANCE:
+				var style := CombatTable.STYLE_MAGIC if e["action"] == "conjure_blade" else CombatTable.STYLE_RANGED
+				_seer_swap_to(sim, style)
+				swaps.append("%d:%s" % [ticks, e["action"]])
+		lowest = mini(lowest, int(sim.state["health"]))
+	return {"health": int(sim.state["health"]), "lowest": lowest, "swaps": swaps, "ticks": ticks, "dead": sim.state["enemies"]["foe"]["mode"] == Sim.MODE_DEAD}
+
+
+## The non-reader holds a steel bow throughout and eats a trout the tick after any heavy blow
+## is told.
+func _hold_the_bow(eats: bool) -> Dictionary:
+	var sim := _seer("steel_bow", SEER_STAFF_RANGE, true)
+	sim.command(Vocab.ATTACK, {"enemy_id": "foe"})
+	var eat_next := false
+	var ticks := 0
+	var lowest := int(sim.state["health"])
+	while ticks < 120 and sim.state["enemies"]["foe"]["mode"] != Sim.MODE_DEAD and int(sim.state["health"]) > 0:
+		H.patch(sim, {"warmth": Sim.WARMTH_MAX})
+		if eat_next and eats:
+			sim.command(Vocab.EAT, {"index": 0})
+		eat_next = false
+		sim.step()
+		ticks += 1
+		for e in sim.drain_events():
+			if e["kind"] == Vocab.EV_ENEMY_TELEGRAPHED and e["heavy"]:
+				eat_next = true
+		lowest = mini(lowest, int(sim.state["health"]))
+	return {"health": int(sim.state["health"]), "lowest": lowest, "ticks": ticks, "dead": sim.state["enemies"]["foe"]["mode"] == Sim.MODE_DEAD}
+
+
+func test_the_reader_baits_the_blade_swaps_to_the_staff_and_wins_with_over_60_health_left() -> void:
+	var fight := _read_the_seer()
+	assert_true(fight["dead"], "the seer falls")
+	assert_true(fight["health"] > 60, "with %d health left" % fight["health"])
+	assert_true((fight["swaps"] as Array)[0].ends_with("conjure_blade"), "it was baited into the blade first")
+
+
+## The issue asks for this character to end below 40 health or dead. At 60 health it does not:
+## two steel-bow shots, with the edge on a staff, kill the seer on the third tick, before the blade
+## it conjures in answer has closed in (docs/balance.md, "Ring three"; the threshold is #198's).
+## This pins what holds until that is settled: the bow-holder wins, and the answer never lands.
+func test_the_non_reader_holding_a_bow_throughout_kills_the_seer_before_it_answers_with_a_blow() -> void:
+	for eats in [false, true]:
+		var fight := _hold_the_bow(eats)
+		assert_true(fight["dead"], "the seer falls")
+		assert_eq(fight["ticks"], 3, "on the third tick")
+		assert_eq(fight["lowest"], 100, "without having hurt it")

@@ -138,6 +138,8 @@ func test_frost_witches_live_in_ring_one_and_cast_magic() -> void:
 		var kind: String = w.enemies[id]["kind"]
 		if CombatTable.weapon(CombatTable.enemy(kind)["weapon"])["style"] != CombatTable.STYLE_MAGIC:
 			continue
+		if kind == "aurora_seer":
+			continue  # ring three's own magic enemy (tests/test_ring_three.gd)
 		witches += 1
 		var home: Array = w.enemies[id]["home"]
 		assert_eq(w.region_at(Vector2(home[0], home[1])), WorldDef.REGION_RING_ONE, "%s lives in ring one" % id)

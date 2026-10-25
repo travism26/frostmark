@@ -6,7 +6,8 @@
 ##
 ## Presentation only. `enemy` returns a FigureBody standing on the ground at its origin with a
 ## `height` metadata for the click volume and labels; the captain carries nodes named
-## `captain_sabre`, `captain_bow` and `captain_staff` that GameRoot shows by his stance. Hand pieces are
+## `captain_sabre`, `captain_bow` and `captain_staff` that GameRoot shows by his stance, and the Aurora seer
+## `aurora_staff` and `seer_blade`. Hand pieces are
 ## authored in a FigureBody `mount` frame: +Y up, -Z forward, the grip on the origin.
 class_name Figures
 extends RefCounted
@@ -52,6 +53,8 @@ const COLOR_ARCHER := Color(0.55, 0.16, 0.14)  # the rogue redrawn in bandit red
 const COLOR_SNOWVEIL := Color(0.90, 0.94, 0.98)  # the same rogue in snow-white
 const COLOR_SNOWVEIL_BOW := Color(0.80, 0.88, 0.94)  # with a pale, frosted bow
 const COLOR_FROSTBOUND := Color(0.66, 0.80, 0.96)  # the knight redrawn in frost-blue and pale steel
+const COLOR_SEER := Color("#7a4fb8")  # the mage in violet, without the witch's blue
+const COLOR_AURORA := Color(0.35, 1.0, 0.72)  # the green of its staff's crystal and its blade
 const COLOR_CAPTAIN_CAPE := Color(0.62, 0.08, 0.08)
 const COLOR_WOLF := Color(1.45, 1.5, 1.6)  # the grey coat lifted towards snow
 const COLOR_WITCH := Color("#6670b3")  # the mage in a rimed blue-violet
@@ -64,7 +67,8 @@ const MAGE_SPARES := ["Spellbook", "Spellbook_open", "1H_Wand", "2H_Staff"]
 ## An enemy of `kind`: a 1 m wolf that lunges with its bite, a hooded archer with a bow, a
 ## frost witch (the wide-hatted mage in blue-violet with a staff), a ruin stalker (a bare
 ## skeleton with a bone bow), a Snowveil archer (the hooded rogue in snow-white with a pale
-## bow), a Frostbound knight (the armoured knight in frost-blue with a long blade), an ice troll (the yeti, 3.1 m of pale fur with an ice club) or
+## bow), a Frostbound knight (the armoured knight in frost-blue with a long blade), an Aurora seer (the hatless
+## mage in violet, with an aurora staff or a conjured blade by its stance), an ice troll (the yeti, 3.1 m of pale fur with an ice club) or
 ## the armoured captain with a sabre, a war bow and a rime staff (one shown at a time, by his
 ## stance).
 static func enemy(kind: String) -> FigureBody:
@@ -110,6 +114,15 @@ static func enemy(kind: String) -> FigureBody:
 			blade.name = "rime_blade"
 			blade.scale = Vector3.ONE * 1.3
 			return knight
+		"aurora_seer":
+			var seer := humanoid("mage.glb", 1.8, MAGE_SPARES + ["Mage_Hat"], WITCH_CLIPS)
+			seer.recolour(COLOR_SEER)
+			seer.impact = 0.4
+			seer.mount("handslot_r", "aurora_staff").add_child(staff(Props.COLOR_DARK_WOOD, 1.6, COLOR_AURORA, 2.2))
+			var ice_blade := sword(COLOR_AURORA, 1.0, seer.model_scale())
+			ice_blade.name = "seer_blade"
+			seer.bone_slot("handslot_r").add_child(ice_blade)
+			return seer
 		"ice_troll":
 			var troll := FigureBody.new()
 			troll.setup(QUATERNIUS + "yeti.glb", YETI_HEIGHT, 3.1, YETI_CLIPS)

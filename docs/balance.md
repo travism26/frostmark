@@ -255,6 +255,29 @@ Two things the numbers show:
 - **The reference staff outruns the knight's first wind-up.** Four casts of 35 (23, 1.5 times for the staff's edge) fell a 120-health knight in seven ticks, and the second takes it under 60 on the third tick, the tick it would declare its first wind-up. The reader's step back from a wind-up is pinned on its own (`test_stepping_back_from_the_wind_up_makes_the_committed_cleave_miss`) rather than by the fight, which never gets there. The wind-ups and the bluff are for a player who deals less than the reference character, with a lower tier or fewer levels.
 - **A meal still decides a swinger's fight**, as for the archer: a trout heals 40 over five ticks in a fight of ten, so the non-reader that eats on every heavy ends at 92. The bar holds only for a swinger that does not eat, the ticket's wording. This is the same open question as [#198](https://github.com/travism26/frostmark/issues/198), which asks what the non-reader's bar should be for all of ring three; the test pins what holds (it wins and is hurt) until that is settled.
 
+### The Aurora seer
+
+[#182](https://github.com/travism26/frostmark/issues/182): 60 health, aurora bolt 8, aurora lance 22 (heavy), ice slash 10, ice rend 24 (heavy), and answers: a bow turned on its staff is answered with a conjured blade, a staff turned on the blade with its staff raised again, with 8 ticks between answers. The numbers below are what the tests print.
+
+| Fight | Result |
+|-------|--------|
+| Reader: steel bow from 5 m, swaps to a steel staff on `conjure_blade`, back to the bow on `raise_aurora`, eats on rest ticks only | The seer falls on the third tick; 100 health at the end, never hurt |
+| Non-reader: steel bow throughout, no meal | The seer falls on the third tick; 100 health at the end |
+| Non-reader: the same, eating a trout the tick after any heavy is told | The seer falls on the third tick; 100 health at the end |
+
+The reader clears the bar of more than 60 health left, and so does the non-reader, who was meant to end below 40 or dead. The bar is out of reach at 60 health, and it is health, not damage or timing, that decides it: the reference bow shoots 35 at a staff (23, 1.5 times for the edge), two shots two ticks apart take the seer's 60, and the first lands on the tick it notices the player, so the seer is dead on the third tick, before the blade that answers the bow has closed the 5 m, let alone struck. Nothing in the seer's damage or timing can change that, since it never gets to a blow; the answer, the cooldown and the bait are all pinned in the sim tests rather than by a fight (`tests/test_ring_three.gd`, `tests/test_sim_answers.gd`).
+
+With the other numbers held and only the seer's health raised, the same fights come out:
+
+| Seer health | Reader | Non-reader, no meal | Non-reader, eating on every heavy |
+|-------------|--------|---------------------|-----------------------------------|
+| 60 | 100 left, 3 ticks | 100 left, 3 ticks | 100 left, 3 ticks |
+| 120 | 99 left, 7 ticks | 57 left, 9 ticks | 73 left (65 at the lowest), 9 ticks |
+| 150 | 91 left, 9 ticks | 46 left, 13 ticks | 86 left (65 at the lowest), 13 ticks |
+| 180 | 91 left, 11 ticks | 14 left, 17 ticks | 86 left (62 at the lowest), 17 ticks |
+
+So the bar of below 40 for a non-reader that does not eat is met somewhere between 150 and 180 health, and the reader still clears 60 by a wide margin: at 180 the reader is baited into the blade, swaps to the staff, and is read again on the second answer. Health was settled at 60 for this ticket (the recommendations were accepted as written), so the numbers are not changed here; the choice between a higher health and a lower bar belongs with [#198](https://github.com/travism26/frostmark/issues/198), which asks what the non-reader's bar should be for all of ring three. The non-reader that eats on every heavy ends well above 40 at every health, as for the archer and the knight; the tests pin what holds (the seer falls on the third tick, unhurt).
+
 ## Off the timed route
 
 What the run deliberately leaves out, and why.
