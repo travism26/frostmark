@@ -21,8 +21,8 @@
 ##
 ## The kit builders (`peaked_hood`, `under_robe`, `cloak`, `collar`, `stacked_plates`,
 ## `crystal`, `fin`, `prism_stack`, `studs`, `edge_trim`, `quiver`, `sash`, `ruff`, `faulds`,
-## `tassets`, `seam`, `shard_crown`, `antlers`, `broadsword`, `bearded_axe`, `greatsword`,
-## `forge_hammer`, `glaive`, `cleaver`, `longbow`) are the layered, non-round shapes the set
+## `tassets`, `seam`, `shard_crown`, `antlers`, `plumes`, `broadsword`, `bearded_axe`,
+## `greatsword`, `forge_hammer`, `glaive`, `cleaver`, `longbow`) are the layered, non-round shapes the set
 ## looks are built from. Each takes a look (its shape's numbers, from `GearLook.numbers` or
 ## `GearLook.piece`) and a palette, names its root after its shape, and draws at least two
 ## tones (a base plus a darker underside or a lighter trim) so it reads lit from above. Which
@@ -83,6 +83,7 @@ const SHAPE_FORGE_HAMMER := GearLook.SHAPE_FORGE_HAMMER
 const SHAPE_GLAIVE := GearLook.SHAPE_GLAIVE
 const SHAPE_CLEAVER := GearLook.SHAPE_CLEAVER
 const SHAPE_LONGBOW := GearLook.SHAPE_LONGBOW
+const SHAPE_PLUMES := GearLook.SHAPE_PLUMES
 ## The names of a two-sided builder's side nodes, so a test can measure each side.
 const SIDE_LEFT := "Left"
 const SIDE_RIGHT := "Right"
@@ -549,6 +550,8 @@ static func kit_builder(shape: String) -> Callable:
 			return cleaver
 		SHAPE_LONGBOW:
 			return longbow
+		SHAPE_PLUMES:
+			return plumes
 	return Callable()
 
 
@@ -610,7 +613,8 @@ static func under_robe(look: Dictionary, colours: Dictionary) -> Node3D:
 ## halves (`Left` and `Right`) each its own length, leaning `tilt` back. Its `outline` is
 ## plain (a hem band across each half), forked (the halves part in a V), torn (a ragged hem of
 ## dark teeth), tail (a long centre tail) or banner (a narrow panel on a pole over the
-## shoulders).
+## shoulders). `lining` above 0 draws a `lining_tone` lining behind each half, showing that
+## much round its edges.
 static func cloak(look: Dictionary, colours: Dictionary) -> Node3D:
 	var root := Node3D.new()
 	root.name = SHAPE_CLOAK
@@ -624,6 +628,7 @@ static func cloak(look: Dictionary, colours: Dictionary) -> Node3D:
 	var hem := _highlight(look, colours, "hem_tone")
 	var tone := _tone(look, colours, "tone")
 	var tooth_tone := _tone(look, colours, "tooth_tone")
+	var lining: float = look["lining"]
 	for side in [[-1, SIDE_LEFT, look["length_left"]], [1, SIDE_RIGHT, look["length_right"]]]:
 		var panel := Node3D.new()
 		panel.name = side[1]
@@ -632,6 +637,9 @@ static func cloak(look: Dictionary, colours: Dictionary) -> Node3D:
 			panel.rotation.z = side[0] * look["fork"]  # each half swings out from the centre line
 		var length: float = side[2]
 		Figures.part(panel, _box(Vector3(half, length, thickness), tone), Vector3(side[0] * half * 0.5, -length * 0.5, 0))
+		if lining > 0.0:
+			# wider and longer than the half and thinner, so it shows as a rim round its edges
+			Figures.part(panel, _box(Vector3(half + lining, length + lining, thickness * 0.6), _tone(look, colours, "lining_tone")), Vector3(side[0] * (half + lining) * 0.5, -(length + lining) * 0.5, 0))
 		if outline == GearLook.OUTLINE_TORN:
 			var teeth := int(look["teeth"])
 			for i in teeth:
@@ -904,7 +912,8 @@ static func edge_trim(look: Dictionary, colours: Dictionary) -> Node3D:
 ## A case on the back from its root at `offset`, turned by `tilt`: a `foot_tone` foot, the
 ## case in `tone`, a cap band round its mouth in the highlight (`band_tone`), and `tip_count`
 ## tips standing out of the mouth, spread across it: `shaft_tone` shafts with fletching fins
-## in `fletch_tone`, or shard tips in `tip_tone` (the glow colour, lit, when `glow` is above 0).
+## in `fletch_tone`, or shard tips in `tip_tone` (the band, the fletching and the shards the
+## glow colour, lit, when `glow` is above 0).
 static func quiver(look: Dictionary, colours: Dictionary) -> Node3D:
 	var root := Node3D.new()
 	root.name = SHAPE_QUIVER
@@ -930,7 +939,7 @@ static func quiver(look: Dictionary, colours: Dictionary) -> Node3D:
 			Figures.part(stand, _cone(radius * 0.35, tip, 4, shard), Vector3(x, length + tip * 0.5, z))
 			continue
 		Figures.part(stand, _cylinder(0.012, 0.012, tip, 4, _tone(look, colours, "shaft_tone")), Vector3(x, length + tip * 0.5, z))
-		Figures.part(stand, _box(Vector3(0.05, tip * 0.55, 0.012), _tone(look, colours, "fletch_tone")), Vector3(x, length + tip * 0.7, z))
+		Figures.part(stand, _box(Vector3(0.05, tip * 0.55, 0.012), _highlight(look, colours, "fletch_tone")), Vector3(x, length + tip * 0.7, z))
 	return root
 
 
@@ -1343,7 +1352,10 @@ static func cleaver(look: Dictionary, colours: Dictionary) -> Node3D:
 ## (Figures.bow): `segments` staves along Z bulging `depth` toward +Y, the outermost bent
 ## `tip_bend` further back for a recurve, the string below them in `string_tone`, a round grip
 ## in `grip_tone` round the middle, a ball nock at each tip in `nock_tone` (the highlight)
-## and, when `cap_length` is above 0, a limb cap that long at each tip in `cap_tone`.
+## and, when `cap_length` is above 0, a limb cap that long at each tip in `cap_tone`. The
+## highlight also draws the string when `lit_string` is on, an `edge` thick strip along the
+## back of every stave when `edge` is above 0, and a shard `shard` long standing off each tip
+## when `shard` is above 0.
 static func longbow(look: Dictionary, colours: Dictionary) -> Node3D:
 	var root := Node3D.new()
 	root.name = SHAPE_LONGBOW
@@ -1352,24 +1364,64 @@ static func longbow(look: Dictionary, colours: Dictionary) -> Node3D:
 	var segments := int(look["segments"])
 	var stave: float = look["stave"]
 	var wood := _tone(look, colours, "tone")
+	var edge: float = look["edge"]
+	var nock := _highlight(look, colours, "nock_tone")
 	for i in segments:
 		var a := lerpf(-1.0, 1.0, (i + 0.5) / segments)
 		var piece := Figures.part(root, _box(Vector3(stave, stave, length / segments * 1.1), wood), Vector3(0, depth * (1.0 - a * a), a * length * 0.5))
 		piece.rotation.x = atan2(2.0 * depth * a, length)
 		if i == 0 or i == segments - 1:
 			piece.rotation.x += signf(a) * float(look["tip_bend"])
-	Figures.part(root, _box(Vector3(look["string"], look["string"], length), _tone(look, colours, "string_tone")), Vector3(0, -0.02, 0))
+		if edge > 0.0:
+			# a lit strip along the stave's back, the side away from the string
+			var strip := Figures.part(root, _box(Vector3(stave * 0.6, edge, length / segments * 1.1 + 0.004), nock), piece.position + Vector3(0, stave * 0.5, 0))
+			strip.rotation.x = piece.rotation.x
+	Figures.part(root, _box(Vector3(look["string"], look["string"], length), nock if look["lit_string"] else _tone(look, colours, "string_tone")), Vector3(0, -0.02, 0))
 	var grip := Figures.part(root, _cylinder(look["grip_radius"], look["grip_radius"], look["grip_length"], 6, _tone(look, colours, "grip_tone")), Vector3(0, depth * 0.95, 0))
 	grip.rotation.x = PI * 0.5  # the grip lies along the staves
-	var nock := _highlight(look, colours, "nock_tone")
 	var cap_length: float = look["cap_length"]
+	var shard: float = look["shard"]
 	for side: float in [-1.0, 1.0]:
 		Figures.part(root, _ball(look["nock"], nock), Vector3(0, 0, side * length * 0.5))
+		if shard > 0.0:
+			var point := Figures.part(root, _cone(look["nock"] * 0.9, shard, 4, nock), Vector3(0, 0, side * (length * 0.5 + shard * 0.5)))
+			point.rotation.x = -side * PI * 0.5  # the shard points on along the limb
 		if cap_length <= 0.0:
 			continue
 		var a: float = side * (1.0 - cap_length / length)
 		var cap := Figures.part(root, _box(Vector3(stave * 1.4, stave * 1.4, cap_length), _tone(look, colours, "cap_tone")), Vector3(0, depth * (1.0 - a * a), a * length * 0.5))
 		cap.rotation.x = atan2(2.0 * depth * a, length) + side * float(look["tip_bend"])
+	return root
+
+
+## `count` feathers fanning from `offset` turned by `tilt`, spread over `arc` about the stand's
+## +Y in its X-Y plane: each a thin plate `length` long, `width` wide and `thickness` thick in
+## `tone` with a `quill_tone` quill down its middle and a ball `tip` across at its end in the
+## highlight (`tip_tone`: the glow colour, lit, when `glow` is above 0). A crest above the
+## head, a wing off a shoulder (laid flat by its tilt).
+static func plumes(look: Dictionary, colours: Dictionary) -> Node3D:
+	var root := Node3D.new()
+	root.name = SHAPE_PLUMES
+	var stand := Node3D.new()
+	stand.position = look["offset"]
+	stand.rotation = look["tilt"]
+	root.add_child(stand)
+	var count := int(look["count"])
+	var arc: float = look["arc"]
+	var length: float = look["length"]
+	var width: float = look["width"]
+	var thickness: float = look["thickness"]
+	var tone := _tone(look, colours, "tone")
+	var quill := _tone(look, colours, "quill_tone")
+	var point := _highlight(look, colours, "tip_tone")
+	for i in count:
+		var a := (i - (count - 1) * 0.5) * (arc / maxf(count - 1, 1))
+		var feather := Node3D.new()
+		feather.rotation.z = -a  # fanned out from the middle feather
+		stand.add_child(feather)
+		Figures.part(feather, _box(Vector3(width, length, thickness), tone), Vector3(0, length * 0.5, 0))
+		Figures.part(feather, _box(Vector3(width * 0.3, length * 0.85, thickness + 0.008), quill), Vector3(0, length * 0.45, 0))
+		Figures.part(feather, _ball(look["tip"], point), Vector3(0, length, 0))
 	return root
 
 
