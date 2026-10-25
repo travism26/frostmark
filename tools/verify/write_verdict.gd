@@ -7,10 +7,12 @@
 ##   grades.json                  the verifier's grades (absent: every criterion is ungraded)
 ##   inputs.json                  head_sha, base_sha, ticket, ci, harness_version, verifier_model,
 ##                                head_copy (the head export's folder, for doc quotes),
-##                                test_guard and changed_since_fail
+##                                test_guard, changed_since_fail and earlier
 ##   drive/<probe>.head.log       raw head output of each probe, and .base.log for base;
 ##   drive/<probe>.head.rc        optionally the exit code of each side
-## The ticket's earlier runs are the verdict.json files of its other records beside this one.
+## The ticket's earlier runs are the verdict.json files of the records inputs.json names in
+## `earlier` (folder names beside this one), or when it has no `earlier`, of every other record
+## beside this one.
 ## Prints the verdict and exits 0, or exits 1 when the record can't be read.
 extends SceneTree
 
@@ -41,7 +43,7 @@ func _init() -> void:
 		"drive": _drive(record + "/drive"),
 		"docs": _docs(grades, str(given.get("head_copy", ""))),
 		"ci": given.get("ci", ""),
-		"earlier": _earlier(record),
+		"earlier": _earlier(record, given.get("earlier", null)),
 		"test_guard": given.get("test_guard", {}),
 		"changed_since_fail": given.get("changed_since_fail", []),
 		"binding": binding,
@@ -96,11 +98,12 @@ func _docs(grades: Dictionary, head_copy: String) -> Dictionary:
 	return out
 
 
-func _earlier(record: String) -> Array:
+func _earlier(record: String, named: Variant) -> Array:
 	var out := []
 	var parent := record.get_base_dir()
-	for d in DirAccess.get_directories_at(parent):
-		var other := parent.path_join(d)
+	var dirs: Array = named if named is Array else Array(DirAccess.get_directories_at(parent))
+	for d in dirs:
+		var other := parent.path_join(str(d))
 		if other != record:
 			var v := _json(other + "/verdict.json")
 			if not v.is_empty():
