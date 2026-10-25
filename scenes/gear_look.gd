@@ -26,11 +26,11 @@
 ##
 ## The kit shapes (a peaked hood, an under-robe with coat panels, a cloak, a collar, stacked
 ## plates, a crystal, a fin, a prism stack, studs, edge trim, a quiver, a sash, a ruff, faulds,
-## tassets, a seam, a shard crown, antlers, plumes, and the hand-held weapons: a broadsword, a
-## bearded axe, a greatsword, a forge hammer, a glaive, a cleaver and a longbow) are the layered,
-## non-round pieces the set looks are built from. Each has its numbers in SHAPES like any other
-## shape and a builder of the same name in CharacterGear; KIT_SAMPLES holds one look of each
-## for the shader warm-up and the kit shots.
+## tassets, a seam, a shard crown, antlers, plumes, a pouch, and the hand-held weapons: a
+## broadsword, a bearded axe, a greatsword, a forge hammer, a glaive, a cleaver, a longbow and
+## a mage staff) are the layered, non-round pieces the set looks are built from. Each has its
+## numbers in SHAPES like any other shape and a builder of the same name in CharacterGear;
+## KIT_SAMPLES holds one look of each for the shader warm-up and the kit shots.
 ##
 ## A top set's light and particles are look numbers too: a crystal, a shard crown or a forge
 ## hammer carries one small light (`light`) or a few motes (`motes`) only when its entry asks,
@@ -95,18 +95,22 @@ const SHAPE_CLEAVER := "Cleaver"
 const SHAPE_LONGBOW := "Longbow"
 ## The ranged top set shape (#165): a fan of feathers, a crest or a wing.
 const SHAPE_PLUMES := "Plumes"
+## The magic set shapes (#166).
+const SHAPE_POUCH := "Pouch"
+const SHAPE_MAGE_STAFF := "MageStaff"
 const KIT_SHAPES := [
 	SHAPE_PEAKED_HOOD, SHAPE_UNDER_ROBE, SHAPE_CLOAK, SHAPE_COLLAR, SHAPE_STACKED_PLATES,
 	SHAPE_CRYSTAL, SHAPE_FIN, SHAPE_PRISM_STACK, SHAPE_STUDS, SHAPE_EDGE_TRIM, SHAPE_QUIVER,
 	SHAPE_SASH, SHAPE_RUFF, SHAPE_FAULDS, SHAPE_TASSETS, SHAPE_SEAM, SHAPE_SHARD_CROWN, SHAPE_ANTLERS,
 	SHAPE_BROADSWORD, SHAPE_BEARDED_AXE, SHAPE_GREATSWORD, SHAPE_FORGE_HAMMER, SHAPE_GLAIVE, SHAPE_CLEAVER,
 	SHAPE_LONGBOW, SHAPE_PLUMES,
+	SHAPE_POUCH, SHAPE_MAGE_STAFF,
 ]
 ## The kit shapes held in the hand: each is a whole weapon, gripped in the right hand, or in
 ## the left for the BOW_SHAPES, held as the tier bows are.
 const WEAPON_SHAPES := [
 	SHAPE_BROADSWORD, SHAPE_BEARDED_AXE, SHAPE_GREATSWORD, SHAPE_FORGE_HAMMER, SHAPE_GLAIVE, SHAPE_CLEAVER,
-	SHAPE_LONGBOW,
+	SHAPE_LONGBOW, SHAPE_MAGE_STAFF,
 ]
 const BOW_SHAPES := [SHAPE_LONGBOW]
 ## The kit shapes that may carry the one small light and the few motes a top set is allowed.
@@ -131,6 +135,12 @@ const COLLARS := [COLLAR_HIGH, COLLAR_JAGGED, COLLAR_PLATE, COLLAR_HOOP]
 const TIPS_FLETCHING := "fletching"
 const TIPS_SHARDS := "shards"
 const QUIVER_TIPS := [TIPS_FLETCHING, TIPS_SHARDS]
+## A mage staff's head: one raw shard lashed to the shaft, two fork arms holding a floating
+## prism, or a hoop cradling a large prism with a small one riding above it.
+const HEAD_LASHED := "lashed"
+const HEAD_FORKED := "forked"
+const HEAD_RING := "ring"
+const STAFF_HEADS := [HEAD_LASHED, HEAD_FORKED, HEAD_RING]
 
 ## Every palette carries exactly these fields.
 ##   base         Color  the piece itself: a dome, vest, greave or fur wrap, a blade or haft
@@ -249,6 +259,35 @@ const TROLLBONE_BONE_DARK := Color("#b8a98c")
 const TROLLBONE_BONE_LIT := Color("#f6efdc")
 const TROLLBONE_HIDE_LIT := Color("#62503f")
 const TROLLBONE_BLOOD_DARK := Color("#731f1b")
+## The magic sets' palettes (#166, the approved round-2 board on #157). Each has a staff, but
+## its glow is per part (the shard, the brow prism, the glyph band), so glow_energy is 0 and
+## `Figures.staff` is never drawn for a set: the glow colour is what those parts shine in. No
+## magic set carries a light or motes.
+## Shardweaver: undyed wool and its shade, cream trim, rope; the frost of a raw shard.
+const SHARDWEAVER := {
+	"base": Color("#5e6d8a"), "dark": Color("#45526b"),
+	"trim": Color("#d9d2c2"), "accent": Color("#b59a6a"),
+	"glow": Color("#9ecbff"), "glow_energy": 0.0,
+}
+## Rimecaller: indigo and its shade, frost white, dark ash; frost glow.
+const RIMECALLER := {
+	"base": Color("#3b4a8c"), "dark": Color("#2b3668"),
+	"trim": Color("#cfe2ff"), "accent": Color("#5c4a3a"),
+	"glow": Color("#9ecbff"), "glow_energy": 0.0,
+}
+## Glacier Warden: teal and its shade, silver, iron; ice glow.
+const GLACIER_WARDEN := {
+	"base": Color("#1f6e7a"), "dark": Color("#154e58"),
+	"trim": Color("#c9d7de"), "accent": Color("#39404a"),
+	"glow": Color("#8fe6f0"), "glow_energy": 0.0,
+}
+## The magic sets' extra materials and lit rim tints.
+const SHARDWEAVER_PINE := Color("#7a5234")
+const SHARDWEAVER_ROPE_DARK := Color("#8a7450")
+const RIMECALLER_FROST_LIT := Color("#e8f2ff")
+const RIMECALLER_ASH_LIT := Color("#7a6450")
+const GLACIER_WARDEN_LIT := Color("#e3ebef")
+const GLACIER_WARDEN_IRON_LIT := Color("#4f5866")
 
 ## The ranged sets' palettes (#164, the approved board on #157). No set glows, so glow is
 ## black and glow_energy 0 (none has a staff).
@@ -393,14 +432,16 @@ const SHAPES := {
 	},
 	# A flaring under-robe in the dark tone with `bands` bands up from its hem, under a coat
 	# shell set `coat_back` behind the body so the robe shows at the open front, and two
-	# front panels hanging from the coat's hem, each its own length and flared apart.
+	# front panels hanging from the coat's hem, each its own length and flared apart;
+	# `panel_edge` above 0 runs an edging strip that wide in `edge_tone` down each panel's
+	# inner edge and along its hem.
 	SHAPE_UNDER_ROBE: {
 		"top_radius": 0.36, "bottom_radius": 0.56, "height": 1.05, "segments": 10, "y": -0.35,
 		"coat_top_radius": 0.4, "coat_bottom_radius": 0.52, "coat_height": 0.6, "coat_y": -0.12, "coat_back": 0.1,
 		"panel_left": 0.55, "panel_right": 0.4, "panel_width": 0.2, "panel_thickness": 0.04,
 		"panel_x": 0.17, "panel_z": -0.46, "panel_top": -0.3, "panel_flare": 0.12, "panel_lean": 0.2,
-		"bands": 2, "band_height": 0.05, "band_from": -0.75, "band_step": 0.2,
-		"tone": "base", "robe_tone": "dark", "band_tone": "trim", "glow": 0.0,
+		"bands": 2, "band_height": 0.05, "band_from": -0.75, "band_step": 0.2, "panel_edge": 0.0,
+		"tone": "base", "robe_tone": "dark", "band_tone": "trim", "edge_tone": "trim", "glow": 0.0,
 	},
 	# A fin hung from the shoulders behind the body, in two halves each its own length, with
 	# a hem band; `outline` picks plain, forked, torn, tail or banner. `lining` above 0 shows
@@ -640,6 +681,36 @@ const SHAPES := {
 		"tips": TIPS_FLETCHING, "tip_count": 3, "tip_length": 0.16, "tone": "base", "foot_tone": "dark",
 		"band_tone": "trim", "shaft_tone": "dark", "fletch_tone": "trim", "tip_tone": "accent", "glow": 0.0,
 	},
+	# The magic set shapes (#166). A pouch hung at `offset` turned by `tilt`: a box `size`
+	# across in `tone` with a flap `flap` tall across its top front in the highlight
+	# (`flap_tone`) over a `shadow_tone` line under the flap, or when `round` a case lying
+	# along the stand's Y of `size.x` across and `size.y` long with a cap `cap` long at each
+	# end in `flap_tone`: a belt pouch, a satchel, a book pouch, a scroll case.
+	SHAPE_POUCH: {
+		"size": Vector3(0.16, 0.14, 0.08), "offset": Vector3(0.38, -0.26, -0.1), "tilt": Vector3(0, 0.3, 0),
+		"flap": 0.05, "round": false, "cap": 0.035,
+		"tone": "accent", "flap_tone": "trim", "shadow_tone": "dark", "glow": 0.0,
+	},
+	# A mage staff held upright in the right hand like the tier staves (`tilt` zero): a shaft
+	# `length` long in `tone` standing `foot` below the hand, a collar `collar` tall in
+	# `collar_tone` under the head and a grip band `grip` tall in `grip_tone` `grip_y` above
+	# the hand (0 for none), and a head of three or four parts picked by `head`: lashed, one
+	# raw `facets`-sided prism `prism_length` long on the shaft's top with a rope torus `lash`
+	# thick round the join in `lash_tone`; forked, two arms `fork_length` long leaning
+	# `fork_spread` apart in `fork_tone` with the prism floating `rise` over the shaft in the
+	# gap; ring, a hoop `ring_inner` to `ring_outer` across in `ring_tone` standing on the
+	# shaft, the prism rising through it and a small prism `small_length` long riding `rise`
+	# above its top. Every prism is the glow colour over a `root_tone` root, lit at `glow`.
+	SHAPE_MAGE_STAFF: {
+		"head": HEAD_LASHED, "length": 1.5, "foot": 0.35, "radius": 0.04, "segments": 6, "tilt": Vector3.ZERO,
+		"collar": 0.05, "collar_radius": 0.065, "grip": 0.12, "grip_y": 0.08, "lash": 0.03,
+		"facets": 4, "prism_length": 0.3, "prism_radius": 0.065, "root": 0.3,
+		"small_length": 0.14, "small_radius": 0.04, "rise": 0.08,
+		"fork_length": 0.32, "fork_spread": 0.45, "fork_radius": 0.022,
+		"ring_inner": 0.15, "ring_outer": 0.19, "ring_rings": 10, "ring_segments": 6,
+		"tone": "accent", "collar_tone": "trim", "grip_tone": "dark", "lash_tone": "trim", "fork_tone": "accent",
+		"ring_tone": "trim", "root_tone": "dark", "glow": 0.0,
+	},
 }
 
 ## One look of each kit shape, for the shader warm-up (a light and motes included) and the kit
@@ -671,6 +742,8 @@ const KIT_SAMPLES := [
 	{"shape": SHAPE_CLEAVER, "glow": 0.8},
 	{"shape": SHAPE_LONGBOW, "cap_length": 0.12, "tip_bend": 0.3, "glow": 0.8},
 	{"shape": SHAPE_PLUMES, "offset": Vector3(0, 0.72, 0.05), "tilt": Vector3(0.3, 0, 0), "glow": 1.0},
+	{"shape": SHAPE_POUCH, "size": Vector3(0.2, 0.18, 0.1), "offset": Vector3(-0.4, -0.3, 0.0), "tilt": Vector3(0, -0.4, 0), "glow": 0.6},
+	{"shape": SHAPE_MAGE_STAFF, "head": HEAD_RING, "glow": 1.2},
 ]
 
 const LOOKS := {

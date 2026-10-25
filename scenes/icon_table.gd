@@ -37,7 +37,7 @@ const UI_SOUND := "ui_sound"
 const UI_ACTIONS: Array[String] = [UI_FIRE, UI_HELP, UI_SAVE, UI_SOUND]
 
 ## The empty quiver and cape slots' glyphs: the quiver's is the one the ranged quivers wear
-## (#164) and the cape's the one the ranged top set capes wear (#165).
+## (#164) and the cape's the one the ranged top set capes (#165) and the magic cloaks (#166) wear.
 const SLOT_QUIVER := "slot_quiver"
 const SLOT_CAPE := "slot_cape"
 
@@ -217,6 +217,21 @@ const ICONS := {
 	"glacier_sovereign_legs": {"icon": "delapouite/leg-armor"},
 	"glacier_sovereign_bow": {"icon": "lorc/pocket-bow"},
 	"glacier_sovereign_quiver": {"icon": "delapouite/quiver"},
+	# The magic sets (#166), the same way: the staff glyph for a staff, the cape slot's for a cloak.
+	"shardweaver_helm": {"icon": "lorc/visored-helm"},
+	"shardweaver_body": {"icon": "lorc/breastplate"},
+	"shardweaver_legs": {"icon": "delapouite/leg-armor"},
+	"shardweaver_staff": {"icon": "lorc/wizard-staff"},
+	"rimecaller_helm": {"icon": "lorc/visored-helm"},
+	"rimecaller_body": {"icon": "lorc/breastplate"},
+	"rimecaller_legs": {"icon": "delapouite/leg-armor"},
+	"rimecaller_staff": {"icon": "lorc/wizard-staff"},
+	"rimecaller_cape": {"icon": "delapouite/cape"},
+	"glacier_warden_helm": {"icon": "lorc/visored-helm"},
+	"glacier_warden_body": {"icon": "lorc/breastplate"},
+	"glacier_warden_legs": {"icon": "delapouite/leg-armor"},
+	"glacier_warden_staff": {"icon": "lorc/wizard-staff"},
+	"glacier_warden_cape": {"icon": "delapouite/cape"},
 	# The side panel's tabs.
 	TAB_PACK: {"icon": "lorc/knapsack", "tint": TINT_TAB},
 	TAB_EQUIPMENT: {"icon": "lorc/battle-gear", "tint": TINT_TAB},

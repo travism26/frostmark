@@ -67,12 +67,17 @@ const SET_EMBER_HAWK := "ember_hawk"
 const SET_AURORAL_WARDEN := "auroral_warden"
 const SET_RUIN_STALKER := "ruin_stalker"
 const SET_GLACIER_SOVEREIGN := "glacier_sovereign"
+## The magic sets (#166).
+const SET_SHARDWEAVER := "shardweaver"
+const SET_RIMECALLER := "rimecaller"
+const SET_GLACIER_WARDEN := "glacier_warden"
 ## Every set key, in the ladder's order.
 const SETS: Array[String] = [
 	SET_HEARTHGUARD, SET_WOLFMARK, SET_RUINWARDEN,
 	SET_EMBERHEART, SET_HOARFROST, SET_AURORAL, SET_TROLLBONE,
 	SET_TRAPPER, SET_WOLFSTALKER, SET_STEELPOINT,
 	SET_EMBER_HAWK, SET_AURORAL_WARDEN, SET_RUIN_STALKER, SET_GLACIER_SOVEREIGN,
+	SET_SHARDWEAVER, SET_RIMECALLER, SET_GLACIER_WARDEN,
 ]
 
 const ITEMS := {
@@ -471,6 +476,65 @@ const ITEMS := {
 	"steelpoint_quiver": {
 		"label": "Steelpoint quiver", "stack": 1, "weight": 1, "value": 40, "slot": SLOT_QUIVER,
 		"set": SET_STEELPOINT,
+	# The magic sets (#166): Shardweaver (mid), Rimecaller (mid-high) and Glacier Warden
+	# (high), each a helm, a body, legs and a staff under the set-item rule above (the staff's
+	# head is look only; its stats are the steel staff's), and a cloak for the two upper sets
+	# under the cape rule (weight 1, value 40, no defence, no warmth): the first cape items.
+	"shardweaver_helm": {
+		"label": "Shardweaver cowl", "stack": 1, "weight": 2, "value": 40, "slot": SLOT_HELM,
+		"defence": 1, "set": SET_SHARDWEAVER,
+	},
+	"shardweaver_body": {
+		"label": "Shardweaver coat", "stack": 1, "weight": 3, "value": 80, "slot": SLOT_BODY,
+		"defence": 2, "set": SET_SHARDWEAVER,
+	},
+	"shardweaver_legs": {
+		"label": "Shardweaver leggings", "stack": 1, "weight": 2, "value": 60, "slot": SLOT_LEGS,
+		"defence": 1, "set": SET_SHARDWEAVER,
+	},
+	"shardweaver_staff": {
+		"label": "Shardweaver staff", "stack": 1, "weight": 2, "value": 172, "slot": SLOT_WEAPON,
+		"style": "magic", "power": 10, "speed": 2, "reach": 6.0, "ammo": "frost_shards", "set": SET_SHARDWEAVER,
+	},
+	"rimecaller_helm": {
+		"label": "Rimecaller hood", "stack": 1, "weight": 2, "value": 40, "slot": SLOT_HELM,
+		"defence": 1, "set": SET_RIMECALLER,
+	},
+	"rimecaller_body": {
+		"label": "Rimecaller robe", "stack": 1, "weight": 3, "value": 80, "slot": SLOT_BODY,
+		"defence": 2, "set": SET_RIMECALLER,
+	},
+	"rimecaller_legs": {
+		"label": "Rimecaller leggings", "stack": 1, "weight": 2, "value": 60, "slot": SLOT_LEGS,
+		"defence": 1, "set": SET_RIMECALLER,
+	},
+	"rimecaller_staff": {
+		"label": "Rimecaller staff", "stack": 1, "weight": 2, "value": 172, "slot": SLOT_WEAPON,
+		"style": "magic", "power": 10, "speed": 2, "reach": 6.0, "ammo": "frost_shards", "set": SET_RIMECALLER,
+	},
+	"rimecaller_cape": {
+		"label": "Rimecaller cloak", "stack": 1, "weight": 1, "value": 40, "slot": SLOT_CAPE,
+		"set": SET_RIMECALLER,
+	},
+	"glacier_warden_helm": {
+		"label": "Glacier Warden hood", "stack": 1, "weight": 2, "value": 40, "slot": SLOT_HELM,
+		"defence": 1, "set": SET_GLACIER_WARDEN,
+	},
+	"glacier_warden_body": {
+		"label": "Glacier Warden robe", "stack": 1, "weight": 3, "value": 80, "slot": SLOT_BODY,
+		"defence": 2, "set": SET_GLACIER_WARDEN,
+	},
+	"glacier_warden_legs": {
+		"label": "Glacier Warden greaves", "stack": 1, "weight": 2, "value": 60, "slot": SLOT_LEGS,
+		"defence": 1, "set": SET_GLACIER_WARDEN,
+	},
+	"glacier_warden_staff": {
+		"label": "Glacier Warden staff", "stack": 1, "weight": 2, "value": 172, "slot": SLOT_WEAPON,
+		"style": "magic", "power": 10, "speed": 2, "reach": 6.0, "ammo": "frost_shards", "set": SET_GLACIER_WARDEN,
+	},
+	"glacier_warden_cape": {
+		"label": "Glacier Warden cloak", "stack": 1, "weight": 1, "value": 40, "slot": SLOT_CAPE,
+		"set": SET_GLACIER_WARDEN,
 	},
 	# The ranged top sets (#165): Ember Hawk, Auroral Warden, Ruin Stalker's Shroud and Glacier
 	# Sovereign, each a helm, a body, legs and a bow under the set-item rule above (the bow's
