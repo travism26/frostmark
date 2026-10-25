@@ -62,6 +62,10 @@ _Avoid_: Metal tier, smithing tier, material
 The highest gear tier you can smith right now, raised by outpost upgrades. Found gear can sit above it.
 _Avoid_: Smithing tier, craft limit
 
+**Rare material**:
+A material only ring three's enemies drop: rime steel, frost sinew or aurora glass, one for each combat style, each feeding that style's top gear sets.
+_Avoid_: Rare drop, rare item (the rare drop is the iron piece any enemy may drop on top of its loot)
+
 ### Outpost
 
 **Outpost upgrade**:

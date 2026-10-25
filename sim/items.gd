@@ -121,6 +121,16 @@ const ITEMS := {
 	"troll_hide": {
 		"label": "Troll hide", "stack": 5, "weight": 2, "value": 20, "slot": "",
 	},
+	# Ring three's rare materials, one per enemy style, each feeding that style's top sets.
+	"rime_steel": {
+		"label": "Rime steel", "stack": 10, "weight": 1, "value": 25, "slot": "",
+	},
+	"frost_sinew": {
+		"label": "Frost sinew", "stack": 10, "weight": 1, "value": 25, "slot": "",
+	},
+	"aurora_glass": {
+		"label": "Aurora glass", "stack": 10, "weight": 1, "value": 25, "slot": "",
+	},
 	"arrows": {
 		"label": "Arrows", "stack": 100, "weight": 0, "value": 1, "slot": "",
 	},
