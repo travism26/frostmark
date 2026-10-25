@@ -32,9 +32,9 @@
 ## numbers in SHAPES like any other shape and a builder of the same name in CharacterGear;
 ## KIT_SAMPLES holds one look of each for the shader warm-up and the kit shots.
 ##
-## A top set's light and particles are look numbers too: a crystal, a shard crown or a forge
-## hammer carries one small light (`light`) or a few motes (`motes`) only when its entry asks,
-## so a set's glow is tuned here and a piece worn alone keeps its own.
+## A top set's light and particles are look numbers too: a crystal, a shard crown, a forge
+## hammer or a mage staff carries one small light (`light`) or a few motes (`motes`) only when
+## its entry asks, so a set's glow is tuned here and a piece worn alone keeps its own.
 class_name GearLook
 extends RefCounted
 
@@ -114,7 +114,7 @@ const WEAPON_SHAPES := [
 ]
 const BOW_SHAPES := [SHAPE_LONGBOW]
 ## The kit shapes that may carry the one small light and the few motes a top set is allowed.
-const GLOW_FX_SHAPES := [SHAPE_CRYSTAL, SHAPE_SHARD_CROWN, SHAPE_FORGE_HAMMER]
+const GLOW_FX_SHAPES := [SHAPE_CRYSTAL, SHAPE_SHARD_CROWN, SHAPE_FORGE_HAMMER, SHAPE_MAGE_STAFF]
 ## The key a piece's extra layers sit under.
 const LAYERS := "layers"
 ## A cloak's outline: one straight hem, two halves parting in a V, a ragged hem, a long
@@ -125,7 +125,8 @@ const OUTLINE_TORN := "torn"
 const OUTLINE_TAIL := "tail"
 const OUTLINE_BANNER := "banner"
 const OUTLINES := [OUTLINE_PLAIN, OUTLINE_FORKED, OUTLINE_TORN, OUTLINE_TAIL, OUTLINE_BANNER]
-## A collar's kind: a high collar, a jagged ice collar, a stone back-plate, or an upright hoop.
+## A collar's kind: a high collar, a jagged ice collar, a stone back-plate, or an upright hoop
+## (a halo) with flame fins on its rim.
 const COLLAR_HIGH := "high"
 const COLLAR_JAGGED := "jagged"
 const COLLAR_PLATE := "plate"
@@ -136,11 +137,18 @@ const TIPS_FLETCHING := "fletching"
 const TIPS_SHARDS := "shards"
 const QUIVER_TIPS := [TIPS_FLETCHING, TIPS_SHARDS]
 ## A mage staff's head: one raw shard lashed to the shaft, two fork arms holding a floating
-## prism, or a hoop cradling a large prism with a small one riding above it.
+## prism, a hoop cradling a large prism with a small one riding above it, or the top sets'
+## heads (#167): one long greatshard with two side shards, a brazier cup holding three prisms,
+## two curved antler tines round a prism with a feather and a bead cord hanging, or a broken
+## pillar top with a prism in the break.
 const HEAD_LASHED := "lashed"
 const HEAD_FORKED := "forked"
 const HEAD_RING := "ring"
-const STAFF_HEADS := [HEAD_LASHED, HEAD_FORKED, HEAD_RING]
+const HEAD_SHARD := "shard"
+const HEAD_BRAZIER := "brazier"
+const HEAD_ANTLER := "antler"
+const HEAD_PILLAR := "pillar"
+const STAFF_HEADS := [HEAD_LASHED, HEAD_FORKED, HEAD_RING, HEAD_SHARD, HEAD_BRAZIER, HEAD_ANTLER, HEAD_PILLAR]
 
 ## Every palette carries exactly these fields.
 ##   base         Color  the piece itself: a dome, vest, greave or fur wrap, a blade or haft
@@ -288,6 +296,45 @@ const RIMECALLER_FROST_LIT := Color("#e8f2ff")
 const RIMECALLER_ASH_LIT := Color("#7a6450")
 const GLACIER_WARDEN_LIT := Color("#e3ebef")
 const GLACIER_WARDEN_IRON_LIT := Color("#4f5866")
+## The magic top sets' palettes (#167, the approved round-2 board on #157): the magic sets above
+## steel, each with exactly one light, at its staff head, a few motes there, and emission in
+## its glow colour on the parts the issue names. Each has a staff, but its glow is per part, so
+## glow_energy is 0 and `Figures.staff` is never drawn for a set.
+## Hoarfrost Sovereign: glacier white over ice shade, steel blue, pale ice; frost glow.
+const HOARFROST_SOVEREIGN := {
+	"base": Color("#dbe8fa"), "dark": Color("#9fb6d6"),
+	"trim": Color("#5f7fb0"), "accent": Color("#c4dcf5"),
+	"glow": Color("#a7e4ff"), "glow_energy": 0.0,
+}
+## Hearthfire Magus: charcoal over soot, brass, flame; ember glow.
+const HEARTHFIRE_MAGUS := {
+	"base": Color("#2b2522"), "dark": Color("#1b1614"),
+	"trim": Color("#c88a3c"), "accent": Color("#ffc46b"),
+	"glow": Color("#ff9e38"), "glow_energy": 0.0,
+}
+## Aurora Shaman: violet over its shade, bone, antler; aurora glow.
+const AURORA_SHAMAN := {
+	"base": Color("#3e2f6b"), "dark": Color("#2a1f4d"),
+	"trim": Color("#e9e4d2"), "accent": Color("#8b7a5a"),
+	"glow": Color("#7ff0c4"), "glow_energy": 0.0,
+}
+## Ruinwarden (the magic line's): dusk cloth over deep cloth, ruin stone, pillar; rune glow.
+const RUINWARDEN_MAGE := {
+	"base": Color("#2a2a3e"), "dark": Color("#1b1b2a"),
+	"trim": Color("#6c6f86"), "accent": Color("#4a4a5c"),
+	"glow": Color("#b784ff"), "glow_energy": 0.0,
+}
+## The magic top sets' lit rim tints and shaded tones.
+const HOARFROST_SOVEREIGN_LIT := Color("#f2f7fd")
+const HOARFROST_SOVEREIGN_STEEL_LIT := Color("#7f9bc8")
+const HEARTHFIRE_MAGUS_LIT := Color("#3d3530")
+const HEARTHFIRE_MAGUS_BRASS_LIT := Color("#e0a655")
+const AURORA_SHAMAN_LIT := Color("#54428a")
+const AURORA_SHAMAN_BONE_LIT := Color("#f6f3e8")
+const AURORA_SHAMAN_BONE_DARK := Color("#c9c2ad")
+const RUINWARDEN_MAGE_LIT := Color("#3a3a52")
+const RUINWARDEN_MAGE_STONE_LIT := Color("#8b8ea6")
+const RUINWARDEN_MAGE_STONE_DARK := Color("#525468")
 
 ## The ranged sets' palettes (#164, the approved board on #157). No set glows, so glow is
 ## black and glow_energy 0 (none has a staff).
@@ -456,7 +503,8 @@ const SHAPES := {
 	},
 	# An upright plate behind the neck leaning `tilt` back, over a dark backing, with a lit
 	# top edge: `kind` picks a high collar, a jagged collar with `teeth` points, a wider
-	# thicker back-plate, or an upright hoop with `teeth` fins on its rim.
+	# thicker back-plate, or an upright hoop (a halo, in the highlight) with `teeth` flame fins
+	# in `tone` on its rim.
 	SHAPE_COLLAR: {
 		"kind": COLLAR_HIGH, "width": 0.64, "height": 0.5, "thickness": 0.05,
 		"offset": Vector3(0, 0.26, 0.3), "tilt": 0.45, "teeth": 5, "tooth": 0.18,
@@ -692,24 +740,36 @@ const SHAPES := {
 		"tone": "accent", "flap_tone": "trim", "shadow_tone": "dark", "glow": 0.0,
 	},
 	# A mage staff held upright in the right hand like the tier staves (`tilt` zero): a shaft
-	# `length` long in `tone` standing `foot` below the hand, a collar `collar` tall in
-	# `collar_tone` under the head and a grip band `grip` tall in `grip_tone` `grip_y` above
-	# the hand (0 for none), and a head of three or four parts picked by `head`: lashed, one
-	# raw `facets`-sided prism `prism_length` long on the shaft's top with a rope torus `lash`
-	# thick round the join in `lash_tone`; forked, two arms `fork_length` long leaning
-	# `fork_spread` apart in `fork_tone` with the prism floating `rise` over the shaft in the
-	# gap; ring, a hoop `ring_inner` to `ring_outer` across in `ring_tone` standing on the
-	# shaft, the prism rising through it and a small prism `small_length` long riding `rise`
-	# above its top. Every prism is the glow colour over a `root_tone` root, lit at `glow`.
+	# `length` long in `tone` standing `foot` below the hand (`segments` 4 makes it a square
+	# pillar), a collar `collar` tall in `collar_tone` under the head and a grip band `grip`
+	# tall in `grip_tone` `grip_y` above the hand (0 for none), and a head of three or four
+	# parts picked by `head`: lashed, one raw `facets`-sided prism `prism_length` long on the
+	# shaft's top with a rope torus `lash` thick round the join in `lash_tone`; forked, two
+	# arms `fork_length` long leaning `fork_spread` apart in `fork_tone` with the prism floating
+	# `rise` over the shaft in the gap; ring, a hoop `ring_inner` to `ring_outer` across in
+	# `ring_tone` standing on the shaft, the prism rising through it and a small prism
+	# `small_length` long riding `rise` above its top; shard, the prism on the shaft's top with
+	# two small prisms leaning `side_spread` out from its root; brazier, a cup `cup` tall in
+	# `cup_tone` flaring to `cup_radius` at its mouth, the prism standing in it between two
+	# small prisms leaning `side_spread` apart; antler, two tines `fork_length` long leaning
+	# `fork_spread` apart that bend `tine_bend` back in halfway up, the prism floating `rise`
+	# over the shaft between them, a feather `feather` long in `feather_tone` hanging from the
+	# right tine's root and `beads` beads `bead` across in `bead_tone` strung from the left's;
+	# pillar, `teeth` jagged points `tooth` tall round the shaft's broken top with the prism
+	# rising from the break. Every prism is the glow colour over a `root_tone` root, lit at
+	# `glow`. `light` and `motes` as a crystal takes them, at the head.
 	SHAPE_MAGE_STAFF: {
 		"head": HEAD_LASHED, "length": 1.5, "foot": 0.35, "radius": 0.04, "segments": 6, "tilt": Vector3.ZERO,
 		"collar": 0.05, "collar_radius": 0.065, "grip": 0.12, "grip_y": 0.08, "lash": 0.03,
 		"facets": 4, "prism_length": 0.3, "prism_radius": 0.065, "root": 0.3,
-		"small_length": 0.14, "small_radius": 0.04, "rise": 0.08,
-		"fork_length": 0.32, "fork_spread": 0.45, "fork_radius": 0.022,
+		"small_length": 0.14, "small_radius": 0.04, "rise": 0.08, "side_spread": 0.5,
+		"fork_length": 0.32, "fork_spread": 0.45, "fork_radius": 0.022, "tine_bend": 0.8,
 		"ring_inner": 0.15, "ring_outer": 0.19, "ring_rings": 10, "ring_segments": 6,
+		"cup": 0.18, "cup_radius": 0.15, "feather": 0.24, "beads": 3, "bead": 0.02, "teeth": 5, "tooth": 0.12,
 		"tone": "accent", "collar_tone": "trim", "grip_tone": "dark", "lash_tone": "trim", "fork_tone": "accent",
-		"ring_tone": "trim", "root_tone": "dark", "glow": 0.0,
+		"ring_tone": "trim", "cup_tone": "trim", "feather_tone": "trim", "bead_tone": "trim", "root_tone": "dark", "glow": 0.0,
+		"light": false, "light_energy": 1.0, "light_range": 3.0,
+		"motes": false, "motes_count": 4, "motes_radius": 0.2, "motes_size": 0.03, "motes_rise": 0.3,
 	},
 }
 
