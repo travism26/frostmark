@@ -7,8 +7,10 @@
 # On the first call for a record it exports the head and base commits with `git archive` to a
 # temp folder outside any repo (so neither copy has a .git) and imports each once; later calls
 # reuse them. It refuses a dirty tree. It lints the probe, copies it into both copies and the
-# record, runs it on each under a perl alarm, appends the raw output to <record>/head.log and
-# <record>/base.log, and prints each side's PROBE lines and errors.
+# record, runs it on each under a perl alarm and prints each side's PROBE lines and errors.
+# The record keeps every run's raw output, appended to head.log and base.log, and the latest
+# run of each probe in drive/<probe>.head.log and .head.rc (and .base.*), which the verdict
+# reads (tools/verify/write_verdict.gd). An rc of 142 is a run the alarm killed.
 #
 #   VERIFY_HEAD        the head commit (default HEAD)
 #   VERIFY_BASE        the base commit (default: git merge-base origin/main <head>)
@@ -40,6 +42,7 @@ mkdir -p "$1" || fail "cannot make the record at $1"
 RECORD=$(cd "$1" && pwd)
 PROBE=$2
 NAME=$(basename "$PROBE")
+STEM=${NAME%.gd}
 command -v godot >/dev/null || fail "godot is not on the PATH"
 
 # Exports <sha> to <dir> and puts this kit's probe base and lint in it, so a base commit from
@@ -87,7 +90,7 @@ else
   echo "$COPIES" >"$RECORD/copies"
 fi
 
-mkdir -p "$RECORD/probes"
+mkdir -p "$RECORD/probes" "$RECORD/drive"
 cp "$PROBE" "$RECORD/probes/$NAME"
 for side in head base; do
   cp "$PROBE" "$COPIES/$side/tools/verify/probes/$NAME"
@@ -110,6 +113,8 @@ for side in head base; do
   rc=$?
   sha=$(cat "$RECORD/$side.sha")
   if [ "$rc" -eq 142 ]; then end="timeout after $SECS s"; else end="rc=$rc"; fi
+  cp "$COPIES/$side.out" "$RECORD/drive/$STEM.$side.log"
+  echo "$rc" >"$RECORD/drive/$STEM.$side.rc"
   {
     echo "== drive $NAME on $side $sha at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
     cat "$COPIES/$side.out"

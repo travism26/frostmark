@@ -40,6 +40,9 @@ check "$(holds grep -q 'PROBE {"id":"AC1"' <(echo "$out" | sed -n '/^head /,/^ba
 check "$(holds grep -q 'PROBE {"id":"AC1"' <(echo "$out" | sed -n '/^base /,$p'))" "the base PROBE lines are printed"
 check "$(holds grep -q '^PROBE {"id":"AC2"' "$RECORD/head.log")" "the head output is saved in the record"
 check "$(holds grep -q '^PROBE {"id":"AC2"' "$RECORD/base.log")" "the base output is saved in the record"
+check "$(holds grep -q '^PROBE {"id":"AC2"' "$RECORD/drive/probe_ok.head.log")" "the latest head output is saved where the verdict reads it"
+check "$(holds test "$(cat "$RECORD/drive/probe_ok.head.rc" "$RECORD/drive/probe_ok.base.rc")" = "0
+0")" "with each side's exit code"
 check "$(holds cmp "$FIX/probe_ok.gd" "$RECORD/probes/probe_ok.gd")" "the probe is saved in the record"
 
 echo "== the copies"
@@ -75,12 +78,14 @@ echo "$out" | sed 's/^/  | /'
 check "$(holds test -z "$(grep 'PROBE {' <<<"$out")")" "yields no PROBE line"
 check "$(holds grep -q "SCRIPT ERROR: Invalid call. Nonexistent function 'walk'" <<<"$out")" "prints the error"
 check "$(holds grep -q 'SCRIPT ERROR' <(sed -n '/^== drive probe_error.gd/,/^== end/p' "$RECORD/head.log"))" "records the error"
+check "$(holds grep -q 'SCRIPT ERROR' "$RECORD/drive/probe_error.head.log")" "where the verdict reads it"
 
 echo "== a probe that never quits"
 out=$(VERIFY_PROBE_SECS=2 drive "$RECORD" "$FIX/probe_hang.gd" 2>&1)
 echo "$out" | sed 's/^/  | /'
 check "$(holds grep -q '^head .*: timeout after 2 s' <<<"$out")" "is killed by the alarm (2 s here, 60 s by default)"
 check "$(holds grep -q '^== end probe_hang.gd timeout after 2 s' "$RECORD/head.log")" "is recorded as a timeout"
+check "$(holds test "$(cat "$RECORD/drive/probe_hang.head.rc")" = 142)" "with the alarm's exit code, 142"
 check "$(holds test -z "$(grep -i 'alarm clock' "$RECORD/head.log" - <<<"$out")")" "and neither the record nor the output has shell noise"
 
 echo "== probe lint"
