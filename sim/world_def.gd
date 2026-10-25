@@ -15,6 +15,7 @@ const KIND_CLIFF := "cliff"
 const KIND_OUTCROP := "outcrop"
 const KIND_DECOR := "decor"
 const KIND_RUIN := "ruin"
+const KIND_RIDGE := "ridge"
 const KIND_GATE := "gate"
 const KIND_FIRE := "fire"
 const KIND_STASH := "stash"
@@ -37,10 +38,16 @@ const REGION_OUTPOST := "outpost"
 const REGION_INNER_RING := "inner_ring"
 const REGION_RING_ONE := "ring_one"
 const REGION_RING_TWO := "ring_two"
+const REGION_RING_THREE := "ring_three"
+
+## Where ring two ends and ring three begins: the outside of ring two's southern cliffs.
+const RING_TWO_FAR := 128.0
+## The middle of the gate to ring three, along ring two's southern cliff.
+const RING_THREE_GATE_X := -40.0
 
 var cell_size := 1.0
 var cols := 128
-var rows := 192
+var rows := 256
 var origin: Array = [-64.0, -64.0]
 var spawn: Array = [0.5, 4.5]
 ## Where a player wakes after dying: beside the outpost fire.
@@ -102,7 +109,8 @@ const NODE_KINDS := {
 
 ## Blocking geometry: {id, kind, min: [x, z], max: [x, z], height}. `kind` is a wall (the
 ## outpost palisade), a cliff (the world's ice edges), an outcrop (a rock in the field), a
-## ruin (ring two's broken walls and pillars) or decor (the tent in the yard).
+## ruin (ring two's broken walls and pillars), a ridge (ring three's pressure ridges in the
+## ice) or decor (the tent in the yard).
 var solids: Array = []
 ## Interactable placements by id: {kind, label, min, max, height, blocks}.
 var objects: Dictionary = {}
@@ -127,8 +135,9 @@ var path_grid: AStarGrid2D = null
 ## two north, east and west), a mine of three copper and three tin rocks against the west cliff
 ## that witch 2 guards and, at its far southern edge, the gate to ring two
 ## with the bandit captain standing at it. Ring two lies beyond that gate and nowhere else: a
-## band of ruins south of the cliffs (see `_ring_two`). Ring one is only reached by walking
-## through the inner ring.
+## band of ruins south of the cliffs (see `_ring_two`). Ring three lies beyond a second gate in
+## ring two's southern cliffs: the glacier (see `_ring_three`). Ring one is only reached by
+## walking through the inner ring.
 static func outpost() -> WorldDef:
 	var w := WorldDef.new()
 	var half := 10.0
@@ -270,19 +279,23 @@ static func outpost() -> WorldDef:
 	for p in placements:
 		w.enemies[p[0]] = {"kind": p[1], "home": p[2], "pack": p[3]}
 	_ring_two(w)
+	_ring_three(w)
 	var far: Array = [w.origin[0] + w.cols * w.cell_size, w.origin[1] + w.rows * w.cell_size]
+	# Ring two runs from the grid's edges to the outside of its southern cliffs, so ring one's
+	# own cliffs and ring two's count as ring two; ring three is everything south of them.
 	w.regions = [
 		{"name": REGION_OUTPOST, "polygon": _rect_polygon([-half, -half], [half, half])},
 		{"name": REGION_INNER_RING, "polygon": _rect_polygon([-24.0, -24.0], [24.0, 24.0])},
 		{"name": REGION_RING_ONE, "polygon": _rect_polygon([-edge, -edge], [edge, edge])},
-		{"name": REGION_RING_TWO, "polygon": _rect_polygon(w.origin, far)},
+		{"name": REGION_RING_TWO, "polygon": _rect_polygon(w.origin, [far[0], RING_TWO_FAR])},
+		{"name": REGION_RING_THREE, "polygon": _rect_polygon([w.origin[0], RING_TWO_FAR], far)},
 	]
 	w.bake()
 	return w
 
 
 ## Ring two: the ruins south of the ring-two gate, from the cliffs at 64 m to the cliffs at
-## 124 m, walled in on every side. A yard with an old brazier opens behind the gate. A broken
+## 124 m, walled in on every side but for the gate to ring three in its southern cliffs. A yard with an old brazier opens behind the gate. A broken
 ## outer wall crosses the ring with three gaps, the chokepoints. Past it a frozen lake with deep
 ## holes lies west under a troll, coal seams and ruined pillars lie east among ruin stalkers, and
 ## a roofless keep in the middle holds rich iron and a pair of trolls. Farther south, past the
@@ -293,11 +306,21 @@ static func _ring_two(w: WorldDef) -> void:
 	var far := 124.0
 	var side := 60.0
 	var c := 4.0
+	var gate_x := RING_THREE_GATE_X
 	w.solids.append_array([
 		_solid("cliff_ring_two_west", [-side - c, near], [-side, far + c], 3.0, KIND_CLIFF),
 		_solid("cliff_ring_two_east", [side, near], [side + c, far + c], 3.0, KIND_CLIFF),
-		_solid("cliff_ring_two_south", [-side, far], [side, far + c], 3.0, KIND_CLIFF),
+		_solid("cliff_ring_two_south_west", [-side, far], [gate_x - 2.0, far + c], 3.0, KIND_CLIFF),
+		_solid("cliff_ring_two_south_east", [gate_x + 2.0, far], [side, far + c], 3.0, KIND_CLIFF),
 	])
+	# Barred until the outpost builds its hoist; it has no guardian. It stands in the outer
+	# half of the cliff, so the alcove in front of it is ring two's and a walk through it
+	# either way ends clear of the line between the rings. It always blocks the grid.
+	w.objects["ring_three_gate"] = {
+		"kind": KIND_RING_GATE, "label": "Gate to ring three", "blocks": true, "height": 3.5,
+		"min": [gate_x - 2.0, RING_TWO_FAR - 2.0], "max": [gate_x + 2.0, RING_TWO_FAR],
+		"upgrade": "ring_three_gate", "outward": [0.0, 1.0],
+	}
 	# The broken outer wall at 78 m, open at x -34 to -30, -3 to 3 and 30 to 34; then the keep,
 	# a square from x -16 to 16 and z 92 to 112, with a door north, west and south-east.
 	var ruins := [
@@ -342,6 +365,35 @@ static func _ring_two(w: WorldDef) -> void:
 	]
 	for p in placements:
 		w.enemies[p[0]] = {"kind": p[1], "home": p[2], "pack": p[3]}
+
+
+## Ring three: the glacier south of ring two's southern cliffs, from 128 m to the cliffs at
+## 188 m and from x -60 to 60, walled in by cliffs on the west, east and south. Its gate sits
+## in the south-west of ring two's cliff, out of sight of every ring-two home and a stretch of
+## ruins from ring two's waystone; there is no waystone past it. A fire burns a few metres in
+## from the gate, as the brazier does in ring two. Pressure ridges break the ice into lanes, so
+## a kiting enemy has walls to be cornered against. No nodes: its enemies bring their own loot.
+static func _ring_three(w: WorldDef) -> void:
+	var near := RING_TWO_FAR
+	var far := 188.0
+	var side := 60.0
+	var c := 4.0
+	w.solids.append_array([
+		_solid("cliff_ring_three_west", [-side - c, near], [-side, far + c], 3.0, KIND_CLIFF),
+		_solid("cliff_ring_three_east", [side, near], [side + c, far + c], 3.0, KIND_CLIFF),
+		_solid("cliff_ring_three_south", [-side, far], [side, far + c], 3.0, KIND_CLIFF),
+	])
+	var ridges := [
+		[[-28.0, 142.0], [-12.0, 143.5]], [[8.0, 138.0], [9.5, 153.0]], [[22.0, 160.0], [40.0, 161.5]],
+		[[-48.0, 158.0], [-46.5, 174.0]], [[-14.0, 170.0], [4.0, 171.5]], [[44.0, 140.0], [45.5, 152.0]],
+	]
+	for i in ridges.size():
+		w.solids.append(_solid("ridge_%d" % (i + 1), ridges[i][0], ridges[i][1], 2.0, KIND_RIDGE))
+	var gate_x := RING_THREE_GATE_X
+	w.objects["ring_three_fire"] = {
+		"kind": KIND_FIRE, "label": "Fire", "blocks": true, "height": 0.6,
+		"min": [gate_x + 5.0, 132.0], "max": [gate_x + 6.5, 133.5],
+	}
 
 
 static func _place(w: WorldDef, id: String, kind: String, label: String, at: Array, size: Array, height: float) -> void:

@@ -9,6 +9,8 @@ func test_outpost_regions_nest_outward() -> void:
 	assert_eq(w.region_at(Vector2(0.5, 0.5)), WorldDef.REGION_OUTPOST)
 	assert_eq(w.region_at(Vector2(0.5, 15.0)), WorldDef.REGION_INNER_RING)
 	assert_eq(w.region_at(Vector2(0.5, 30.0)), WorldDef.REGION_RING_ONE)
+	assert_eq(w.region_at(Vector2(0.5, 100.0)), WorldDef.REGION_RING_TWO)
+	assert_eq(w.region_at(Vector2(0.5, 160.0)), WorldDef.REGION_RING_THREE)
 	assert_eq(w.region_at(Vector2(100.0, 100.0)), "")
 
 

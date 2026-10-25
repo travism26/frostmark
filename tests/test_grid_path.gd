@@ -39,8 +39,8 @@ func test_routes_step_cell_to_cell_without_cutting_corners() -> void:
 		var from: Vector2i = pair[0]
 		var to: Vector2i = pair[1]
 		var cells := GridPath.find(w, from, to)
-		if _beyond_the_gate(w, from) != _beyond_the_gate(w, to):
-			assert_true(cells.is_empty(), "%s to %s does not route: the ring-two gate is the only way" % [from, to])
+		if _band(w, from) != _band(w, to):
+			assert_true(cells.is_empty(), "%s to %s does not route: the ring gates are the only way" % [from, to])
 			continue
 		assert_false(cells.is_empty(), "%s to %s routes (walkable ground on one side is connected)" % [from, to])
 		if cells.is_empty():
@@ -56,8 +56,9 @@ func test_routes_step_cell_to_cell_without_cutting_corners() -> void:
 				assert_true(corners, "a diagonal step at %s cuts no corner" % cells[i])
 
 
-static func _beyond_the_gate(w: WorldDef, cell: Vector2i) -> bool:
-	return w.region_at(w.cell_center(cell)) == WorldDef.REGION_RING_TWO
+## Which side of the ring gates a cell is on: the walkable ground of each band is connected.
+static func _band(w: WorldDef, cell: Vector2i) -> int:
+	return Sim._band(w.region_at(w.cell_center(cell)))
 
 
 func test_smoothed_routes_keep_line_of_sight_and_end_on_the_goal() -> void:
