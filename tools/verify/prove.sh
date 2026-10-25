@@ -82,18 +82,16 @@ done
 (cd "$WORK/planted" && env -u GIT_DIR -u GIT_WORK_TREE git apply) <"$FIX/plant-$TICKET.patch"
 check $? "plant-$TICKET.patch applies to the exported copy"
 check "$(holds test -z "$(git status --porcelain)")" "  and the repo is untouched"
-suite() {
-  limit 300 godot --headless --path "$WORK/$1" --import >"$WORK/$1.import.log" 2>&1 \
-    && limit 120 godot --headless --path "$WORK/$1" -s tests/run.gd >"$WORK/$1.unit.log" 2>&1
-}
-suite shipped &
-pid_shipped=$!
-suite planted &
-pid_planted=$!
-wait $pid_shipped
-check $? "the shipped copy's suite exits 0"
-wait $pid_planted
-check $? "the planted copy's suite exits 0"
+for side in shipped planted; do
+  limit 300 godot --headless --path "$WORK/$side" --import >"$WORK/$side.import.log" 2>&1 &
+  eval "pid_$side=$!"
+done
+# The two suites run one at a time: both copies share one user:// folder, and the settings
+# tests write to it.
+for side in shipped planted; do
+  eval "wait \$pid_$side" && limit 120 godot --headless --path "$WORK/$side" -s tests/run.gd >"$WORK/$side.unit.log" 2>&1
+  check $? "the $side copy's suite exits 0"
+done
 for side in shipped planted; do
   echo "  $side: $(grep -E '^PASS [0-9]+ / FAIL' "$WORK/$side.unit.log")"
 done
