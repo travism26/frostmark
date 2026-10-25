@@ -3,8 +3,8 @@
 ## gear stands south of the gate, and each GearLook.KIT_SAMPLES look is built in the kit palette
 ## and hung on the bone slot its kind belongs to (the hood, crystal, fin and prism stack on the
 ## head; the robe, cloak, collar, plates, studs, edge trim, sash and ruff on the chest; the
-## faulds and tassets on the hips; the weapons in the right hand), one at a time and then all
-## together.
+## faulds and tassets on the hips; the weapons in the right hand, the longbow in the left), one
+## at a time and then all together.
 ##
 ##   godot --resolution 1280x720 -s tools/kit_shots.gd -- <out_dir> [shape ...]
 ##
@@ -28,6 +28,7 @@ const SLOTS := {
 	GearLook.SHAPE_EDGE_TRIM: "chest", GearLook.SHAPE_SASH: "chest", GearLook.SHAPE_RUFF: "chest",
 	GearLook.SHAPE_FAULDS: "hips", GearLook.SHAPE_TASSETS: "hips",
 	GearLook.SHAPE_BROADSWORD: "handslot_r", GearLook.SHAPE_BEARDED_AXE: "handslot_r", GearLook.SHAPE_GREATSWORD: "handslot_r",
+	GearLook.SHAPE_LONGBOW: "handslot_l",
 }
 
 var _out_dir := ""

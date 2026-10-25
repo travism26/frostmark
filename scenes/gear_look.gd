@@ -26,8 +26,8 @@
 ##
 ## The kit shapes (a peaked hood, an under-robe with coat panels, a cloak, a collar, stacked
 ## plates, a crystal, a fin, a prism stack, studs, edge trim, a quiver, a sash, a ruff, faulds,
-## tassets, a broadsword, a bearded axe and a greatsword) are the layered, non-round pieces the
-## set looks are built from. Each has its numbers in SHAPES like any other shape and a builder
+## tassets, a broadsword, a bearded axe, a greatsword and a longbow) are the layered, non-round
+## pieces the set looks are built from. Each has its numbers in SHAPES like any other shape and a builder
 ## of the same name in CharacterGear; KIT_SAMPLES holds one look of each for the shader warm-up
 ## and the kit shots.
 class_name GearLook
@@ -79,14 +79,18 @@ const SHAPE_TASSETS := "Tassets"
 const SHAPE_BROADSWORD := "Broadsword"
 const SHAPE_BEARDED_AXE := "BeardedAxe"
 const SHAPE_GREATSWORD := "Greatsword"
+## The ranged set shape (#164): a bow built from its look, held like the tier bows.
+const SHAPE_LONGBOW := "Longbow"
 const KIT_SHAPES := [
 	SHAPE_PEAKED_HOOD, SHAPE_UNDER_ROBE, SHAPE_CLOAK, SHAPE_COLLAR, SHAPE_STACKED_PLATES,
 	SHAPE_CRYSTAL, SHAPE_FIN, SHAPE_PRISM_STACK, SHAPE_STUDS, SHAPE_EDGE_TRIM, SHAPE_QUIVER,
 	SHAPE_SASH, SHAPE_RUFF, SHAPE_FAULDS, SHAPE_TASSETS,
-	SHAPE_BROADSWORD, SHAPE_BEARDED_AXE, SHAPE_GREATSWORD,
+	SHAPE_BROADSWORD, SHAPE_BEARDED_AXE, SHAPE_GREATSWORD, SHAPE_LONGBOW,
 ]
-## The kit shapes held in the hand: each is a whole weapon, gripped in the right hand.
-const WEAPON_SHAPES := [SHAPE_BROADSWORD, SHAPE_BEARDED_AXE, SHAPE_GREATSWORD]
+## The kit shapes held in the hand: each is a whole weapon, gripped in the right hand, or in
+## the left for the BOW_SHAPES, held as the tier bows are.
+const WEAPON_SHAPES := [SHAPE_BROADSWORD, SHAPE_BEARDED_AXE, SHAPE_GREATSWORD, SHAPE_LONGBOW]
+const BOW_SHAPES := [SHAPE_LONGBOW]
 ## The key a piece's extra layers sit under.
 const LAYERS := "layers"
 ## A cloak's outline: one straight hem, two halves parting in a V, a ragged hem, a long
@@ -187,6 +191,34 @@ const RUINWARDEN_LIT := Color("#d4b05c")
 const RUINWARDEN_VERDIGRIS_LIT := Color("#7fae9c")
 const RUINWARDEN_PLUME_DARK := Color("#731f1b")
 const RUINWARDEN_PLUME_LIT := Color("#d8514a")
+
+## The ranged sets' palettes (#164, the approved board on #157). No set glows, so glow is
+## black and glow_energy 0 (none has a staff).
+## Trapper's Leathers: tanned hide, dark lacing, a pale fur edge, the ash stave.
+const TRAPPER := {
+	"base": Color("#a8784a"), "dark": Color("#4a3324"),
+	"trim": Color("#d8c9a8"), "accent": Color("#8a6a46"),
+	"glow": Color.BLACK, "glow_energy": 0.0,
+}
+## Wolfstalker: the grey wolf pelt over dark leather, bone trim, the yew stave.
+const WOLFSTALKER := {
+	"base": Color("#9c9ca8"), "dark": Color("#3b2f2a"),
+	"trim": Color("#dcd6c0"), "accent": Color("#4f3a2c"),
+	"glow": Color.BLACK, "glow_energy": 0.0,
+}
+## Steelpoint Ranger: smithed steel, dark straps, the amber feather, pine-green leather.
+const STEELPOINT := {
+	"base": Color("#6b80a0"), "dark": Color("#1f2a24"),
+	"trim": Color("#e8a040"), "accent": Color("#2f4a3a"),
+	"glow": Color.BLACK, "glow_energy": 0.0,
+}
+## The ranged sets' lit and shaded tints, and the pale bowstring every bow shares.
+const TRAPPER_HIDE_LIT := Color("#c4945e")
+const WOLFSTALKER_PELT_DARK := Color("#6e6e7a")
+const STEELPOINT_LIT := Color("#8aa0c0")
+const STEELPOINT_PINE_LIT := Color("#3f6450")
+const STEELPOINT_AMBER_DARK := Color("#b87a28")
+const BOWSTRING := Color("#e6e0cc")
 
 ## Each shape's numbers (metres and radians in the part's mount frame, segment counts) and
 ## switches, as drawn when a piece changes none of them.
@@ -323,10 +355,11 @@ const SHAPES := {
 		"offset": Vector3.ZERO, "tilt": Vector3.ZERO, "root_tone": "dark", "tone": "base", "tip_tone": "accent", "glow": 0.0,
 	},
 	# `count` small spheres in the accent tone spaced over `arc` of a dark band of `radius`,
-	# centred on the front.
+	# centred on the front, in `rows` rows each `row_step` lower than the one above; `band`
+	# off leaves the studs alone on the piece under them (lace knots, a toggle, a chest column).
 	SHAPE_STUDS: {
 		"count": 5, "radius": 0.42, "arc": PI, "y": -0.28, "stud": 0.035, "band_height": 0.05, "segments": 10,
-		"band_tone": "dark", "stud_tone": "accent", "glow": 0.0,
+		"rows": 1, "row_step": 0.1, "band": true, "band_tone": "dark", "stud_tone": "accent", "glow": 0.0,
 	},
 	# A thin raised rim in the trim tone round a plate `size` across (x and z) and `size.y`
 	# tall, over a dark shadow line, so the plate catches a highlight from above; `round`
@@ -405,6 +438,17 @@ const SHAPES := {
 		"tone": "base", "ridge_tone": "dark", "fuller_tone": "trim", "guard_tone": "trim", "grip_tone": "dark",
 		"ring_tone": "trim", "pommel_tone": "trim", "glow": 0.0,
 	},
+	# A bow in the left hand's mount frame, held by its grip like the tier bows (Figures.bow):
+	# `segments` staves `stave` thick along the frame's Z over `length`, bulging `depth` toward
+	# +Y, the outermost bent `tip_bend` further back (a recurve), a `string` thick string
+	# below them, a round grip `grip_length` long round the middle in `grip_tone`, a ball
+	# `nock` wide at each tip in `nock_tone` (the highlight) and, when `cap_length` is above 0,
+	# a limb cap that long at each tip in `cap_tone`.
+	SHAPE_LONGBOW: {
+		"length": 1.1, "depth": 0.19, "segments": 6, "stave": 0.06, "string": 0.015, "tip_bend": 0.0,
+		"grip_length": 0.18, "grip_radius": 0.045, "cap_length": 0.0, "nock": 0.03,
+		"tone": "base", "grip_tone": "dark", "cap_tone": "trim", "nock_tone": "trim", "string_tone": "trim", "glow": 0.0,
+	},
 	# A case `length` long on the back, its root at `offset` low on the shoulder blade and turned
 	# by `tilt` so its mouth tops the right shoulder, clear of a tool slung the other way: a
 	# dark foot, a cap band round the mouth, and `tip_count` fletched shafts or shard tips
@@ -438,6 +482,7 @@ const KIT_SAMPLES := [
 	{"shape": SHAPE_BROADSWORD, "glow": 0.8},
 	{"shape": SHAPE_BEARDED_AXE, "glow": 0.8},
 	{"shape": SHAPE_GREATSWORD, "glow": 1.0},
+	{"shape": SHAPE_LONGBOW, "cap_length": 0.12, "tip_bend": 0.3, "glow": 0.8},
 ]
 
 const LOOKS := {
@@ -593,6 +638,124 @@ const LOOKS := {
 		"shape": SHAPE_FUR_BAND, "band_radius": 0.175, "band_height": 0.05, "band_y": -0.02,
 	}},
 	"ruinwarden_greatsword": {"palette": RUINWARDEN, PART_WEAPON: {"shape": SHAPE_GREATSWORD, "glow": 0.7}},
+	# The ranged sets (#164). As with the melee sets, every colour, size, offset and glow is
+	# here. None glows. The ladder steps up by what stands out past the body: a round hood,
+	# then ear points with a mantle and a quiver, then a pointed cap with a feather, square
+	# pauldrons and greaves.
+	# Trapper's Leathers (mid): ring-one hide tanned at the outpost. No glow.
+	"trapper_helm": {"palette": TRAPPER, PART_HEAD: {
+		# a round hide hood with a pale fur edge round the face, a dark seam ridge running
+		# front to back over the crown so the head reads as a hood and not a disc, and two
+		# lace knots tied under the chin
+		"shape": SHAPE_FUR_HOOD, "hoop_tone": "trim",
+		LAYERS: [
+			{"shape": SHAPE_FIN, "size": Vector3(0.08, 0.2, 0.64), "offset": Vector3(0, 0.68, 0.0), "edge": 0.03, "tone": "dark", "edge_tone": TRAPPER_HIDE_LIT},
+			{"shape": SHAPE_STUDS, "count": 2, "arc": 0.5, "radius": 0.46, "y": -0.2, "stud": 0.04, "band": false, "stud_tone": "dark"},
+		],
+	}},
+	"trapper_body": {"palette": TRAPPER, PART_BODY: {
+		# a hide jerkin with a dark belt at the hem, a dark lacing strip down the chest with a
+		# pale tie at its top and three pale lace knots down it
+		"shape": SHAPE_VEST,
+		LAYERS: [
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.365, "size": Vector3(0, 0.06, 0), "lip": 0.0, "offset": Vector3(0, -0.28, 0), "tone": "dark"},
+			{"shape": SHAPE_FIN, "size": Vector3(0.07, 0.36, 0.03), "offset": Vector3(0, -0.26, -0.37), "edge": 0.03, "tone": "dark", "edge_tone": "trim"},
+			{"shape": SHAPE_STUDS, "count": 1, "rows": 3, "row_step": 0.1, "band": false, "y": 0.06, "radius": 0.39, "stud": 0.025, "stud_tone": "trim"},
+		],
+	}},
+	"trapper_legs": {"palette": TRAPPER, PART_HIPS: {
+		# a hide hip wrap under a dark belt, with a pale fur edge at its hem
+		"shape": SHAPE_KILT, "tone": "base",
+		LAYERS: [
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.39, "size": Vector3(0, 0.05, 0), "lip": 0.0, "offset": Vector3(0, 0.03, 0), "tone": "dark"},
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.46, "size": Vector3(0, 0.035, 0), "lip": 0.0, "offset": Vector3(0, -0.19, 0), "tone": "trim"},
+		],
+	}, PART_SHIN: {
+		# a hide shin wrap with a dark strap at the knee and a second lower down
+		"shape": SHAPE_FUR_BAND, "band_tone": "dark", "band_radius": 0.175, "band_height": 0.05, "band_y": -0.03,
+		LAYERS: [
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.165, "size": Vector3(0, 0.04, 0), "lip": 0.0, "offset": Vector3(0, -0.17, 0), "tone": "dark"},
+		],
+	}},
+	# an ash recurve: a plain stave with a pale string, dark nocks and a dark grip
+	"trapper_bow": {"palette": TRAPPER, PART_WEAPON: {"shape": SHAPE_LONGBOW, "tip_bend": 0.25, "tone": "accent", "nock_tone": "dark", "string_tone": BOWSTRING}},
+	# Wolfstalker (mid-high): ring one's wolves, worn. No glow.
+	"wolfstalker_helm": {"palette": WOLFSTALKER, PART_HEAD: {
+		# a grey pelt hood with a bone-pale face trim, two pointed ears standing up and out
+		# from the crown, and a darker snout band hanging over the brow
+		"shape": SHAPE_FUR_HOOD, "hoop_tone": "trim",
+		LAYERS: [
+			{"shape": SHAPE_FIN, "size": Vector3(0.2, 0.22, 0.07), "offset": Vector3(-0.22, 0.74, 0.0), "tilt": Vector3(-0.1, 0, 0.35), "jagged": true, "teeth": 1, "tooth": 0.2, "tone": WOLFSTALKER_PELT_DARK},
+			{"shape": SHAPE_FIN, "size": Vector3(0.2, 0.22, 0.07), "offset": Vector3(0.22, 0.74, 0.0), "tilt": Vector3(-0.1, 0, -0.35), "jagged": true, "teeth": 1, "tooth": 0.2, "tone": WOLFSTALKER_PELT_DARK},
+			{"shape": SHAPE_FIN, "size": Vector3(0.3, 0.12, 0.08), "offset": Vector3(0, 0.62, -0.4), "tilt": Vector3(-0.7, 0, 0), "edge": 0.02, "tone": WOLFSTALKER_PELT_DARK},
+		],
+	}},
+	"wolfstalker_body": {"palette": WOLFSTALKER, PART_BODY: {
+		# a dark leather jerkin under a grey pelt mantle round the shoulders with a bone edge,
+		# the pelt torn down the back, one bone toggle on the chest and a yew-brown belt
+		"shape": SHAPE_VEST, "tone": "dark",
+		LAYERS: [
+			{"shape": SHAPE_CLOAK, "outline": OUTLINE_TORN, "width": 0.56, "length_left": 0.42, "length_right": 0.34, "offset": Vector3(0, 0.2, 0.34), "tilt": 0.15, "teeth": 4, "tooth": 0.1, "tone": "base", "tooth_tone": "trim"},
+			{"shape": SHAPE_RUFF, "inner": 0.24, "outer": 0.5, "y": 0.2, "tone": "base", "trim_tone": "trim"},
+			{"shape": SHAPE_STUDS, "count": 1, "band": false, "y": 0.0, "radius": 0.38, "stud": 0.045, "stud_tone": "trim"},
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.365, "size": Vector3(0, 0.05, 0), "lip": 0.0, "offset": Vector3(0, -0.28, 0), "tone": "accent"},
+		],
+	}},
+	"wolfstalker_legs": {"palette": WOLFSTALKER, PART_HIPS: {
+		# dark leather hips under a yew-brown belt, a ragged pelt flap hanging behind and a
+		# shorter one in front
+		"shape": SHAPE_KILT, "tone": "dark",
+		LAYERS: [
+			{"shape": SHAPE_CLOAK, "outline": OUTLINE_TORN, "width": 0.5, "length_left": 0.3, "length_right": 0.26, "offset": Vector3(0, 0.04, 0.4), "tilt": 0.2, "teeth": 3, "tooth": 0.1, "tone": "base", "tooth_tone": "trim"},
+			{"shape": SHAPE_CLOAK, "outline": OUTLINE_TORN, "width": 0.44, "length_left": 0.22, "length_right": 0.26, "offset": Vector3(0, 0.04, -0.4), "tilt": -0.2, "teeth": 3, "tooth": 0.08, "tone": "base", "tooth_tone": "trim"},
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.39, "size": Vector3(0, 0.05, 0), "lip": 0.0, "offset": Vector3(0, 0.03, 0), "tone": "accent"},
+		],
+	}, PART_SHIN: {
+		# a dark shin wrap with a bone band at the knee
+		"shape": SHAPE_FUR_BAND, "tone": "dark", "band_tone": "trim", "band_radius": 0.185, "band_height": 0.06, "band_y": -0.03,
+	}},
+	# a dark yew longbow, longer than the others, with bone nocks and a pale string
+	"wolfstalker_bow": {"palette": WOLFSTALKER, PART_WEAPON: {"shape": SHAPE_LONGBOW, "length": 1.25, "nock": 0.04, "tone": "accent", "string_tone": BOWSTRING}},
+	# a dark leather quiver with a bone cap band, yew shafts and pale fletching
+	"wolfstalker_quiver": {"palette": WOLFSTALKER, PART_QUIVER: {"shape": SHAPE_QUIVER, "tone": "dark", "foot_tone": "accent", "band_tone": "trim", "shaft_tone": "accent", "fletch_tone": "trim", "tip_tone": "trim"}},
+	# Steelpoint Ranger (high): ring two's smithed steel on a hunter's frame. No glow.
+	"steelpoint_helm": {"palette": STEELPOINT, PART_HEAD: {
+		# a brimmed steel cap: the dome over a wide thin brim, a dark strap round it above the
+		# brim, a pointed crown rising from the top with a lit tip, and one amber feather
+		# standing up and out to the right
+		"shape": SHAPE_HELM, "band": true, "band_radius": 0.56, "band_height": 0.03, "band_y": 0.4, "band_tone": "base",
+		LAYERS: [
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.465, "size": Vector3(0, 0.045, 0), "lip": 0.0, "offset": Vector3(0, 0.46, 0), "tone": "dark"},
+			{"shape": SHAPE_PRISM_STACK, "count": 2, "length": 0.44, "radius": 0.3, "facets": 8, "bend": 0.0, "taper": 0.5, "offset": Vector3(0, 0.7, 0), "root_tone": "base", "tip_tone": STEELPOINT_LIT},
+			{"shape": SHAPE_FIN, "size": Vector3(0.1, 0.5, 0.03), "offset": Vector3(0.16, 0.74, 0.0), "tilt": Vector3(0.45, 0, -0.55), "edge": 0.06, "tone": "trim", "edge_tone": STEELPOINT_AMBER_DARK},
+		],
+	}},
+	"steelpoint_body": {"palette": STEELPOINT, PART_BODY: {
+		# a pine-green leather jerkin with square steel pauldrons stepped over a dark
+		# under-plate, a lit steel rim at the collar, three steel studs down the chest and a
+		# dark belt at the hem
+		"shape": SHAPE_VEST, "tone": "accent",
+		LAYERS: [
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.345, "size": Vector3(0, 0.035, 0), "lip": 0.015, "offset": Vector3(0, 0.18, 0), "tone": "base"},
+			{"shape": SHAPE_STACKED_PLATES, "plates_left": 2, "plates_right": 2, "size_left": Vector3(0.26, 0.08, 0.3), "size_right": Vector3(0.26, 0.08, 0.3), "x": 0.4, "y": 0.18, "trim_tone": STEELPOINT_LIT},
+			{"shape": SHAPE_STUDS, "count": 1, "rows": 3, "row_step": 0.1, "band": false, "y": 0.06, "radius": 0.38, "stud": 0.03, "stud_tone": "base"},
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.365, "size": Vector3(0, 0.05, 0), "lip": 0.0, "offset": Vector3(0, -0.28, 0), "tone": "dark"},
+		],
+	}},
+	"steelpoint_legs": {"palette": STEELPOINT, PART_HIPS: {
+		# pine leather chaps: two plates hung from a dark belt over pine hips
+		"shape": SHAPE_KILT, "tone": "accent",
+		LAYERS: [
+			{"shape": SHAPE_TASSETS, "count": 2, "arc": PI * 0.6, "size": Vector3(0.2, 0.24, 0.035), "tone": "accent", "edge_tone": STEELPOINT_PINE_LIT},
+		],
+	}, PART_SHIN: {
+		# a steel greave with a lit steel knee plate
+		"shape": SHAPE_FUR_BAND, "band_tone": STEELPOINT_LIT, "band_radius": 0.19, "band_height": 0.1, "band_y": -0.03,
+	}},
+	# a steel-capped recurve: a pine stave with steel limb caps, grip and nocks, a pale string
+	"steelpoint_bow": {"palette": STEELPOINT, PART_WEAPON: {"shape": SHAPE_LONGBOW, "tip_bend": 0.35, "cap_length": 0.14, "tone": "accent", "cap_tone": "base", "grip_tone": "base", "nock_tone": "base", "string_tone": BOWSTRING}},
+	# a pine leather quiver with a steel foot and cap band, dark shafts and amber fletching
+	"steelpoint_quiver": {"palette": STEELPOINT, PART_QUIVER: {"shape": SHAPE_QUIVER, "tone": "accent", "foot_tone": "base", "band_tone": "base", "shaft_tone": "dark", "fletch_tone": "trim", "tip_tone": "base"}},
 }
 
 
