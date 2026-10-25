@@ -1,6 +1,6 @@
 ## One tooltip for everything the player hovers: a tinted badge, a Cinzel title, body lines
 ## and a muted footnote on the frosted frame. `item()` builds it for a pack, stash or
-## equipment slot (tier, weight and value, what it crafts into, what a click does) and
+## equipment slot (tier, weight and value, what it crafts into and builds, what a click does) and
 ## `skill()` for a skill cell (level, xp to go, the next unlock). Hosts are `UiTooltip.Host`
 ## buttons: Godot asks a Control for its tooltip through `_make_custom_tooltip`, so a host
 ## keeps a Callable that builds the control fresh on each hover from the live state.
@@ -58,6 +58,11 @@ static func build(icon_key: String, title: String, lines: Array[String], note :=
 ## An item's tooltip: its tier, weight and value, what it does or crafts into, and `verb`
 ## (what a click does here), with the drop reminder as the note.
 static func item(kind: String, verb := "", note := "Right-click to drop.") -> UiTooltip:
+	return build(kind, ItemTable.label(kind), item_lines(kind, verb), note)
+
+
+## The body lines of `kind`'s tooltip, with `verb` last when given. Pure: it reads the tables only.
+static func item_lines(kind: String, verb := "") -> Array[String]:
 	var lines: Array[String] = []
 	var tier := ItemTable.tier(kind)
 	var facts: PackedStringArray = []
@@ -78,9 +83,12 @@ static func item(kind: String, verb := "", note := "Right-click to drop.") -> Ui
 	var makes := crafts_into(kind)
 	if not makes.is_empty():
 		lines.append("Crafts into %s." % ", ".join(makes))
+	var upgrades := builds(kind)
+	if not upgrades.is_empty():
+		lines.append("Builds %s." % ", ".join(upgrades))
 	if verb != "":
 		lines.append(verb + ".")
-	return build(kind, ItemTable.label(kind), lines, note)
+	return lines
 
 
 ## A skill's tooltip: the level, the xp to the next, and the first thing a higher level unlocks.
@@ -103,6 +111,17 @@ static func crafts_into(kind: String) -> Array[String]:
 		var r := RecipeTable.get_recipe(id)
 		if r["inputs"].has(kind):
 			out.append(str(r["label"]).to_lower())
+	return out
+
+
+## The labels of every outpost upgrade whose cost includes `kind`, in upgrade-table order,
+## built or not.
+static func builds(kind: String) -> Array[String]:
+	var out: Array[String] = []
+	for id in UpgradeTable.ids():
+		var u := UpgradeTable.get_upgrade(id)
+		if u["cost"].has(kind):
+			out.append(str(u["label"]))
 	return out
 
 
