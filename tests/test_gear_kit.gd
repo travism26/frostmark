@@ -185,13 +185,18 @@ func test_the_samples_hold_one_of_each_kit_shape_with_a_light_and_motes() -> voi
 	all.free()
 
 
-func test_the_kit_changes_no_item_look() -> void:
+func test_the_kit_changes_no_tier_or_fur_look() -> void:
 	for item in GearLookScript.LOOKS:
+		if ItemTable.set_of(item) != "":
+			continue  # the sets are built from the kit
 		var look: Dictionary = GearLookScript.LOOKS[item]
 		for part in look:
 			if part == "palette" or (look[part] as Dictionary).is_empty():
 				continue
-			assert_false(GearLookScript.KIT_SHAPES.has(look[part]["shape"]), "%s's %s is not a kit shape yet" % [item, part])
+			assert_false(GearLookScript.KIT_SHAPES.has(look[part]["shape"]), "%s's %s is not a kit shape" % [item, part])
+			assert_false((look[part] as Dictionary).has(GearLookScript.LAYERS), "%s's %s layers nothing on" % [item, part])
+			for key in look[part]:
+				assert_false(String(key).ends_with("tone"), "%s's %s keeps its shape's tones" % [item, part])
 	for shape in GearLookScript.KIT_SHAPES:
 		var numbers: Dictionary = GearLookScript.SHAPES[shape]
 		assert_true(numbers.has("glow"), "%s has a glow number" % shape)

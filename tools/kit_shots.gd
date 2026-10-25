@@ -2,8 +2,9 @@
 ## with the real game loop running, for the kit PR's evidence (#160). A new character with no
 ## gear stands south of the gate, and each GearLook.KIT_SAMPLES look is built in the kit palette
 ## and hung on the bone slot its kind belongs to (the hood, crystal, fin and prism stack on the
-## head; the robe, cloak, collar, plates, studs and edge trim on the chest), one at a time and
-## then all together.
+## head; the robe, cloak, collar, plates, studs, edge trim, sash and ruff on the chest; the
+## faulds and tassets on the hips; the weapons in the right hand), one at a time and then all
+## together.
 ##
 ##   godot --resolution 1280x720 -s tools/kit_shots.gd -- <out_dir> [shape ...]
 ##
@@ -24,7 +25,9 @@ const SLOTS := {
 	GearLook.SHAPE_PEAKED_HOOD: "head", GearLook.SHAPE_CRYSTAL: "head", GearLook.SHAPE_FIN: "head",
 	GearLook.SHAPE_PRISM_STACK: "head", GearLook.SHAPE_UNDER_ROBE: "chest", GearLook.SHAPE_CLOAK: "chest",
 	GearLook.SHAPE_COLLAR: "chest", GearLook.SHAPE_STACKED_PLATES: "chest", GearLook.SHAPE_STUDS: "chest",
-	GearLook.SHAPE_EDGE_TRIM: "chest",
+	GearLook.SHAPE_EDGE_TRIM: "chest", GearLook.SHAPE_SASH: "chest", GearLook.SHAPE_RUFF: "chest",
+	GearLook.SHAPE_FAULDS: "hips", GearLook.SHAPE_TASSETS: "hips",
+	GearLook.SHAPE_BROADSWORD: "handslot_r", GearLook.SHAPE_BEARDED_AXE: "handslot_r", GearLook.SHAPE_GREATSWORD: "handslot_r",
 }
 
 var _out_dir := ""

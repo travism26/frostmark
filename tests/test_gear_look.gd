@@ -43,12 +43,24 @@ func test_every_look_is_complete() -> void:
 			var own: Dictionary = look[part]
 			if own.is_empty():
 				continue
-			assert_true(GearLookScript.SHAPES.has(own["shape"]), "%s's %s is a known shape" % [item, part])
-			var numbers: Dictionary = GearLookScript.SHAPES.get(own["shape"], {})
-			for key in own:
-				assert_true(key == "shape" or numbers.has(key), "%s's %s %s is one of its shape's numbers" % [item, part, key])
+			_assert_own_numbers(own, "%s's %s" % [item, part])
+			for layer in own.get(GearLookScript.LAYERS, []):
+				_assert_own_numbers(layer, "%s's %s %s layer" % [item, part, layer.get("shape", "?")])
+				assert_false((layer as Dictionary).has(GearLookScript.LAYERS), "a layer of %s's %s carries no layers of its own" % [item, part])
 		for part in parts:
 			assert_true(look.has(part), "%s says what it draws on %s" % [item, part])
+
+
+## `own` names a known shape and changes only that shape's numbers (and, for a piece, its
+## layers); a tone it sets names a palette field or carries a Color.
+func _assert_own_numbers(own: Dictionary, what: String) -> void:
+	assert_true(GearLookScript.SHAPES.has(own["shape"]), "%s is a known shape" % what)
+	var numbers: Dictionary = GearLookScript.SHAPES.get(own["shape"], {})
+	for key in own:
+		assert_true(key == "shape" or key == GearLookScript.LAYERS or numbers.has(key), "%s %s is one of its shape's numbers" % [what, key])
+		if String(key).ends_with("tone"):
+			var tone: Variant = own[key]
+			assert_true(tone is Color or GearLookScript.PALETTE_FIELDS.has(tone), "%s %s names a palette field or carries a Color" % [what, key])
 
 
 func test_a_piece_lays_its_own_numbers_over_its_shape() -> void:
