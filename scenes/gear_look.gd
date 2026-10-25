@@ -719,6 +719,172 @@ const LOOKS := {
 		"shape": SHAPE_FUR_BAND, "band_radius": 0.175, "band_height": 0.05, "band_y": -0.02,
 	}},
 	"ruinwarden_greatsword": {"palette": RUINWARDEN, PART_WEAPON: {"shape": SHAPE_GREATSWORD, "glow": 0.7}},
+	# The melee top sets (#163): the only melee sets allowed a light or particles. At most one
+	# light per set, and only Emberheart's hammer carries one; a few motes per set (one emitter
+	# each, a handful alive at once); Trollbone has no glow at all, on purpose. Every colour,
+	# size, offset and glow is here, to be tuned live after playtesting with a re-shoot.
+	# Emberheart (top): forge-black plate that carries the outpost fire out into the cold, ember
+	# light bleeding through every seam. Glow: emissive seams and cracks, one warm light and a few
+	# embers rising off the hammer, embers off the burning core.
+	"emberheart_helm": {"palette": EMBERHEART, PART_HEAD: {
+		# a tall black dome under a dark bronze band with a lit rim above it, an ember eye slit
+		# across the face, and two black horns curving out then up, the left the longer, each
+		# rooted in a glowing ember ring
+		"shape": SHAPE_HELM, "height": 0.44, "band": true, "band_height": 0.07, "band_y": 0.4,
+		LAYERS: [
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.47, "size": Vector3(0, 0.03, 0), "lip": 0.0, "offset": Vector3(0, 0.46, 0), "tone": EMBERHEART_LIT},
+			{"shape": SHAPE_SEAM, "size": Vector3(0.34, 0.035, 0.03), "offset": Vector3(0, 0.33, -0.455), "tilt": Vector3(-0.3, 0, 0), "glow": 1.4},
+			{"shape": SHAPE_PRISM_STACK, "count": 3, "length": 0.6, "radius": 0.085, "taper": 0.7, "bend": -0.4, "offset": Vector3(-0.34, 0.62, 0.02), "tilt": Vector3(0.9, -PI * 0.5, 0), "root_tone": "accent", "tone": "accent", "tip_tone": "trim"},
+			{"shape": SHAPE_PRISM_STACK, "count": 3, "length": 0.5, "radius": 0.085, "taper": 0.7, "bend": -0.4, "offset": Vector3(0.34, 0.62, 0.02), "tilt": Vector3(0.9, PI * 0.5, 0), "root_tone": "accent", "tone": "accent", "tip_tone": "trim"},
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.085, "size": Vector3(0, 0.05, 0), "lip": 0.014, "offset": Vector3(-0.34, 0.62, 0.02), "tilt": Vector3(0.9, -PI * 0.5, 0), "glow": 1.2},
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.085, "size": Vector3(0, 0.05, 0), "lip": 0.014, "offset": Vector3(0.34, 0.62, 0.02), "tilt": Vector3(0.9, PI * 0.5, 0), "glow": 1.2},
+		],
+	}},
+	"emberheart_body": {"palette": EMBERHEART, PART_BODY: {
+		# black plate with a lit rim at the collar and a bronze rim at the hem, three ember cracks
+		# down the chest round a burning core (a six-sided crystal faced forward and up, embers
+		# rising off it), and big angular pauldrons, three plates on the left and two on the
+		# right, their edges lit ember
+		"shape": SHAPE_VEST,
+		LAYERS: [
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.345, "size": Vector3(0, 0.04, 0), "lip": 0.02, "offset": Vector3(0, 0.18, 0), "tone": EMBERHEART_LIT},
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.36, "size": Vector3(0, 0.04, 0), "lip": 0.02, "offset": Vector3(0, -0.29, 0)},
+			{"shape": SHAPE_SEAM, "size": Vector3(0.03, 0.26, 0.03), "offset": Vector3(-0.12, -0.02, -0.355), "tilt": Vector3(-0.1, 0, 0.35), "glow": 1.3},
+			{"shape": SHAPE_SEAM, "size": Vector3(0.03, 0.26, 0.03), "offset": Vector3(0.12, -0.02, -0.355), "tilt": Vector3(-0.1, 0, -0.35), "glow": 1.3},
+			{"shape": SHAPE_SEAM, "size": Vector3(0.03, 0.2, 0.03), "offset": Vector3(0, -0.2, -0.37), "glow": 1.3},
+			{"shape": SHAPE_CRYSTAL, "facets": 6, "length": 0.14, "radius": 0.08, "root": 0.35, "offset": Vector3(0, 0.03, -0.34), "tilt": Vector3(-1.2, 0, 0), "glow": 1.6, "root_tone": "trim", "motes": true, "motes_count": 6, "motes_radius": 0.2, "motes_size": 0.025, "motes_rise": 0.4},
+			{"shape": SHAPE_STACKED_PLATES, "plates_left": 3, "plates_right": 2, "size_left": Vector3(0.36, 0.1, 0.4), "size_right": Vector3(0.32, 0.1, 0.36), "x": 0.44, "y": 0.2, "tilt": 0.3, "step": Vector3(0.05, -0.08, 0), "under_tone": "accent", "glow": 1.0},
+		],
+	}},
+	"emberheart_legs": {"palette": EMBERHEART, PART_HIPS: {
+		# four black tassets with ember hems hung from a bronze belt over a dark kilt
+		"shape": SHAPE_KILT,
+		LAYERS: [{"shape": SHAPE_TASSETS, "count": 4, "belt_tone": "trim", "glow": 1.0}],
+	}, PART_SHIN: {
+		# a black greave with a bronze rim at its top and an ember seam down its front
+		"shape": SHAPE_FUR_BAND, "band_radius": 0.175, "band_height": 0.04, "band_y": -0.02,
+		LAYERS: [{"shape": SHAPE_SEAM, "size": Vector3(0.025, 0.16, 0.025), "offset": Vector3(0, -0.12, -0.165), "glow": 1.2}],
+	}},
+	# the forge hammer: a black head cracked with ember, banded in dark bronze on a horn haft,
+	# carrying the one small warm light the four sets are allowed
+	"emberheart_hammer": {"palette": EMBERHEART, PART_WEAPON: {"shape": SHAPE_FORGE_HAMMER, "glow": 1.5, "light": true, "light_energy": 1.2, "light_range": 2.5}},
+	# Hoarfrost (top): ice plate grown over white fur, a crown of frost shards, crystal shoulders
+	# and a blade that is one long icicle. Glow: emissive shard tips and the blade's core, a few
+	# frost motes off the crown. The dark-blue harness holds the silhouette on pale snow.
+	"hoarfrost_helm": {"palette": HOARFROST, PART_HEAD: {
+		# a pale ice cap over a dark harness band with a lit rim, under a tilted crown of seven
+		# frost shards glowing faintly blue at the tips, frost motes drifting up through it
+		"shape": SHAPE_HELM, "band": true, "band_tone": "dark", "band_height": 0.07, "band_y": 0.4,
+		LAYERS: [
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.47, "size": Vector3(0, 0.03, 0), "lip": 0.0, "offset": Vector3(0, 0.46, 0), "tone": HOARFROST_LIT},
+			{"shape": SHAPE_SHARD_CROWN, "count": 7, "tone": "accent", "glow": 0.8, "offset": Vector3(0, 0.52, 0), "tilt": Vector3(0.12, 0, -0.1), "motes": true, "motes_count": 5},
+		],
+	}},
+	"hoarfrost_body": {"palette": HOARFROST, PART_BODY: {
+		# an ice breastplate crossed by a dark-blue harness (two straps, lit along their edges),
+		# a white fur mantle round the shoulders, a crystal cluster on each shoulder, the left the
+		# taller, and a dark harness band at the hem
+		"shape": SHAPE_VEST,
+		LAYERS: [
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.36, "size": Vector3(0, 0.04, 0), "lip": 0.02, "offset": Vector3(0, -0.29, 0), "tone": "dark"},
+			{"shape": SHAPE_SASH, "roll": 0.6, "tone": "dark", "edge_tone": HOARFROST_HARNESS_LIT},
+			{"shape": SHAPE_SASH, "roll": -0.6, "tone": "dark", "edge_tone": HOARFROST_HARNESS_LIT},
+			{"shape": SHAPE_RUFF, "tone": "trim", "trim_tone": HOARFROST_LIT},
+			{"shape": SHAPE_SHARD_CROWN, "count": 3, "arc": PI, "radius": 0.06, "lean": 0.5, "length": 0.3, "shard": 0.06, "offset": Vector3(-0.42, 0.22, 0), "tilt": Vector3(0, 0, 0.3), "tone": "accent", "glow": 0.8},
+			{"shape": SHAPE_SHARD_CROWN, "count": 3, "arc": PI, "radius": 0.06, "lean": 0.5, "length": 0.24, "shard": 0.06, "offset": Vector3(0.42, 0.22, 0), "tilt": Vector3(0, 0, -0.3), "tone": "accent", "glow": 0.8},
+		],
+	}},
+	"hoarfrost_legs": {"palette": HOARFROST, PART_HIPS: {
+		# ice tassets with lit hems hung from a dark harness belt over a dark-blue kilt
+		"shape": SHAPE_KILT,
+		LAYERS: [{"shape": SHAPE_TASSETS, "edge_tone": HOARFROST_LIT, "shadow_tone": "accent"}],
+	}, PART_SHIN: {
+		# a white fur boot under an ice band
+		"shape": SHAPE_FUR_BAND, "tone": "trim", "band_tone": "base", "band_radius": 0.19, "band_height": 0.1, "band_y": -0.03,
+	}},
+	# the icicle greatsword: a long pale blade with a glowing core down its whole length (no
+	# transparency; the core's emission does the work) on dark harness fittings
+	"hoarfrost_greatsword": {"palette": HOARFROST, PART_WEAPON: {"shape": SHAPE_GREATSWORD, "ridge_tone": "accent", "guard_tone": "dark", "grip_tone": "dark", "fuller_length": 1.0, "glow": 1.4}},
+	# Auroral (top): dusk-violet plate under the northern lights, antlers of the great stag,
+	# swept wing pauldrons and aurora-green trim. Glow: emissive green seams, rims and the blade
+	# edge, a faint aurora shimmer of motes off the star.
+	"auroral_helm": {"palette": AURORAL, PART_HEAD: {
+		# a deep violet dome under a lilac band with a lit rim, pale antlers branching up and out,
+		# the left the longer with one more tine
+		"shape": SHAPE_HELM, "band": true, "band_height": 0.07, "band_y": 0.4,
+		LAYERS: [
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.47, "size": Vector3(0, 0.03, 0), "lip": 0.0, "offset": Vector3(0, 0.46, 0), "tone": AURORAL_LIT},
+			{"shape": SHAPE_ANTLERS, "length_left": 0.6, "length_right": 0.52, "tines_left": 3, "tines_right": 2, "tip_tone": AURORAL_ANTLER_LIT},
+		],
+	}},
+	"auroral_body": {"palette": AURORAL, PART_BODY: {
+		# violet plate with lilac rims at the collar and hem, two aurora-green seams either side
+		# of a five-pointed star (a crystal faced forward and up, an aurora shimmer of motes round
+		# it), a shoulder plate each side and a swept wing rising out and up from each, the left
+		# the longer, edged in green
+		"shape": SHAPE_VEST,
+		LAYERS: [
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.345, "size": Vector3(0, 0.04, 0), "lip": 0.02, "offset": Vector3(0, 0.18, 0)},
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.36, "size": Vector3(0, 0.04, 0), "lip": 0.02, "offset": Vector3(0, -0.29, 0)},
+			{"shape": SHAPE_SEAM, "size": Vector3(0.03, 0.3, 0.03), "offset": Vector3(-0.15, -0.04, -0.35), "tilt": Vector3(-0.1, 0, 0), "glow": 1.2},
+			{"shape": SHAPE_SEAM, "size": Vector3(0.03, 0.3, 0.03), "offset": Vector3(0.15, -0.04, -0.35), "tilt": Vector3(-0.1, 0, 0), "glow": 1.2},
+			{"shape": SHAPE_CRYSTAL, "facets": 5, "length": 0.14, "radius": 0.09, "root": 0.3, "offset": Vector3(0, 0.0, -0.34), "tilt": Vector3(-1.2, 0, 0), "glow": 1.5, "root_tone": "trim", "motes": true, "motes_count": 6, "motes_radius": 0.35, "motes_size": 0.025, "motes_rise": 0.2},
+			{"shape": SHAPE_STACKED_PLATES, "plates_left": 1, "plates_right": 1, "size_left": Vector3(0.3, 0.08, 0.34), "size_right": Vector3(0.3, 0.08, 0.34), "trim_tone": AURORAL_LIT},
+			{"shape": SHAPE_FIN, "size": Vector3(0.3, 0.46, 0.04), "offset": Vector3(-0.42, 0.24, 0.02), "tilt": Vector3(-(PI * 0.5 - 0.5), PI * 0.5, 0), "edge": 0.03, "glow": 1.0},
+			{"shape": SHAPE_FIN, "size": Vector3(0.3, 0.38, 0.04), "offset": Vector3(0.42, 0.24, 0.02), "tilt": Vector3(-(PI * 0.5 - 0.5), -PI * 0.5, 0), "edge": 0.03, "glow": 1.0},
+		],
+	}},
+	"auroral_legs": {"palette": AURORAL, PART_HIPS: {
+		# three violet faulds with aurora-green rims over a dark kilt
+		"shape": SHAPE_KILT,
+		LAYERS: [{"shape": SHAPE_FAULDS, "glow": 1.0}],
+	}, PART_SHIN: {
+		# a violet greave with a lilac band at its top
+		"shape": SHAPE_FUR_BAND, "band_radius": 0.175, "band_height": 0.04, "band_y": -0.02,
+	}},
+	# the glaive: a long violet haft with lilac fittings and a curved lit-violet blade that glows
+	# green along its edge
+	"auroral_glaive": {"palette": AURORAL, PART_WEAPON: {"shape": SHAPE_GLAIVE, "tone": AURORAL_LIT, "haft_tone": "base", "glow": 1.4}},
+	# Trollbone (top): trophies of the ice troll, a tusked skull helm, tusk pauldrons, bone
+	# plates lashed over dark hide and a cleaver cut from one tusk. No glow, light or motes, on
+	# purpose: the silhouette alone says top.
+	"trollbone_helm": {"palette": TROLLBONE, PART_HEAD: {
+		# an ivory skull over a hide band: two dark eye sockets, a toothed jaw guard hanging over
+		# the chin, and two tusks curving out then up from the cheeks, the left the longer
+		"shape": SHAPE_HELM, "tone": "trim", "radius": 0.49, "height": 0.44, "band": true, "band_tone": "base", "band_radius": 0.5, "band_height": 0.06, "band_y": 0.38,
+		LAYERS: [
+			{"shape": SHAPE_SEAM, "size": Vector3(0.1, 0.07, 0.03), "offset": Vector3(-0.13, 0.33, -0.455), "tone": "dark", "shadow_tone": TROLLBONE_BONE_DARK},
+			{"shape": SHAPE_SEAM, "size": Vector3(0.1, 0.07, 0.03), "offset": Vector3(0.13, 0.33, -0.455), "tone": "dark", "shadow_tone": TROLLBONE_BONE_DARK},
+			{"shape": SHAPE_FIN, "size": Vector3(0.3, 0.1, 0.05), "offset": Vector3(0, 0.22, -0.44), "tilt": Vector3(PI, 0, 0), "jagged": true, "teeth": 5, "tooth": 0.06, "tone": "trim", "edge_tone": TROLLBONE_BONE_LIT},
+			{"shape": SHAPE_PRISM_STACK, "count": 3, "length": 0.5, "radius": 0.07, "taper": 0.65, "bend": -0.45, "offset": Vector3(-0.4, 0.3, -0.12), "tilt": Vector3(1.2, -PI * 0.5, 0), "root_tone": TROLLBONE_BONE_DARK, "tone": "trim", "tip_tone": TROLLBONE_BONE_LIT},
+			{"shape": SHAPE_PRISM_STACK, "count": 3, "length": 0.42, "radius": 0.07, "taper": 0.65, "bend": -0.45, "offset": Vector3(0.4, 0.3, -0.12), "tilt": Vector3(1.2, PI * 0.5, 0), "root_tone": TROLLBONE_BONE_DARK, "tone": "trim", "tip_tone": TROLLBONE_BONE_LIT},
+		],
+	}},
+	"trollbone_body": {"palette": TROLLBONE, PART_BODY: {
+		# three bone plates lashed across a dark hide vest under a blood-red wrap, a hide pad on
+		# each shoulder and a tusk curving out then up from each, the left the longer
+		"shape": SHAPE_VEST,
+		LAYERS: [
+			{"shape": SHAPE_FIN, "size": Vector3(0.32, 0.09, 0.04), "offset": Vector3(0, 0.08, -0.355), "tilt": Vector3(-0.1, 0, 0), "tone": "trim", "edge_tone": TROLLBONE_BONE_LIT, "edge": 0.02},
+			{"shape": SHAPE_FIN, "size": Vector3(0.32, 0.09, 0.04), "offset": Vector3(0, -0.04, -0.355), "tilt": Vector3(-0.1, 0, 0), "tone": "trim", "edge_tone": TROLLBONE_BONE_LIT, "edge": 0.02},
+			{"shape": SHAPE_FIN, "size": Vector3(0.32, 0.09, 0.04), "offset": Vector3(0, -0.16, -0.355), "tilt": Vector3(-0.1, 0, 0), "tone": "trim", "edge_tone": TROLLBONE_BONE_LIT, "edge": 0.02},
+			{"shape": SHAPE_SASH, "offset": Vector3(0, -0.05, -0.38), "edge_tone": TROLLBONE_BLOOD_DARK},
+			{"shape": SHAPE_STACKED_PLATES, "plates_left": 1, "plates_right": 1, "size_left": Vector3(0.3, 0.08, 0.34), "size_right": Vector3(0.3, 0.08, 0.34), "trim_tone": TROLLBONE_HIDE_LIT},
+			{"shape": SHAPE_PRISM_STACK, "count": 3, "length": 0.44, "radius": 0.08, "taper": 0.65, "bend": -0.45, "offset": Vector3(-0.42, 0.24, 0), "tilt": Vector3(1.1, -PI * 0.5, 0), "root_tone": TROLLBONE_BONE_DARK, "tone": "trim", "tip_tone": TROLLBONE_BONE_LIT},
+			{"shape": SHAPE_PRISM_STACK, "count": 3, "length": 0.36, "radius": 0.08, "taper": 0.65, "bend": -0.45, "offset": Vector3(0.42, 0.24, 0), "tilt": Vector3(1.1, PI * 0.5, 0), "root_tone": TROLLBONE_BONE_DARK, "tone": "trim", "tip_tone": TROLLBONE_BONE_LIT},
+		],
+	}},
+	"trollbone_legs": {"palette": TROLLBONE, PART_HIPS: {
+		# bone tassets hung from a hide belt over a hide kilt
+		"shape": SHAPE_KILT, "tone": "base",
+		LAYERS: [{"shape": SHAPE_TASSETS, "tone": "trim", "edge_tone": TROLLBONE_BONE_LIT, "shadow_tone": TROLLBONE_BONE_DARK, "belt_tone": "base"}],
+	}, PART_SHIN: {
+		# a bone shin plate strapped on with hide
+		"shape": SHAPE_FUR_BAND, "tone": "trim", "band_tone": "base", "band_radius": 0.175, "band_height": 0.05, "band_y": -0.02,
+	}},
+	# the tusk cleaver: a broad curved ivory blade on a short hide-wrapped grip, bound in blood
+	# red. No glow.
+	"trollbone_cleaver": {"palette": TROLLBONE, PART_WEAPON: {"shape": SHAPE_CLEAVER, "edge_tone": TROLLBONE_BONE_LIT, "back_tone": TROLLBONE_BONE_DARK}},
 }
 
 
