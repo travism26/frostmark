@@ -193,7 +193,8 @@ static func _grade(c: Dictionary, g: Dictionary, inputs: Dictionary) -> Dictiona
 
 static func _grade_probe(row: Dictionary, drive: Dictionary) -> void:
 	var probe := _evidence_probe(row.evidence)
-	var probes: Array = drive.keys() if probe == "probe" else [probe, probe + ".gd"].filter(func(p): return drive.has(p))
+	# drive.sh keeps each probe's output under its file name without `.gd`; evidence may name either.
+	var probes: Array = drive.keys() if probe == "probe" else [probe, probe + ".gd", probe.trim_suffix(".gd")].filter(func(p): return drive.has(p))
 	if probes.is_empty():
 		row.why = "no drive output for evidence '%s'" % row.evidence
 		return

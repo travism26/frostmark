@@ -44,7 +44,7 @@ fail() {
 mkdir -p "$1" || fail "cannot make the record at $1"
 RECORD=$(cd "$1" && pwd)
 PROBE=$2
-NAME=$(basename "$PROBE")
+NAME=$(basename -- "$PROBE")
 STEM=${NAME%.gd}
 command -v godot >/dev/null || fail "godot is not on the PATH"
 

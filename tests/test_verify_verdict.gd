@@ -93,6 +93,14 @@ func test_a_pass_grade_naming_a_probe_that_was_not_driven_is_inconclusive() -> v
 	assert_eq(_row(Verdict.decide(inputs), "AC2").grade, Verdict.INCONCLUSIVE)
 
 
+func test_evidence_naming_the_probe_file_reads_its_output_under_the_stem() -> void:
+	var inputs := _passing()
+	inputs.drive = {"gate": inputs.drive["gate.gd"]}
+	assert_eq(Verdict.decide(inputs).verdict, Verdict.PASS, "drive.sh saves gate.gd's output as drive/gate.head.log")
+	inputs.grades.criteria[0].evidence = "gate:AC1"
+	assert_eq(_row(Verdict.decide(inputs), "AC1").grade, Verdict.PASS)
+
+
 func test_a_bare_probe_evidence_reads_every_probe() -> void:
 	var inputs := _passing()
 	inputs.grades.criteria[1].evidence = "probe:AC2"

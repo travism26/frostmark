@@ -142,7 +142,7 @@ echo "verify: ticket #$TICKET at ${HEAD_SHA:0:7} (base ${BASE_SHA:0:7}), record 
 # Writes inputs.json from the variables gathered so far; $1 is the session.json content.
 write_inputs() {
   jq -n --argjson ticket "$TICKET" --arg head "$HEAD_SHA" --arg base "$BASE_SHA" --arg ci "$CI" \
-    --arg harness "$(git rev-parse "$HEAD_SHA:tools/verify" 2>/dev/null)" --arg model "$VERIFIER_MODEL" \
+    --arg harness "$(git rev-parse HEAD:tools/verify)" --arg model "$VERIFIER_MODEL" \
     --arg copy "${COPIES:+$COPIES/head}" --argjson guard "$GUARD" --argjson changed "$CHANGED" \
     --argjson earlier "$EARLIER" --arg replay_of "$(basename "${REPLAY:-}")" --arg mode "$MODE" \
     '{ticket: $ticket, head_sha: $head, base_sha: $base, ci: $ci, harness_version: $harness,
@@ -291,7 +291,7 @@ cat >"$SESS/bin/drive" <<EOF
 #!/bin/bash
 # drive <probe.gd>: runs a probe from the work folder on the head and base copies.
 n=\$((\$(wc -l <"$SESS/calls.log") + 1))
-echo "\$n cwd=\$(pwd -P) git_vars=\$(env | grep -c '^GIT_') \$*" >>"$SESS/calls.log"
+echo "\$n cwd=\$(pwd -P) git_vars=\$(env | sed -n 's/^\(GIT_[A-Za-z0-9_]*\)=.*/\\1/p' | paste -sd, -) \$*" >>"$SESS/calls.log"
 if [ "\$n" -gt $DRIVE_CAP ]; then
   touch "$SESS/capped-drive"
   echo "drive: refused: the cap of $DRIVE_CAP drive calls is reached, so this run is INCONCLUSIVE. Write grades.json and finish."
@@ -333,12 +333,14 @@ jq -n --arg hook "$SESS/bin/only-drive" \
 } >"$RECORD/prompt.md"
 
 TOOLS="Read,Write,Glob,Grep,Bash"
+# The session's whole environment: nothing else, so no GIT_* and nothing from this shell's session.
+SESSION_ENV=(HOME="$HOME" USER="${USER:-}" LOGNAME="${LOGNAME:-${USER:-}}" SHELL=/bin/bash
+  TMPDIR="${TMPDIR:-/tmp/}" LANG="${LANG:-en_US.UTF-8}" PATH="$SESS/bin:$PATH")
+[ -n "${ANTHROPIC_API_KEY:-}" ] && SESSION_ENV+=(ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY")
 session_start=$SECONDS
 (
   cd "$WORK" || exit 1
-  exec env -i HOME="$HOME" USER="${USER:-}" LOGNAME="${LOGNAME:-${USER:-}}" SHELL=/bin/bash \
-    TMPDIR="${TMPDIR:-/tmp/}" LANG="${LANG:-en_US.UTF-8}" PATH="$SESS/bin:$PATH" \
-    ${ANTHROPIC_API_KEY:+ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY"} \
+  exec env -i "${SESSION_ENV[@]}" \
     perl -e 'alarm shift; exec @ARGV or die "cannot run $ARGV[0]: $!\n"' "$SESSION_SECS" \
     claude --print --model "$MODEL" --restricted --tools "$TOOLS" \
     --allowedTools "Read" "Glob" "Grep" "Edit(./**)" "Bash(drive *)" \
@@ -374,11 +376,13 @@ write_inputs "$(jq -n --arg cwd "$WORK" --arg model "$MODEL" --arg tools "$TOOLS
   --arg why "$WHY_SESSION" --argjson rc "$rc" --argjson wall "$wall" --arg capped "$capped" \
   --argjson secs "$SESSION_SECS" --argjson cap "$DRIVE_CAP" --argjson freeze "$FREEZE" \
   --argjson calls "$(wc -l <"$RECORD/drive-calls.log" | tr -d ' ')" \
-  --argjson git_vars "$(awk '{sub("git_vars=", "", $3); if ($3 + 0 > m) m = $3 + 0} END {print m + 0}' "$RECORD/drive-calls.log")" \
+  --argjson env "$(env -i "${SESSION_ENV[@]}" env | cut -d= -f1 | jq -R . | jq -s -c .)" \
+  --argjson git_vars "$(awk '{sub("git_vars=", "", $3); print $3}' "$RECORD/drive-calls.log" | tr , '\n' | sort -u | jq -R 'select(length > 0)' | jq -s -c .)" \
   --argjson result "$RESULT" \
   '{started: true, why: $why, cwd: $cwd, model: $model, models_used: (($result.modelUsage // {}) | keys),
     tools: $tools, readable: [$cwd, $head], writable: [$cwd], bash: "drive <probe.gd> only",
-    git_vars_seen_by_drive: $git_vars, exit: $rc, wall_secs: $wall, drive_calls: $calls,
+    env_at_start: $env, git_vars_at_start: ($env | map(select(startswith("GIT_")))),
+    git_vars_set_by_the_bash_tool: $git_vars, exit: $rc, wall_secs: $wall, drive_calls: $calls,
     caps: {secs: $secs, drive_calls: $cap}, capped: (if $capped == "" then null else $capped end),
     frozen: ($freeze == 1), num_turns: $result.num_turns, cost_usd: $result.total_cost_usd,
     tokens: (($result.modelUsage // {}) | [.[]] | {
