@@ -41,7 +41,7 @@ run() {
 }
 
 sessions() {
-  ls "$DATA"/claude.* 2>/dev/null | wc -l | tr -d ' '
+  ls "$DATA" | grep -cE '^claude\.[0-9]+$'
 }
 
 record_of() {
@@ -80,7 +80,7 @@ cat >"$SHIMS/claude" <<EOF
 #!/bin/bash
 # selftest stand-in for claude (see the top of selftest_run.sh).
 prompt=\$(cat)
-n=\$(ls "$DATA"/claude.* 2>/dev/null | wc -l | tr -d ' ')
+n=\$(ls "$DATA" | grep -cE '^claude\.[0-9]+\$')
 note=$DATA/claude.\$((n + 1))
 {
   echo "cwd=\$(pwd -P)"
@@ -139,7 +139,7 @@ check "$(holds test "$(jq -r .model "$REC1/session.json")" = sonnet -a "$(jq -r 
 for a in --print --restricted "Bash(drive *)" "Edit(./**)" --strict-mcp-config; do
   check "$(holds grep -qxF "arg=$a" "$NOTE")" "  claude gets $a"
 done
-check "$(holds grep -A1 -xF 'arg=--model' "$NOTE" | grep -qx 'arg=sonnet')" "  claude gets --model sonnet"
+check "$(holds test "$(grep -A1 -xF 'arg=--model' "$NOTE" | tail -n 1)" = arg=sonnet)" "  claude gets --model sonnet"
 check "$(holds test "$(grep -A1 -xF 'arg=--add-dir' "$NOTE" | tail -n 1)" = "arg=$(jq -r '.readable[1]' "$REC1/session.json")")" "  and only the head copy beyond its work folder"
 check "$(holds test "$(cat "$FROSTMARK_VERIFY_HOME/903/frozen")" = "$(basename "$REC1")")" "its probes are frozen for the ticket"
 sum1=$(cat "$REC1"/*.json | shasum)
@@ -173,7 +173,7 @@ mv "$DATA/ticket-903.orig" "$DATA/ticket-903.json"
 echo "== a frozen probe that errors"
 cp tools/verify/fixtures/probes/probe_error.gd "$REC1/probes/p.gd"
 out=$(run 903)
-echo "$out" | grep -E '^(verify|verdict):' | sed 's/^/  | /'
+echo "$out" | grep -E '^(verify|verdict|drive):' | sed 's/^/  | /'
 REC3=$(record_of "$out")
 check "$(holds grep -q 'errors on head' <<<"$out")" "is noticed on the re-drive"
 check "$(holds test "$(sessions)" = 2)" "  and starts a fresh session"
@@ -181,12 +181,12 @@ check "$(holds test "$(cat "$FROSTMARK_VERIFY_HOME/903/frozen")" = "$(basename "
 
 echo "== the caps"
 out=$(VERIFY_SESSION_SECS=2 run 904)
-echo "$out" | grep -E '^(verify|verdict):' | sed 's/^/  | /'
+echo "$out" | grep -E '^(verify|verdict|drive):' | sed 's/^/  | /'
 check "$(holds grep -qx 'verdict: INCONCLUSIVE' <<<"$out")" "a session past its time cap is INCONCLUSIVE"
 check "$(holds test "$(jq -r .capped "$(record_of "$out")/session.json")" = time)" "  and noted as capped"
 check "$(holds test ! -e "$FROSTMARK_VERIFY_HOME/904/frozen")" "  and its probes are not frozen"
 out=$(VERIFY_DRIVE_CAP=2 run 905)
-echo "$out" | grep -E '^(verify|verdict):' | sed 's/^/  | /'
+echo "$out" | grep -E '^(verify|verdict|drive):' | sed 's/^/  | /'
 check "$(holds grep -qx 'verdict: INCONCLUSIVE' <<<"$out")" "a third drive past a cap of 2 is refused and INCONCLUSIVE"
 check "$(holds grep -q 'refused: the cap of 2 drive calls' "$DATA/claude.$(sessions).drive")" "  the session is told why"
 check "$(holds grep -q 'cap of 2 drive calls' "$(record_of "$out")/report.md")" "  and so is the report"
