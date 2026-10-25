@@ -5,6 +5,7 @@ extends "res://tests/run.gd".TestCase
 
 const GearLookScript := preload("res://scenes/gear_look.gd")
 const CharacterGearScript := preload("res://scenes/character_gear.gd")
+const CharacterViewScript := preload("res://scenes/character_view.gd")
 
 ## The parts each equipment slot draws.
 const SLOT_PARTS := {
@@ -112,3 +113,71 @@ func test_the_gear_node_keeps_no_colour_table_of_its_own() -> void:
 	for name in consts:
 		assert_false(consts[name] is Color, "%s is a colour outside the look table" % name)
 		assert_false(consts[name] is Dictionary, "%s is a table outside the look table" % name)
+
+
+## The live node named `shape` under `node`, skipping any already queued to go.
+static func _live_shape(node: Node, shape: String) -> Node:
+	for child in node.get_children():
+		if child.is_queued_for_deletion():
+			continue
+		if String(child.name) == shape:
+			return child
+		var found := _live_shape(child, shape)
+		if found != null:
+			return found
+	return null
+
+
+## The colours a piece's meshes are drawn in, in order.
+static func _colours(piece: Node) -> Array:
+	var out: Array = []
+	for node in piece.find_children("*", "MeshInstance3D", true, false):
+		out.append(((node as MeshInstance3D).mesh.surface_get_material(0) as StandardMaterial3D).albedo_color)
+	return out
+
+
+func test_mixed_sets_and_tiers_each_draw_their_own_complete_look() -> void:
+	# Pieces are unlocked one at a time and mixed across sets and tiers, so every piece must draw
+	# the same whatever else is worn: each slot is put on in turn over every other slot's pieces.
+	var helms: Array = []
+	var bodies: Array = []
+	var legs: Array = []
+	for item in ItemTable.ITEMS:
+		match ItemTable.slot(item):
+			ItemTable.SLOT_HELM:
+				helms.append(item)
+			ItemTable.SLOT_BODY:
+				bodies.append(item)
+			ItemTable.SLOT_LEGS:
+				legs.append(item)
+	var root := Node3D.new()
+	var view := CharacterViewScript.new()
+	var gear := CharacterGearScript.new()
+	root.add_child(view)
+	root.add_child(gear)
+	# Each bone slot, the piece builder drawing on it and the equipment slot it draws for.
+	var bones := [
+		["head", CharacterGearScript.head_piece, ItemTable.SLOT_HELM],
+		["chest", CharacterGearScript.body_piece, ItemTable.SLOT_BODY],
+		["hips", CharacterGearScript.hips_piece, ItemTable.SLOT_LEGS],
+		["lowerleg_l", CharacterGearScript.shin_piece, ItemTable.SLOT_LEGS],
+	]
+	for helm in helms:
+		for body in bodies:
+			for leg in legs:
+				var worn := {ItemTable.SLOT_HELM: helm, ItemTable.SLOT_BODY: body, ItemTable.SLOT_LEGS: leg}
+				gear.show_equipment(worn)
+				for bone in bones:
+					var slot := view.bone_slot(bone[0])
+					var item: String = worn[bone[2]]
+					var alone: Node3D = (bone[1] as Callable).call(item)
+					if alone == null:
+						var shin := [CharacterGearScript.SHAPE_GREAVE, CharacterGearScript.SHAPE_FUR_BAND].filter(func(s: String) -> bool: return _live_shape(slot, s) != null)
+						assert_eq(shin, [], "%s leaves the shin bare beside %s" % [item, worn])
+						continue
+					var drawn := _live_shape(slot, String(alone.name))
+					assert_true(drawn != null, "%s draws its %s beside %s" % [item, alone.name, worn])
+					if drawn != null:
+						assert_eq(_colours(drawn), _colours(alone), "%s keeps its own colours beside %s" % [item, worn])
+					alone.free()
+	root.free()
