@@ -61,6 +61,8 @@ func _json(path: String) -> Dictionary:
 
 func _drive(dir: String) -> Dictionary:
 	var out := {}
+	if not DirAccess.dir_exists_absolute(dir):
+		return out
 	for f in DirAccess.get_files_at(dir):
 		for side in ["head", "base"]:
 			var suffix := ".%s.log" % side
