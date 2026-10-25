@@ -479,6 +479,24 @@ func test_a_version_10_snapshot_gains_an_empty_quiver_and_cape_and_nothing_else(
 	assert_eq(sim.state["inventory"]["equipment"], expected["inventory"]["equipment"])
 
 
+func test_a_version_11_snapshot_puts_every_enemy_on_its_own_cycle_and_nothing_else() -> void:
+	var v11 := SimScript.new().snapshot()
+	v11["version"] = 11
+	v11["tick"] = 6200
+	for id in v11["enemies"]:
+		v11["enemies"][id].erase("phase")
+	v11["enemies"]["captain"].merge({"health": 90, "mode": "engaged", "step": 7, "next": {"action": "volley", "at": 6201}}, true)
+	var migrated: Dictionary = SaveCode.migrate(v11, 12)
+	var expected := v11.duplicate(true)
+	expected["version"] = 12
+	for id in expected["enemies"]:
+		expected["enemies"][id]["phase"] = 0
+	assert_eq(migrated, expected, "phase 0 on every enemy, everything else as it was")
+	var sim := SimScript.new()
+	assert_true(sim.command(Vocab.IMPORT_SAVE, {"code": SaveCode.encode(v11)})["ok"], "the version-11 code imports")
+	assert_eq(sim.state["enemies"]["captain"], expected["enemies"]["captain"], "the captain carries on mid-fight")
+
+
 func test_a_full_version_2_stash_gets_no_kit() -> void:
 	var full: Array = []
 	for i in 8:

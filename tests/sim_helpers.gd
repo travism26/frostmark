@@ -120,11 +120,13 @@ static func where(events: Array[Dictionary], kind: String, field: String, value:
 	return out
 
 
-## Stand-in kinds for the feint rule, which no enemy uses yet. A feint pretends to be a lunge
-## (or, for the kiting kind, a dart); `add_stand_ins()` puts them in CombatTable for a test.
+## Stand-in kinds for the feint and fight-phase rules, which no enemy uses yet. A feint pretends
+## to be a lunge (or, for the kiting kind, a dart); `add_stand_ins()` puts them in CombatTable for
+## a test.
 const STAND_IN_ACTIONS := {
 	"feint_lunge": {"label": "Lunge", "damage": 0, "feint": "lunge"},
 	"feint_dart": {"label": "Dart", "damage": 0, "feint": "dart"},
+	"quicken": {"label": "Quickens", "damage": 0, "stance": true},
 }
 const STAND_IN_KINDS := {
 	# Feints a lunge, then lunges for real, rests, winds up into another feint, and rests.
@@ -137,6 +139,20 @@ const STAND_IN_KINDS := {
 	"stand_in_kiting_feinter": {
 		"label": "Kiting feinter", "health": 500, "weapon": "stalker_bow", "speed": 1.5, "sight": 10.0,
 		"kite": 4.0, "actions": ["feint_dart", CombatTable.ACTION_REST, "dart", CombatTable.ACTION_REST],
+		"loot": [], "rare_percent": 0, "respawn_ticks": 100,
+	},
+	# Fights like an ice troll, winding up a tick before its crush. Below half health it
+	# quickens and crushes with no wind-up; below 45 % it draws a bow and shoots instead.
+	"stand_in_phaser": {
+		"label": "Phaser", "health": 100, "weapon": "troll_club", "speed": 1.5, "sight": 6.0,
+		"actions": ["smash", CombatTable.ACTION_REST, "wind_up", "crush", CombatTable.ACTION_REST, CombatTable.ACTION_REST],
+		"phases": [
+			{"below": 50, "actions": ["quicken", "smash", "crush", CombatTable.ACTION_REST]},
+			{
+				"below": 45, "actions": ["draw_bow", "loose", CombatTable.ACTION_REST, "volley", CombatTable.ACTION_REST],
+				"stances": ["captain_bow", "captain_bow", "captain_bow", "captain_bow", "captain_bow"],
+			},
+		],
 		"loot": [], "rare_percent": 0, "respawn_ticks": 100,
 	},
 }

@@ -142,3 +142,19 @@ func test_the_version_11_fixture_still_wears_its_wooden_set() -> void:
 	assert_true(sim.command(Vocab.IMPORT_SAVE, {"code": _fixture(11)})["ok"])
 	var worn: Dictionary = sim.state["inventory"]["equipment"]
 	assert_eq([worn["helm"], worn["body"], worn["legs"]], ["wooden_helm", "wooden_body", "wooden_legs"], "the helm, body and legs it wore")
+
+
+func test_every_fixture_loads_with_every_enemy_on_its_own_cycle() -> void:
+	for v in range(1, Sim.STATE_VERSION + 1):
+		var sim := SimScript.new()
+		assert_true(sim.command(Vocab.IMPORT_SAVE, {"code": _fixture(v)})["ok"], "save_v%d imports" % v)
+		for id in sim.state["enemies"]:
+			assert_eq(sim.state["enemies"][id]["phase"], 0, "save_v%d: %s is in no phase" % [v, id])
+
+
+func test_the_version_12_fixture_is_saved_mid_fight_with_a_wolf() -> void:
+	var sim := SimScript.new()
+	assert_true(sim.command(Vocab.IMPORT_SAVE, {"code": _fixture(12)})["ok"])
+	var wolf: Dictionary = sim.state["enemies"]["wolf_1"]
+	assert_eq(wolf["mode"], Sim.MODE_ENGAGED, "the wolf it was fighting")
+	assert_true(int(wolf["health"]) < int(CombatTable.ENEMIES["wolf"]["health"]), "is hurt")

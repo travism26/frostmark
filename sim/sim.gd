@@ -21,7 +21,7 @@ const WALK_PER_TICK := WALK_SPEED * TICK_SECONDS
 const SNAP_RADIUS_CELLS := 2
 ## Bumped whenever the state shape changes. `restore()` migrates older snapshots forward
 ## (SaveCode.migrate) and refuses ones it cannot read.
-const STATE_VERSION := 11
+const STATE_VERSION := 12
 
 ## The pack: a fixed number of slots, and a carried weight (pack plus equipment, in kg)
 ## above which walking slows to OVERWEIGHT_SPEED of normal. BASE_CARRY_LIMIT is that weight
@@ -212,6 +212,7 @@ func _fresh_enemy(id: String) -> Dictionary:
 		"mode": MODE_IDLE,
 		"next": {},
 		"step": 0,
+		"phase": 0,
 		"respawn_tick": 0,
 	}
 
@@ -1030,7 +1031,7 @@ func combatant(id: String) -> Dictionary:
 	var e: Dictionary = state["enemies"][id]
 	var def := CombatTable.enemy(e["kind"])
 	# The weapon of the action declared last: a captain holds his bow from "draws his bow" on.
-	var held := CombatTable.stance_weapon(e["kind"], int(e["step"]) - 1)
+	var held := CombatTable.stance_weapon(e["kind"], int(e["step"]) - 1, int(e["phase"]))
 	var enemy_stats := CombatTable.weapon(held)
 	var shown := (e["next"] as Dictionary).duplicate()
 	if shown.has("action"):
@@ -1208,6 +1209,7 @@ func _step_enemy(id: String) -> void:
 				e["mode"] = MODE_IDLE
 				e["health"] = int(CombatTable.enemy(e["kind"])["health"])
 				e["step"] = 0
+				e["phase"] = 0
 
 
 ## Why an idle enemy notices the player this tick ("sight" or "noise"), or "" when it does not.
@@ -1302,17 +1304,23 @@ func _kite(id: String) -> void:
 ## Declares what the enemy does next tick: the next action of its cycle while the player is in
 ## its reach, or straight after a wind-up (`acted` is what it did this tick), else closing in.
 ## An attack is telegraphed now, exactly one tick before it lands, and a feint is telegraphed
-## as the attack it pretends to be: the same action, style, damage and weight.
+## as the attack it pretends to be: the same action, style, damage and weight. Once its health
+## is below a phase's mark, the next action it takes from the cycle (but never the blow a
+## wind-up committed) is that phase's first, and its cycle is that phase's from then on.
 func _enemy_declare(id: String, acted := "") -> void:
 	var e: Dictionary = state["enemies"][id]
 	var me := combatant(id)
 	var action := CombatTable.ACTION_MOVE
 	var style: String = me["style"]
 	if (me["pos"] as Vector2).distance_to(player_pos()) <= float(me["reach"]) or CombatTable.is_windup(acted):
-		var actions: Array = CombatTable.enemy(e["kind"])["actions"]
+		var phase := CombatTable.phase_at(e["kind"], int(e["health"]), int(e["phase"]))
+		if phase != int(e["phase"]) and not CombatTable.is_windup(acted):
+			e["phase"] = phase
+			e["step"] = 0
+		var actions := CombatTable.cycle(e["kind"], int(e["phase"]))
 		var index := int(e["step"]) % actions.size()
 		action = actions[index]
-		style = CombatTable.weapon(CombatTable.stance_weapon(e["kind"], index))["style"]
+		style = CombatTable.weapon(CombatTable.stance_weapon(e["kind"], index, int(e["phase"])))["style"]
 		e["step"] = (index + 1) % actions.size()
 	var at := int(state["tick"]) + 1
 	e["next"] = {"action": action, "at": at}
@@ -2243,7 +2251,9 @@ func _restored_enemies(saved: Variant) -> Dictionary:
 		e["mode"] = mode
 		if next is Dictionary and CombatTable.has_action(str(next.get("action", ""))) and _is_number(next.get("at")):
 			e["next"] = {"action": str(next["action"]), "at": int(next["at"])}
-		var cycle: int = (CombatTable.enemy(e["kind"])["actions"] as Array).size()
+		var phase := int(entry["phase"]) if _is_number(entry.get("phase")) else 0
+		e["phase"] = phase if phase >= 0 and phase <= CombatTable.phase_count(e["kind"]) else 0
+		var cycle := CombatTable.cycle(e["kind"], int(e["phase"])).size()
 		e["step"] = posmod(int(entry["step"]), cycle) if _is_number(entry.get("step")) else 0
 		e["respawn_tick"] = int(entry["respawn_tick"]) if _is_number(entry.get("respawn_tick")) else 0
 	return out
