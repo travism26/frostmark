@@ -36,6 +36,10 @@ const UI_SAVE := "ui_save"
 const UI_SOUND := "ui_sound"
 const UI_ACTIONS: Array[String] = [UI_FIRE, UI_HELP, UI_SAVE, UI_SOUND]
 
+## The empty quiver and cape slots' glyphs: no item has them yet to lend one.
+const SLOT_QUIVER := "slot_quiver"
+const SLOT_CAPE := "slot_cape"
+
 ## Equipment slot (ItemTable) -> the icon key an empty slot shows.
 const SLOT_KEYS := {
 	ItemTable.SLOT_WEAPON: STYLE_MELEE,
@@ -43,6 +47,8 @@ const SLOT_KEYS := {
 	ItemTable.SLOT_BODY: "steel_body",
 	ItemTable.SLOT_LEGS: "steel_legs",
 	ItemTable.SLOT_TOOL: "wooden_pickaxe",
+	ItemTable.SLOT_QUIVER: SLOT_QUIVER,
+	ItemTable.SLOT_CAPE: SLOT_CAPE,
 }
 
 # --- Tints --------------------------------------------------------------------------------
@@ -156,6 +162,9 @@ const ICONS := {
 	UI_HELP: {"icon": "sbed/help", "tint": TINT_TAB},
 	UI_SAVE: {"icon": "delapouite/save", "tint": TINT_TAB},
 	UI_SOUND: {"icon": "delapouite/sound-on", "tint": TINT_TAB},
+	# Empty equipment slots with no item of their own.
+	SLOT_QUIVER: {"icon": "delapouite/quiver", "tint": TINT_TAB},
+	SLOT_CAPE: {"icon": "delapouite/cape", "tint": TINT_TAB},
 }
 
 ## Author folder -> the name the credit line carries, as on game-icons.net/about.html.
