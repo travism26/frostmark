@@ -28,6 +28,8 @@
 #   VERIFY_BASE            its base (default: git merge-base origin/main <head>)
 #   VERIFY_SESSION_SECS    the session's time cap (default 900)
 #   VERIFY_DRIVE_CAP       the session's drive-call cap (default 12)
+#   VERIFY_HEAD_PATCH      a patch for the head copy only (see drive.sh), noted in inputs.json and
+#                          the verdict's binding as head_patch, its sha256; --replay refuses it
 #
 # Exits 0 when it printed a verdict, 1 when it refused or could not finish.
 set -u
@@ -85,6 +87,7 @@ while [ $# -gt 0 ]; do
 done
 [[ $TICKET =~ ^[0-9]+$ ]] || usage
 [ -z "$REPLAY" ] || [ "$FRESH" = 0 ] || usage
+[ -z "$REPLAY" ] || [ -z "${VERIFY_HEAD_PATCH:-}" ] || fail "refused: a replay drives the commit as it is, so VERIFY_HEAD_PATCH must be unset"
 for tool in godot gh jq claude; do
   command -v "$tool" >/dev/null || fail "$tool is not on the PATH"
 done
@@ -145,9 +148,11 @@ write_inputs() {
     --arg harness "$(git rev-parse HEAD:tools/verify)" --arg model "$VERIFIER_MODEL" \
     --arg copy "${COPIES:+$COPIES/head}" --argjson guard "$GUARD" --argjson changed "$CHANGED" \
     --argjson earlier "$EARLIER" --arg replay_of "$(basename "${REPLAY:-}")" --arg mode "$MODE" \
+    --arg patch "$([ -f "$RECORD/head.patch" ] && shasum -a 256 "$RECORD/head.patch" | cut -d' ' -f1)" \
     '{ticket: $ticket, head_sha: $head, base_sha: $base, ci: $ci, harness_version: $harness,
       verifier_model: $model, head_copy: $copy, test_guard: $guard, changed_since_fail: $changed,
-      earlier: $earlier, mode: $mode} + (if $replay_of == "" then {} else {replay_of: $replay_of} end)' \
+      earlier: $earlier, mode: $mode} + (if $replay_of == "" then {} else {replay_of: $replay_of} end)
+      + (if $patch == "" then {} else {head_patch: $patch} end)' \
     >"$RECORD/inputs.json"
   echo "$1" | jq . >"$RECORD/session.json"
 }

@@ -19,6 +19,8 @@
 #   VERIFY_BASE        the base commit (default: git merge-base origin/main <head>)
 #   VERIFY_PROBE_SECS  the alarm on each probe run (default 60)
 #   VERIFY_REPO        the repo to export from (default: the one this script is in)
+#   VERIFY_HEAD_PATCH  a patch applied to the head copy after its export, never to the repo, and
+#                      kept in the record as head.patch (tools/verify/prove.sh plants its bug so)
 # A record that already holds head.sha and base.sha keeps them; the variables only seed a new one.
 #
 # Exits 0 when the probe ran on both sides, whatever it graded or however it ended; 1 when the
@@ -81,6 +83,11 @@ else
   for side in head base; do
     export_copy "$(cat "$RECORD/$side.sha")" "$COPIES/$side" || fail "cannot export the $side commit to $COPIES/$side"
   done
+  if [ -n "${VERIFY_HEAD_PATCH:-}" ]; then
+    (cd "$COPIES/head" && env -u GIT_DIR -u GIT_WORK_TREE git apply) <"$VERIFY_HEAD_PATCH" || fail "cannot apply $VERIFY_HEAD_PATCH to the head copy"
+    cp "$VERIFY_HEAD_PATCH" "$RECORD/head.patch"
+    echo "drive: applied $(basename "$VERIFY_HEAD_PATCH") to the head copy"
+  fi
   echo "drive: importing the head and base copies in $COPIES"
   # Now and then an import exits partway with no error (its log just stops), so each side gets a
   # second try; the exit codes go in import.retries.

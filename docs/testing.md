@@ -42,6 +42,14 @@ Either way it reads CI's conclusion for the head SHA and takes the test guard fr
 
 `tools/verify/selftest.sh` proves `drive`, and `tools/verify/selftest_run.sh` proves `run.sh` with stand-ins for `gh` and `claude`, so it spends no tokens. Run both on any PR that touches `tools/verify/`.
 
+`tools/verify/prove.sh` proves the whole harness, the verifier included, against a planted bug. Run it on a PR that touches the verifier brief (`tools/verify/verifier-brief.md`), `drive`, the probe base (`tools/verify/probe_base.gd`) or the verdict rules (`tools/verify/verdict.gd`), on that PR's head; no other PR needs it. It starts two real verifier sessions, so it costs a few minutes and about 100k tokens a session. Its fixed case is ticket #107 at `c40cacb`, the commit that shipped it, with the ticket's text from `tools/verify/fixtures/ticket-107.md` rather than GitHub. It runs the two selftests first, then:
+
+- checks that `tools/verify/fixtures/plant-107.patch`, applied to an export of `c40cacb`, leaves that copy's own unit suite passing as the shipped copy's does. The patch skips the gate's save on an empty-pack return and edits the matching test in `tests/test_sim_gate.gd`, so only the verifier can catch it;
+- runs `run.sh 107` twice at once, each with its own `FROSTMARK_VERIFY_HOME` (`$FROSTMARK_VERIFY_HOME/prove/<stamp>/shipped` and `planted`), so each run has its own record and its own session. Run 1 verifies the commit as shipped and must PASS. Run 2 applies the patch to its head copy only (`VERIFY_HEAD_PATCH`, never the repo) and must FAIL, with AC2 failing on a probe that saw no `saved` after the empty-pack return. Its verdict carries the patch's hash as `head_patch`;
+- checks that neither session saw the patch or the other run's record.
+
+It prints each run's wall time and tokens and the two record paths, and exits non-zero unless every point holds. Put the two record paths in that PR's record, beside its own verify record.
+
 ## The test-mode code
 
 To check something deep in the rings without playing up to it, load the test-mode character. There are three ways, all giving the same save:
