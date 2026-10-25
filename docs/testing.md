@@ -52,7 +52,7 @@ It prints each run's wall time and tokens and the two record paths, and exits no
 
 ## The test codes
 
-Four test characters load a ready-made save, so something deep in the game can be checked without playing up to it: the test-mode character, the same character in ring two, the build-from-scratch character and the all-gear character. Each but the ring-two one has a **short code**, typed on the title screen into **Import code** (case and surrounding spaces do not matter), and a **link**, a `?name=value` parameter on the page (<https://travism26.github.io/frostmark/> or a local build) that skips the title screen and loads the character on startup, every time the page loads with it. Both work on the live site and in a local build.
+Five test characters load a ready-made save, so something deep in the game can be checked without playing up to it: the test-mode character, the same character in ring two, the same character at the ring-three gate, the build-from-scratch character and the all-gear character. Each but the ring-two and ring-three ones has a **short code**, typed on the title screen into **Import code** (case and surrounding spaces do not matter), and a **link**, a `?name=value` parameter on the page (<https://travism26.github.io/frostmark/> or a local build) that skips the title screen and loads the character on startup, every time the page loads with it. Both work on the live site and in a local build.
 
 The repo holds no short code or link in plain text, not here and not in the tests. `scenes/field_kit.gd` keeps only their sha256 hashes, and nothing in the game's interface mentions them. That is obscurity, not security: codes already in git history stay findable in earlier commits of this file and of `tests/`, so taking them out of the current tree keeps them out of code search but does not unpublish them.
 
@@ -66,7 +66,7 @@ Each is an ordinary save code of the current save version, not a cheat: the rule
 godot --headless -s tools/test_codes.gd
 ```
 
-The map has an entry for each test character: test mode, test mode in ring two, build from scratch, all gear, and each ring code from `tools/ring_codes.gd`. An entry gives the short code and link where the character has them, a summary of what it loads, read back from the save itself (for the all-gear character, how many gear items and from which sets or tiers), and the full save code to paste into **Import code**.
+The map has an entry for each test character: test mode, test mode in ring two, test mode at the ring-three gate, build from scratch, all gear, and each ring code from `tools/ring_codes.gd`. An entry gives the short code and link where the character has them, a summary of what it loads, read back from the save itself (for the all-gear character, how many gear items and from which sets or tiers), and the full save code to paste into **Import code**.
 
 The plaintext short codes and links come from a seed, `tools/test_codes.local.cfg`, with one `name = code` line each: `test_mode_short`, `test_mode_query`, `bare_short`, `bare_query`, `gear_short` and `gear_query` (a query line holds the whole `name=value` pair). The tool checks every seed line against its hash in `scenes/field_kit.gd`. A line that does not match, or names no test code, is refused by name and no map is written. A code missing from the seed is written as "not known on this machine" beside its hash. The seed reaches a maintainer outside GitHub.
 
@@ -89,9 +89,9 @@ It loads a character in the outpost with:
 - both waystones attuned and awake, so `travel` home works from either
 - full warmth and health, and the hints off
 
-To start in ring two instead of the outpost, add `ring=two` to its link (the map gives the whole link). It is the same character standing just inside the ring-two gate, within reach of the brazier so it starts warming; without `ring=`, or with any other value, the link loads in the outpost as before. The parameter does nothing on its own or beside another character's link.
+To start in ring two instead of the outpost, add `ring=two` to its link (the map gives the whole link). It is the same character standing just inside the ring-two gate, within reach of the brazier so it starts warming. To start at the ring-three gate, add `ring=three` instead: the same character stands on ring two's side of the ring-three gate, a few metres in front of it and out of sight of every ring-two enemy, with the gate open and ring three not yet reached, so one click on the gate walks it into ring three for the first time. Without `ring=`, or with any other value, the link loads in the outpost as before. The parameter does nothing on its own or beside another character's link.
 
-`scenes/field_kit.gd` builds it from a new character through `restore()`, so the short code and the link always give a save of the current version. `tests/test_test_mode.gd` builds the code the same way, imports it and checks every point above, that both stored hashes load the same character, that typed text is matched without its case or surrounding spaces, and that the ring-two spot stands it beside the brazier.
+`scenes/field_kit.gd` builds it from a new character through `restore()`, so the short code and the link always give a save of the current version. `tests/test_test_mode.gd` builds the code the same way, imports it and checks every point above, that both stored hashes load the same character, that typed text is matched without its case or surrounding spaces, that the ring-two spot stands it beside the brazier, and that the ring-three spot stands it out of sight in front of the open ring-three gate, one click from ring three.
 
 ### The build-from-scratch character
 
