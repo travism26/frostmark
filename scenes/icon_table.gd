@@ -37,7 +37,7 @@ const UI_SOUND := "ui_sound"
 const UI_ACTIONS: Array[String] = [UI_FIRE, UI_HELP, UI_SAVE, UI_SOUND]
 
 ## The empty quiver and cape slots' glyphs: the quiver's is the one the ranged quivers wear
-## (#164); no cape item exists yet to lend the cape one.
+## (#164) and the cape's the one the ranged top set capes wear (#165).
 const SLOT_QUIVER := "slot_quiver"
 const SLOT_CAPE := "slot_cape"
 
@@ -194,6 +194,29 @@ const ICONS := {
 	"steelpoint_legs": {"icon": "delapouite/leg-armor"},
 	"steelpoint_bow": {"icon": "lorc/pocket-bow"},
 	"steelpoint_quiver": {"icon": "delapouite/quiver"},
+	# The ranged top set pieces (#165), the same way; the two capes take the cape slot's glyph.
+	"ember_hawk_helm": {"icon": "lorc/visored-helm"},
+	"ember_hawk_body": {"icon": "lorc/breastplate"},
+	"ember_hawk_legs": {"icon": "delapouite/leg-armor"},
+	"ember_hawk_bow": {"icon": "lorc/pocket-bow"},
+	"ember_hawk_quiver": {"icon": "delapouite/quiver"},
+	"auroral_warden_helm": {"icon": "lorc/visored-helm"},
+	"auroral_warden_body": {"icon": "lorc/breastplate"},
+	"auroral_warden_legs": {"icon": "delapouite/leg-armor"},
+	"auroral_warden_bow": {"icon": "lorc/pocket-bow"},
+	"auroral_warden_quiver": {"icon": "delapouite/quiver"},
+	"auroral_warden_cape": {"icon": "delapouite/cape"},
+	"ruin_stalker_helm": {"icon": "lorc/visored-helm"},
+	"ruin_stalker_body": {"icon": "lorc/breastplate"},
+	"ruin_stalker_legs": {"icon": "delapouite/leg-armor"},
+	"ruin_stalker_bow": {"icon": "lorc/pocket-bow"},
+	"ruin_stalker_quiver": {"icon": "delapouite/quiver"},
+	"ruin_stalker_cape": {"icon": "delapouite/cape"},
+	"glacier_sovereign_helm": {"icon": "lorc/visored-helm"},
+	"glacier_sovereign_body": {"icon": "lorc/breastplate"},
+	"glacier_sovereign_legs": {"icon": "delapouite/leg-armor"},
+	"glacier_sovereign_bow": {"icon": "lorc/pocket-bow"},
+	"glacier_sovereign_quiver": {"icon": "delapouite/quiver"},
 	# The side panel's tabs.
 	TAB_PACK: {"icon": "lorc/knapsack", "tint": TINT_TAB},
 	TAB_EQUIPMENT: {"icon": "lorc/battle-gear", "tint": TINT_TAB},
