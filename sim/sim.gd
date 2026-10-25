@@ -39,11 +39,14 @@ const STARTING_STASH := [
 ]
 
 ## Warmth is whole points. Outside the outpost it drains WARMTH_DRAIN per tick, so a full
-## gauge lasts WARMTH_MAX / WARMTH_DRAIN ticks (three minutes). Within FIRE_REACH metres of
+## gauge lasts WARMTH_MAX / WARMTH_DRAIN ticks (three minutes). With `n` warmth worn
+## (worn_warmth()) it drains only on WARMTH_PACE of every WARMTH_PACE + n ticks, so a full fur
+## set (n = 3) makes a full gauge last half as long again. Within FIRE_REACH metres of
 ## a fire it refills FIRE_WARMTH per tick and health refills FIRE_HEALTH per tick. At zero
 ## warmth, health drains COLD_DAMAGE per tick instead; at zero health the player dies.
 const WARMTH_MAX := 360
 const WARMTH_DRAIN := 1
+const WARMTH_PACE := 6
 const HEALTH_MAX := 100
 const COLD_DAMAGE := 1
 const FIRE_REACH := 3.0
@@ -1570,7 +1573,8 @@ func _step_survival() -> void:
 		health = mini(HEALTH_MAX, health + FIRE_HEALTH)
 	elif not in_outpost():
 		if warmth > 0:
-			warmth = maxi(0, warmth - WARMTH_DRAIN)
+			if _drains_this_tick():
+				warmth = maxi(0, warmth - WARMTH_DRAIN)
 		else:
 			health = maxi(0, health - COLD_DAMAGE)
 			_emit({"kind": SimVocab.EV_TOOK_DAMAGE, "amount": COLD_DAMAGE, "cause": "cold", "health": health})
@@ -1580,6 +1584,14 @@ func _step_survival() -> void:
 	state["health"] = health
 	if health <= 0:
 		_die("cold")
+
+
+## Whether warmth drains this tick: on WARMTH_PACE of every WARMTH_PACE + worn_warmth()
+## ticks, read from the tick count alone, so the pace keeps no state and follows a swap at once.
+func _drains_this_tick() -> bool:
+	var span := WARMTH_PACE + worn_warmth()
+	var t := int(state["tick"]) - 1
+	return (t + 1) * WARMTH_PACE / span > t * WARMTH_PACE / span
 
 
 ## Health ran out, to a blow or to the cold. Everything carried or worn is lost for good except
@@ -2334,6 +2346,14 @@ func has_tool(tool_kind: String) -> bool:
 		if s != null and ItemTable.tool(s["item"]) == tool_kind:
 			return true
 	return false
+
+
+## Points of cold kept out by everything equipped: the `warmth` of every slot added up.
+func worn_warmth() -> int:
+	var total := 0
+	for slot in ItemTable.EQUIPMENT_SLOTS:
+		total += ItemTable.warmth(str(state["inventory"]["equipment"][slot]))
+	return total
 
 
 ## Kilograms carried: the pack plus everything equipped.
