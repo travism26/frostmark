@@ -82,8 +82,18 @@ else
     export_copy "$(cat "$RECORD/$side.sha")" "$COPIES/$side" || fail "cannot export the $side commit to $COPIES/$side"
   done
   echo "drive: importing the head and base copies in $COPIES"
+  # Now and then an import exits partway with no error (its log just stops), so each side gets a
+  # second try; the exit codes go in import.retries.
+  import_copy() {
+    local try
+    for try in 1 2; do
+      { (limit 300 godot --headless --path "$COPIES/$1" --import >"$COPIES/$1.import.log" 2>&1); } 2>/dev/null && return 0
+      echo "$1 import try $try exited $?" >>"$COPIES/import.retries"
+    done
+    return 1
+  }
   for side in head base; do
-    { (limit 300 godot --headless --path "$COPIES/$side" --import >"$COPIES/$side.import.log" 2>&1); } 2>/dev/null &
+    import_copy "$side" &
     eval "pid_$side=$!"
   done
   for side in head base; do

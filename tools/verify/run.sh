@@ -214,6 +214,7 @@ fi
 
 "$KIT/drive.sh" "$RECORD" --prepare >"$RECORD/prepare.log" 2>&1 || { cat "$RECORD/prepare.log" >&2; fail "cannot prepare the head and base copies"; }
 COPIES=$(cat "$RECORD/copies")
+[ -f "$COPIES/import.retries" ] && cp "$COPIES/import.retries" "$RECORD/import.retries"
 
 # Drives each probe file named on stdin from folder $1 into the record. Exits non-zero when one
 # errors on head: refused by the lint, a non-zero exit, a SCRIPT ERROR or no PROBE line.
