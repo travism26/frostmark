@@ -109,3 +109,92 @@ func test_the_barbarians_own_props_are_all_hidden() -> void:
 		assert_true(props.has(name), "the glb still carries %s" % name)
 	for name in props:
 		assert_true(CharacterViewScript.BUILT_IN_GEAR.has(name), "%s is hidden" % name)
+
+
+## The live children of `node`: those not already queued to go with the gear they drew.
+static func _live(node: Node, out: Array = []) -> Array:
+	for child in node.get_children():
+		if child.is_queued_for_deletion():
+			continue
+		out.append(String(child.name))
+		_live(child, out)
+	return out
+
+
+func test_fur_pieces_draw_their_own_shapes_in_fur_and_metal_keeps_its_own() -> void:
+	var shapes := {
+		"fur_hood": [CharacterGearScript.head_piece, CharacterGearScript.SHAPE_FUR_HOOD, CharacterGearScript.SHAPE_HELM],
+		"fur_coat": [CharacterGearScript.body_piece, CharacterGearScript.SHAPE_FUR_COAT, CharacterGearScript.SHAPE_VEST],
+		"fur_legs": [CharacterGearScript.hips_piece, CharacterGearScript.SHAPE_FUR_LEGGINGS, CharacterGearScript.SHAPE_KILT],
+	}
+	for kind in shapes:
+		var make: Callable = shapes[kind][0]
+		var fur: Node3D = make.call(kind)
+		assert_eq(fur.name, shapes[kind][1], "%s draws its own fur shape" % kind)
+		var in_fur := 0
+		for node in fur.find_children("*", "MeshInstance3D", true, false):
+			var m := (node as MeshInstance3D).mesh.surface_get_material(0) as StandardMaterial3D
+			assert_true(m != null, "%s has a flat material" % kind)
+			if m != null and m.albedo_color == CharacterGearScript.FUR_COLOR:
+				in_fur += 1
+		assert_true(in_fur > 0, "%s has a part in the fur colour" % kind)
+		fur.free()
+		for metal in ["wooden", "bronze", "iron", "steel"]:
+			var item := "%s_%s" % [metal, ItemTable.slot(kind)]
+			var piece: Node3D = make.call(item)
+			assert_eq(piece.name, shapes[kind][2], "%s keeps the metal shape" % item)
+			piece.free()
+	var band := CharacterGearScript.shin_piece("fur_legs")
+	assert_eq(band.name, CharacterGearScript.SHAPE_FUR_BAND, "fur leggings put a band at the shin")
+	band.free()
+	var greave := CharacterGearScript.shin_piece("iron_legs")
+	assert_eq(greave.name, CharacterGearScript.SHAPE_GREAVE, "iron legs put a greave at the shin")
+	greave.free()
+	assert_true(CharacterGearScript.shin_piece("bronze_legs") == null, "bronze legs leave the shin bare")
+
+
+func test_swapping_fur_and_metal_in_a_slot_redraws_it_both_ways() -> void:
+	var root := Node3D.new()
+	var view := CharacterViewScript.new()
+	var gear := CharacterGearScript.new()
+	root.add_child(view)
+	root.add_child(gear)
+	var head := view.bone_slot("head")
+	var hips := view.bone_slot("hips")
+	var shin := view.bone_slot("lowerleg_l")
+	assert_true(head != null and hips != null and shin != null, "the barbarian has head, hips and shin slots")
+	gear.show_equipment({ItemTable.SLOT_HELM: "fur_hood", ItemTable.SLOT_LEGS: "fur_legs"})
+	assert_true(_live(head).has(CharacterGearScript.SHAPE_FUR_HOOD), "the fur hood is on the head")
+	assert_true(_live(hips).has(CharacterGearScript.SHAPE_FUR_LEGGINGS), "the fur leggings are on the hips")
+	assert_true(_live(shin).has(CharacterGearScript.SHAPE_FUR_BAND), "a fur band is on the shin")
+	gear.show_equipment({ItemTable.SLOT_HELM: "iron_helm", ItemTable.SLOT_LEGS: "iron_legs"})
+	assert_true(_live(head).has(CharacterGearScript.SHAPE_HELM), "the iron helm replaces the hood")
+	assert_false(_live(head).has(CharacterGearScript.SHAPE_FUR_HOOD), "the hood is gone from the head")
+	assert_true(_live(hips).has(CharacterGearScript.SHAPE_KILT), "the kilt replaces the leggings")
+	assert_false(_live(hips).has(CharacterGearScript.SHAPE_FUR_LEGGINGS), "the leggings are gone from the hips")
+	assert_true(_live(shin).has(CharacterGearScript.SHAPE_GREAVE), "a greave replaces the band")
+	assert_false(_live(shin).has(CharacterGearScript.SHAPE_FUR_BAND), "the band is gone from the shin")
+	gear.show_equipment({ItemTable.SLOT_HELM: "fur_hood", ItemTable.SLOT_LEGS: "wooden_legs"})
+	assert_true(_live(head).has(CharacterGearScript.SHAPE_FUR_HOOD), "the hood comes back")
+	assert_false(_live(head).has(CharacterGearScript.SHAPE_HELM), "the helm is gone again")
+	assert_true(_live(hips).has(CharacterGearScript.SHAPE_KILT), "wooden legs are a kilt")
+	assert_false(_live(shin).has(CharacterGearScript.SHAPE_GREAVE) or _live(shin).has(CharacterGearScript.SHAPE_FUR_BAND), "wooden legs leave the shin bare")
+	root.free()
+
+
+func test_every_armour_look_is_there_to_warm_up() -> void:
+	var all := CharacterGearScript.samples()
+	var names: Array = []
+	for child in all.get_children():
+		names.append(String(child.name))
+	for shape in [CharacterGearScript.SHAPE_FUR_HOOD, CharacterGearScript.SHAPE_FUR_COAT, CharacterGearScript.SHAPE_FUR_LEGGINGS, CharacterGearScript.SHAPE_FUR_BAND, CharacterGearScript.SHAPE_HELM, CharacterGearScript.SHAPE_VEST, CharacterGearScript.SHAPE_KILT, CharacterGearScript.SHAPE_GREAVE]:
+		assert_true(names.has(shape), "a %s is sampled" % shape)
+	var armour := 0
+	for item in ItemTable.ITEMS:
+		if ItemTable.ARMOUR_SLOTS.has(ItemTable.slot(item)):
+			armour += 1
+	assert_true(all.get_child_count() >= armour, "at least one sample per armour piece (%d)" % armour)
+	for node in all.find_children("*", "MeshInstance3D", true, false):
+		var mi := node as MeshInstance3D
+		assert_true(mi.mesh != null and mi.mesh.surface_get_material(0) != null, "%s has a look to warm up" % node.get_parent().name)
+	all.free()
