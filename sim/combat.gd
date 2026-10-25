@@ -54,6 +54,9 @@ const NATURAL_WEAPONS := {
 	"rime_blade": {"label": "Rime blade", "style": STYLE_MELEE, "power": 0, "speed": 1, "reach": CLOSE_RANGE},
 	"aurora_staff": {"label": "Aurora staff", "style": STYLE_MAGIC, "power": 0, "speed": 1, "reach": 6.0},
 	"seer_blade": {"label": "Seer's blade", "style": STYLE_MELEE, "power": 0, "speed": 1, "reach": CLOSE_RANGE},
+	"tyrant_greatblade": {"label": "Greatblade", "style": STYLE_MELEE, "power": 0, "speed": 1, "reach": CLOSE_RANGE},
+	"tyrant_bow": {"label": "Warbow", "style": STYLE_RANGED, "power": 0, "speed": 1, "reach": 8.0},
+	"tyrant_staff": {"label": "Tyrant's staff", "style": STYLE_MAGIC, "power": 0, "speed": 1, "reach": 6.0},
 }
 const UNARMED := "fists"
 
@@ -126,6 +129,20 @@ const ACTIONS := {
 	"ice_slash": {"label": "Ice slash", "damage": 10},
 	"ice_rend": {"label": "Ice rend", "damage": 24, "heavy": true},
 	"raise_aurora": {"label": "Raises its staff", "damage": 0, "stance": true},
+	"tyrant_slash": {"label": "Greatblade slash", "damage": 12},
+	"tyrant_cleave": {"label": "Glacier cleave", "damage": 32, "heavy": true},
+	"raise_greatblade": {"label": "Raises its greatblade", "damage": 0, "stance": true, "windup": true},
+	"feint_tyrant_cleave": {"label": "Glacier cleave", "damage": 0, "feint": "tyrant_cleave"},
+	"draw_warbow": {"label": "Draws its warbow", "damage": 0, "stance": true},
+	"tyrant_loose": {"label": "Loose", "damage": 10},
+	"tyrant_volley": {"label": "Hail volley", "damage": 28, "heavy": true},
+	"feint_volley": {"label": "Hail volley", "damage": 0, "feint": "tyrant_volley"},
+	"raise_tyrant_staff": {"label": "Raises its staff", "damage": 0, "stance": true},
+	"tyrant_bolt": {"label": "Rime bolt", "damage": 10},
+	"tyrant_storm": {"label": "Whiteout", "damage": 28, "heavy": true},
+	"feint_storm": {"label": "Whiteout", "damage": 0, "feint": "tyrant_storm"},
+	"draw_greatblade": {"label": "Draws its greatblade", "damage": 0, "stance": true},
+	"tyrant_roars": {"label": "Roars", "damage": 0, "stance": true},
 }
 
 ## Enemy kinds. `weapon` sets the style and reach. `speed` is metres per tick (the player walks
@@ -139,9 +156,10 @@ const ACTIONS := {
 ##
 ## A kind with `stances` fights with more than one weapon: `stances[i]` is the weapon it holds
 ## for `actions[i]`, so its style and reach follow its place in the cycle. `boss_loot` is a
-## list of which exactly one always drops. A `boss` is a ring's guardian: its first death is
-## recorded for good (it opens that ring's gate with the matching upgrade), and once that gate
-## stands open it no longer comes back.
+## list of which exactly one always drops. A `boss` has its first death recorded for good. A
+## boss that is a ring's guardian (the captain) opens that ring's gate with the matching upgrade,
+## and once that gate stands open it no longer comes back; one that guards no gate (the Frost
+## tyrant) keeps coming back.
 ##
 ## A kind with `phases` fights differently near the end: each phase is {below, actions,
 ## stances?}, in order of falling `below`, a percentage of its health. Once a blow takes it
@@ -153,7 +171,7 @@ const ACTIONS := {
 ## where the action at each index is a stance. When the player's style has the edge on the
 ## enemy's, it declares the stance answering that style instead of its next action, at most
 ## once every `answer_ticks` ticks and never straight after a wind-up (see `answer_problems`).
-## The Aurora seer answers (ring three, #182); the others of ring three will.
+## The Aurora seer and the Frost tyrant answer (ring three, #182 and #183).
 const ENEMIES := {
 	"wolf": {
 		"label": "Wolf", "health": 15, "weapon": "fangs", "speed": 2.5, "sight": 6.0,
@@ -248,6 +266,44 @@ const ENEMIES := {
 		],
 		"answers": {STYLE_RANGED: 5, STYLE_MAGIC: 10}, "answer_ticks": 8,
 		"loot": [{"item": "aurora_glass", "count": 1}], "rare_percent": 0, "respawn_ticks": 300,
+	},
+	# Ring three's boss, and everything the ring has taught at once: the captain's three weapons,
+	# a wound-up cleave, feinted heavies, answers to a counter-swap, and below half health a
+	# quicker cycle with no wind-up, fewer rests and quicker answers. It guards no gate, so it
+	# comes back.
+	"frost_tyrant": {
+		"label": "Frost tyrant", "health": 600, "weapon": "tyrant_greatblade", "speed": 2.0, "sight": 8.0,
+		"actions": [
+			"tyrant_slash", ACTION_REST, "raise_greatblade", "tyrant_cleave", ACTION_REST,
+			"draw_warbow", "tyrant_loose", "feint_volley", "tyrant_volley", ACTION_REST,
+			"raise_tyrant_staff", "tyrant_bolt", ACTION_REST, "tyrant_storm", ACTION_REST,
+			"draw_greatblade",
+		],
+		"stances": [
+			"tyrant_greatblade", "tyrant_greatblade", "tyrant_greatblade", "tyrant_greatblade", "tyrant_greatblade",
+			"tyrant_bow", "tyrant_bow", "tyrant_bow", "tyrant_bow", "tyrant_bow",
+			"tyrant_staff", "tyrant_staff", "tyrant_staff", "tyrant_staff", "tyrant_staff",
+			"tyrant_greatblade",
+		],
+		"answers": {STYLE_MAGIC: 5, STYLE_RANGED: 15, STYLE_MELEE: 10}, "answer_ticks": 10,
+		"phases": [{
+			"below": 50,
+			"actions": [
+				"tyrant_roars", "tyrant_slash", "feint_tyrant_cleave", "tyrant_cleave", ACTION_REST,
+				"draw_warbow", "tyrant_loose", "tyrant_volley", ACTION_REST,
+				"raise_tyrant_staff", "tyrant_bolt", "feint_storm", "tyrant_storm", ACTION_REST,
+				"draw_greatblade",
+			],
+			"stances": [
+				"tyrant_greatblade", "tyrant_greatblade", "tyrant_greatblade", "tyrant_greatblade", "tyrant_greatblade",
+				"tyrant_bow", "tyrant_bow", "tyrant_bow", "tyrant_bow",
+				"tyrant_staff", "tyrant_staff", "tyrant_staff", "tyrant_staff", "tyrant_staff",
+				"tyrant_greatblade",
+			],
+			"answers": {STYLE_MAGIC: 5, STYLE_RANGED: 14, STYLE_MELEE: 9}, "answer_ticks": 6,
+		}],
+		"loot": [{"item": "rime_steel", "count": 1}, {"item": "frost_sinew", "count": 1}, {"item": "aurora_glass", "count": 1}],
+		"rare_percent": 0, "respawn_ticks": 900, "boss": true,
 	},
 }
 ## The rare drop in both rings: one piece of iron gear, ahead of smithing it at the Bloomery.

@@ -14,7 +14,7 @@ const Vocab := preload("res://sim/vocab.gd")
 ## Open ground in ring one, with nobody else in the arena.
 const HOME := Vector2(14.5, 28.5)
 const TICKS := 400
-## The player is topped up below this, so no blow (the heaviest, 42 with the edge) kills them,
+## The player is topped up below this, so no blow (the heaviest, 48 with the edge) kills them,
 ## and kept warm, so the cold never takes a bite.
 const TOP_UP := 50
 ## A sword in hand, a bow and a staff in the pack to swap to, and ammunition for both.

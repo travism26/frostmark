@@ -386,6 +386,8 @@ static func _ring_three(w: WorldDef) -> void:
 	var ridges := [
 		[[-28.0, 142.0], [-12.0, 143.5]], [[8.0, 138.0], [9.5, 153.0]], [[22.0, 160.0], [40.0, 161.5]],
 		[[-48.0, 158.0], [-46.5, 174.0]], [[-14.0, 170.0], [4.0, 171.5]], [[44.0, 140.0], [45.5, 152.0]],
+		# The Frost tyrant's hollow at the far south-west, open to the east.
+		[[-33.0, 176.0], [-17.0, 177.5]], [[-34.5, 176.0], [-33.0, 186.0]],
 	]
 	for i in ridges.size():
 		w.solids.append(_solid("ridge_%d" % (i + 1), ridges[i][0], ridges[i][1], 2.0, KIND_RIDGE))
@@ -416,6 +418,9 @@ static func _ring_three(w: WorldDef) -> void:
 		["seer_2", "aurora_seer", [50.5, 177.5], "seer_2"],
 		["seer_3", "aurora_seer", [-34.5, 170.5], "seer_3"],
 	])
+	# The Frost tyrant, ring three's boss, alone in a hollow of ridges at the far south-west of
+	# the ring, more than a fight's noise from every other group.
+	placements.append(["frost_tyrant", "frost_tyrant", [-24.0, 183.0], "tyrant"])
 	for p in placements:
 		w.enemies[p[0]] = {"kind": p[1], "home": p[2], "pack": p[3]}
 

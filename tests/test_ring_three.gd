@@ -1,8 +1,8 @@
 ## Ring three: the glacier south of ring two, behind a gate in ring two's southern cliffs that
 ## the Ring-three gate hoist opens on its own. The gate is walked through both ways and nothing
 ## follows; the first arrival is marked once; a fire burns past the gate; and nothing notices,
-## chases or fights across either ring gate. Its enemies' fights follow, the Snowveil archer's
-## first and the Frostbound knight's after it.
+## chases or fights across either ring gate. Its enemies' fights follow: the Snowveil archer's,
+## the Frostbound knight's, the Aurora seer's and the Frost tyrant's, its boss.
 extends "res://tests/run.gd".TestCase
 
 const H := preload("res://tests/sim_helpers.gd")
@@ -1212,3 +1212,454 @@ func test_the_non_reader_holding_a_bow_throughout_kills_the_seer_before_it_answe
 		assert_true(fight["dead"], "the seer falls")
 		assert_eq(fight["ticks"], 3, "on the third tick")
 		assert_eq(fight["lowest"], 100, "without having hurt it")
+
+
+# --- The Frost tyrant ---------------------------------------------------------------------
+
+## The tyrant's hollow at the far south-west of the ring, a spot 1.2 m east of it for the player
+## (inside the greatblade's reach) and one 4 m east (inside the bow's and the staff's, past the
+## blade's).
+const TYRANT_HOME := [-24.0, 183.0]
+const TYRANT_IN_REACH := [-22.8, 183.0]
+const TYRANT_AWAY := 4.0
+## A meal, and a steel weapon of each style to swap to.
+const TYRANT_PACK := [
+	{"item": "cooked_trout", "count": 5}, {"item": "steel_sword", "count": 1}, {"item": "steel_bow", "count": 1},
+	{"item": "steel_staff", "count": 1}, {"item": "arrows", "count": 200}, {"item": "frost_shards", "count": 200},
+]
+## Its first phase and its second as declared, a feint by the blow it is told as.
+const TYRANT_FIRST := [
+	"tyrant_slash", "raise_greatblade", "tyrant_cleave", "draw_warbow", "tyrant_loose", "tyrant_volley",
+	"tyrant_volley", "raise_tyrant_staff", "tyrant_bolt", "tyrant_storm", "draw_greatblade",
+]
+const TYRANT_SECOND := [
+	"tyrant_roars", "tyrant_slash", "tyrant_cleave", "tyrant_cleave", "draw_warbow", "tyrant_loose",
+	"tyrant_volley", "raise_tyrant_staff", "tyrant_bolt", "tyrant_storm", "tyrant_storm", "draw_greatblade",
+]
+
+
+## The tyrant at its home, with a player at `at` holding `weapon`, not fighting back.
+func _tyrant(weapon := "", at := TYRANT_IN_REACH, reference := false) -> Sim:
+	var sim := _duel(weapon, at, reference, "frost_tyrant", TYRANT_HOME)
+	H.set_pack(sim, TYRANT_PACK)
+	sim.command(Vocab.SET_AUTO_RETALIATE, {"on": false})
+	return sim
+
+
+## Puts the player `metres` from the tyrant, on the side they stand.
+func _stand_off(sim: Sim, metres: float) -> void:
+	var at: Vector2 = sim.combatant("foe")["pos"]
+	var to: Vector2 = at + (sim.player_pos() - at).normalized() * metres
+	H.place(sim, [to.x, to.y])
+
+
+## Steps `ticks` ticks with the player bare-handed and never countering it: beside it while it
+## holds the greatblade (blade on blade) or the staff (which has the edge on a fist), and stood
+## off 4 m while it holds the bow, where a fist has no edge on it. Stops early once `until` is
+## declared.
+func _leave_alone(sim: Sim, ticks: int, until := "") -> Array[Dictionary]:
+	var events: Array[Dictionary] = []
+	for i in ticks:
+		var step := _seer_run(sim, 1)
+		events.append_array(step)
+		for e in H.of_kind(step, Vocab.EV_ENEMY_STANCE):
+			if e["action"] == "draw_warbow":
+				_stand_off(sim, TYRANT_AWAY)
+		if until != "" and _seer_actions(step).has(until):
+			break
+	return events
+
+
+func test_the_frost_tyrant_is_a_three_weapon_boss_with_a_second_phase_and_answers() -> void:
+	var def := CombatTable.enemy("frost_tyrant")
+	assert_eq(def["label"], "Frost tyrant")
+	assert_eq([def["health"], def["speed"], def["sight"]], [600, 2.0, 8.0])
+	assert_eq(def["weapon"], "tyrant_greatblade")
+	for w in [["tyrant_greatblade", CombatTable.STYLE_MELEE, 1.5], ["tyrant_bow", CombatTable.STYLE_RANGED, 8.0], ["tyrant_staff", CombatTable.STYLE_MAGIC, 6.0]]:
+		var weapon := CombatTable.weapon(w[0])
+		assert_eq([weapon["style"], weapon["reach"]], [w[1], w[2]], "%s, a natural weapon" % w[0])
+		assert_false(ItemTable.has(w[0]), "%s is no item" % w[0])
+	assert_eq(def["loot"], [{"item": "rime_steel", "count": 1}, {"item": "frost_sinew", "count": 1}, {"item": "aurora_glass", "count": 1}])
+	assert_eq([def["rare_percent"], def["respawn_ticks"], def["boss"]], [0, 900, true])
+	assert_false(def.has("boss_loot"), "no iron")
+	assert_eq(def["actions"], [
+		"tyrant_slash", "rest", "raise_greatblade", "tyrant_cleave", "rest",
+		"draw_warbow", "tyrant_loose", "feint_volley", "tyrant_volley", "rest",
+		"raise_tyrant_staff", "tyrant_bolt", "rest", "tyrant_storm", "rest", "draw_greatblade",
+	])
+	var blade := "tyrant_greatblade"
+	assert_eq(def["stances"], [blade, blade, blade, blade, blade, "tyrant_bow", "tyrant_bow", "tyrant_bow", "tyrant_bow", "tyrant_bow", "tyrant_staff", "tyrant_staff", "tyrant_staff", "tyrant_staff", "tyrant_staff", blade])
+	assert_eq([CombatTable.answers("frost_tyrant"), CombatTable.answer_ticks("frost_tyrant")], [{"magic": 5, "ranged": 15, "melee": 10}, 10])
+	assert_eq(CombatTable.phase_count("frost_tyrant"), 1)
+	assert_eq(def["phases"][0]["below"], 50)
+	assert_eq(CombatTable.cycle("frost_tyrant", 1), [
+		"tyrant_roars", "tyrant_slash", "feint_tyrant_cleave", "tyrant_cleave", "rest",
+		"draw_warbow", "tyrant_loose", "tyrant_volley", "rest",
+		"raise_tyrant_staff", "tyrant_bolt", "feint_storm", "tyrant_storm", "rest", "draw_greatblade",
+	])
+	assert_eq(def["phases"][0]["stances"], [blade, blade, blade, blade, blade, "tyrant_bow", "tyrant_bow", "tyrant_bow", "tyrant_bow", "tyrant_staff", "tyrant_staff", "tyrant_staff", "tyrant_staff", "tyrant_staff", blade])
+	assert_eq([CombatTable.answers("frost_tyrant", 1), CombatTable.answer_ticks("frost_tyrant", 1)], [{"magic": 5, "ranged": 14, "melee": 9}, 6])
+	assert_eq(CombatTable.phase_problems(def), [] as Array[String])
+	assert_eq(CombatTable.answer_problems(def), [] as Array[String])
+	for a in [["tyrant_slash", 12, false], ["tyrant_cleave", 32, true], ["tyrant_loose", 10, false], ["tyrant_volley", 28, true], ["tyrant_bolt", 10, false], ["tyrant_storm", 28, true]]:
+		assert_eq([CombatTable.action_damage(a[0]), CombatTable.is_heavy(a[0])], [a[1], a[2]], a[0])
+	for stance in ["raise_greatblade", "draw_warbow", "raise_tyrant_staff", "draw_greatblade", "tyrant_roars"]:
+		assert_true(CombatTable.is_stance(stance), "%s is a stance" % stance)
+		assert_eq(CombatTable.is_windup(stance), stance == "raise_greatblade", "only raising the greatblade winds up")
+	assert_eq(CombatTable.action_label("tyrant_roars"), "Roars")
+	for feint in [["feint_volley", "tyrant_volley"], ["feint_tyrant_cleave", "tyrant_cleave"], ["feint_storm", "tyrant_storm"]]:
+		assert_eq(CombatTable.shown_action(feint[0]), feint[1], "%s is told as %s" % feint)
+		assert_eq(CombatTable.action_label(feint[0]), CombatTable.action_label(feint[1]), "under the same name")
+
+
+func test_left_alone_the_tyrant_plays_its_first_phase_in_order_and_its_style_follows_its_stance() -> void:
+	var sim := _tyrant()
+	var events := _leave_alone(sim, 44)
+	assert_eq(_seer_actions(events).slice(0, 22), TYRANT_FIRST + TYRANT_FIRST, "%s" % [_seer_actions(events)])
+	var held := {"tyrant_greatblade": CombatTable.STYLE_MELEE, "tyrant_bow": CombatTable.STYLE_RANGED, "tyrant_staff": CombatTable.STYLE_MAGIC}
+	var bow := ["draw_warbow", "tyrant_loose", "tyrant_volley"]
+	var staff := ["raise_tyrant_staff", "tyrant_bolt", "tyrant_storm"]
+	for e in events:
+		if e.get("enemy_id") == "foe" and e["kind"] in [Vocab.EV_ENEMY_STANCE, Vocab.EV_ENEMY_TELEGRAPHED]:
+			var style := CombatTable.STYLE_RANGED if e["action"] in bow else CombatTable.STYLE_MAGIC if e["action"] in staff else CombatTable.STYLE_MELEE
+			assert_eq(e["style"], style, "%s on tick %d is told in its weapon's style" % [e["action"], e["tick"]])
+	assert_eq(held[_held(sim)], sim.combatant("foe")["style"])
+	assert_eq(int(sim.state["enemies"]["foe"]["answered_tick"]), -1, "and it never answered")
+	assert_eq(int(sim.state["enemies"]["foe"]["phase"]), 0)
+
+
+func test_a_staff_turned_on_the_greatblade_is_answered_by_the_bow() -> void:
+	var sim := _tyrant()
+	_seer_run(sim, 1)  # noticed: its slash is told for the tick after
+	assert_eq(_held(sim), "tyrant_greatblade")
+	_seer_swap_to(sim, CombatTable.STYLE_MAGIC)
+	var events := _seer_run(sim, 1)
+	assert_eq(_declared_by_the_seer(events), ["2:draw_warbow"], "told a tick ahead on its next declaration")
+	var stance := H.of_kind(events, Vocab.EV_ENEMY_STANCE)[0]
+	assert_eq([stance["style"], stance["at"]], [CombatTable.STYLE_RANGED, 3])
+	assert_eq(int(sim.state["enemies"]["foe"]["answered_tick"]), 3)
+	assert_eq(_held(sim), "tyrant_bow")
+
+
+func test_a_bow_turned_on_the_staff_is_answered_by_the_greatblade_and_it_closes_in() -> void:
+	var sim := _tyrant()
+	_leave_alone(sim, 20, "raise_tyrant_staff")
+	_seer_run(sim, 1)
+	assert_eq(_held(sim), "tyrant_staff", "it raised its staff on its own")
+	assert_eq(int(sim.state["enemies"]["foe"]["answered_tick"]), -1)
+	var before := (sim.combatant("foe")["pos"] as Vector2).distance_to(sim.player_pos())
+	_seer_swap_to(sim, CombatTable.STYLE_RANGED)
+	var events := _seer_run(sim, 1)
+	assert_eq(_seer_actions(events), ["draw_greatblade"], "the greatblade answers the bow")
+	assert_eq(H.of_kind(events, Vocab.EV_ENEMY_STANCE)[0]["style"], CombatTable.STYLE_MELEE)
+	_seer_run(sim, 3)
+	assert_eq(_held(sim), "tyrant_greatblade")
+	var after := (sim.combatant("foe")["pos"] as Vector2).distance_to(sim.player_pos())
+	assert_true(before > 3.0 and after <= 1.5, "and it closes in from %.1f m to %.1f m" % [before, after])
+
+
+func test_a_blade_turned_on_the_bow_up_close_is_answered_by_the_staff() -> void:
+	var sim := _tyrant()
+	_leave_alone(sim, 20, "tyrant_loose")
+	assert_eq(_held(sim), "tyrant_bow", "it drew its bow on its own")
+	_seer_swap_to(sim, CombatTable.STYLE_MELEE)
+	_stand_off(sim, 1.2)
+	var events := _seer_run(sim, 1)
+	assert_eq(_seer_actions(events), ["raise_tyrant_staff"], "a sword beside its bow is answered by its staff")
+	assert_eq(H.of_kind(events, Vocab.EV_ENEMY_STANCE)[0]["style"], CombatTable.STYLE_MAGIC)
+
+
+## Turns the counter of the weapon the tyrant holds on it, from beside it, unless already in hand.
+func _turn_the_counter(sim: Sim) -> void:
+	_stand_off(sim, 1.2)
+	var counter: String = TYRANT_COUNTER[sim.combatant("foe")["style"]]
+	if sim.player_style() != counter:
+		_seer_swap_to(sim, counter)
+
+
+## A tyrant a staff has been turned on: it noticed the player on tick 1, told its slash, and
+## answered on tick 2 with its bow drawn for tick 3. The player stands beside it.
+func _tyrant_baited() -> Sim:
+	var sim := _tyrant()
+	_seer_run(sim, 1)
+	_seer_swap_to(sim, CombatTable.STYLE_MAGIC)
+	assert_eq(_declared_by_the_seer(_seer_run(sim, 1)), ["2:draw_warbow"], "the staff draws the bow")
+	return sim
+
+
+func test_no_second_answer_comes_inside_10_ticks_whatever_the_player_swaps_to() -> void:
+	var sim := _tyrant_baited()
+	# Every tick the player turns the counter of what it holds on it, 9 times over.
+	var events: Array[Dictionary] = []
+	for i in 9:
+		_turn_the_counter(sim)
+		events.append_array(_seer_run(sim, 1))
+		assert_eq(int(sim.state["enemies"]["foe"]["answered_tick"]), 3, "no answer on tick %d" % (3 + i))
+	assert_eq(_declared_by_the_seer(events), [
+		"3:tyrant_loose", "4:tyrant_volley", "5:tyrant_volley", "7:raise_tyrant_staff", "8:tyrant_bolt", "10:tyrant_storm",
+	], "its cycle runs on through the bow and the staff, a bow turned on the staff or not")
+
+
+## The ticks the tyrant answered on over `ticks` ticks of the player turning the counter of what
+## it holds on it every tick, from beside it.
+func _answer_ticks_while_countered(sim: Sim, ticks: int) -> Array:
+	var out: Array = []
+	for i in ticks:
+		_turn_the_counter(sim)
+		_seer_run(sim, 1)
+		var answered := int(sim.state["enemies"]["foe"]["answered_tick"])
+		if answered >= 0 and not out.has(answered):
+			out.append(answered)
+	return out
+
+
+func test_countered_every_tick_it_answers_once_every_10_ticks_and_every_6_below_its_mark() -> void:
+	for enraged in [false, true]:
+		var sim := _tyrant("", TYRANT_IN_REACH, true)
+		if enraged:
+			_seer_run(sim, 1)
+			_enrage(sim)
+		var answered := _answer_ticks_while_countered(sim, 40)
+		var cooldown := 6 if enraged else 10
+		assert_true(answered.size() >= 3, "it answers again and again: %s" % [answered])
+		for i in range(1, answered.size()):
+			assert_true(int(answered[i]) - int(answered[i - 1]) >= cooldown, "never inside %d ticks: %s" % [cooldown, answered])
+
+
+func test_stepping_back_from_its_wind_up_makes_the_committed_cleave_miss() -> void:
+	var sim := _tyrant("", TYRANT_IN_REACH, true)
+	_leave_alone(sim, 6, "raise_greatblade")
+	var away: Vector2 = sim.player_pos() + (sim.player_pos() - sim.combatant("foe")["pos"]).normalized() * 2.0
+	assert_true(sim.command(Vocab.MOVE_TO, {"pos": [away.x, away.y]})["ok"])
+	var events := H.run_stamped(sim, 2)
+	assert_eq(_beats(events), ["4:told tyrant_cleave", "5:miss"], "the cleave it committed to finds nobody")
+
+
+## Takes it below its mark: 299 of its 600.
+func _enrage(sim: Sim) -> void:
+	H.patch_enemy(sim, "foe", {"health": 299})
+
+
+func test_below_300_health_the_tyrant_roars_and_plays_its_second_phase_in_order() -> void:
+	var sim := _tyrant()
+	_seer_run(sim, 1)  # noticed; its slash is told
+	_enrage(sim)
+	var events := _leave_alone(sim, 40)
+	var stance := H.of_kind(events, Vocab.EV_ENEMY_STANCE)[0]
+	assert_eq([stance["action"], stance["tick"], stance["style"]], ["tyrant_roars", 2, CombatTable.STYLE_MELEE], "the first declaration after the mark")
+	assert_eq(int(sim.state["enemies"]["foe"]["phase"]), 1)
+	assert_eq(_seer_actions(events).slice(0, 24), TYRANT_SECOND + TYRANT_SECOND, "%s" % [_seer_actions(events)])
+	assert_eq(H.where(events, Vocab.EV_ENEMY_STANCE, "action", "raise_greatblade").size(), 0, "no wind-ups left")
+	for told in H.where(events, Vocab.EV_ENEMY_TELEGRAPHED, "action", "tyrant_cleave"):
+		assert_eq(int(told["at"]), int(told["tick"]) + 1, "each cleave is told one tick out")
+		assert_eq(H.where(events, Vocab.EV_ENEMY_STANCE, "tick", int(told["tick"]) - 1).size() + H.where(events, Vocab.EV_ENEMY_STANCE, "tick", int(told["tick"])).size(), 0, "with no wind-up before it")
+
+
+func test_a_cleave_already_wound_up_lands_before_the_tyrant_roars() -> void:
+	var sim := _tyrant("", TYRANT_IN_REACH, true)
+	_leave_alone(sim, 6, "raise_greatblade")
+	_enrage(sim)
+	var beats := _beats(H.run_stamped(sim, 3))
+	assert_eq(beats.slice(0, 3), ["4:told tyrant_cleave", "5:hit 28", "5:told tyrant_roars"], "the wound-up cleave lands, then it roars: %s" % [beats])
+
+
+func test_every_feint_is_told_as_its_blow_and_lands_nothing() -> void:
+	for enraged in [false, true]:
+		var sim := _tyrant("", TYRANT_IN_REACH, true)
+		if enraged:
+			_seer_run(sim, 1)
+			_enrage(sim)
+		var events := _leave_alone(sim, 34)
+		var feinted := {}
+		for f in H.of_kind(events, Vocab.EV_ENEMY_FEINTED):
+			feinted[f["action"]] = true
+			var told := H.where(H.where(events, Vocab.EV_ENEMY_TELEGRAPHED, "at", f["at"]), Vocab.EV_ENEMY_TELEGRAPHED, "action", f["action"])
+			assert_eq(told.size(), 1, "%s was told a tick before" % f["action"])
+			assert_eq([told[0]["heavy"], told[0]["damage"]], [true, CombatTable.action_damage(f["action"])], "as heavy as the real one")
+			assert_eq(H.where(events, Vocab.EV_HIT, "tick", f["tick"]).filter(func(e: Dictionary) -> bool: return e["attacker"] == "foe").size(), 0, "nothing lands on the feint tick")
+			assert_eq(H.where(events, Vocab.EV_MISSED, "tick", f["tick"]).size(), 0)
+		var expected := {"tyrant_cleave": true, "tyrant_storm": true} if enraged else {"tyrant_volley": true}
+		assert_eq(feinted, expected, "the feints of phase %d" % (1 if enraged else 0))
+
+
+## Kills the tyrant with a sword beside it and returns the tick it fell on.
+func _fell_the_tyrant(sim: Sim) -> int:
+	H.place(sim, [TYRANT_HOME[0] + 1.2, TYRANT_HOME[1]])
+	H.arm(sim, "steel_sword")
+	H.patch_enemy(sim, "frost_tyrant", {"health": 1})
+	sim.command(Vocab.ATTACK, {"enemy_id": "frost_tyrant"})
+	var events := H.run_stamped(sim, 3)
+	var died := H.where(events, Vocab.EV_ENEMY_DIED, "enemy_id", "frost_tyrant")
+	assert_eq(died.size(), 1, "the tyrant falls")
+	H.place(sim, PAST_THE_GATE)  # well out of its sight
+	return int(died[0]["tick"]) if not died.is_empty() else -1
+
+
+## The tick, among the next `ticks`, the tyrant comes back on.
+func _back_on(sim: Sim, ticks: int) -> int:
+	var back := H.where(H.run_stamped(sim, ticks), Vocab.EV_ENEMY_RESPAWNED, "enemy_id", "frost_tyrant")
+	return int(back[0]["tick"]) if back.size() == 1 else -1
+
+
+func test_its_first_fall_is_kept_for_good_and_it_comes_back_900_ticks_after_each() -> void:
+	var tyrant := {"frost_tyrant": {"kind": "frost_tyrant", "home": TYRANT_HOME}}
+	var sim := H.arena(tyrant)
+	var fell := _fell_the_tyrant(sim)
+	assert_eq(sim.state["bosses_defeated"], ["frost_tyrant"], "its first fall is recorded")
+	assert_false(sim.ring_gate_open("ring_three_gate"), "and opens no gate: it guards none")
+	assert_eq(_back_on(sim, 905), fell + 900, "back 900 ticks after it fell")
+	assert_eq(sim.state["enemies"]["frost_tyrant"]["mode"], Sim.MODE_IDLE)
+	assert_eq(int(sim.state["enemies"]["frost_tyrant"]["health"]), 600)
+	assert_eq(sim.state["enemies"]["frost_tyrant"]["pos"], TYRANT_HOME, "at home")
+	assert_eq(sim.state["bosses_defeated"], ["frost_tyrant"], "its fall still counts")
+	fell = _fell_the_tyrant(sim)
+	assert_eq(sim.state["bosses_defeated"], ["frost_tyrant"], "once")
+	assert_eq(_back_on(sim, 905), fell + 900, "and back 900 ticks after its second fall too")
+	var other := H.arena(tyrant)
+	assert_true(other.command(Vocab.IMPORT_SAVE, {"code": sim.export_code()})["ok"])
+	assert_eq(other.state["bosses_defeated"], ["frost_tyrant"], "kept through a save")
+	var restored := H.arena(tyrant)
+	restored.restore(sim.snapshot())
+	assert_eq(restored.state["bosses_defeated"], ["frost_tyrant"], "and a snapshot and restore")
+
+
+func test_a_dead_tyrant_drops_one_of_each_rare_material_and_no_iron() -> void:
+	for i in 5:
+		var sim := _tyrant("steel_sword", TYRANT_IN_REACH, true)
+		H.patch_enemy(sim, "foe", {"health": 1})
+		sim.command(Vocab.ATTACK, {"enemy_id": "foe"})
+		var drops := H.of_kind(H.run(sim, 3), Vocab.EV_LOOT_DROPPED).map(func(e: Dictionary) -> String: return "%d %s" % [e["count"], e["item"]])
+		drops.sort()
+		assert_eq(drops, ["1 aurora_glass", "1 frost_sinew", "1 rime_steel"], "kill %d: one of each, and nothing else" % i)
+
+
+func test_its_home_is_alone_in_a_hollow_at_the_far_south_of_ring_three_reached_from_its_fire() -> void:
+	var w := WorldDefScript.outpost()
+	assert_eq(w.enemies["frost_tyrant"]["kind"], "frost_tyrant")
+	var home := Vector2(w.enemies["frost_tyrant"]["home"][0], w.enemies["frost_tyrant"]["home"][1])
+	assert_eq(w.region_at(home), WorldDef.REGION_RING_THREE)
+	assert_true(home.y > 178.0, "at the far south of the ring")
+	var gate := w.object_center("ring_three_gate")
+	assert_true(home.distance_to(gate) > 45.0 and home.distance_to(gate) < 65.0, "about 50 m from the gate (%.1f m)" % home.distance_to(gate))
+	var fire := w.object_center("ring_three_fire")
+	assert_false(GridPath.find(w, w.cell_of(Vector2(PAST_THE_GATE[0], PAST_THE_GATE[1])), w.cell_of(home)).is_empty(), "walked to from the fire")
+	assert_true(home.distance_to(fire) > float(CombatTable.enemy("frost_tyrant")["sight"]))
+	var count := 0
+	for id in w.enemies:
+		if w.enemies[id]["kind"] == "frost_tyrant":
+			count += 1
+			continue
+		var other := Vector2(w.enemies[id]["home"][0], w.enemies[id]["home"][1])
+		assert_true(home.distance_to(other) > 12.0, "%s is %.1f m off" % [id, home.distance_to(other)])
+	assert_eq(count, 1, "one tyrant")
+	# Ridges close the hollow on the north and the west; it is entered from the east.
+	var walls := 0
+	for solid in w.solids:
+		if solid["kind"] == WorldDef.KIND_RIDGE and Rect2(Vector2(solid["min"][0], solid["min"][1]), Vector2(solid["max"][0] - solid["min"][0], solid["max"][1] - solid["min"][1])).grow(10.0).has_point(home):
+			walls += 1
+	assert_eq(walls, 2, "a hollow of two ridges")
+
+
+# --- Reader and non-reader (the tyrant) ---------------------------------------------------
+
+## The weapon style that has the edge on each of the tyrant's styles: a staff on the greatblade
+## (a bow at distance would do too), a blade up close on the bow, a bow on the staff.
+const TYRANT_COUNTER := {
+	CombatTable.STYLE_MELEE: CombatTable.STYLE_MAGIC, CombatTable.STYLE_RANGED: CombatTable.STYLE_MELEE,
+	CombatTable.STYLE_MAGIC: CombatTable.STYLE_RANGED,
+}
+
+
+func _trout(sim: Sim) -> int:
+	var pack: Array = sim.state["inventory"]["pack"]
+	for i in pack.size():
+		if pack[i] != null and pack[i]["item"] == "cooked_trout":
+			return i
+	return -1
+
+
+## The reader, the reference character with a steel sword, bow and staff and five trout, opens
+## with the staff from beside it. On every stance it swaps to that stance's counter (so each
+## answer the tyrant makes to a counter is met at once with the answer's counter, inside the
+## cooldown: a bait); on the wind-up it steps 2 m straight back instead; it does nothing on a
+## feint; and it eats only when a rest is declared and it is below 70. `baited` counts the swaps
+## made inside an answer's cooldown, `stepped` the wind-ups stepped back from.
+func _read_the_tyrant() -> Dictionary:
+	var sim := _tyrant("steel_staff", TYRANT_IN_REACH, true)
+	sim.command(Vocab.ATTACK, {"enemy_id": "foe"})
+	var ticks := 0
+	var lowest := int(sim.state["health"])
+	var baited := 0
+	var stepped := 0
+	var answers := 0
+	var answered := -1
+	var died := false
+	while ticks < 200 and sim.state["enemies"]["foe"]["mode"] != Sim.MODE_DEAD and not died:
+		H.patch(sim, {"warmth": Sim.WARMTH_MAX})
+		var raw_next: String = str(sim.state["enemies"]["foe"].get("next", {}).get("action", ""))
+		if raw_next == CombatTable.ACTION_REST and int(sim.state["health"]) < 70 and _trout(sim) >= 0:
+			sim.command(Vocab.EAT, {"index": _trout(sim)})
+		sim.step()
+		ticks += 1
+		var foe: Dictionary = sim.state["enemies"]["foe"]
+		if int(foe["answered_tick"]) != answered:
+			answered = int(foe["answered_tick"])
+			answers += 1
+		for e in sim.drain_events():
+			died = died or e["kind"] == Vocab.EV_DIED
+			if e["kind"] != Vocab.EV_ENEMY_STANCE:
+				continue
+			if e["action"] == "raise_greatblade":
+				var away: Vector2 = (sim.player_pos() - sim.combatant("foe")["pos"]).normalized()
+				var to: Vector2 = sim.player_pos() + away * 2.0
+				if sim.command(Vocab.MOVE_TO, {"pos": [to.x, to.y]})["ok"]:
+					stepped += 1
+				continue
+			var counter: String = TYRANT_COUNTER[e["style"]]
+			if sim.player_style() != counter:
+				_seer_swap_to(sim, counter)
+				if answered >= 0 and int(e["at"]) < answered + CombatTable.answer_ticks("frost_tyrant", int(foe["phase"])):
+					baited += 1
+		if not sim.is_attacking() and not sim.is_moving():
+			sim.command(Vocab.ATTACK, {"enemy_id": "foe"})
+		lowest = mini(lowest, int(sim.state["health"]))
+	return {
+		"health": int(sim.state["health"]), "lowest": lowest, "ticks": ticks, "died": died,
+		"dead": sim.state["enemies"]["foe"]["mode"] == Sim.MODE_DEAD, "baited": baited, "stepped": stepped,
+		"answers": answers, "trout": H.pack_count(sim, "cooked_trout"),
+	}
+
+
+## The non-reader is the same character holding one weapon throughout, attacking every tick it
+## can, and eating a trout whenever it is below half health. Returns the tick it died on, or -1,
+## and what the tyrant had left.
+func _hold_one_style(weapon: String) -> Dictionary:
+	var sim := _tyrant(weapon, TYRANT_IN_REACH, true)
+	sim.command(Vocab.ATTACK, {"enemy_id": "foe"})
+	var ticks := 0
+	while ticks < 200 and sim.state["enemies"]["foe"]["mode"] != Sim.MODE_DEAD:
+		H.patch(sim, {"warmth": Sim.WARMTH_MAX})
+		if int(sim.state["health"]) < Sim.HEALTH_MAX / 2 and _trout(sim) >= 0:
+			sim.command(Vocab.EAT, {"index": _trout(sim)})
+		sim.step()
+		ticks += 1
+		if not H.of_kind(sim.drain_events(), Vocab.EV_DIED).is_empty():
+			return {"died_on": ticks, "tyrant": int(sim.state["enemies"]["foe"]["health"])}
+		if not sim.is_attacking() and not sim.is_moving():
+			sim.command(Vocab.ATTACK, {"enemy_id": "foe"})
+	return {"died_on": -1, "tyrant": int(sim.state["enemies"]["foe"]["health"])}
+
+
+func test_the_reader_reads_every_stance_and_beats_the_tyrant() -> void:
+	var fight := _read_the_tyrant()
+	print("  tyrant, the reader: %s" % fight)
+	assert_true(fight["dead"] and not fight["died"], "the tyrant falls and the reader stands")
+	assert_true(fight["health"] > 50, "with %d health left" % fight["health"])
+	assert_true(fight["answers"] >= 3 and fight["baited"] >= 3, "it baited %d of %d answers" % [fight["baited"], fight["answers"]])
+
+
+func test_the_non_reader_holding_one_style_dies() -> void:
+	for weapon in ["steel_sword", "steel_bow", "steel_staff"]:
+		var fight := _hold_one_style(weapon)
+		print("  tyrant, holding the %s: %s" % [weapon, fight])
+		assert_true(fight["died_on"] > 0, "holding the %s dies (the tyrant left on %d)" % [weapon, fight["tyrant"]])

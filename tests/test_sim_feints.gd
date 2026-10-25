@@ -1,4 +1,4 @@
-## Feints: a telegraphed blow that never lands. Only the Snowveil archer and the Frostbound knight feint so far, so the
+## Feints: a telegraphed blow that never lands. Only ring three's Snowveil archer, Frostbound knight and Frost tyrant feint so far, so the
 ## stand-in kinds in tests/sim_helpers.gd carry the rule: a feint is telegraphed exactly as the blow it pretends
 ## to be, strikes nothing on its tick (no hit, no miss, no noise, no fight back, no broken
 ## channel), and the enemy's next blow is telegraphed on that tick as usual.
@@ -13,7 +13,10 @@ const Vocab := preload("res://sim/vocab.gd")
 const HOME := [14.5, 28.5]
 const BESIDE := [14.5, 27.5]
 ## The feints in the table, and the one kind that plays each.
-const FEINTS := {"feint_pierce": "snowveil_archer", "feint_cleave": "frostbound_knight"}
+const FEINTS := {
+	"feint_pierce": "snowveil_archer", "feint_cleave": "frostbound_knight",
+	"feint_volley": "frost_tyrant", "feint_tyrant_cleave": "frost_tyrant", "feint_storm": "frost_tyrant",
+}
 const WINCH := ["stash_shelves", "forge", "armoury", "ring_two_gate"]
 
 
@@ -26,7 +29,7 @@ func _feinter(kind := "stand_in_feinter", at := BESIDE) -> Sim:
 	return sim
 
 
-func test_only_the_snowveil_archer_and_the_frostbound_knight_feint_so_far() -> void:
+func test_only_the_snowveil_archer_the_frostbound_knight_and_the_frost_tyrant_feint_so_far() -> void:
 	for action in CombatTable.ACTIONS:
 		if FEINTS.has(action):
 			continue
