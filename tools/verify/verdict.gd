@@ -85,7 +85,8 @@ static func probe_lines(output: String) -> Array[Dictionary]:
 ##   earlier: Array of the ticket's earlier verdict.json dictionaries
 ##   test_guard: {deleted_tests: Array, asserts_added: int, asserts_removed: int}, from the diff
 ##   changed_since_fail: Array of paths changed since the last run that failed a criterion
-##   binding: head_sha, base_sha, ticket, harness_version, verifier_model, godot_version
+##   binding: head_sha, base_sha, ticket, harness_version, verifier_model, godot_version, and
+##            head_patch when the head copy was patched
 static func decide(inputs: Dictionary) -> Dictionary:
 	var criteria := parse_criteria(str(inputs.get("ticket", "")))
 	var binding: Dictionary = inputs.get("binding", {}).duplicate()
@@ -345,6 +346,8 @@ static func report_md(result: Dictionary) -> String:
 	out.append("## Binding")
 	for k in ["head_sha", "base_sha", "ticket", "criteria_hash", "harness_version", "verifier_model", "godot_version"]:
 		out.append("- %s: %s" % [k, str(b.get(k, ""))])
+	if b.has("head_patch"):
+		out.append("- head_patch: %s (the head copy was patched, so this is not the commit as it stands)" % b.head_patch)
 	return "\n".join(out) + "\n"
 
 

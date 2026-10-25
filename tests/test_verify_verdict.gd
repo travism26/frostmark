@@ -303,3 +303,12 @@ func test_the_report_has_a_row_per_criterion_then_residue_flags_notes_and_bindin
 		var i := md.find(s, at)
 		assert_true(i >= 0, "%s after offset %d in\n%s" % [s, at, md])
 		at = maxi(i, at)
+
+
+func test_the_report_names_a_patched_head_copy() -> void:
+	var inputs := _passing()
+	assert_false(Verdict.report_md(Verdict.decide(inputs)).contains("head_patch"), "an unpatched copy says nothing")
+	inputs.binding["head_patch"] = "f00d"
+	var result := Verdict.decide(inputs)
+	assert_eq(result.binding.get("head_patch"), "f00d", "the patch stays in the binding")
+	assert_true(Verdict.report_md(result).contains("- head_patch: f00d (the head copy was patched"), Verdict.report_md(result))

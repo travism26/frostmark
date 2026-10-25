@@ -7,7 +7,8 @@
 ##   grades.json                  the verifier's grades (absent: every criterion is ungraded)
 ##   inputs.json                  head_sha, base_sha, ticket, ci, harness_version, verifier_model,
 ##                                head_copy (the head export's folder, for doc quotes),
-##                                test_guard, changed_since_fail and earlier
+##                                test_guard, changed_since_fail and earlier, and head_patch
+##                                when the head copy was patched
 ##   drive/<probe>.head.log       raw head output of each probe, and .base.log for base;
 ##   drive/<probe>.head.rc        optionally the exit code of each side
 ## The ticket's earlier runs are the verdict.json files of the records inputs.json names in
@@ -37,6 +38,9 @@ func _init() -> void:
 		var v = given.get(k, "")
 		# JSON reads every number as a float; the ticket number stays a whole number.
 		binding[k] = int(v) if v is float and v == floorf(v) else v
+	# A head copy with a patch on it (tools/verify/prove.sh's planted bug) is not the commit.
+	if given.has("head_patch"):
+		binding["head_patch"] = given["head_patch"]
 	var result := Verdict.decide({
 		"ticket": FileAccess.get_file_as_string(record + "/ticket.md"),
 		"grades": grades,
