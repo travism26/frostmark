@@ -525,8 +525,8 @@ func test_three_visible_gear_tiers_for_every_slot_and_style() -> void:
 		if slot == "":
 			continue
 		var tier := ItemTable.tier(kind)
-		if tier == "" and ItemTable.ARMOUR_SLOTS.has(slot):
-			continue  # fur: a sideways choice in an armour slot, with no tier
+		if tier == "" and (ItemTable.ARMOUR_SLOTS.has(slot) or ItemTable.set_of(kind) != ""):
+			continue  # fur or a set item: a sideways piece with no tier
 		assert_true(ItemTable.tier_rank(tier) >= 0, "%s has a gear tier" % kind)
 		var group := slot
 		if slot == ItemTable.SLOT_WEAPON:
@@ -537,6 +537,39 @@ func test_three_visible_gear_tiers_for_every_slot_and_style() -> void:
 	for group in ["melee", "ranged", "magic", ItemTable.SLOT_HELM, ItemTable.SLOT_BODY, ItemTable.SLOT_LEGS, ItemTable.TOOL_AXE, ItemTable.TOOL_PICKAXE]:
 		for tier in ItemTable.TIERS:
 			assert_true(seen.has("%s/%s" % [group, tier]), "a %s %s" % [tier, group])
+
+
+## The steel item a set item stands in for: the same slot, and the same style or tool.
+func _steel_of(kind: String) -> String:
+	for other in ItemTable.ITEMS:
+		if ItemTable.tier(other) != ItemTable.TIER_STEEL or ItemTable.slot(other) != ItemTable.slot(kind):
+			continue
+		if ItemTable.ITEMS[other].get("style", "") == ItemTable.ITEMS[kind].get("style", "") and ItemTable.tool(other) == ItemTable.tool(kind):
+			return other
+	return ""
+
+
+func test_a_set_item_has_no_tier_takes_the_steel_stats_and_is_neither_made_nor_dropped() -> void:
+	var dropped := {}
+	for enemy in CombatTable.ENEMIES.values():
+		for loot in enemy.get("loot", []):
+			dropped[loot["item"]] = true
+		for kind in enemy.get("boss_loot", []):
+			dropped[kind] = true
+	for kind in CombatTable.RARE_LOOT:
+		dropped[kind] = true
+	for kind in ItemTable.ITEMS:
+		if ItemTable.set_of(kind) == "":
+			continue
+		assert_eq(ItemTable.tier(kind), "", "%s has no tier until #138 places its set" % kind)
+		var steel := _steel_of(kind)
+		assert_true(steel != "", "%s has a steel item of its slot and style" % kind)
+		for stat in ["weight", "value", "defence", "power", "speed", "reach", "ammo"]:
+			assert_eq(ItemTable.ITEMS[kind].get(stat), ItemTable.ITEMS.get(steel, {}).get(stat), "%s's %s is %s's" % [kind, stat, steel])
+		assert_false(RecipeTable.has(kind), "%s has no recipe" % kind)
+		assert_false(dropped.has(kind), "%s drops from nothing" % kind)
+	assert_eq(ItemTable.set_of("steel_body"), "", "an item in no set has no set key")
+	assert_eq(ItemTable.set_of("fur_coat"), "", "fur is in no set")
 
 
 func test_higher_tiers_are_stronger_and_worth_more() -> void:

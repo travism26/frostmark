@@ -7,6 +7,7 @@ extends "res://tests/run.gd".TestCase
 const GearLayoutScript := preload("res://scenes/gear_layout.gd")
 const CharacterViewScript := preload("res://scenes/character_view.gd")
 const CharacterGearScript := preload("res://scenes/character_gear.gd")
+const GearLookScript := preload("res://scenes/gear_look.gd")
 
 ## The barbarian's own body: every other mesh in the glb is a prop to hide.
 const BODY_PARTS := [
@@ -63,9 +64,9 @@ func test_fur_pieces_are_worn_like_armour_and_drawn_in_fur() -> void:
 	assert_eq(full[GearLayoutScript.BODY], "fur_coat")
 	assert_eq(full[GearLayoutScript.LEGS], "fur_legs")
 	for kind in ["fur_hood", "fur_coat", "fur_legs"]:
-		assert_eq(CharacterGearScript.colour_of(kind), CharacterGearScript.FUR_COLOR, "%s is drawn in fur" % kind)
+		assert_eq(CharacterGearScript.colour_of(kind), GearLookScript.FUR["base"], "%s is drawn in fur" % kind)
 		assert_ne(CharacterGearScript.colour_of(kind), Color.MAGENTA, "%s is not the missing-colour magenta" % kind)
-	assert_eq(CharacterGearScript.colour_of("steel_body"), CharacterGearScript.TIER_COLORS[ItemTable.TIER_STEEL], "metal keeps its tier colour")
+	assert_eq(CharacterGearScript.colour_of("steel_body"), GearLookScript.STEEL["base"], "metal keeps its own colour")
 
 
 func test_bare_handed_with_a_tool() -> void:
@@ -135,7 +136,7 @@ func test_fur_pieces_draw_their_own_shapes_in_fur_and_metal_keeps_its_own() -> v
 		for node in fur.find_children("*", "MeshInstance3D", true, false):
 			var m := (node as MeshInstance3D).mesh.surface_get_material(0) as StandardMaterial3D
 			assert_true(m != null, "%s has a flat material" % kind)
-			if m != null and m.albedo_color == CharacterGearScript.FUR_COLOR:
+			if m != null and m.albedo_color == GearLookScript.FUR["base"]:
 				in_fur += 1
 		assert_true(in_fur > 0, "%s has a part in the fur colour" % kind)
 		fur.free()

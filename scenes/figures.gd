@@ -162,9 +162,9 @@ static func club(colour: Color) -> Node3D:
 	return root
 
 
-## A staff held upright by its grip: a shaft in the tier's colour rising a metre over the
-## hand, a frost crystal turned on its corner at the top.
-static func staff(colour: Color, length := 1.5) -> Node3D:
+## A staff held upright by its grip: a shaft in `colour` rising a metre over the hand, a
+## crystal turned on its corner at the top, frost lit at `glow` unless told otherwise.
+static func staff(colour: Color, length := 1.5, crystal_colour := Props.COLOR_FROST, glow := 1.5) -> Node3D:
 	var root := Node3D.new()
 	var shaft := CylinderMesh.new()
 	shaft.top_radius = 0.035
@@ -175,7 +175,7 @@ static func staff(colour: Color, length := 1.5) -> Node3D:
 	part(root, shaft, Vector3(0, length * 0.5 - 0.35, 0))
 	var crystal := BoxMesh.new()
 	crystal.size = Vector3(0.16, 0.16, 0.16)
-	crystal.material = Props.flat(Props.COLOR_FROST, 1.5)
+	crystal.material = Props.flat(crystal_colour, glow)
 	var tip := part(root, crystal, Vector3(0, length - 0.3, 0))
 	tip.rotation = Vector3(0.6, 0.8, 0.0)
 	return root
