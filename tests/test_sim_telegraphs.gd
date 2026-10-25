@@ -1,8 +1,9 @@
 ## The readability floor: whatever the player does, every enemy blow is telegraphed exactly one
 ## tick ahead, every change of an enemy's style is announced, and a feint deals no damage.
-## Every kind in CombatTable.ENEMIES, and the stand-in feinting kinds, fights a long seeded
-## fight against a player who swaps style and steps in and out of reach. It reads the table,
-## so a kind added later is covered without editing this file.
+## Every kind in CombatTable.ENEMIES, and the stand-in feinting and phased kinds, fights a long
+## seeded fight against a player who swaps style and steps in and out of reach, and strikes a
+## kind with fight phases so it comes to them. It reads the table, so a kind added later is
+## covered without editing this file.
 extends "res://tests/run.gd".TestCase
 
 const H := preload("res://tests/sim_helpers.gd")
@@ -43,10 +44,12 @@ func _fight(kind: String, seed: int) -> void:
 	var blows := 0
 	var changes := 0
 	var feints := 0
+	var phases := CombatTable.phase_count(kind)
+	var deepest := 0
 	for t in TICKS:
 		if int(sim.state["health"]) < TOP_UP or int(sim.state["warmth"]) < TOP_UP:
 			H.patch(sim, {"health": Sim.HEALTH_MAX, "warmth": Sim.WARMTH_MAX})
-		_player_turn(sim, rng)
+		_player_turn(sim, rng, phases > 0)
 		sim.step()
 		var tick := int(sim.state["tick"])
 		var events := sim.drain_events()
@@ -60,6 +63,9 @@ func _fight(kind: String, seed: int) -> void:
 					told[int(e["at"])] = e
 				Vocab.EV_ENEMY_STANCE:
 					stanced = true
+				Vocab.EV_ENEMY_RESPAWNED:
+					# A new life starts on the kind's own cycle, in its own weapon.
+					style = sim.combatant("foe")["style"]
 				Vocab.EV_ENEMY_FEINTED:
 					feinted = true
 					feints += 1
@@ -78,15 +84,18 @@ func _fight(kind: String, seed: int) -> void:
 			# its announcement, a tick before the stance and two before any blow in it.
 			assert_true(stanced, "%s: the change to %s on tick %d was announced" % [kind, now, tick])
 			style = now
+		deepest = maxi(deepest, int(sim.state["enemies"]["foe"]["phase"]))
 	assert_true(blows > 10, "%s: the fight came to blows (%d)" % [kind, blows])
 	if (CombatTable.enemy(kind).get("stances", []) as Array).size() > 0:
 		assert_true(changes > 0, "%s: it changed style in the fight" % kind)
 	if (CombatTable.enemy(kind)["actions"] as Array).any(CombatTable.is_feint):
 		assert_true(feints > 0, "%s: it feinted in the fight" % kind)
+	assert_eq(deepest, phases, "%s: it fought into its last phase" % kind)
 
 
-## The player's move this tick: stay, swap to another weapon, step up close, or step back out.
-func _player_turn(sim: Sim, rng: RandomNumberGenerator) -> void:
+## The player's move this tick: stay, swap to another weapon, step up close, step back out, or,
+## when `strikes`, attack.
+func _player_turn(sim: Sim, rng: RandomNumberGenerator, strikes: bool) -> void:
 	var foe: Vector2 = sim.combatant("foe")["pos"]
 	match rng.randi_range(0, 5):
 		0:
@@ -96,6 +105,9 @@ func _player_turn(sim: Sim, rng: RandomNumberGenerator) -> void:
 		2:
 			var away := Vector2.from_angle(rng.randf_range(0.0, TAU)) * rng.randf_range(5.0, 10.0)
 			_walk(sim, HOME + away)
+		3:
+			if strikes:
+				sim.command(Vocab.ATTACK, {"enemy_id": "foe"})
 
 
 func _walk(sim: Sim, to: Vector2) -> void:

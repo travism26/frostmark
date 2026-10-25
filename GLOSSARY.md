@@ -85,3 +85,7 @@ _Avoid_: Smelter, iron forge
 **Feint**:
 A blow an enemy telegraphs exactly like a real one that then lands nothing: no hit, no miss, no damage. Its next blow is telegraphed on the feint tick, so reading through a feint is part of the counter.
 _Avoid_: Fake attack, bluff, fake-out
+
+**Fight phase**:
+A change in how an enemy fights once its health falls below a mark: from then until it dies or heals, it works through a quicker cycle, so the end of a fight is the most dangerous part. The change is announced a tick ahead like a change of weapon.
+_Avoid_: Enrage, rage mode, stage

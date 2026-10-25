@@ -124,6 +124,12 @@ const ACTIONS := {
 ## list of which exactly one always drops. A `boss` is a ring's guardian: its first death is
 ## recorded for good (it opens that ring's gate with the matching upgrade), and once that gate
 ## stands open it no longer comes back.
+##
+## A kind with `phases` fights differently near the end: each phase is {below, actions,
+## stances?}, in order of falling `below`, a percentage of its health. Once a blow takes it
+## below a phase's mark, its next declaration from the cycle starts that phase's `actions` from
+## the first, which is always a stance so the change is announced, and the phase's `actions`
+## and `stances` replace the kind's for the rest of that life (see `phase_problems`).
 const ENEMIES := {
 	"wolf": {
 		"label": "Wolf", "health": 15, "weapon": "fangs", "speed": 2.5, "sight": 6.0,
@@ -245,13 +251,66 @@ static func shown_action(action: String) -> String:
 	return str(_action(action)["feint"]) if is_feint(action) else action
 
 
-## The weapon an enemy of `kind` holds for the action at `index` of its cycle.
-static func stance_weapon(kind: String, index: int) -> String:
-	var def := enemy(kind)
-	var stances: Array = def.get("stances", [])
+## The weapon an enemy of `kind` holds for the action at `index` of its cycle in `phase`.
+static func stance_weapon(kind: String, index: int, phase := 0) -> String:
+	var stances: Array = _phase(kind, phase).get("stances", [])
 	if stances.is_empty():
-		return def["weapon"]
+		return enemy(kind)["weapon"]
 	return stances[posmod(index, stances.size())]
+
+
+## The action cycle an enemy of `kind` works through in `phase`: 0 is the kind's own, then 1,
+## 2 … into its `phases`.
+static func cycle(kind: String, phase := 0) -> Array:
+	return _phase(kind, phase)["actions"]
+
+
+static func phase_count(kind: String) -> int:
+	return (enemy(kind).get("phases", []) as Array).size()
+
+
+## The phase an enemy of `kind` in `phase` with `health` left fights in: the deepest whose mark
+## its health is below, and never one it has already left behind.
+static func phase_at(kind: String, health: int, phase: int) -> int:
+	var def := enemy(kind)
+	var phases: Array = def.get("phases", [])
+	var deepest := phase
+	for i in range(phase, phases.size()):
+		if health * 100 < int(def["health"]) * int(phases[i]["below"]):
+			deepest = i + 1
+	return deepest
+
+
+## Phase 0 is the kind itself; phase n is its n-th entry in `phases`.
+static func _phase(kind: String, phase: int) -> Dictionary:
+	var def := enemy(kind)
+	return def if phase <= 0 else def["phases"][phase - 1]
+
+
+## What is wrong with the `phases` of an enemy definition, or [] when nothing is: each phase
+## needs a `below` mark from 1 to 99 and lower than the phase before's, a cycle whose first
+## action is a stance (so the change is announced a tick ahead), and one stance per action
+## when it lists stances.
+static func phase_problems(def: Dictionary) -> Array[String]:
+	var out: Array[String] = []
+	var mark := 100
+	var phases: Array = def.get("phases", [])
+	for i in phases.size():
+		var phase: Dictionary = phases[i]
+		var below: Variant = phase.get("below")
+		if not (below is int) or below < 1 or below > 99:
+			out.append("phase %d: below %s is not from 1 to 99" % [i + 1, below])
+		elif below >= mark:
+			out.append("phase %d: below %d is not under the phase before's %d" % [i + 1, below, mark])
+		else:
+			mark = below
+		var actions: Array = phase.get("actions", [])
+		if actions.is_empty() or not is_stance(str(actions[0])):
+			out.append("phase %d: its cycle does not begin with a stance" % [i + 1])
+		var stances: Array = phase.get("stances", [])
+		if not stances.is_empty() and stances.size() != actions.size():
+			out.append("phase %d: %d stances for %d actions" % [i + 1, stances.size(), actions.size()])
+	return out
 
 
 static func action_label(action: String) -> String:

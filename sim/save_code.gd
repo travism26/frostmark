@@ -101,6 +101,8 @@ static func migrate(snapshot: Dictionary, target: int) -> Variant:
 				snap = _v9_to_v10(snap)
 			10:
 				snap = _v10_to_v11(snap)
+			11:
+				snap = _v11_to_v12(snap)
 			_:
 				return null
 		version = int(snap["version"])
@@ -263,6 +265,18 @@ static func _v10_to_v11(snap: Dictionary) -> Dictionary:
 		if worn is Dictionary:
 			worn["quiver"] = ""
 			worn["cape"] = ""
+	return snap
+
+
+## Version 11 had no fight phases. Version 12 records the phase each enemy fights in, and every
+## enemy saved before then was on its kind's own cycle: phase 0, everything else as it was.
+static func _v11_to_v12(snap: Dictionary) -> Dictionary:
+	snap["version"] = 12
+	var enemies: Variant = snap.get("enemies")
+	if enemies is Dictionary:
+		for e in enemies.values():
+			if e is Dictionary:
+				e["phase"] = 0
 	return snap
 
 
