@@ -1,8 +1,9 @@
-## Fight phases: below a mark on its health an enemy changes into a quicker cycle. No enemy has
-## a phase yet, so the stand-in phaser in tests/sim_helpers.gd carries the rule: it winds up a
-## tick before its crush, below half health it crushes with no wind-up, and below 45 % it draws
-## a bow. A phase starts on the first declaration from the cycle after the mark is crossed,
-## announced by a stance, never between a wind-up and its blow, and lasts the rest of that life.
+## Fight phases: below a mark on its health an enemy changes into a quicker cycle. Only the
+## Frostbound knight has a phase so far (its own fight is in tests/test_ring_three.gd), so the
+## stand-in phaser in tests/sim_helpers.gd carries the rule: it winds up a tick before its
+## crush, below half health it crushes with no wind-up, and below 45 % it draws a bow. A phase
+## starts on the first declaration from the cycle after the mark is crossed, announced by a
+## stance, never between a wind-up and its blow, and lasts the rest of that life.
 extends "res://tests/run.gd".TestCase
 
 const H := preload("res://tests/sim_helpers.gd")
@@ -61,9 +62,9 @@ func _phase(sim: Sim) -> int:
 	return int(sim.state["enemies"]["foe"]["phase"])
 
 
-func test_no_enemy_has_a_phase_yet() -> void:
+func test_only_the_frostbound_knight_has_a_phase_so_far() -> void:
 	for kind in CombatTable.ENEMIES:
-		assert_eq(CombatTable.phase_count(kind), 0, "%s has no phase" % kind)
+		assert_eq(CombatTable.phase_count(kind), 1 if kind == "frostbound_knight" else 0, "%s's phases" % kind)
 		assert_eq(CombatTable.cycle(kind), CombatTable.ENEMIES[kind]["actions"], "%s keeps its own cycle" % kind)
 	H.add_stand_ins()
 	assert_eq(CombatTable.phase_count("stand_in_phaser"), 2)

@@ -51,6 +51,7 @@ const NATURAL_WEAPONS := {
 	"troll_club": {"label": "Ice club", "style": STYLE_MELEE, "power": 0, "speed": 1, "reach": CLOSE_RANGE},
 	"stalker_bow": {"label": "Bone bow", "style": STYLE_RANGED, "power": 0, "speed": 1, "reach": 8.0},
 	"veil_bow": {"label": "Veil bow", "style": STYLE_RANGED, "power": 0, "speed": 1, "reach": 8.0},
+	"rime_blade": {"label": "Rime blade", "style": STYLE_MELEE, "power": 0, "speed": 1, "reach": CLOSE_RANGE},
 }
 const UNARMED := "fists"
 
@@ -112,6 +113,11 @@ const ACTIONS := {
 	"quick_shot": {"label": "Quick shot", "damage": 7},
 	"piercing_shot": {"label": "Piercing shot", "damage": 22, "heavy": true},
 	"feint_pierce": {"label": "Piercing shot", "damage": 0, "feint": "piercing_shot"},
+	"hack": {"label": "Hack", "damage": 12},
+	"rime_cleave": {"label": "Rime cleave", "damage": 28, "heavy": true},
+	"raise_blade": {"label": "Raises its blade", "damage": 0, "stance": true, "windup": true},
+	"feint_cleave": {"label": "Rime cleave", "damage": 0, "feint": "rime_cleave"},
+	"knight_quickens": {"label": "Its frost cracks", "damage": 0, "stance": true},
 }
 
 ## Enemy kinds. `weapon` sets the style and reach. `speed` is metres per tick (the player walks
@@ -203,6 +209,21 @@ const ENEMIES := {
 			"quick_shot", "feint_pierce", "piercing_shot", ACTION_REST, ACTION_REST,
 		],
 		"loot": [{"item": "frost_sinew", "count": 1}], "rare_percent": 0, "respawn_ticks": 300,
+	},
+	# Ring three. A ruin warrior frozen into its armour, and the ring's first lesson: it winds up
+	# like the troll, fakes its second cleave (the real one comes straight after), and below half
+	# health drops its wind-ups, so each cleave is told one tick out where it was told two. A
+	# staff has the edge on it at any range, and a bow at distance.
+	"frostbound_knight": {
+		"label": "Frostbound knight", "health": 120, "weapon": "rime_blade", "speed": 2.0, "sight": 7.0,
+		"actions": [
+			"hack", ACTION_REST, "raise_blade", "rime_cleave", ACTION_REST,
+			"hack", ACTION_REST, "raise_blade", "feint_cleave", "rime_cleave", ACTION_REST,
+		],
+		"phases": [{
+			"below": 50, "actions": ["knight_quickens", "hack", "rime_cleave", ACTION_REST, "feint_cleave", "rime_cleave", ACTION_REST],
+		}],
+		"loot": [{"item": "rime_steel", "count": 1}], "rare_percent": 0, "respawn_ticks": 400,
 	},
 }
 ## The rare drop in both rings: one piece of iron gear, ahead of smithing it at the Bloomery.

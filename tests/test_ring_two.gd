@@ -6,6 +6,7 @@ extends "res://tests/run.gd".TestCase
 const H := preload("res://tests/sim_helpers.gd")
 const SimScript := preload("res://sim/sim.gd")
 const Vocab := preload("res://sim/vocab.gd")
+const WorldDefScript := preload("res://sim/world_def.gd")
 
 ## Ring one's side of the gate, out of the captain's sight, and ring two's, just through it.
 const NORTH_OF_GATE := [0.5, 50.5]
@@ -158,6 +159,20 @@ func test_enemies_break_off_when_the_player_passes_the_gate() -> void:
 
 # --- The ice troll ------------------------------------------------------------------------
 
+## Every action played by a kind whose home is in ring three, phases included.
+func _ring_three_actions() -> Dictionary:
+	var w := WorldDefScript.outpost()
+	var out := {}
+	for id in w.enemies:
+		var home := Vector2(w.enemies[id]["home"][0], w.enemies[id]["home"][1])
+		if w.region_at(home) != WorldDef.REGION_RING_THREE:
+			continue
+		for phase in CombatTable.phase_count(w.enemies[id]["kind"]) + 1:
+			for action in CombatTable.cycle(w.enemies[id]["kind"], phase):
+				out[CombatTable.shown_action(action)] = true
+	return out
+
+
 func test_the_ice_troll_winds_up_two_ticks_before_its_crush() -> void:
 	var sim := _gate_open()
 	_sturdy(sim)
@@ -169,8 +184,11 @@ func test_the_ice_troll_winds_up_two_ticks_before_its_crush() -> void:
 	assert_eq(int(crush["tick"]), int(wind_up["tick"]) + 1, "the crush is telegraphed the tick after the wind-up")
 	assert_eq(int(crush["at"]), int(wind_up["tick"]) + 2, "so it lands two ticks after the first warning")
 	assert_true(crush["heavy"])
+	# Ring three's enemies hit harder; below it, nothing does.
+	var deeper := _ring_three_actions()
 	for action in CombatTable.ACTIONS:
-		assert_true(int(crush["damage"]) >= CombatTable.action_damage(action), "the hardest blow there is (vs %s)" % action)
+		if not deeper.has(action):
+			assert_true(int(crush["damage"]) >= CombatTable.action_damage(action), "the hardest blow in rings one and two (vs %s)" % action)
 	assert_eq(sim.combatant("troll_1")["style"], CombatTable.STYLE_MELEE)
 
 

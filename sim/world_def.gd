@@ -402,6 +402,13 @@ static func _ring_three(w: WorldDef) -> void:
 		["veil_archer_2", "snowveil_archer", [11.5, 147.5], "ridge_pair"],
 		["veil_archer_3", "snowveil_archer", [-54.5, 166.5], "cliff_archer"],
 	]
+	# Frostbound knights, the first kind met: a pair a little way past the fire and one alone
+	# farther in, each group more than a fight's noise from the next and out of sight of the fire.
+	placements.append_array([
+		["frost_knight_1", "frostbound_knight", [-24.5, 152.0], "knight_pair"],
+		["frost_knight_2", "frostbound_knight", [-24.5, 154.5], "knight_pair"],
+		["frost_knight_3", "frostbound_knight", [-8.0, 180.0], "knight_alone"],
+	])
 	for p in placements:
 		w.enemies[p[0]] = {"kind": p[1], "home": p[2], "pack": p[3]}
 

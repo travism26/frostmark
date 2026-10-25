@@ -51,6 +51,7 @@ const COLOR_GRIP := Color(0.25, 0.17, 0.11)
 const COLOR_ARCHER := Color(0.55, 0.16, 0.14)  # the rogue redrawn in bandit red
 const COLOR_SNOWVEIL := Color(0.90, 0.94, 0.98)  # the same rogue in snow-white
 const COLOR_SNOWVEIL_BOW := Color(0.80, 0.88, 0.94)  # with a pale, frosted bow
+const COLOR_FROSTBOUND := Color(0.66, 0.80, 0.96)  # the knight redrawn in frost-blue and pale steel
 const COLOR_CAPTAIN_CAPE := Color(0.62, 0.08, 0.08)
 const COLOR_WOLF := Color(1.45, 1.5, 1.6)  # the grey coat lifted towards snow
 const COLOR_WITCH := Color("#6670b3")  # the mage in a rimed blue-violet
@@ -63,7 +64,7 @@ const MAGE_SPARES := ["Spellbook", "Spellbook_open", "1H_Wand", "2H_Staff"]
 ## An enemy of `kind`: a 1 m wolf that lunges with its bite, a hooded archer with a bow, a
 ## frost witch (the wide-hatted mage in blue-violet with a staff), a ruin stalker (a bare
 ## skeleton with a bone bow), a Snowveil archer (the hooded rogue in snow-white with a pale
-## bow), an ice troll (the yeti, 3.1 m of pale fur with an ice club) or
+## bow), a Frostbound knight (the armoured knight in frost-blue with a long blade), an ice troll (the yeti, 3.1 m of pale fur with an ice club) or
 ## the armoured captain with a sabre, a war bow and a rime staff (one shown at a time, by his
 ## stance).
 static func enemy(kind: String) -> FigureBody:
@@ -102,6 +103,13 @@ static func enemy(kind: String) -> FigureBody:
 			hunter.recolour(COLOR_SNOWVEIL)
 			hunter.mount("handslot_l", "bow").add_child(bow(COLOR_SNOWVEIL_BOW, 1.2))
 			return hunter
+		"frostbound_knight":
+			var knight := humanoid("knight.glb", 1.8 * 1.1, ["1H_Sword_Offhand", "2H_Sword", "Badge_Shield", "Rectangle_Shield", "Round_Shield", "Spike_Shield"])
+			knight.recolour(COLOR_FROSTBOUND)
+			var blade := knight.bone_slot("handslot_r").get_node("1H_Sword") as Node3D
+			blade.name = "rime_blade"
+			blade.scale = Vector3.ONE * 1.3
+			return knight
 		"ice_troll":
 			var troll := FigureBody.new()
 			troll.setup(QUATERNIUS + "yeti.glb", YETI_HEIGHT, 3.1, YETI_CLIPS)
