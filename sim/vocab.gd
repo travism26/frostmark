@@ -82,6 +82,7 @@ const EV_ENEMY_MOVED := "enemy_moved"            # {enemy_id, from, to, path, fa
 const EV_ENEMY_TELEGRAPHED := "enemy_telegraphed"  # {enemy_id, action, style, damage, heavy, at}
 const EV_HIT := "hit"                            # {attacker, target, amount, style, multiplier, health}
 const EV_MISSED := "missed"                      # {attacker, target, action}  the target was out of reach
+const EV_ENEMY_FEINTED := "enemy_feinted"        # {enemy_id, action, style, at}  the blow telegraphed for `at` was a feint; action and style are the ones it showed
 const EV_ENEMY_DIED := "enemy_died"              # {enemy_id, enemy_kind, pos}
 const EV_ENEMY_DISENGAGED := "enemy_disengaged"  # {enemy_id}  heading home; the player is in the outpost
 const EV_ENEMY_RESPAWNED := "enemy_respawned"    # {enemy_id, pos}
