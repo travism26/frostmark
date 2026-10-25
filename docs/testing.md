@@ -112,7 +112,7 @@ To try gear on in game, load the all-gear character. It is the test-mode charact
 - one of every item in `ItemTable.ITEMS` that has an equipment slot (weapons, tools, armour, and any new slot's gear), in the table's order so a set's pieces sit side by side
 - then a full stack of each ammunition a weapon fires (arrows and frost shards today), so every bow and staff can fire
 
-The list is read from the item table each time the code is built, so gear added later shows up without touching `scenes/field_kit.gd`. Like the build-from-scratch stash, it starts with as many slots as it fills when that is more than the built stash has (38 today).
+The list is read from the item table each time the code is built, so gear added later shows up without touching `scenes/field_kit.gd`. Like the build-from-scratch stash, it starts with as many slots as it fills when that is more than the built stash has (50 today).
 
 `tests/test_gear_mode.gd` builds the expected stash from the item table and compares it with the imported save, and checks that everything else matches the test-mode save.
 
