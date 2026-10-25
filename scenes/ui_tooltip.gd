@@ -77,6 +77,8 @@ static func item_lines(kind: String, verb := "") -> Array[String]:
 		lines.append("Takes %d off every hit." % ItemTable.defence(kind))
 	elif ItemTable.ARMOUR_SLOTS.has(ItemTable.slot(kind)):
 		lines.append("Takes nothing off a hit on its own.")
+	if ItemTable.warmth(kind) > 0:
+		lines.append("Makes warmth last longer while worn.")
 	if ItemTable.slot(kind) == ItemTable.SLOT_WEAPON:
 		var w := CombatTable.weapon(kind)
 		lines.append("%s, power %d, reach %s m." % [str(w["style"]).capitalize(), w["power"], str(w["reach"])])

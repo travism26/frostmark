@@ -53,3 +53,10 @@ func test_a_fur_piece_shows_no_tier_and_takes_nothing_off_a_hit() -> void:
 		assert_true(lines.has("Takes nothing off a hit on its own."), "%s: %s" % [kind, lines])
 		assert_false("\n".join(lines).contains("tier"), "%s shows no tier: %s" % [kind, lines])
 	assert_true(UiTooltip.item_lines("bronze_helm")[0].begins_with("Bronze tier"), "metal still shows its tier")
+
+
+func test_a_fur_piece_says_it_makes_warmth_last_longer() -> void:
+	for kind in ["fur_hood", "fur_coat", "fur_legs"]:
+		assert_true(UiTooltip.item_lines(kind).has("Makes warmth last longer while worn."), "%s: %s" % [kind, UiTooltip.item_lines(kind)])
+	for kind in ["bronze_helm", "wolf_pelt", "logs"]:
+		assert_false("\n".join(UiTooltip.item_lines(kind)).contains("warmth"), "%s keeps no cold out" % kind)
