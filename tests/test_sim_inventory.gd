@@ -150,6 +150,30 @@ func test_equip_swaps_with_the_slot() -> void:
 	assert_true(sim.has_tool(ItemTable.TOOL_AXE), "still counts for gathering from the pack")
 
 
+func test_fur_pieces_go_in_the_armour_slots_swap_with_metal_and_weigh_in() -> void:
+	var sim := SimScript.new()
+	var snap := sim.snapshot()
+	snap["inventory"]["equipment"].merge({"helm": "bronze_helm", "body": "iron_body", "legs": "steel_legs"}, true)
+	sim.restore(snap)
+	H.set_pack(sim, [{"item": "fur_hood", "count": 1}, {"item": "fur_coat", "count": 1}, {"item": "fur_legs", "count": 1}])
+	var before := sim.carry_weight()
+	for i in 3:
+		assert_true(sim.command(Vocab.EQUIP, {"index": i})["ok"])
+		H.run(sim, 1)
+	var worn: Dictionary = sim.state["inventory"]["equipment"]
+	assert_eq(worn["helm"], "fur_hood")
+	assert_eq(worn["body"], "fur_coat")
+	assert_eq(worn["legs"], "fur_legs")
+	for kind in ["bronze_helm", "iron_body", "steel_legs"]:
+		assert_eq(H.pack_count(sim, kind), 1, "the %s swapped into the pack" % kind)
+	assert_eq(sim.carry_weight(), before, "a swap moves the weight between the pack and the body")
+	H.set_pack(sim, [])
+	var furred := sim.carry_weight()
+	var bare := SimScript.new()
+	H.set_pack(bare, [])
+	assert_eq(furred - bare.carry_weight(), ItemTable.weight("fur_hood") + ItemTable.weight("fur_coat") + ItemTable.weight("fur_legs"), "worn fur counts toward carry weight")
+
+
 func test_queued_commands_apply_on_the_next_tick() -> void:
 	var sim := SimScript.new()
 	H.set_pack(sim, [{"item": "logs", "count": 6}])

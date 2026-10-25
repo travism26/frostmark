@@ -54,6 +54,28 @@ func test_a_club_beside_an_archer_has_the_edge() -> void:
 	assert_eq(theirs[0]["multiplier"], 0.5, "the archer shoots into the edge")
 
 
+## The archer's first blow on a player beside it wearing `armour` (slot -> item).
+func _first_blow_on(armour: Dictionary) -> int:
+	var sim := SimScript.new()
+	H.place(sim, BESIDE_ARCHER)
+	H.arm(sim, "wooden_club")
+	var snap := sim.snapshot()
+	snap["inventory"]["equipment"].merge(armour, true)
+	sim.restore(snap)
+	sim.command(Vocab.ATTACK, {"enemy_id": "archer_1"})
+	var theirs := H.where(H.run_stamped(sim, 6), Vocab.EV_HIT, "attacker", "archer_1")
+	assert_true(theirs.size() > 0, "the archer lands a blow")
+	return int(theirs[0]["amount"]) if theirs.size() > 0 else -1
+
+
+func test_a_full_fur_set_takes_hits_in_full() -> void:
+	var bare := _first_blow_on({})
+	var fur := _first_blow_on({"helm": "fur_hood", "body": "fur_coat", "legs": "fur_legs"})
+	assert_eq(fur, bare, "fur takes nothing off a hit")
+	assert_eq(ItemTable.worn_defence({"helm": "fur_hood", "body": "fur_coat", "legs": "fur_legs"}), 0)
+	assert_true(_first_blow_on({"body": "steel_body"}) < bare, "where steel would")
+
+
 func test_a_bow_at_distance_has_the_edge_on_a_wolf() -> void:
 	var sim := SimScript.new()
 	H.place(sim, [-7.5, 23.5])  # five metres north of wolf_1
