@@ -88,14 +88,10 @@ func _play() -> void:
 	# 3. Bronze, a staff, and a wooden set before the first fight.
 	bot.phase("bronze and a wooden set")
 	_logs_for(14)
-	bot.withdraw("copper_ore")
-	bot.withdraw("tin_ore")
-	bot.withdraw("logs")
-	for i in mini(H.pack_count(sim, "copper_ore"), H.pack_count(sim, "tin_ore")):
+	for i in mini(_have("copper_ore"), _have("tin_ore")):
 		bot.smith("bronze_bar")
 	bot.smith("bronze_pickaxe")
 	bot.smith("bronze_sword")
-	bot.withdraw("ice_crystal")
 	bot.smith("wooden_staff")
 	bot.smith("frost_shards")
 	bot.smith("frost_shards")
@@ -140,9 +136,7 @@ func _play() -> void:
 	for piece in ["bronze_helm", "bronze_body", "bronze_legs"]:
 		bars += int(RecipeTable.get_recipe(piece)["inputs"]["bronze_bar"])
 	_ore_for_bars(bars)
-	bot.withdraw("copper_ore")
-	bot.withdraw("tin_ore")
-	for i in mini(H.pack_count(sim, "copper_ore"), H.pack_count(sim, "tin_ore")):
+	for i in mini(_have("copper_ore"), _have("tin_ore")):
 		bot.smith("bronze_bar")
 	# Twelve stash slots are cramped by now, and the return banner offers the cellar.
 	bot.build("stash_cellar")
