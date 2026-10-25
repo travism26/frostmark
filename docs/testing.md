@@ -50,19 +50,37 @@ Either way it reads CI's conclusion for the head SHA and takes the test guard fr
 
 It prints each run's wall time and tokens and the two record paths, and exits non-zero unless every point holds. Put the two record paths in that PR's record, beside its own verify record.
 
-## The test-mode code
+## The test codes
 
-To check something deep in the rings without playing up to it, load the test-mode character. There are three ways, all giving the same save:
+Four test characters load a ready-made save, so something deep in the game can be checked without playing up to it: the test-mode character, the same character in ring two, the build-from-scratch character and the all-gear character. Each but the ring-two one has a **short code**, typed on the title screen into **Import code** (case and surrounding spaces do not matter), and a **link**, a `?name=value` parameter on the page (<https://travism26.github.io/frostmark/> or a local build) that skips the title screen and loads the character on startup, every time the page loads with it. Both work on the live site and in a local build.
 
-- **Short code:** on the title screen type `PELTKEG7` into **Import code** (case and spaces do not matter).
-- **Link:** open <https://travism26.github.io/frostmark/?hearth=tallow> (or `?hearth=tallow` on a local build). The game skips the title screen and loads the character on startup, every time the page loads with that parameter.
-- **Full code:** write it to `tools/test_mode_code.txt` (below) and paste the whole file into **Import code**.
+The repo holds no short code or link in plain text, not here and not in the tests. `scenes/field_kit.gd` keeps only their sha256 hashes, and nothing in the game's interface mentions them. That is obscurity, not security: codes already in git history stay findable in earlier commits of this file and of `tests/`, so taking them out of the current tree keeps them out of code search but does not unpublish them.
 
-To start in ring two instead of the outpost, add `ring=two` to the link: <https://travism26.github.io/frostmark/?hearth=tallow&ring=two> (or `?hearth=tallow&ring=two` on a local build). It is the same character standing just inside the ring-two gate, within reach of the brazier so it starts warming; without `ring=`, or with any other value, the link loads in the outpost as before. The parameter does nothing on its own or beside the build-from-scratch link.
+Each is an ordinary save code of the current save version, not a cheat: the rules are unchanged, so the character can still freeze, be hit and die. Loading one replaces the browser save, so export your own code first if you want it back.
 
-They work on the live site and in a local build. The short code and the link are obscurity, not security: the repo is public, so anyone reading this file can use them, and the game only keeps their sha256 hashes (`scenes/field_kit.gd`) so they do not turn up in a search of the code. Nothing in the game's interface mentions them.
+### The code map
 
-It is an ordinary save code of the current save version, not a cheat: the rules are unchanged, so the character can still freeze, be hit and die. It loads a character in the outpost with:
+`tools/test_codes.gd` writes the map of every test code to `tools/test_codes.local.md`:
+
+```
+godot --headless -s tools/test_codes.gd
+```
+
+The map has an entry for each test character: test mode, test mode in ring two, build from scratch, all gear, and each ring code from `tools/ring_codes.gd`. An entry gives the short code and link where the character has them, a summary of what it loads, read back from the save itself (for the all-gear character, how many gear items and from which sets or tiers), and the full save code to paste into **Import code**.
+
+The plaintext short codes and links come from a seed, `tools/test_codes.local.cfg`, with one `name = code` line each: `test_mode_short`, `test_mode_query`, `bare_short`, `bare_query`, `gear_short` and `gear_query` (a query line holds the whole `name=value` pair). The tool checks every seed line against its hash in `scenes/field_kit.gd`. A line that does not match, or names no test code, is refused by name and no map is written. A code missing from the seed is written as "not known on this machine" beside its hash. The seed reaches a maintainer outside GitHub.
+
+Neither file is committed (`.gitignore`). The save codes change with every upgrade, layout or item edit, so run the command again after any pull, merge or rebase before using a full code from the map. An older code still migrates forward, but a stale one can miss what changed since (a new skill would load at level 1, for example). The short codes and links are always built fresh by the game, so they never go stale.
+
+`tools/test_mode_code.gd` still writes the test-mode full code alone to `tools/test_mode_code.txt` (also not committed):
+
+```
+godot --headless -s tools/test_mode_code.gd
+```
+
+### The test-mode character
+
+It loads a character in the outpost with:
 
 - every skill at level 99
 - steel sword, steel helm, steel body, steel legs and steel pickaxe worn; a steel axe, fishing rod, steel bow, steel staff, 100 arrows, 100 frost shards, 5 cooked char and 3 logs (one field fire) in the pack, 30 kg in all, within the carry limit
@@ -71,26 +89,13 @@ It is an ordinary save code of the current save version, not a cheat: the rules 
 - both waystones attuned and awake, so `travel` home works from either
 - full warmth and health, and the hints off
 
-Loading it replaces the browser save, so export your own code first if you want it back.
+To start in ring two instead of the outpost, add `ring=two` to its link (the map gives the whole link). It is the same character standing just inside the ring-two gate, within reach of the brazier so it starts warming; without `ring=`, or with any other value, the link loads in the outpost as before. The parameter does nothing on its own or beside another character's link.
 
-`scenes/field_kit.gd` builds it from a new character through `restore()`, so the short code and the link always give a save of the current version. `tools/test_mode_code.gd` writes the same code to the file:
+`scenes/field_kit.gd` builds it from a new character through `restore()`, so the short code and the link always give a save of the current version. `tests/test_test_mode.gd` builds the code the same way, imports it and checks every point above, that both stored hashes load the same character, that typed text is matched without its case or surrounding spaces, and that the ring-two spot stands it beside the brazier.
 
-```
-godot --headless -s tools/test_mode_code.gd
-```
+### The build-from-scratch character
 
-The file is not committed (`.gitignore`), because it changed with every upgrade or layout edit and parallel branches kept conflicting on it. So a merge or rebase never touches it, and a copy written before one is stale: run the command above again after any pull, merge or rebase before pasting it. An older code still migrates forward, but a stale one can miss what changed since (a new skill would load at level 1, for example).
-
-`tests/test_test_mode.gd` builds the code the same way, imports it and checks every point above, that the short code loads the same character, and that `ring=two` loads it in ring two beside the brazier.
-
-## The build-from-scratch code
-
-To build the outpost up by hand (the build moment, the yard pieces, the build sounds and the "You can now build" line), load the build-from-scratch character instead. Two ways, both giving the same save:
-
-- **Short code:** on the title screen type `RIMEKNOT` into **Import code** (case and spaces do not matter).
-- **Link:** open <https://travism26.github.io/frostmark/?hearth=kindling> (or `?hearth=kindling` on a local build). Like the test-mode link, it loads the character on every page load with that parameter.
-
-The same note holds: obscurity, not security, only their sha256 hashes are in `scenes/field_kit.gd`, and nothing in the game mentions them. It is an ordinary save of the current version, with the rules unchanged. It loads a new character in the outpost with:
+To build the outpost up by hand (the build moment, the yard pieces, the build sounds and the "You can now build" line), load the build-from-scratch character. It loads a new character in the outpost with:
 
 - every skill at its starting level, the starting pack and axe, full warmth and health, and the hints as a new character has them
 - nothing built, the captain standing, no ring reached and no waystone attuned
@@ -100,6 +105,17 @@ The summed cost is worked out from `sim/upgrades.gd` each time the code is loade
 
 `tests/test_bare_mode.gd` checks each point and builds every upgrade from it in turn.
 
+### The all-gear character
+
+To try gear on in game, load the all-gear character. It is the test-mode character in the outpost (every skill at 99, the same worn and carried kit, every upgrade built, the captain down, ring two reached, both waystones attuned, full warmth and health, hints off) with a different stash:
+
+- one of every item in `ItemTable.ITEMS` that has an equipment slot (weapons, tools, armour, and any new slot's gear), in the table's order so a set's pieces sit side by side
+- then a full stack of each ammunition a weapon fires (arrows and frost shards today), so every bow and staff can fire
+
+The list is read from the item table each time the code is built, so gear added later shows up without touching `scenes/field_kit.gd`. Like the build-from-scratch stash, it starts with as many slots as it fills when that is more than the built stash has (38 today).
+
+`tests/test_gear_mode.gd` builds the expected stash from the item table and compares it with the imported save, and checks that everything else matches the test-mode save.
+
 ## Other codes
 
-`tools/ring_codes.gd` prints a new character standing in each ring (and one in ring one with the warmth run low), for screenshots. Its output is in `tools/ring_codes.txt`.
+`tools/ring_codes.gd` prints a new character standing in each ring (and one in ring one with the warmth run low), for screenshots. Its output is in `tools/ring_codes.txt`, and the code map lists the same codes.
