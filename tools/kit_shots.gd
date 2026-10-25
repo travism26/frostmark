@@ -31,6 +31,7 @@ const SLOTS := {
 	GearLook.SHAPE_BROADSWORD: "handslot_r", GearLook.SHAPE_BEARDED_AXE: "handslot_r", GearLook.SHAPE_GREATSWORD: "handslot_r",
 	GearLook.SHAPE_FORGE_HAMMER: "handslot_r", GearLook.SHAPE_GLAIVE: "handslot_r", GearLook.SHAPE_CLEAVER: "handslot_r",
 	GearLook.SHAPE_LONGBOW: "handslot_l", GearLook.SHAPE_PLUMES: "head",
+	GearLook.SHAPE_POUCH: "chest", GearLook.SHAPE_MAGE_STAFF: "handslot_r",
 }
 
 var _out_dir := ""
