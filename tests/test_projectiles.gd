@@ -1,7 +1,7 @@
 ## Shots in flight, from the pure functions GameRoot drives them with: a bow throws an arrow
 ## and a staff a frost shard, a monster's shot arrives on its blow's tick, a shot flies from
-## shooter to target, and it lands on a hit, drops past the target on a miss and never hangs
-## in the air. How it looks is judged by hand.
+## shooter to target, and it lands on a hit, drops past the target on a miss, shrinks away in
+## the air on a feint and never hangs there. How it looks is judged by hand.
 extends "res://tests/run.gd".TestCase
 
 const ProjectilesScript := preload("res://scenes/projectiles.gd")
@@ -76,6 +76,23 @@ func test_a_miss_drops_past_the_target() -> void:
 	assert_eq(ProjectilesScript.phase(_at(shot, 0.5 + ProjectilesScript.MISS_SECONDS)), ProjectilesScript.DROPPED, "into the snow")
 
 
+func test_a_feinted_shot_fades_in_the_air() -> void:
+	var shot := _feinted(_at(_shot(0.3, 0.2, null), 0.4))
+	assert_eq(ProjectilesScript.phase(shot), ProjectilesScript.FADING, "it shrinks away where it is")
+	assert_eq(ProjectilesScript.phase(_at(shot, 0.4 + ProjectilesScript.FADE_SECONDS)), ProjectilesScript.FADED)
+	assert_eq(ProjectilesScript.phase(_at(shot, 2.0)), ProjectilesScript.FADED, "it never lands or drops")
+
+
+func test_a_feint_at_the_target_fades_instead_of_landing() -> void:
+	var shot := _feinted(_at(_shot(0.3, 0.2, null), 0.55))
+	assert_eq(ProjectilesScript.phase(shot), ProjectilesScript.FADING, "a shot waiting at the target fades too")
+
+
+func test_a_shot_feinted_before_it_leaves_is_never_seen() -> void:
+	var shot := _feinted(_at(_shot(0.3, 0.2, null), 0.1))
+	assert_eq(ProjectilesScript.phase(shot), ProjectilesScript.FADED)
+
+
 func test_a_shot_no_blow_answers_drops_instead_of_hanging() -> void:
 	var shot := _shot(0.3, 0.2, null)
 	assert_eq(ProjectilesScript.phase(_at(shot, 0.5 + ProjectilesScript.GRACE)), ProjectilesScript.DROPPED)
@@ -130,6 +147,13 @@ func test_a_puff_bursts_once_and_reduced_motion_only_fades() -> void:
 
 static func _shot(delay: float, seconds: float, result: Variant) -> Dictionary:
 	return {"delay": delay, "seconds": seconds, "time": 0.0, "result": result}
+
+
+## What `fade()` does to the shot of a feinted blow.
+static func _feinted(shot: Dictionary) -> Dictionary:
+	shot["result"] = false
+	shot["faded_at"] = shot["time"]
+	return shot
 
 
 static func _at(shot: Dictionary, time: float) -> Dictionary:

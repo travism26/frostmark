@@ -3,7 +3,8 @@
 ## simulation already emits. A player's shot is loosed on its `hit` and lands a moment later,
 ## when GameRoot's flinch for it plays. A monster's shot is loosed from its telegraph so that it
 ## arrives on the tick the blow resolves; it lands on the player when that tick's `hit` comes,
-## and in the snow past them when `missed` does. Shots are hand-made meshes and a trail quad,
+## in the snow past them when `missed` does, and shrinks away in the air when the blow was an
+## `enemy_feinted`. Shots are hand-made meshes and a trail quad,
 ## with no shadow and no state beyond what is on screen.
 ##
 ## Every shot and puff of a look shares one set of meshes and materials, made once and held
@@ -40,6 +41,8 @@ const ARROW_LENGTH := 1.5
 const SHARD_LENGTH := 1.0
 const TRAIL_LENGTH := 2.4
 const PUFF_SECONDS := 0.45
+## How long a feinted shot takes to shrink away in the air.
+const FADE_SECONDS := 0.2
 
 const COLOR_SHAFT := Color(0.45, 0.30, 0.18)
 const COLOR_HEAD := Color(0.62, 0.66, 0.72)
@@ -56,11 +59,14 @@ const FLYING := "flying"
 const HOLDING := "holding"
 const LANDED := "landed"
 const DROPPED := "dropped"
+const FADING := "fading"
+const FADED := "faded"
 
 ## Whether a puff bursts outward; off with reduced motion, so it only glows and fades in place.
 var reduced_motion := false
 ## Each shot: {node, kind, shooter, from, target, to, key, delay, seconds, time, held,
-## result (null until resolved, then true for a hit, false for a miss), miss_at, on_land}.
+## result (null until resolved, then true for a hit, false for a miss), miss_at, faded_at
+## (set when the blow was a feint), on_land}.
 var _shots: Array[Dictionary] = []
 
 static var _trail_texture: Texture2D
@@ -98,11 +104,15 @@ static func point(from: Vector3, to: Vector3, t: float, kind: String) -> Vector3
 
 
 ## Which part of its life a shot is in: WAITING to be loosed, FLYING, HOLDING at its target
-## for the blow's tick, LANDED (a hit, or a player's shot) or DROPPED into the snow (a miss,
-## or no word inside GRACE). Only reads the shot's time, flight and result.
+## for the blow's tick, LANDED (a hit, or a player's shot), DROPPED into the snow (a miss,
+## or no word inside GRACE), or FADING away in the air and then FADED (a feint; one still
+## waiting to be loosed is never seen). Only reads the shot's time, flight and result.
 static func phase(shot: Dictionary) -> String:
 	var time: float = shot["time"]
 	var flown: float = shot["delay"] + shot["seconds"]
+	if shot.has("faded_at"):
+		var faded: float = shot["faded_at"]
+		return FADING if faded >= shot["delay"] and time < faded + FADE_SECONDS else FADED
 	if time < shot["delay"]:
 		return WAITING
 	if time < flown:
@@ -144,6 +154,15 @@ func resolve(key: String, landed: bool) -> void:
 			shot["result"] = landed
 			if not landed:
 				shot["missed_at"] = shot["time"]
+			return
+
+
+## The blow `key` shot was a feint: it shrinks away where it is instead of landing or dropping.
+func fade(key: String) -> void:
+	for shot in _shots:
+		if shot["key"] == key and shot["result"] == null:
+			shot["result"] = false
+			shot["faded_at"] = shot["time"]
 			return
 
 
@@ -196,6 +215,11 @@ func _advance(shot: Dictionary) -> bool:
 			var on_land: Callable = shot["on_land"]
 			if on_land.is_valid():
 				on_land.call()
+			return true
+		FADING:
+			node.scale = Vector3.ONE * (1.0 - (float(shot["time"]) - float(shot["faded_at"])) / FADE_SECONDS)
+			return false
+		FADED:
 			return true
 	var ahead := Vector3(to.x - from.x, 0.0, to.z - from.z).normalized()
 	_burst(SHARD if shot["kind"] == SHARD else "", Vector3(to.x, 0.1, to.z) + ahead * MISS_REACH)

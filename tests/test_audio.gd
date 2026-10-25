@@ -66,6 +66,16 @@ func test_the_combat_and_milestone_events_each_sound() -> void:
 	assert_eq(fish, [AudioCues.CATCH], "a caught fish splashes")
 
 
+func test_a_feint_sounds_its_telegraph_cue_cut_short() -> void:
+	var feint := {"kind": Vocab.EV_ENEMY_FEINTED, "style": CombatTable.STYLE_MELEE}
+	assert_eq(AudioCues.event_cues(feint), [AudioCues.CUE_MELEE], "the telegraph cue for its style")
+	feint["style"] = CombatTable.STYLE_RANGED
+	assert_eq(AudioCues.event_cues(feint), [AudioCues.CUE_RANGED])
+	assert_true(AudioCues.cut_seconds(feint) > 0.0 and AudioCues.cut_seconds(feint) < 0.5, "cut short")
+	assert_eq(AudioCues.cut_seconds({"kind": Vocab.EV_ENEMY_TELEGRAPHED, "style": CombatTable.STYLE_MELEE}), 0.0,
+		"a real telegraph plays in full")
+
+
 func test_every_upgrade_declares_a_material() -> void:
 	var materials := [YardLook.TIMBER, YardLook.STONE, YardLook.IRON]
 	for id in UpgradeTable.ids():

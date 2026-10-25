@@ -92,6 +92,8 @@ const BUILT_BY_MATERIAL := {YardLook.TIMBER: CHOP, YardLook.STONE: MINE, YardLoo
 
 ## The telegraph cue for each style, so the counter can be heard as well as read.
 const CUE_BY_STYLE := {CombatTable.STYLE_MELEE: CUE_MELEE, CombatTable.STYLE_RANGED: CUE_RANGED}
+## A feint sounds its style's telegraph cue again, cut off after this many seconds.
+const FEINT_SECONDS := 0.15
 
 ## Every clip shipped, its source and its licence, shown in the sound panel. The full
 ## table with links is docs/assets/CREDITS.md.
@@ -138,7 +140,7 @@ static func event_cues(e: Dictionary) -> Array[String]:
 			if e.get("style", "") == CombatTable.STYLE_RANGED:
 				out.append(BOW)
 			out.append(HIT_TAKEN if e.get("target", "") == SimVocab.PLAYER else HIT)
-		SimVocab.EV_ENEMY_TELEGRAPHED, SimVocab.EV_ENEMY_STANCE:
+		SimVocab.EV_ENEMY_TELEGRAPHED, SimVocab.EV_ENEMY_STANCE, SimVocab.EV_ENEMY_FEINTED:
 			if CUE_BY_STYLE.has(e.get("style", "")):
 				out.append(CUE_BY_STYLE[e["style"]])
 		SimVocab.EV_ENEMY_DIED:
@@ -150,6 +152,12 @@ static func event_cues(e: Dictionary) -> Array[String]:
 		SimVocab.EV_LEVELLED:
 			out.append(STING_LEVEL)
 	return out
+
+
+## How long an event's cues play before they are cut off: FEINT_SECONDS for a feint, else 0
+## for the whole clip.
+static func cut_seconds(e: Dictionary) -> float:
+	return FEINT_SECONDS if e.get("kind", "") == SimVocab.EV_ENEMY_FEINTED else 0.0
 
 
 ## Every cue key the event mapping and the director can ask for.
