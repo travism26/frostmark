@@ -72,6 +72,14 @@ func test_tiered_gear_takes_its_tier_colour_and_styles_share_the_telegraph_colou
 		assert_eq(IconTable.tint(IconTable.style_key(style)), IconTable.STYLE_COLOURS[style], "%s badge is the telegraph colour" % style)
 
 
+func test_fur_pieces_take_the_fur_tint_on_the_armour_glyphs() -> void:
+	var glyphs := {"fur_hood": "steel_helm", "fur_coat": "steel_body", "fur_legs": "steel_legs"}
+	for kind in glyphs:
+		assert_eq(IconTable.tint(kind), IconTable.TINT_FUR, "%s wears the fur tint" % kind)
+		assert_false(IconTable.TIER_TINTS.values().has(IconTable.tint(kind)), "%s takes no tier tint" % kind)
+		assert_eq(IconTable.path(kind), IconTable.path(glyphs[kind]), "%s reuses the armour glyph" % kind)
+
+
 func test_each_metal_bar_is_a_bar_in_its_own_metal() -> void:
 	var bars := ["bronze_bar", "iron_bar", "steel_bar"]
 	for kind in bars:

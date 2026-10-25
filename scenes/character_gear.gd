@@ -3,7 +3,7 @@
 ## while the hands are free of it, and each worn armour piece in its place (the helm on the
 ## head, the body on the chest, the legs on the hips and shins), each in its tier's colour
 ## (wood, bronze, iron, steel) and hung on the CharacterView's bone slots so it swings with the
-## animation. While the view chops, mines or fishes, the tool moves to the right hand (the rod
+## animation; a fur piece, which has no tier, in fur. While the view chops, mines or fishes, the tool moves to the right hand (the rod
 ## tipped forward over the water) and the weapon is put away. A piece shows because it is worn,
 ## whatever its tier; the tier changes its shape (pauldrons on a body from bronze, a band on a
 ## helm from bronze and a nose guard from iron, greaves under the kilt from iron), so progress
@@ -20,6 +20,8 @@ const TIER_COLORS := {
 	ItemTable.TIER_IRON: Color(0.58, 0.62, 0.68),
 	ItemTable.TIER_STEEL: Color(0.42, 0.50, 0.62),
 }
+## Tierless armour is fur, drawn in a pelt grey-brown on the metal shapes.
+const FUR_COLOR := Color(0.56, 0.48, 0.40)
 
 ## How far up its own height a tool in the hand is gripped.
 const TOOL_GRIP := 0.22
@@ -105,7 +107,7 @@ func _mount(view: CharacterView, place: String, slot_name: String) -> Node3D:
 
 
 func _build_weapon(view: CharacterView, place: String, item: String) -> void:
-	var colour := _tier_colour(item)
+	var colour := colour_of(item)
 	var style: String = ItemTable.ITEMS[item].get("style", CombatTable.STYLE_MELEE)
 	if style == CombatTable.STYLE_RANGED:
 		_mount(view, place, "handslot_l").add_child(Figures.bow(colour, 1.1))
@@ -126,7 +128,7 @@ func _build_weapon(view: CharacterView, place: String, item: String) -> void:
 
 ## A vest round the chest; from bronze, pauldrons on the shoulders.
 func _build_body(view: CharacterView, place: String, item: String) -> void:
-	var colour := _tier_colour(item)
+	var colour := colour_of(item)
 	var chest := _mount(view, place, "chest")
 	var vest := CylinderMesh.new()
 	vest.top_radius = 0.34
@@ -143,7 +145,7 @@ func _build_body(view: CharacterView, place: String, item: String) -> void:
 
 ## A dome over the crown; from bronze, a band round its rim; from iron, a nose guard.
 func _build_helm(view: CharacterView, place: String, item: String) -> void:
-	var colour := _tier_colour(item)
+	var colour := colour_of(item)
 	var rank := _rank(item)
 	var head := _mount(view, place, "head")
 	var helm := SphereMesh.new()
@@ -168,7 +170,7 @@ func _build_helm(view: CharacterView, place: String, item: String) -> void:
 
 ## A kilt round the hips; from iron, greaves on both shins as well.
 func _build_legs(view: CharacterView, place: String, item: String) -> void:
-	var colour := _tier_colour(item)
+	var colour := colour_of(item)
 	var hips := _mount(view, place, "hips")
 	var kilt := CylinderMesh.new()
 	kilt.top_radius = 0.38
@@ -192,7 +194,7 @@ func _build_legs(view: CharacterView, place: String, item: String) -> void:
 
 ## The tool slung across the back: Kenney's axe or pickaxe, or the fishing rod.
 func _build_slung_tool(view: CharacterView, place: String, item: String) -> void:
-	var colour := _tier_colour(item)
+	var colour := colour_of(item)
 	var sling := Node3D.new()
 	sling.position = Vector3(0.12, -0.38, 0.34)
 	sling.rotation.z = 0.5
@@ -210,7 +212,7 @@ func _build_slung_tool(view: CharacterView, place: String, item: String) -> void
 ## The tool in the right hand: the rod tipped forward over the water, or the axe or pickaxe
 ## gripped low on its haft the way the barbarian held his own axe, so the chop clip swings it.
 func _build_held_tool(view: CharacterView, place: String, item: String) -> void:
-	var colour := _tier_colour(item)
+	var colour := colour_of(item)
 	if ItemTable.tool(item) == ItemTable.TOOL_ROD:
 		var rod := Figures.rod(colour, 1.4)
 		rod.rotation.x = -1.0  # tipped forward over the water
@@ -233,5 +235,9 @@ static func _rank(item: String) -> int:
 	return ItemTable.tier_rank(ItemTable.tier(item))
 
 
-static func _tier_colour(item: String) -> Color:
+## The colour `item` is drawn in: its tier's, fur for tierless armour, magenta for anything
+## else so a missing colour shows.
+static func colour_of(item: String) -> Color:
+	if ItemTable.tier(item) == "" and ItemTable.ARMOUR_SLOTS.has(ItemTable.slot(item)):
+		return FUR_COLOR
 	return TIER_COLORS.get(ItemTable.tier(item), Color.MAGENTA)
