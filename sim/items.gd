@@ -71,6 +71,12 @@ const SET_GLACIER_SOVEREIGN := "glacier_sovereign"
 const SET_SHARDWEAVER := "shardweaver"
 const SET_RIMECALLER := "rimecaller"
 const SET_GLACIER_WARDEN := "glacier_warden"
+## The magic top sets (#167). The magic line's Ruinwarden is `ruinwarden_mage`, so no item id
+## collides with the melee set's; its labels keep the approved name with the piece.
+const SET_HOARFROST_SOVEREIGN := "hoarfrost_sovereign"
+const SET_HEARTHFIRE_MAGUS := "hearthfire_magus"
+const SET_AURORA_SHAMAN := "aurora_shaman"
+const SET_RUINWARDEN_MAGE := "ruinwarden_mage"
 ## Every set key, in the ladder's order.
 const SETS: Array[String] = [
 	SET_HEARTHGUARD, SET_WOLFMARK, SET_RUINWARDEN,
@@ -78,6 +84,7 @@ const SETS: Array[String] = [
 	SET_TRAPPER, SET_WOLFSTALKER, SET_STEELPOINT,
 	SET_EMBER_HAWK, SET_AURORAL_WARDEN, SET_RUIN_STALKER, SET_GLACIER_SOVEREIGN,
 	SET_SHARDWEAVER, SET_RIMECALLER, SET_GLACIER_WARDEN,
+	SET_HOARFROST_SOVEREIGN, SET_HEARTHFIRE_MAGUS, SET_AURORA_SHAMAN, SET_RUINWARDEN_MAGE,
 ]
 
 const ITEMS := {
@@ -536,6 +543,91 @@ const ITEMS := {
 	"glacier_warden_cape": {
 		"label": "Glacier Warden cloak", "stack": 1, "weight": 1, "value": 40, "slot": SLOT_CAPE,
 		"set": SET_GLACIER_WARDEN,
+	},
+	# The magic top sets (#167): Hoarfrost Sovereign, Hearthfire Magus, Aurora Shaman and
+	# Ruinwarden (`ruinwarden_mage`, beside the melee set's `ruinwarden`), each a helm, a body,
+	# legs and a staff under the set-item rule above (the staff's head is look only; its stats
+	# are the steel staff's) and a cape under the cape rule (weight 1, value 40, no defence, no
+	# warmth).
+	"hoarfrost_sovereign_helm": {
+		"label": "Hoarfrost Sovereign crown", "stack": 1, "weight": 2, "value": 40, "slot": SLOT_HELM,
+		"defence": 1, "set": SET_HOARFROST_SOVEREIGN,
+	},
+	"hoarfrost_sovereign_body": {
+		"label": "Hoarfrost Sovereign robe", "stack": 1, "weight": 3, "value": 80, "slot": SLOT_BODY,
+		"defence": 2, "set": SET_HOARFROST_SOVEREIGN,
+	},
+	"hoarfrost_sovereign_legs": {
+		"label": "Hoarfrost Sovereign skirt", "stack": 1, "weight": 2, "value": 60, "slot": SLOT_LEGS,
+		"defence": 1, "set": SET_HOARFROST_SOVEREIGN,
+	},
+	"hoarfrost_sovereign_staff": {
+		"label": "Hoarfrost Sovereign greatshard", "stack": 1, "weight": 2, "value": 172, "slot": SLOT_WEAPON,
+		"style": "magic", "power": 10, "speed": 2, "reach": 6.0, "ammo": "frost_shards", "set": SET_HOARFROST_SOVEREIGN,
+	},
+	"hoarfrost_sovereign_cape": {
+		"label": "Hoarfrost Sovereign cloak", "stack": 1, "weight": 1, "value": 40, "slot": SLOT_CAPE,
+		"set": SET_HOARFROST_SOVEREIGN,
+	},
+	"hearthfire_magus_helm": {
+		"label": "Hearthfire Magus hood", "stack": 1, "weight": 2, "value": 40, "slot": SLOT_HELM,
+		"defence": 1, "set": SET_HEARTHFIRE_MAGUS,
+	},
+	"hearthfire_magus_body": {
+		"label": "Hearthfire Magus robe", "stack": 1, "weight": 3, "value": 80, "slot": SLOT_BODY,
+		"defence": 2, "set": SET_HEARTHFIRE_MAGUS,
+	},
+	"hearthfire_magus_legs": {
+		"label": "Hearthfire Magus leggings", "stack": 1, "weight": 2, "value": 60, "slot": SLOT_LEGS,
+		"defence": 1, "set": SET_HEARTHFIRE_MAGUS,
+	},
+	"hearthfire_magus_staff": {
+		"label": "Hearthfire Magus brazier staff", "stack": 1, "weight": 2, "value": 172, "slot": SLOT_WEAPON,
+		"style": "magic", "power": 10, "speed": 2, "reach": 6.0, "ammo": "frost_shards", "set": SET_HEARTHFIRE_MAGUS,
+	},
+	"hearthfire_magus_cape": {
+		"label": "Hearthfire Magus cloak", "stack": 1, "weight": 1, "value": 40, "slot": SLOT_CAPE,
+		"set": SET_HEARTHFIRE_MAGUS,
+	},
+	"aurora_shaman_helm": {
+		"label": "Aurora Shaman antlers", "stack": 1, "weight": 2, "value": 40, "slot": SLOT_HELM,
+		"defence": 1, "set": SET_AURORA_SHAMAN,
+	},
+	"aurora_shaman_body": {
+		"label": "Aurora Shaman mantle", "stack": 1, "weight": 3, "value": 80, "slot": SLOT_BODY,
+		"defence": 2, "set": SET_AURORA_SHAMAN,
+	},
+	"aurora_shaman_legs": {
+		"label": "Aurora Shaman leggings", "stack": 1, "weight": 2, "value": 60, "slot": SLOT_LEGS,
+		"defence": 1, "set": SET_AURORA_SHAMAN,
+	},
+	"aurora_shaman_staff": {
+		"label": "Aurora Shaman staff", "stack": 1, "weight": 2, "value": 172, "slot": SLOT_WEAPON,
+		"style": "magic", "power": 10, "speed": 2, "reach": 6.0, "ammo": "frost_shards", "set": SET_AURORA_SHAMAN,
+	},
+	"aurora_shaman_cape": {
+		"label": "Aurora Shaman cloak", "stack": 1, "weight": 1, "value": 40, "slot": SLOT_CAPE,
+		"set": SET_AURORA_SHAMAN,
+	},
+	"ruinwarden_mage_helm": {
+		"label": "Ruinwarden mask", "stack": 1, "weight": 2, "value": 40, "slot": SLOT_HELM,
+		"defence": 1, "set": SET_RUINWARDEN_MAGE,
+	},
+	"ruinwarden_mage_body": {
+		"label": "Ruinwarden robe", "stack": 1, "weight": 3, "value": 80, "slot": SLOT_BODY,
+		"defence": 2, "set": SET_RUINWARDEN_MAGE,
+	},
+	"ruinwarden_mage_legs": {
+		"label": "Ruinwarden greaves", "stack": 1, "weight": 2, "value": 60, "slot": SLOT_LEGS,
+		"defence": 1, "set": SET_RUINWARDEN_MAGE,
+	},
+	"ruinwarden_mage_staff": {
+		"label": "Ruinwarden pillar", "stack": 1, "weight": 2, "value": 172, "slot": SLOT_WEAPON,
+		"style": "magic", "power": 10, "speed": 2, "reach": 6.0, "ammo": "frost_shards", "set": SET_RUINWARDEN_MAGE,
+	},
+	"ruinwarden_mage_cape": {
+		"label": "Ruinwarden banner", "stack": 1, "weight": 1, "value": 40, "slot": SLOT_CAPE,
+		"set": SET_RUINWARDEN_MAGE,
 	},
 	# The ranged top sets (#165): Ember Hawk, Auroral Warden, Ruin Stalker's Shroud and Glacier
 	# Sovereign, each a helm, a body, legs and a bow under the set-item rule above (the bow's

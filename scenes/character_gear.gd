@@ -28,9 +28,9 @@
 ## tones (a base plus a darker underside or a lighter trim) so it reads lit from above. Which
 ## palette field a part takes is the look's tone number (`tone`, `edge_tone`...), or a Color
 ## of the look's own. A look's `glow` above 0 draws the builder's highlight in the palette's
-## glow colour, shining that bright, through `Props.flat`. A crystal, a shard crown or a forge
-## hammer carries the one small light and the few motes a top set is allowed (`_glow_fx`), and
-## only when its look asks for them.
+## glow colour, shining that bright, through `Props.flat`. A crystal, a shard crown, a forge
+## hammer or a mage staff carries the one small light and the few motes a top set is allowed
+## (`_glow_fx`), and only when its look asks for them.
 ##
 ## A piece's `layers` are built the same way and added under its root, so a set helm is a
 ## helm with studs, cheek guards and a crest layered on from its one entry; no builder knows
@@ -693,12 +693,12 @@ static func collar(look: Dictionary, colours: Dictionary) -> Node3D:
 	var tone := _tone(look, colours, "tone")
 	var teeth := int(look["teeth"])
 	if kind == GearLook.COLLAR_HOOP:
-		var ring := Figures.part(stand, _torus(look["hoop_inner"], look["hoop_outer"], look["hoop_rings"], look["hoop_segments"], tone), Vector3(0, look["hoop_outer"], 0))
-		ring.rotation.x = PI * 0.5  # the hoop stands up behind the head
+		var ring := Figures.part(stand, _torus(look["hoop_inner"], look["hoop_outer"], look["hoop_rings"], look["hoop_segments"], top), Vector3(0, look["hoop_outer"], 0))
+		ring.rotation.x = PI * 0.5  # the hoop stands up behind the head, a halo in the highlight
 		var mid: float = (look["hoop_inner"] + look["hoop_outer"]) * 0.5
 		for i in teeth:
 			var a := PI * 0.5 + (i - (teeth - 1) * 0.5) * (PI * 0.8 / maxf(teeth - 1, 1))
-			var flame := Figures.part(stand, _cone(look["tooth"] * 0.3, look["tooth"], 4, top), Vector3(cos(a) * mid, look["hoop_outer"] + sin(a) * mid, 0))
+			var flame := Figures.part(stand, _cone(look["tooth"] * 0.3, look["tooth"], 4, tone), Vector3(cos(a) * mid, look["hoop_outer"] + sin(a) * mid, 0))
 			flame.rotation.z = a - PI * 0.5  # each fin points out along the rim
 		return root
 	if kind == GearLook.COLLAR_PLATE:
@@ -1497,6 +1497,7 @@ static func mage_staff(look: Dictionary, colours: Dictionary) -> Node3D:
 	hilt.add_child(head)
 	var prism_length: float = look["prism_length"]
 	var prism_radius: float = look["prism_radius"]
+	var prism_y := 0.0  # where the main prism's root stands, so the light and motes sit at its join
 	match look["head"]:
 		GearLook.HEAD_LASHED:
 			_prism(head, look, colours, prism_length, prism_radius, 0.0)
@@ -1509,13 +1510,73 @@ static func mage_staff(look: Dictionary, colours: Dictionary) -> Node3D:
 				arm.rotation.z = side * look["fork_spread"]  # the arms lean apart
 				head.add_child(arm)
 				Figures.part(arm, _cylinder(look["fork_radius"], look["fork_radius"] * 1.2, fork_length, 6, _tone(look, colours, "fork_tone")), Vector3(0, fork_length * 0.5, 0))
-			_prism(head, look, colours, prism_length, prism_radius, look["rise"])
+			prism_y = look["rise"]
+			_prism(head, look, colours, prism_length, prism_radius, prism_y)
 		GearLook.HEAD_RING:
 			var ring_outer: float = look["ring_outer"]
 			var hoop := Figures.part(head, _torus(look["ring_inner"], ring_outer, int(look["ring_rings"]), int(look["ring_segments"]), _tone(look, colours, "ring_tone")), Vector3(0, ring_outer, 0))
 			hoop.rotation.x = PI * 0.5  # upright on the shaft's top, facing front
-			_prism(head, look, colours, prism_length, prism_radius, 0.02)
+			prism_y = 0.02
+			_prism(head, look, colours, prism_length, prism_radius, prism_y)
 			_prism(head, look, colours, look["small_length"], look["small_radius"], ring_outer * 2.0 + look["rise"])
+		GearLook.HEAD_SHARD:
+			_prism(head, look, colours, prism_length, prism_radius, 0.0)
+			for side: float in [-1.0, 1.0]:
+				var splinter := Node3D.new()
+				splinter.position.y = prism_length * look["root"] * 0.5
+				splinter.rotation.z = -side * look["side_spread"]  # each small shard leans out from the root's side
+				head.add_child(splinter)
+				_prism(splinter, look, colours, look["small_length"], look["small_radius"], 0.0)
+		GearLook.HEAD_BRAZIER:
+			var cup: float = look["cup"]
+			Figures.part(head, _cylinder(look["cup_radius"], radius * 1.2, cup, segments, _tone(look, colours, "cup_tone")), Vector3(0, cup * 0.5, 0))
+			prism_y = cup * 0.6
+			_prism(head, look, colours, prism_length, prism_radius, prism_y)
+			for side: float in [-1.0, 1.0]:
+				var ember := Node3D.new()
+				ember.position.y = prism_y
+				ember.rotation.z = -side * look["side_spread"]  # the small flames lean apart out of the cup
+				head.add_child(ember)
+				_prism(ember, look, colours, look["small_length"], look["small_radius"], 0.0)
+		GearLook.HEAD_ANTLER:
+			var fork_length: float = look["fork_length"]
+			var fork_radius: float = look["fork_radius"]
+			var fork := _tone(look, colours, "fork_tone")
+			var lower: float = fork_length * 0.55
+			for side: float in [-1.0, 1.0]:
+				var tine := Node3D.new()
+				tine.rotation.z = -side * look["fork_spread"]  # the tines lean apart
+				head.add_child(tine)
+				Figures.part(tine, _cylinder(fork_radius, fork_radius * 1.2, lower, 6, fork), Vector3(0, lower * 0.5, 0))
+				var tip := Node3D.new()
+				tip.position.y = lower
+				tip.rotation.z = side * look["tine_bend"]  # the tip curves back in over the prism
+				tine.add_child(tip)
+				Figures.part(tip, _cone(fork_radius, fork_length - lower, 6, fork), Vector3(0, (fork_length - lower) * 0.5, 0))
+			prism_y = look["rise"]
+			_prism(head, look, colours, prism_length, prism_radius, prism_y)
+			var feather: float = look["feather"]
+			var quill := Node3D.new()
+			quill.position.x = radius + 0.01
+			quill.rotation.z = -(PI - 0.35)  # hangs from the right tine's root, swung out a little
+			head.add_child(quill)
+			Figures.part(quill, _box(Vector3(feather * 0.25, feather, 0.015), _tone(look, colours, "feather_tone")), Vector3(0, feather * 0.5, 0))
+			Figures.part(quill, _box(Vector3(0.012, feather, 0.02), _tone(look, colours, "root_tone")), Vector3(0, feather * 0.5, 0))
+			var bead: float = look["bead"]
+			var beads := _tone(look, colours, "bead_tone")
+			for i in int(look["beads"]):
+				Figures.part(head, _ball(bead, beads), Vector3(-(radius + bead), -(i + 0.5) * bead * 2.4, 0))  # strung down from the left tine's root
+		GearLook.HEAD_PILLAR:
+			var teeth := int(look["teeth"])
+			var tooth: float = look["tooth"]
+			var stone := _tone(look, colours, "tone")
+			for i in teeth:
+				var a := i * TAU / teeth
+				var height: float = tooth * (0.6 + 0.4 * (i % 2))  # every other point the taller
+				Figures.part(head, _cone(tooth * 0.35, height, 4, stone), Vector3(cos(a) * radius * 0.7, height * 0.5 - 0.02, sin(a) * radius * 0.7))
+			prism_y = -0.02
+			_prism(head, look, colours, prism_length, prism_radius, prism_y)
+	_glow_fx(head, look, colours["glow"], look["glow"], prism_y + prism_length * look["root"])
 	return root
 
 
