@@ -272,8 +272,8 @@ const SHAPES := {
 	# dark foot, a cap band round the mouth, and `tip_count` fletched shafts or shard tips
 	# standing `tip_length` out of it.
 	SHAPE_QUIVER: {
-		"length": 0.6, "radius": 0.09, "segments": 8, "offset": Vector3(0.16, -0.22, 0.42),
-		"tilt": Vector3(0.12, 0, -0.42), "foot": 0.06, "band_height": 0.05,
+		"length": 0.6, "radius": 0.09, "segments": 8, "offset": Vector3(0.2, -0.15, 0.4),
+		"tilt": Vector3(0.12, 0, -0.3), "foot": 0.06, "band_height": 0.05,
 		"tips": TIPS_FLETCHING, "tip_count": 3, "tip_length": 0.16, "glow": 0.0,
 	},
 }

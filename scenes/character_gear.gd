@@ -14,6 +14,11 @@
 ## armour look (`samples`) before play; the node mounts them on the view. The barbarian's own
 ## cape is hidden while a body or a cape is worn.
 ##
+## The back is worn in layers: the body piece, then the cape over it, then the quiver and the
+## slung tool over both. Each layer keeps its look's place when nothing is under it and is moved
+## back just far enough to stand clear of what is (`hang_cape`, `hang_quiver`, `hang_sling`),
+## so any cape hangs over any body piece and any quiver over any cape, whatever their sets.
+##
 ## The kit builders (`peaked_hood`, `under_robe`, `cloak`, `collar`, `stacked_plates`,
 ## `crystal`, `fin`, `prism_stack`, `studs`, `edge_trim`, `quiver`) are the layered, non-round shapes
 ## the set looks are built from. Each takes a look (its shape's numbers, from
@@ -48,9 +53,14 @@ const SHAPE_PRISM_STACK := GearLook.SHAPE_PRISM_STACK
 const SHAPE_STUDS := GearLook.SHAPE_STUDS
 const SHAPE_EDGE_TRIM := GearLook.SHAPE_EDGE_TRIM
 const SHAPE_QUIVER := GearLook.SHAPE_QUIVER
-## The bone slot the quiver and the cape hang from.
+## The bone slot the quiver and the cape hang from, the body's and the slung tool's own.
 const QUIVER_SLOT := "chest"
 const CAPE_SLOT := "chest"
+## How far apart two layers on the back stand, and how many points along a piece are checked.
+const BACK_GAP := 0.02
+const CLEAR_STEPS := 8
+## How far a slung tool's haft stands proud of its sling line toward the back it lies on.
+const HAFT_DEPTH := 0.04
 ## The names of a two-sided builder's side nodes, so a test can measure each side.
 const SIDE_LEFT := "Left"
 const SIDE_RIGHT := "Right"
@@ -58,7 +68,7 @@ const SIDE_RIGHT := "Right"
 const GLOW_LIGHT := "Light"
 const GLOW_MOTES := "Motes"
 
-var _shown := {}  # place -> item currently drawn there
+var _shown := {}  # place -> what is drawn there (`_draw_key`)
 var _pieces := {}  # place -> the nodes drawn for it, to free when it changes
 var _equipment := {}
 var _view: CharacterView
@@ -90,9 +100,10 @@ func _redraw() -> void:
 	var layout := GearLayout.place(_equipment, view.is_working())
 	for place in GearLayout.PLACES:
 		var item: String = layout[place]
-		if _shown[place] == item:
+		var key := _draw_key(place, layout)
+		if _shown[place] == key:
 			continue
-		_shown[place] = item
+		_shown[place] = key
 		for node in _pieces[place]:
 			(node as Node).queue_free()
 		_pieces[place] = []
@@ -114,12 +125,24 @@ func _redraw() -> void:
 			GearLayout.LEGS:
 				_build_legs(view, place, item)
 			GearLayout.BACK:
-				_build_slung_tool(view, place, item)
+				_build_slung_tool(view, place, item, layout)
 			GearLayout.QUIVER:
-				_mount(view, place, QUIVER_SLOT).add_child(quiver_piece(item))
+				var quiver := quiver_piece(item, layout[GearLayout.BODY], layout[GearLayout.CAPE])
+				_mount(view, place, QUIVER_SLOT).add_child(quiver)
 			GearLayout.CAPE:
-				_mount(view, place, CAPE_SLOT).add_child(cape_piece(item))
+				_mount(view, place, CAPE_SLOT).add_child(cape_piece(item, layout[GearLayout.BODY]))
 	set_process(_equipment.get(ItemTable.SLOT_TOOL, "") != "")
+
+
+## What a place's drawing depends on: its item and, for a layer on the back, the layers under
+## it, so it is redrawn to stand clear when one of them changes.
+static func _draw_key(place: String, layout: Dictionary) -> String:
+	match place:
+		GearLayout.CAPE:
+			return "%s|%s" % [layout[place], layout[GearLayout.BODY]]
+		GearLayout.QUIVER, GearLayout.BACK:
+			return "%s|%s|%s" % [layout[place], layout[GearLayout.BODY], layout[GearLayout.CAPE]]
+	return layout[place]
 
 
 func _find_view() -> CharacterView:
@@ -218,14 +241,110 @@ static func shin_piece(item: String) -> Node3D:
 	return shin
 
 
-## What `item` draws on the back over the right shoulder: a quiver.
-static func quiver_piece(item: String) -> Node3D:
-	return quiver(GearLook.piece(item, GearLook.PART_QUIVER), GearLook.palette(item))
+## What `item` draws on the back over the right shoulder: a quiver, standing clear of the body
+## item and the cape item worn under it ("" for none).
+static func quiver_piece(item: String, body := "", cape := "") -> Node3D:
+	var hung := hang_cape(GearLook.piece(cape, GearLook.PART_CAPE), body) if cape != "" else {}
+	return quiver(hang_quiver(GearLook.piece(item, GearLook.PART_QUIVER), body, hung), GearLook.palette(item))
 
 
-## What `item` draws hung behind the body: a cloak.
-static func cape_piece(item: String) -> Node3D:
-	return cloak(GearLook.piece(item, GearLook.PART_CAPE), GearLook.palette(item))
+## What `item` draws hung behind the body: a cloak, standing clear of the body item worn under
+## it ("" for none).
+static func cape_piece(item: String, body := "") -> Node3D:
+	return cloak(hang_cape(GearLook.piece(item, GearLook.PART_CAPE), body), GearLook.palette(item))
+
+
+## A cloak `look` moved back just far enough that, leaning `tilt` back from its `offset`, it
+## stands clear of what `body` draws on the chest from its top to its hem.
+static func hang_cape(look: Dictionary, body: String) -> Dictionary:
+	var tilt: float = look["tilt"]
+	var length: float = maxf(look["length_left"], look["length_right"])
+	var shift := _clearance(look["offset"], Vector3(0, -cos(tilt), sin(tilt)), length, look["thickness"] * 0.5, look["width"] * 0.5, _body_bounds(body))
+	var out := look.duplicate()
+	out["offset"] = (look["offset"] as Vector3) + Vector3(0, 0, shift)
+	return out
+
+
+## A quiver `look` moved back just far enough that its case stands clear of what `body` draws
+## on the chest and of `cape`, a cape look already hung (`hang_cape`), or {} for none.
+static func hang_quiver(look: Dictionary, body: String, cape: Dictionary) -> Dictionary:
+	var under := _body_bounds(body)
+	under.append_array(_cape_bounds(cape))
+	var axis := Basis.from_euler(look["tilt"]) * Vector3.UP
+	var tip: float = look["tip_length"]
+	var radius: float = look["radius"]
+	var shift := _clearance(look["offset"], axis, look["length"] + tip, radius, radius, under)
+	var out := look.duplicate()
+	out["offset"] = (look["offset"] as Vector3) + Vector3(0, 0, shift)
+	return out
+
+
+## Where a tool look's sling sits: its own `sling_offset`, moved back just far enough that the
+## tool, slung `slung_height` long up its `sling_roll`, lies over `cape`, a cape look already
+## hung, or {} for none.
+static func hang_sling(look: Dictionary, cape: Dictionary) -> Vector3:
+	var roll: float = look["sling_roll"]
+	var height: float = look.get("slung_height", look.get("length", 1.0))
+	var shift := _clearance(look["sling_offset"], Vector3(-sin(roll), cos(roll), 0), height, HAFT_DEPTH, HAFT_DEPTH, _cape_bounds(cape))
+	return (look["sling_offset"] as Vector3) + Vector3(0, 0, shift)
+
+
+## How far a straight piece must move back (+Z) to stand clear of every box in `under`: it runs
+## `length` from `from` along `dir`, reaching `depth` toward the back it lies on and `half_width`
+## to either side, and is checked at CLEAR_STEPS + 1 points along its length.
+static func _clearance(from: Vector3, dir: Vector3, length: float, depth: float, half_width: float, under: Array[AABB]) -> float:
+	var shift := 0.0
+	for i in CLEAR_STEPS + 1:
+		var p := from + dir * (length * i / CLEAR_STEPS)
+		for box in under:
+			if p.y < box.position.y or p.y > box.end.y:
+				continue
+			if p.x + half_width < box.position.x or p.x - half_width > box.end.x:
+				continue
+			shift = maxf(shift, box.end.z + BACK_GAP + depth - p.z)
+	return shift
+
+
+## The bounds of every part `body` draws on the chest, in the chest mount's frame, or none for "".
+static func _body_bounds(body: String) -> Array[AABB]:
+	if body == "":
+		return []
+	var piece := body_piece(body)
+	var out := mesh_bounds(piece)
+	piece.free()
+	return out
+
+
+## A hung cape look as boxes down its length, each as deep as the cloak (twice that, for a tail
+## or banner set behind it), or none for {}.
+static func _cape_bounds(cape: Dictionary) -> Array[AABB]:
+	var out: Array[AABB] = []
+	if cape.is_empty():
+		return out
+	var tilt: float = cape["tilt"]
+	var length: float = maxf(cape["length_left"], cape["length_right"])
+	var half: float = cape["width"] * 0.5
+	var depth: float = cape["thickness"] * (2.0 if cape["outline"] in [GearLook.OUTLINE_TAIL, GearLook.OUTLINE_BANNER] else 1.0)
+	var top: Vector3 = cape["offset"]
+	var dir := Vector3(0, -cos(tilt), sin(tilt))
+	for i in CLEAR_STEPS:
+		var a := top + dir * (length * i / CLEAR_STEPS)
+		var b := top + dir * (length * (i + 1) / CLEAR_STEPS)
+		out.append(AABB(Vector3(-half, b.y, a.z - depth * 0.5), Vector3(half * 2.0, a.y - b.y, b.z - a.z + depth)))
+	return out
+
+
+## The bounds of every mesh under `node`, in `node`'s frame.
+static func mesh_bounds(node: Node3D) -> Array[AABB]:
+	var out: Array[AABB] = []
+	for mesh in node.find_children("*", "MeshInstance3D", true, false):
+		var t := Transform3D.IDENTITY
+		var n: Node = mesh
+		while n != node:
+			t = (n as Node3D).transform * t
+			n = n.get_parent()
+		out.append(t * (mesh as MeshInstance3D).mesh.get_aabb())
+	return out
 
 
 ## A dome over the crown, with a band round its rim and a nose guard when the look has them.
@@ -744,12 +863,13 @@ static func samples() -> Node3D:
 	return all
 
 
-## The tool slung across the back: Kenney's axe or pickaxe, or the fishing rod.
-func _build_slung_tool(view: CharacterView, place: String, item: String) -> void:
+## The tool slung across the back, over any cape: Kenney's axe or pickaxe, or the fishing rod.
+func _build_slung_tool(view: CharacterView, place: String, item: String, layout: Dictionary) -> void:
 	var look := GearLook.piece(item, GearLook.PART_TOOL)
 	var colour: Color = GearLook.palette(item)["base"]
+	var cape: String = layout[GearLayout.CAPE]
 	var sling := Node3D.new()
-	sling.position = look["sling_offset"]
+	sling.position = hang_sling(look, hang_cape(GearLook.piece(cape, GearLook.PART_CAPE), layout[GearLayout.BODY]) if cape != "" else {})
 	sling.rotation.z = look["sling_roll"]
 	_mount(view, place, "chest").add_child(sling)
 	if look["shape"] == GearLook.SHAPE_ROD:
