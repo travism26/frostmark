@@ -53,6 +53,16 @@ const TIERS: Array[String] = [TIER_WOODEN, TIER_BRONZE, TIER_IRON, TIER_STEEL]
 const SET_HEARTHGUARD := "hearthguard"
 const SET_WOLFMARK := "wolfmark"
 const SET_RUINWARDEN := "ruinwarden"
+## The melee top sets (#163).
+const SET_EMBERHEART := "emberheart"
+const SET_HOARFROST := "hoarfrost"
+const SET_AURORAL := "auroral"
+const SET_TROLLBONE := "trollbone"
+## Every set key, in the ladder's order.
+const SETS: Array[String] = [
+	SET_HEARTHGUARD, SET_WOLFMARK, SET_RUINWARDEN,
+	SET_EMBERHEART, SET_HOARFROST, SET_AURORAL, SET_TROLLBONE,
+]
 
 const ITEMS := {
 	# Materials
@@ -323,6 +333,73 @@ const ITEMS := {
 	"ruinwarden_greatsword": {
 		"label": "Ruinwarden greatsword", "stack": 1, "weight": 4, "value": 160, "slot": SLOT_WEAPON,
 		"style": "melee", "power": 11, "speed": 2, "reach": 1.5, "set": SET_RUINWARDEN,
+	},
+	# The melee top sets (#163): Emberheart, Hoarfrost, Auroral and Trollbone, each a helm, a
+	# body, legs and a weapon under the same rule. The weapon's kind (a forge hammer, an icicle
+	# greatsword, a glaive, a tusk cleaver) is look only; its stats are the steel sword's.
+	"emberheart_helm": {
+		"label": "Emberheart helm", "stack": 1, "weight": 2, "value": 40, "slot": SLOT_HELM,
+		"defence": 1, "set": SET_EMBERHEART,
+	},
+	"emberheart_body": {
+		"label": "Emberheart body", "stack": 1, "weight": 3, "value": 80, "slot": SLOT_BODY,
+		"defence": 2, "set": SET_EMBERHEART,
+	},
+	"emberheart_legs": {
+		"label": "Emberheart legs", "stack": 1, "weight": 2, "value": 60, "slot": SLOT_LEGS,
+		"defence": 1, "set": SET_EMBERHEART,
+	},
+	"emberheart_hammer": {
+		"label": "Emberheart hammer", "stack": 1, "weight": 4, "value": 160, "slot": SLOT_WEAPON,
+		"style": "melee", "power": 11, "speed": 2, "reach": 1.5, "set": SET_EMBERHEART,
+	},
+	"hoarfrost_helm": {
+		"label": "Hoarfrost helm", "stack": 1, "weight": 2, "value": 40, "slot": SLOT_HELM,
+		"defence": 1, "set": SET_HOARFROST,
+	},
+	"hoarfrost_body": {
+		"label": "Hoarfrost body", "stack": 1, "weight": 3, "value": 80, "slot": SLOT_BODY,
+		"defence": 2, "set": SET_HOARFROST,
+	},
+	"hoarfrost_legs": {
+		"label": "Hoarfrost legs", "stack": 1, "weight": 2, "value": 60, "slot": SLOT_LEGS,
+		"defence": 1, "set": SET_HOARFROST,
+	},
+	"hoarfrost_greatsword": {
+		"label": "Hoarfrost greatsword", "stack": 1, "weight": 4, "value": 160, "slot": SLOT_WEAPON,
+		"style": "melee", "power": 11, "speed": 2, "reach": 1.5, "set": SET_HOARFROST,
+	},
+	"auroral_helm": {
+		"label": "Auroral helm", "stack": 1, "weight": 2, "value": 40, "slot": SLOT_HELM,
+		"defence": 1, "set": SET_AURORAL,
+	},
+	"auroral_body": {
+		"label": "Auroral body", "stack": 1, "weight": 3, "value": 80, "slot": SLOT_BODY,
+		"defence": 2, "set": SET_AURORAL,
+	},
+	"auroral_legs": {
+		"label": "Auroral legs", "stack": 1, "weight": 2, "value": 60, "slot": SLOT_LEGS,
+		"defence": 1, "set": SET_AURORAL,
+	},
+	"auroral_glaive": {
+		"label": "Auroral glaive", "stack": 1, "weight": 4, "value": 160, "slot": SLOT_WEAPON,
+		"style": "melee", "power": 11, "speed": 2, "reach": 1.5, "set": SET_AURORAL,
+	},
+	"trollbone_helm": {
+		"label": "Trollbone helm", "stack": 1, "weight": 2, "value": 40, "slot": SLOT_HELM,
+		"defence": 1, "set": SET_TROLLBONE,
+	},
+	"trollbone_body": {
+		"label": "Trollbone body", "stack": 1, "weight": 3, "value": 80, "slot": SLOT_BODY,
+		"defence": 2, "set": SET_TROLLBONE,
+	},
+	"trollbone_legs": {
+		"label": "Trollbone legs", "stack": 1, "weight": 2, "value": 60, "slot": SLOT_LEGS,
+		"defence": 1, "set": SET_TROLLBONE,
+	},
+	"trollbone_cleaver": {
+		"label": "Trollbone cleaver", "stack": 1, "weight": 4, "value": 160, "slot": SLOT_WEAPON,
+		"style": "melee", "power": 11, "speed": 2, "reach": 1.5, "set": SET_TROLLBONE,
 	},
 }
 

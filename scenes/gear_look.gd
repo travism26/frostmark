@@ -26,10 +26,15 @@
 ##
 ## The kit shapes (a peaked hood, an under-robe with coat panels, a cloak, a collar, stacked
 ## plates, a crystal, a fin, a prism stack, studs, edge trim, a quiver, a sash, a ruff, faulds,
-## tassets, a broadsword, a bearded axe and a greatsword) are the layered, non-round pieces the
-## set looks are built from. Each has its numbers in SHAPES like any other shape and a builder
-## of the same name in CharacterGear; KIT_SAMPLES holds one look of each for the shader warm-up
-## and the kit shots.
+## tassets, a seam, a shard crown, antlers, and the hand-held weapons: a broadsword, a bearded
+## axe, a greatsword, a forge hammer, a glaive and a cleaver) are the layered, non-round pieces
+## the set looks are built from. Each has its numbers in SHAPES like any other shape and a
+## builder of the same name in CharacterGear; KIT_SAMPLES holds one look of each for the shader
+## warm-up and the kit shots.
+##
+## A top set's light and particles are look numbers too: a crystal, a shard crown or a forge
+## hammer carries one small light (`light`) or a few motes (`motes`) only when its entry asks,
+## so a set's glow is tuned here and a piece worn alone keeps its own.
 class_name GearLook
 extends RefCounted
 
@@ -79,14 +84,23 @@ const SHAPE_TASSETS := "Tassets"
 const SHAPE_BROADSWORD := "Broadsword"
 const SHAPE_BEARDED_AXE := "BeardedAxe"
 const SHAPE_GREATSWORD := "Greatsword"
+## The melee top set shapes (#163).
+const SHAPE_SEAM := "Seam"
+const SHAPE_SHARD_CROWN := "ShardCrown"
+const SHAPE_ANTLERS := "Antlers"
+const SHAPE_FORGE_HAMMER := "ForgeHammer"
+const SHAPE_GLAIVE := "Glaive"
+const SHAPE_CLEAVER := "Cleaver"
 const KIT_SHAPES := [
 	SHAPE_PEAKED_HOOD, SHAPE_UNDER_ROBE, SHAPE_CLOAK, SHAPE_COLLAR, SHAPE_STACKED_PLATES,
 	SHAPE_CRYSTAL, SHAPE_FIN, SHAPE_PRISM_STACK, SHAPE_STUDS, SHAPE_EDGE_TRIM, SHAPE_QUIVER,
-	SHAPE_SASH, SHAPE_RUFF, SHAPE_FAULDS, SHAPE_TASSETS,
-	SHAPE_BROADSWORD, SHAPE_BEARDED_AXE, SHAPE_GREATSWORD,
+	SHAPE_SASH, SHAPE_RUFF, SHAPE_FAULDS, SHAPE_TASSETS, SHAPE_SEAM, SHAPE_SHARD_CROWN, SHAPE_ANTLERS,
+	SHAPE_BROADSWORD, SHAPE_BEARDED_AXE, SHAPE_GREATSWORD, SHAPE_FORGE_HAMMER, SHAPE_GLAIVE, SHAPE_CLEAVER,
 ]
 ## The kit shapes held in the hand: each is a whole weapon, gripped in the right hand.
-const WEAPON_SHAPES := [SHAPE_BROADSWORD, SHAPE_BEARDED_AXE, SHAPE_GREATSWORD]
+const WEAPON_SHAPES := [SHAPE_BROADSWORD, SHAPE_BEARDED_AXE, SHAPE_GREATSWORD, SHAPE_FORGE_HAMMER, SHAPE_GLAIVE, SHAPE_CLEAVER]
+## The kit shapes that may carry the one small light and the few motes a top set is allowed.
+const GLOW_FX_SHAPES := [SHAPE_CRYSTAL, SHAPE_SHARD_CROWN, SHAPE_FORGE_HAMMER]
 ## The key a piece's extra layers sit under.
 const LAYERS := "layers"
 ## A cloak's outline: one straight hem, two halves parting in a V, a ragged hem, a long
@@ -187,6 +201,44 @@ const RUINWARDEN_LIT := Color("#d4b05c")
 const RUINWARDEN_VERDIGRIS_LIT := Color("#7fae9c")
 const RUINWARDEN_PLUME_DARK := Color("#731f1b")
 const RUINWARDEN_PLUME_LIT := Color("#d8514a")
+## The melee top sets' palettes (#163, the approved board on #157). The glow is the colour a
+## set's seams, shard tips, trim or cracks shine in (the only melee sets allowed a light or
+## particles); Trollbone has none, on purpose. None has a staff, so glow_energy is 0.
+## Emberheart: forge black and its recessed shade, dark bronze bands and straps, horn.
+const EMBERHEART := {
+	"base": Color("#2e2a33"), "dark": Color("#1c1921"),
+	"trim": Color("#8a3a1a"), "accent": Color("#3a3340"),
+	"glow": Color("#ff7a1f"), "glow_energy": 0.0,
+}
+## Hoarfrost: ice over the dark-blue harness, white fur, ice shade.
+const HOARFROST := {
+	"base": Color("#cfe3f2"), "dark": Color("#3a4a6a"),
+	"trim": Color("#f1ece2"), "accent": Color("#a9d4ef"),
+	"glow": Color("#7fd4ff"), "glow_energy": 0.0,
+}
+## Auroral: dusk violet and its shade, lilac trim, pale antler.
+const AURORAL := {
+	"base": Color("#3f3670"), "dark": Color("#2a2350"),
+	"trim": Color("#b08cff"), "accent": Color("#e8dcc0"),
+	"glow": Color("#6ff0b0"), "glow_energy": 0.0,
+}
+## Trollbone: hide, dark, bone, blood.
+const TROLLBONE := {
+	"base": Color("#4a3a2e"), "dark": Color("#2a2238"),
+	"trim": Color("#e8dcc0"), "accent": Color("#a3302a"),
+	"glow": Color.BLACK, "glow_energy": 0.0,
+}
+## The top sets' lit rim tints and extra materials.
+const EMBERHEART_LIT := Color("#46404e")
+const EMBERHEART_BRONZE_LIT := Color("#a85a2c")
+const HOARFROST_LIT := Color("#eef6fc")
+const HOARFROST_HARNESS_LIT := Color("#55688c")
+const AURORAL_LIT := Color("#574b98")
+const AURORAL_ANTLER_LIT := Color("#f6efdc")
+const TROLLBONE_BONE_DARK := Color("#b8a98c")
+const TROLLBONE_BONE_LIT := Color("#f6efdc")
+const TROLLBONE_HIDE_LIT := Color("#62503f")
+const TROLLBONE_BLOOD_DARK := Color("#731f1b")
 
 ## Each shape's numbers (metres and radians in the part's mount frame, segment counts) and
 ## switches, as drawn when a piece changes none of them.
@@ -405,6 +457,74 @@ const SHAPES := {
 		"tone": "base", "ridge_tone": "dark", "fuller_tone": "trim", "guard_tone": "trim", "grip_tone": "dark",
 		"ring_tone": "trim", "pommel_tone": "trim", "glow": 0.0,
 	},
+	# The melee top set shapes (#163). A raised strip `size` wide, tall and thick at `offset`
+	# turned by `tilt`, its face toward -Z, drawn whole in the highlight (`tone`: the glow
+	# colour, lit, when glow is above 0) over a `shadow_tone` backing `lip` wider behind it: a
+	# glowing seam or crack, an eye slit, an eye socket, a lashing.
+	SHAPE_SEAM: {
+		"size": Vector3(0.03, 0.3, 0.03), "offset": Vector3.ZERO, "tilt": Vector3.ZERO, "lip": 0.012,
+		"tone": "trim", "shadow_tone": "dark", "glow": 0.0,
+	},
+	# `count` shards round a ring of `radius` at `offset` turned by `tilt`, spread over `arc`
+	# (a full turn for a crown, less for a cluster centred on the front), each leaning out
+	# `lean` and every other one `short` as long as its neighbours: a `facets`-sided shard
+	# `shard` across and `length` long in `tone`, the top `tip` of it in the highlight
+	# (`tip_tone`: the glow colour, lit, when glow is above 0). `light` and `motes` as a
+	# crystal takes them.
+	SHAPE_SHARD_CROWN: {
+		"count": 7, "radius": 0.36, "arc": TAU, "length": 0.3, "short": 0.65, "shard": 0.05, "facets": 4,
+		"lean": 0.35, "tip": 0.45, "offset": Vector3(0, 0.55, 0), "tilt": Vector3.ZERO,
+		"tone": "base", "tip_tone": "accent", "glow": 0.0,
+		"light": false, "light_energy": 1.0, "light_range": 3.0,
+		"motes": false, "motes_count": 5, "motes_radius": 0.3, "motes_size": 0.03, "motes_rise": 0.25,
+	},
+	# Two antlers (`Left` and `Right`) `x` either side of `offset`, each a thin `facets`-sided
+	# beam its own length leaning out `spread` and back `sweep`, with its own count of tines
+	# branching forward `tine_spread` along it, `tine_length` long; the beams and tines in
+	# `tone` with every tip in the highlight (`tip_tone`: the glow colour, lit, when glow is
+	# above 0).
+	SHAPE_ANTLERS: {
+		"length_left": 0.55, "length_right": 0.55, "radius": 0.035, "facets": 5, "x": 0.22,
+		"spread": 0.55, "sweep": 0.3, "tines_left": 3, "tines_right": 2, "tine_length": 0.22,
+		"tine_radius": 0.025, "tine_spread": 0.9, "offset": Vector3(0, 0.55, 0.05), "tilt": Vector3.ZERO,
+		"tone": "accent", "tip_tone": "trim", "glow": 0.0,
+	},
+	# A forge hammer, built like the other weapons in the hand's frame and turned by `tilt`: a
+	# haft `haft_length` long in `haft_tone` with a cap at its foot, a block head `head_size`
+	# across (x along the hand, y tall, z deep) in `tone`, a band `band` wide round it `band_x`
+	# of its half-width out each side in `band_tone`, and `cracks` strips `crack` wide across
+	# its faces in the highlight (`crack_tone`: the glow colour, lit, when glow is above 0).
+	# `light` and `motes` as a crystal takes them, at the head.
+	SHAPE_FORGE_HAMMER: {
+		"haft_length": 0.9, "haft_radius": 0.035, "rise": 0.1, "head_size": Vector3(0.46, 0.2, 0.2),
+		"band": 0.04, "band_x": 0.3, "cracks": 3, "crack": 0.022, "tilt": Vector3(0, 0, PI * 0.25),
+		"tone": "base", "haft_tone": "accent", "band_tone": "trim", "crack_tone": "trim", "glow": 0.0,
+		"light": false, "light_energy": 1.0, "light_range": 3.0,
+		"motes": false, "motes_count": 5, "motes_radius": 0.2, "motes_size": 0.03, "motes_rise": 0.3,
+	},
+	# A glaive: a long haft `haft_length` long in `haft_tone` with a cap at its foot and a
+	# `ferrule` tall ferrule under the blade in `ferrule_tone`; the blade `blade_length` long
+	# and `blade_width` across standing off one side of the haft's top, leaning `curve` out and
+	# ending in a `tip` bent further, in `tone` with a `back` wide spine in `back_tone` along
+	# the haft side and the edge `edge` wide along its far side in the highlight (`edge_tone`:
+	# the glow colour, lit, when glow is above 0).
+	SHAPE_GLAIVE: {
+		"haft_length": 1.3, "haft_radius": 0.03, "rise": 0.1, "ferrule": 0.07, "blade_length": 0.45,
+		"blade_width": 0.13, "blade_thickness": 0.03, "curve": 0.4, "tip": 0.2, "edge": 0.022, "back": 0.03,
+		"tilt": Vector3(0, 0, PI * 0.25), "tone": "base", "haft_tone": "dark", "ferrule_tone": "trim",
+		"cap_tone": "trim", "back_tone": "dark", "edge_tone": "trim", "glow": 0.0,
+	},
+	# A cleaver: a short grip `grip_length` long in `grip_tone` with a `wrap` tall wrap round
+	# it in `wrap_tone`, and a broad blade `blade_length` long and `blade_width` across off the
+	# grip, leaning `curve` out, swelling to a belly at its far end and ending in a `tip`, in
+	# `tone` with a `back` wide spine in `back_tone` and the edge `edge` wide along the belly in
+	# the highlight (`edge_tone`: the glow colour, lit, when glow is above 0).
+	SHAPE_CLEAVER: {
+		"grip_length": 0.24, "grip_radius": 0.03, "rise": 0.08, "wrap": 0.09, "blade_length": 0.55,
+		"blade_width": 0.2, "blade_thickness": 0.035, "curve": 0.3, "tip": 0.18, "edge": 0.022, "back": 0.03,
+		"tilt": Vector3(0, 0, PI * 0.25), "tone": "trim", "grip_tone": "base", "wrap_tone": "accent",
+		"back_tone": "dark", "edge_tone": "accent", "glow": 0.0,
+	},
 	# A case `length` long on the back, its root at `offset` low on the shoulder blade and turned
 	# by `tilt` so its mouth tops the right shoulder, clear of a tool slung the other way: a
 	# dark foot, a cap band round the mouth, and `tip_count` fletched shafts or shard tips
@@ -438,6 +558,12 @@ const KIT_SAMPLES := [
 	{"shape": SHAPE_BROADSWORD, "glow": 0.8},
 	{"shape": SHAPE_BEARDED_AXE, "glow": 0.8},
 	{"shape": SHAPE_GREATSWORD, "glow": 1.0},
+	{"shape": SHAPE_SEAM, "size": Vector3(0.04, 0.28, 0.03), "offset": Vector3(0, -0.05, -0.36), "glow": 1.2},
+	{"shape": SHAPE_SHARD_CROWN, "glow": 0.8},
+	{"shape": SHAPE_ANTLERS, "length_left": 0.6, "length_right": 0.5, "glow": 0.6},
+	{"shape": SHAPE_FORGE_HAMMER, "glow": 1.2},
+	{"shape": SHAPE_GLAIVE, "glow": 1.0},
+	{"shape": SHAPE_CLEAVER, "glow": 0.8},
 ]
 
 const LOOKS := {
