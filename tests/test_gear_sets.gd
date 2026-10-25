@@ -263,16 +263,19 @@ func test_the_samples_and_the_shot_tool_cover_every_piece() -> void:
 	var armour := 0
 	var weapons := 0
 	var kit_weapons := 0
+	var back := 0
 	for item in ItemTable.ITEMS:
 		if ItemTable.ARMOUR_SLOTS.has(ItemTable.slot(item)):
 			armour += _pieces(item).size()
+		elif ItemTable.slot(item) == ItemTable.SLOT_QUIVER or ItemTable.slot(item) == ItemTable.SLOT_CAPE:
+			back += 1
 		elif CharacterGearScript.weapon_piece(item) != null:
 			weapons += 1
 		if ItemTable.slot(item) == ItemTable.SLOT_WEAPON and GearLookScript.WEAPON_SHAPES.has(GearLookScript.piece(item, GearLookScript.PART_WEAPON)["shape"]):
 			kit_weapons += 1
 	assert_true(weapons >= WEAPON_SHAPES.size(), "the three melee set weapons are kit weapons")
 	assert_eq(weapons, kit_weapons, "every weapon whose look is a kit shape is built by weapon_piece")
-	assert_eq(all.get_child_count(), GearLookScript.KIT_SAMPLES.size() + armour + weapons, "one sample per kit shape, armour piece and kit weapon")
+	assert_eq(all.get_child_count(), GearLookScript.KIT_SAMPLES.size() + armour + back + weapons, "one sample per kit shape, armour piece, quiver or cape, and kit weapon")
 	assert_true(all.find_children("*", "OmniLight3D", true, false).size() >= 1, "the samples still carry the kit light")
 	all.free()
 	var scenes: Array = (load("res://tools/gear_shots.gd") as Script).get_script_constant_map()["SCENES"]

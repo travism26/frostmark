@@ -4,7 +4,7 @@
 ## and hung on the bone slot its kind belongs to (the hood, crystal, fin and prism stack on the
 ## head with the shard crown and antlers; the robe, cloak, collar, plates, studs, edge trim,
 ## sash, ruff and seam on the chest; the faulds and tassets on the hips; the weapons in the
-## right hand), one at a time and then all together.
+## right hand, the longbow in the left), one at a time and then all together.
 ##
 ##   godot --resolution 1280x720 -s tools/kit_shots.gd -- <out_dir> [shape ...]
 ##
@@ -30,6 +30,7 @@ const SLOTS := {
 	GearLook.SHAPE_SEAM: "chest", GearLook.SHAPE_SHARD_CROWN: "head", GearLook.SHAPE_ANTLERS: "head",
 	GearLook.SHAPE_BROADSWORD: "handslot_r", GearLook.SHAPE_BEARDED_AXE: "handslot_r", GearLook.SHAPE_GREATSWORD: "handslot_r",
 	GearLook.SHAPE_FORGE_HAMMER: "handslot_r", GearLook.SHAPE_GLAIVE: "handslot_r", GearLook.SHAPE_CLEAVER: "handslot_r",
+	GearLook.SHAPE_LONGBOW: "handslot_l",
 }
 
 var _out_dir := ""

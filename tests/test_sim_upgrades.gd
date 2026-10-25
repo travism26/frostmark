@@ -562,10 +562,18 @@ func test_a_set_item_has_no_tier_takes_the_steel_stats_and_is_neither_made_nor_d
 		if ItemTable.set_of(kind) == "":
 			continue
 		assert_eq(ItemTable.tier(kind), "", "%s has no tier until #138 places its set" % kind)
-		var steel := _steel_of(kind)
-		assert_true(steel != "", "%s has a steel item of its slot and style" % kind)
-		for stat in ["weight", "value", "defence", "power", "speed", "reach", "ammo"]:
-			assert_eq(ItemTable.ITEMS[kind].get(stat), ItemTable.ITEMS.get(steel, {}).get(stat), "%s's %s is %s's" % [kind, stat, steel])
+		var slot := ItemTable.slot(kind)
+		if slot == ItemTable.SLOT_QUIVER or slot == ItemTable.SLOT_CAPE:
+			# no steel counterpart: the provisional quiver and cape stats (#161)
+			assert_eq(ItemTable.ITEMS[kind]["weight"], 1, "%s weighs 1 until #138" % kind)
+			assert_eq(ItemTable.ITEMS[kind]["value"], 40, "%s is worth 40 until #138" % kind)
+			assert_false(ItemTable.ITEMS[kind].has("defence"), "%s has no defence" % kind)
+			assert_false(ItemTable.ITEMS[kind].has("warmth"), "%s has no warmth" % kind)
+		else:
+			var steel := _steel_of(kind)
+			assert_true(steel != "", "%s has a steel item of its slot and style" % kind)
+			for stat in ["weight", "value", "defence", "power", "speed", "reach", "ammo"]:
+				assert_eq(ItemTable.ITEMS[kind].get(stat), ItemTable.ITEMS.get(steel, {}).get(stat), "%s's %s is %s's" % [kind, stat, steel])
 		assert_false(RecipeTable.has(kind), "%s has no recipe" % kind)
 		assert_false(dropped.has(kind), "%s drops from nothing" % kind)
 	assert_eq(ItemTable.set_of("steel_body"), "", "an item in no set has no set key")

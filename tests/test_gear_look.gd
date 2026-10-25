@@ -14,6 +14,8 @@ const SLOT_PARTS := {
 	ItemTable.SLOT_LEGS: [GearLookScript.PART_HIPS, GearLookScript.PART_SHIN],
 	ItemTable.SLOT_WEAPON: [GearLookScript.PART_WEAPON],
 	ItemTable.SLOT_TOOL: [GearLookScript.PART_TOOL],
+	ItemTable.SLOT_QUIVER: [GearLookScript.PART_QUIVER],
+	ItemTable.SLOT_CAPE: [GearLookScript.PART_CAPE],
 }
 
 
