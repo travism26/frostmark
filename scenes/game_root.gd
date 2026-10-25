@@ -30,6 +30,7 @@ const COLOR_BY_ENEMY := {
 	"bandit_captain": Color(0.30, 0.10, 0.12), "frost_witch": Color(0.40, 0.48, 0.66),
 	"ice_troll": Color(0.58, 0.70, 0.78), "ruin_stalker": Color(0.24, 0.26, 0.30),
 	"snowveil_archer": Color(0.82, 0.90, 0.96), "frostbound_knight": Color(0.55, 0.72, 0.92),
+	"aurora_seer": Color(0.52, 0.40, 0.78),
 }
 ## Telegraph cues take the style's colour from the icon table, so the ring on the ground, the
 ## name over the enemy and the style badge in the panel always agree.
@@ -1273,8 +1274,8 @@ func _flicker() -> void:
 # --- Enemies and loot -----------------------------------------------------------------
 
 ## One figure per placed enemy: an animated model from Figures (the captain's sabre, bow and
-## staff are its `captain_sabre`, `captain_bow` and `captain_staff` nodes; the one in his hand
-## follows his stance),
+## staff are its `captain_sabre`, `captain_bow` and `captain_staff` nodes, the Aurora seer's
+## its `aurora_staff` and `seer_blade`; the one in hand follows the stance),
 ## a click volume that becomes `attack`, a name-and-health label and a telegraph cue above it.
 func _build_enemies(world: WorldDef) -> void:
 	for id in world.enemies:
@@ -1286,7 +1287,7 @@ func _build_enemies(world: WorldDef) -> void:
 		figure.name = "Figure"
 		root.add_child(figure)
 		var weapons := {}
-		for w in ["captain_sabre", "captain_bow", "captain_staff"]:
+		for w in ["captain_sabre", "captain_bow", "captain_staff", "aurora_staff", "seer_blade"]:
 			var piece := figure.find_child(w, true, false)
 			if piece != null:
 				weapons[w] = piece

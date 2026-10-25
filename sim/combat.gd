@@ -52,6 +52,8 @@ const NATURAL_WEAPONS := {
 	"stalker_bow": {"label": "Bone bow", "style": STYLE_RANGED, "power": 0, "speed": 1, "reach": 8.0},
 	"veil_bow": {"label": "Veil bow", "style": STYLE_RANGED, "power": 0, "speed": 1, "reach": 8.0},
 	"rime_blade": {"label": "Rime blade", "style": STYLE_MELEE, "power": 0, "speed": 1, "reach": CLOSE_RANGE},
+	"aurora_staff": {"label": "Aurora staff", "style": STYLE_MAGIC, "power": 0, "speed": 1, "reach": 6.0},
+	"seer_blade": {"label": "Seer's blade", "style": STYLE_MELEE, "power": 0, "speed": 1, "reach": CLOSE_RANGE},
 }
 const UNARMED := "fists"
 
@@ -118,6 +120,12 @@ const ACTIONS := {
 	"raise_blade": {"label": "Raises its blade", "damage": 0, "stance": true, "windup": true},
 	"feint_cleave": {"label": "Rime cleave", "damage": 0, "feint": "rime_cleave"},
 	"knight_quickens": {"label": "Its frost cracks", "damage": 0, "stance": true},
+	"aurora_bolt": {"label": "Aurora bolt", "damage": 8},
+	"aurora_lance": {"label": "Aurora lance", "damage": 22, "heavy": true},
+	"conjure_blade": {"label": "Conjures a blade", "damage": 0, "stance": true},
+	"ice_slash": {"label": "Ice slash", "damage": 10},
+	"ice_rend": {"label": "Ice rend", "damage": 24, "heavy": true},
+	"raise_aurora": {"label": "Raises its staff", "damage": 0, "stance": true},
 }
 
 ## Enemy kinds. `weapon` sets the style and reach. `speed` is metres per tick (the player walks
@@ -145,7 +153,7 @@ const ACTIONS := {
 ## where the action at each index is a stance. When the player's style has the edge on the
 ## enemy's, it declares the stance answering that style instead of its next action, at most
 ## once every `answer_ticks` ticks and never straight after a wind-up (see `answer_problems`).
-## No enemy answers yet; ring three's will.
+## The Aurora seer answers (ring three, #182); the others of ring three will.
 const ENEMIES := {
 	"wolf": {
 		"label": "Wolf", "health": 15, "weapon": "fangs", "speed": 2.5, "sight": 6.0,
@@ -224,6 +232,22 @@ const ENEMIES := {
 			"below": 50, "actions": ["knight_quickens", "hack", "rime_cleave", ACTION_REST, "feint_cleave", "rime_cleave", ACTION_REST],
 		}],
 		"loot": [{"item": "rime_steel", "count": 1}], "rare_percent": 0, "respawn_ticks": 400,
+	},
+	# Ring three. A caster who reads the player back: a bow turned on its staff is answered by
+	# a conjured blade and it closes in, a staff turned on the blade by its staff raised again.
+	# Left alone it works through both stances in turn.
+	"aurora_seer": {
+		"label": "Aurora seer", "health": 60, "weapon": "aurora_staff", "speed": 1.5, "sight": 8.0,
+		"actions": [
+			"aurora_bolt", ACTION_REST, "aurora_lance", ACTION_REST, ACTION_REST,
+			"conjure_blade", "ice_slash", ACTION_REST, "ice_rend", ACTION_REST, "raise_aurora",
+		],
+		"stances": [
+			"aurora_staff", "aurora_staff", "aurora_staff", "aurora_staff", "aurora_staff",
+			"seer_blade", "seer_blade", "seer_blade", "seer_blade", "seer_blade", "aurora_staff",
+		],
+		"answers": {STYLE_RANGED: 5, STYLE_MAGIC: 10}, "answer_ticks": 8,
+		"loot": [{"item": "aurora_glass", "count": 1}], "rare_percent": 0, "respawn_ticks": 300,
 	},
 }
 ## The rare drop in both rings: one piece of iron gear, ahead of smithing it at the Bloomery.
