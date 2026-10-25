@@ -4,7 +4,10 @@
 ## sword, a bow and a staff, the axe again while chopping a pine, and the armour sets (a full
 ## wooden, bronze, iron, steel and fur set, fur mixed with metal both ways, a helm alone and
 ## legs alone), and the melee sets (#162): each full set, each set's helm alone over steel, and
-## pieces mixed across sets and tiers.
+## pieces mixed across sets and tiers), and the melee top sets (#163): each full set at the
+## outpost and on the ring-one and ring-two snow, each set's helm alone over steel, and pieces
+## mixed across sets and tiers. A scene may name a `spot` to stand at; the default is south of
+## the gate.
 ##
 ##   godot --resolution 1280x720 -s tools/gear_shots.gd -- <out_dir> [scene ...]
 ##
@@ -18,7 +21,10 @@ const OrbitCamera := preload("res://scenes/orbit_camera.gd")
 const SETTLE_FRAMES := 60
 const WAIT_FRAMES := 900
 const SPOT := [0.5, 3.5]
-## Each scene's equipment; a slot it does not name is empty.
+## The ring-one and ring-two spots from tools/ring_codes.gd, for the sets on each ring's snow.
+const SPOT_RING_ONE := [-11.5, 36.5]
+const SPOT_RING_TWO := [2.5, 71.5]
+## Each scene's equipment; a slot it does not name is empty. `spot` is where the wearer stands.
 const SCENES := [
 	{"name": "axe", "tool": "steel_axe"},
 	{"name": "pickaxe", "tool": "steel_pickaxe"},
@@ -49,6 +55,31 @@ const SCENES := [
 	{"name": "wolfmark_body_only", "weapon": "bronze_sword", "tool": "bronze_axe", "body": "wolfmark_body"},
 	{"name": "ruinwarden_legs_only", "weapon": "iron_sword", "tool": "iron_axe", "legs": "ruinwarden_legs"},
 	{"name": "hearthguard_body_fur_hood_steel_legs", "weapon": "steel_sword", "tool": "steel_axe", "helm": "fur_hood", "body": "hearthguard_body", "legs": "steel_legs"},
+	# The melee top sets (#163): each full set at the outpost, on ring one and on ring two, each
+	# set's helm alone over steel (the one-piece check), and pieces mixed across sets and tiers.
+	{"name": "emberheart_set", "weapon": "emberheart_hammer", "tool": "steel_pickaxe", "helm": "emberheart_helm", "body": "emberheart_body", "legs": "emberheart_legs"},
+	{"name": "hoarfrost_set", "weapon": "hoarfrost_greatsword", "tool": "steel_pickaxe", "helm": "hoarfrost_helm", "body": "hoarfrost_body", "legs": "hoarfrost_legs"},
+	{"name": "auroral_set", "weapon": "auroral_glaive", "tool": "steel_pickaxe", "helm": "auroral_helm", "body": "auroral_body", "legs": "auroral_legs"},
+	{"name": "trollbone_set", "weapon": "trollbone_cleaver", "tool": "steel_pickaxe", "helm": "trollbone_helm", "body": "trollbone_body", "legs": "trollbone_legs"},
+	{"name": "emberheart_set_ring_one", "spot": SPOT_RING_ONE, "weapon": "emberheart_hammer", "tool": "steel_pickaxe", "helm": "emberheart_helm", "body": "emberheart_body", "legs": "emberheart_legs"},
+	{"name": "hoarfrost_set_ring_one", "spot": SPOT_RING_ONE, "weapon": "hoarfrost_greatsword", "tool": "steel_pickaxe", "helm": "hoarfrost_helm", "body": "hoarfrost_body", "legs": "hoarfrost_legs"},
+	{"name": "auroral_set_ring_one", "spot": SPOT_RING_ONE, "weapon": "auroral_glaive", "tool": "steel_pickaxe", "helm": "auroral_helm", "body": "auroral_body", "legs": "auroral_legs"},
+	{"name": "trollbone_set_ring_one", "spot": SPOT_RING_ONE, "weapon": "trollbone_cleaver", "tool": "steel_pickaxe", "helm": "trollbone_helm", "body": "trollbone_body", "legs": "trollbone_legs"},
+	{"name": "emberheart_set_ring_two", "spot": SPOT_RING_TWO, "weapon": "emberheart_hammer", "tool": "steel_pickaxe", "helm": "emberheart_helm", "body": "emberheart_body", "legs": "emberheart_legs"},
+	{"name": "hoarfrost_set_ring_two", "spot": SPOT_RING_TWO, "weapon": "hoarfrost_greatsword", "tool": "steel_pickaxe", "helm": "hoarfrost_helm", "body": "hoarfrost_body", "legs": "hoarfrost_legs"},
+	{"name": "auroral_set_ring_two", "spot": SPOT_RING_TWO, "weapon": "auroral_glaive", "tool": "steel_pickaxe", "helm": "auroral_helm", "body": "auroral_body", "legs": "auroral_legs"},
+	{"name": "trollbone_set_ring_two", "spot": SPOT_RING_TWO, "weapon": "trollbone_cleaver", "tool": "steel_pickaxe", "helm": "trollbone_helm", "body": "trollbone_body", "legs": "trollbone_legs"},
+	{"name": "emberheart_helm_check", "weapon": "steel_sword", "tool": "steel_pickaxe", "helm": "emberheart_helm", "body": "steel_body", "legs": "steel_legs"},
+	{"name": "hoarfrost_helm_check", "weapon": "steel_sword", "tool": "steel_pickaxe", "helm": "hoarfrost_helm", "body": "steel_body", "legs": "steel_legs"},
+	{"name": "auroral_helm_check", "weapon": "steel_sword", "tool": "steel_pickaxe", "helm": "auroral_helm", "body": "steel_body", "legs": "steel_legs"},
+	{"name": "trollbone_helm_check", "weapon": "steel_sword", "tool": "steel_pickaxe", "helm": "trollbone_helm", "body": "steel_body", "legs": "steel_legs"},
+	{"name": "top_mixed_sets", "weapon": "trollbone_cleaver", "tool": "steel_pickaxe", "helm": "emberheart_helm", "body": "hoarfrost_body", "legs": "auroral_legs"},
+	{"name": "top_mixed_sets_2", "weapon": "hoarfrost_greatsword", "tool": "iron_axe", "helm": "trollbone_helm", "body": "auroral_body", "legs": "emberheart_legs"},
+	{"name": "hoarfrost_body_fur_hood_iron_legs", "weapon": "iron_sword", "tool": "iron_axe", "helm": "fur_hood", "body": "hoarfrost_body", "legs": "iron_legs"},
+	{"name": "auroral_helm_hearthguard_body_wolfmark_legs", "weapon": "hearthguard_broadsword", "tool": "steel_axe", "helm": "auroral_helm", "body": "hearthguard_body", "legs": "wolfmark_legs"},
+	{"name": "trollbone_body_hoarfrost_legs_steel_helm", "weapon": "emberheart_hammer", "tool": "steel_pickaxe", "helm": "steel_helm", "body": "trollbone_body", "legs": "hoarfrost_legs"},
+	{"name": "emberheart_body_only", "weapon": "bronze_sword", "tool": "bronze_axe", "body": "emberheart_body"},
+	{"name": "trollbone_legs_only", "weapon": "iron_sword", "tool": "iron_axe", "legs": "trollbone_legs"},
 ]
 
 var _out_dir := ""
@@ -141,5 +172,5 @@ static func _wearer(world: WorldDef, scene: Dictionary) -> Sim:
 	for slot in ItemTable.EQUIPMENT_SLOTS:
 		snap["inventory"]["equipment"][slot] = scene.get(slot, "")
 	sim.restore(snap)
-	H.place(sim, SPOT)
+	H.place(sim, scene.get("spot", SPOT))
 	return sim
