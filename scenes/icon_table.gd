@@ -36,7 +36,8 @@ const UI_SAVE := "ui_save"
 const UI_SOUND := "ui_sound"
 const UI_ACTIONS: Array[String] = [UI_FIRE, UI_HELP, UI_SAVE, UI_SOUND]
 
-## The empty quiver and cape slots' glyphs: no item has them yet to lend one.
+## The empty quiver and cape slots' glyphs: the quiver's is the one the ranged quivers wear
+## (#164); no cape item exists yet to lend the cape one.
 const SLOT_QUIVER := "slot_quiver"
 const SLOT_CAPE := "slot_cape"
 
@@ -177,6 +178,22 @@ const ICONS := {
 	"trollbone_body": {"icon": "lorc/breastplate"},
 	"trollbone_legs": {"icon": "delapouite/leg-armor"},
 	"trollbone_cleaver": {"icon": "lorc/broadsword"},
+	# The ranged set pieces (#164): each slot's glyph in the set's base colour; the quivers take
+	# the quiver slot's own glyph.
+	"trapper_helm": {"icon": "lorc/visored-helm"},
+	"trapper_body": {"icon": "lorc/breastplate"},
+	"trapper_legs": {"icon": "delapouite/leg-armor"},
+	"trapper_bow": {"icon": "lorc/pocket-bow"},
+	"wolfstalker_helm": {"icon": "lorc/visored-helm"},
+	"wolfstalker_body": {"icon": "lorc/breastplate"},
+	"wolfstalker_legs": {"icon": "delapouite/leg-armor"},
+	"wolfstalker_bow": {"icon": "lorc/pocket-bow"},
+	"wolfstalker_quiver": {"icon": "delapouite/quiver"},
+	"steelpoint_helm": {"icon": "lorc/visored-helm"},
+	"steelpoint_body": {"icon": "lorc/breastplate"},
+	"steelpoint_legs": {"icon": "delapouite/leg-armor"},
+	"steelpoint_bow": {"icon": "lorc/pocket-bow"},
+	"steelpoint_quiver": {"icon": "delapouite/quiver"},
 	# The side panel's tabs.
 	TAB_PACK: {"icon": "lorc/knapsack", "tint": TINT_TAB},
 	TAB_EQUIPMENT: {"icon": "lorc/battle-gear", "tint": TINT_TAB},
