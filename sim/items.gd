@@ -62,11 +62,17 @@ const SET_TROLLBONE := "trollbone"
 const SET_TRAPPER := "trapper"
 const SET_WOLFSTALKER := "wolfstalker"
 const SET_STEELPOINT := "steelpoint"
+## The ranged top sets' keys (#165).
+const SET_EMBER_HAWK := "ember_hawk"
+const SET_AURORAL_WARDEN := "auroral_warden"
+const SET_RUIN_STALKER := "ruin_stalker"
+const SET_GLACIER_SOVEREIGN := "glacier_sovereign"
 ## Every set key, in the ladder's order.
 const SETS: Array[String] = [
 	SET_HEARTHGUARD, SET_WOLFMARK, SET_RUINWARDEN,
 	SET_EMBERHEART, SET_HOARFROST, SET_AURORAL, SET_TROLLBONE,
 	SET_TRAPPER, SET_WOLFSTALKER, SET_STEELPOINT,
+	SET_EMBER_HAWK, SET_AURORAL_WARDEN, SET_RUIN_STALKER, SET_GLACIER_SOVEREIGN,
 ]
 
 const ITEMS := {
@@ -465,6 +471,99 @@ const ITEMS := {
 	"steelpoint_quiver": {
 		"label": "Steelpoint quiver", "stack": 1, "weight": 1, "value": 40, "slot": SLOT_QUIVER,
 		"set": SET_STEELPOINT,
+	},
+	# The ranged top sets (#165): Ember Hawk, Auroral Warden, Ruin Stalker's Shroud and Glacier
+	# Sovereign, each a helm, a body, legs and a bow under the set-item rule above (the bow's
+	# stats are the steel bow's) and a quiver under the quiver rule, and Auroral Warden and
+	# Ruin Stalker a cape under the same provisional rule (weight 1, value 40, no defence, no
+	# warmth): the first items in the cape slot.
+	"ember_hawk_helm": {
+		"label": "Ember Hawk hood", "stack": 1, "weight": 2, "value": 40, "slot": SLOT_HELM,
+		"defence": 1, "set": SET_EMBER_HAWK,
+	},
+	"ember_hawk_body": {
+		"label": "Ember Hawk jerkin", "stack": 1, "weight": 3, "value": 80, "slot": SLOT_BODY,
+		"defence": 2, "set": SET_EMBER_HAWK,
+	},
+	"ember_hawk_legs": {
+		"label": "Ember Hawk kilt", "stack": 1, "weight": 2, "value": 60, "slot": SLOT_LEGS,
+		"defence": 1, "set": SET_EMBER_HAWK,
+	},
+	"ember_hawk_bow": {
+		"label": "Ember Hawk bow", "stack": 1, "weight": 2, "value": 168, "slot": SLOT_WEAPON,
+		"style": "ranged", "power": 10, "speed": 2, "reach": 8.0, "ammo": "arrows", "set": SET_EMBER_HAWK,
+	},
+	"ember_hawk_quiver": {
+		"label": "Ember Hawk quiver", "stack": 1, "weight": 1, "value": 40, "slot": SLOT_QUIVER,
+		"set": SET_EMBER_HAWK,
+	},
+	"auroral_warden_helm": {
+		"label": "Auroral Warden hood", "stack": 1, "weight": 2, "value": 40, "slot": SLOT_HELM,
+		"defence": 1, "set": SET_AURORAL_WARDEN,
+	},
+	"auroral_warden_body": {
+		"label": "Auroral Warden jerkin", "stack": 1, "weight": 3, "value": 80, "slot": SLOT_BODY,
+		"defence": 2, "set": SET_AURORAL_WARDEN,
+	},
+	"auroral_warden_legs": {
+		"label": "Auroral Warden kilt", "stack": 1, "weight": 2, "value": 60, "slot": SLOT_LEGS,
+		"defence": 1, "set": SET_AURORAL_WARDEN,
+	},
+	"auroral_warden_bow": {
+		"label": "Auroral Warden bow", "stack": 1, "weight": 2, "value": 168, "slot": SLOT_WEAPON,
+		"style": "ranged", "power": 10, "speed": 2, "reach": 8.0, "ammo": "arrows", "set": SET_AURORAL_WARDEN,
+	},
+	"auroral_warden_quiver": {
+		"label": "Auroral Warden quiver", "stack": 1, "weight": 1, "value": 40, "slot": SLOT_QUIVER,
+		"set": SET_AURORAL_WARDEN,
+	},
+	"auroral_warden_cape": {
+		"label": "Auroral Warden mantle", "stack": 1, "weight": 1, "value": 40, "slot": SLOT_CAPE,
+		"set": SET_AURORAL_WARDEN,
+	},
+	"ruin_stalker_helm": {
+		"label": "Ruin Stalker mask", "stack": 1, "weight": 2, "value": 40, "slot": SLOT_HELM,
+		"defence": 1, "set": SET_RUIN_STALKER,
+	},
+	"ruin_stalker_body": {
+		"label": "Ruin Stalker jerkin", "stack": 1, "weight": 3, "value": 80, "slot": SLOT_BODY,
+		"defence": 2, "set": SET_RUIN_STALKER,
+	},
+	"ruin_stalker_legs": {
+		"label": "Ruin Stalker kilt", "stack": 1, "weight": 2, "value": 60, "slot": SLOT_LEGS,
+		"defence": 1, "set": SET_RUIN_STALKER,
+	},
+	"ruin_stalker_bow": {
+		"label": "Ruin Stalker bow", "stack": 1, "weight": 2, "value": 168, "slot": SLOT_WEAPON,
+		"style": "ranged", "power": 10, "speed": 2, "reach": 8.0, "ammo": "arrows", "set": SET_RUIN_STALKER,
+	},
+	"ruin_stalker_quiver": {
+		"label": "Ruin Stalker quiver", "stack": 1, "weight": 1, "value": 40, "slot": SLOT_QUIVER,
+		"set": SET_RUIN_STALKER,
+	},
+	"ruin_stalker_cape": {
+		"label": "Ruin Stalker shroud", "stack": 1, "weight": 1, "value": 40, "slot": SLOT_CAPE,
+		"set": SET_RUIN_STALKER,
+	},
+	"glacier_sovereign_helm": {
+		"label": "Glacier Sovereign crown", "stack": 1, "weight": 2, "value": 40, "slot": SLOT_HELM,
+		"defence": 1, "set": SET_GLACIER_SOVEREIGN,
+	},
+	"glacier_sovereign_body": {
+		"label": "Glacier Sovereign jerkin", "stack": 1, "weight": 3, "value": 80, "slot": SLOT_BODY,
+		"defence": 2, "set": SET_GLACIER_SOVEREIGN,
+	},
+	"glacier_sovereign_legs": {
+		"label": "Glacier Sovereign kilt", "stack": 1, "weight": 2, "value": 60, "slot": SLOT_LEGS,
+		"defence": 1, "set": SET_GLACIER_SOVEREIGN,
+	},
+	"glacier_sovereign_bow": {
+		"label": "Glacier Sovereign bow", "stack": 1, "weight": 2, "value": 168, "slot": SLOT_WEAPON,
+		"style": "ranged", "power": 10, "speed": 2, "reach": 8.0, "ammo": "arrows", "set": SET_GLACIER_SOVEREIGN,
+	},
+	"glacier_sovereign_quiver": {
+		"label": "Glacier Sovereign quiver", "stack": 1, "weight": 1, "value": 40, "slot": SLOT_QUIVER,
+		"set": SET_GLACIER_SOVEREIGN,
 	},
 }
 

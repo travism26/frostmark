@@ -26,8 +26,8 @@
 ##
 ## The kit shapes (a peaked hood, an under-robe with coat panels, a cloak, a collar, stacked
 ## plates, a crystal, a fin, a prism stack, studs, edge trim, a quiver, a sash, a ruff, faulds,
-## tassets, a seam, a shard crown, antlers, and the hand-held weapons: a broadsword, a bearded
-## axe, a greatsword, a forge hammer, a glaive, a cleaver and a longbow) are the layered,
+## tassets, a seam, a shard crown, antlers, plumes, and the hand-held weapons: a broadsword, a
+## bearded axe, a greatsword, a forge hammer, a glaive, a cleaver and a longbow) are the layered,
 ## non-round pieces the set looks are built from. Each has its numbers in SHAPES like any other
 ## shape and a builder of the same name in CharacterGear; KIT_SAMPLES holds one look of each
 ## for the shader warm-up and the kit shots.
@@ -93,12 +93,14 @@ const SHAPE_GLAIVE := "Glaive"
 const SHAPE_CLEAVER := "Cleaver"
 ## The ranged set shape (#164): a bow built from its look, held like the tier bows.
 const SHAPE_LONGBOW := "Longbow"
+## The ranged top set shape (#165): a fan of feathers, a crest or a wing.
+const SHAPE_PLUMES := "Plumes"
 const KIT_SHAPES := [
 	SHAPE_PEAKED_HOOD, SHAPE_UNDER_ROBE, SHAPE_CLOAK, SHAPE_COLLAR, SHAPE_STACKED_PLATES,
 	SHAPE_CRYSTAL, SHAPE_FIN, SHAPE_PRISM_STACK, SHAPE_STUDS, SHAPE_EDGE_TRIM, SHAPE_QUIVER,
 	SHAPE_SASH, SHAPE_RUFF, SHAPE_FAULDS, SHAPE_TASSETS, SHAPE_SEAM, SHAPE_SHARD_CROWN, SHAPE_ANTLERS,
 	SHAPE_BROADSWORD, SHAPE_BEARDED_AXE, SHAPE_GREATSWORD, SHAPE_FORGE_HAMMER, SHAPE_GLAIVE, SHAPE_CLEAVER,
-	SHAPE_LONGBOW,
+	SHAPE_LONGBOW, SHAPE_PLUMES,
 ]
 ## The kit shapes held in the hand: each is a whole weapon, gripped in the right hand, or in
 ## the left for the BOW_SHAPES, held as the tier bows are.
@@ -276,6 +278,44 @@ const STEELPOINT_PINE_LIT := Color("#3f6450")
 const STEELPOINT_AMBER_DARK := Color("#b87a28")
 const BOWSTRING := Color("#e6e0cc")
 
+## The ranged top sets' palettes (#165, the approved board on #157). Each has one accent glow,
+## the colour its tips, hems, eyes, strings or nocks shine in: emissive only, no light and no
+## motes. None has a staff, so glow_energy is 0.
+## Ember Hawk: charcoal and its char, gold trim, the warm string, ember glow.
+const EMBER_HAWK := {
+	"base": Color("#2b2422"), "dark": Color("#1a1512"),
+	"trim": Color("#c9922e"), "accent": Color("#f3d7a6"),
+	"glow": Color("#ffa033"), "glow_energy": 0.0,
+}
+## Auroral Warden: snow hide over violet lining, silver, a shaded hide, aurora glow.
+const AURORAL_WARDEN := {
+	"base": Color("#ece9f5"), "dark": Color("#3d2d6b"),
+	"trim": Color("#b9c3d6"), "accent": Color("#d4d0e3"),
+	"glow": Color("#5ff0c8"), "glow_energy": 0.0,
+}
+## Ruin Stalker's Shroud: ink and its pitch, bone, ash grey, violet glow.
+const RUIN_STALKER := {
+	"base": Color("#15141c"), "dark": Color("#0b0a10"),
+	"trim": Color("#dcd4bc"), "accent": Color("#6a6878"),
+	"glow": Color("#9a6cff"), "glow_energy": 0.0,
+}
+## Glacier Sovereign: ice hide over deep sea, the crystal face, a shaded ice, frost glow.
+const GLACIER_SOVEREIGN := {
+	"base": Color("#b7d4ea"), "dark": Color("#1e3a5a"),
+	"trim": Color("#d9f0ff"), "accent": Color("#8fb6d6"),
+	"glow": Color("#8cd9ff"), "glow_energy": 0.0,
+}
+## The ranged top sets' lit rim tints and shaded tones.
+const EMBER_HAWK_LIT := Color("#3d3431")
+const EMBER_HAWK_GOLD_DARK := Color("#8f6a1e")
+const AURORAL_WARDEN_SILVER_LIT := Color("#d9e1ec")
+const AURORAL_WARDEN_VIOLET_LIT := Color("#5a4791")
+const RUIN_STALKER_BONE_DARK := Color("#b4aa8e")
+const RUIN_STALKER_BONE_LIT := Color("#f1ebd8")
+const RUIN_STALKER_INK_LIT := Color("#2a2836")
+const GLACIER_SOVEREIGN_LIT := Color("#edf7ff")
+const GLACIER_SOVEREIGN_SEA_LIT := Color("#315a82")
+
 ## Each shape's numbers (metres and radians in the part's mount frame, segment counts) and
 ## switches, as drawn when a piece changes none of them.
 const SHAPES := {
@@ -363,13 +403,15 @@ const SHAPES := {
 		"tone": "base", "robe_tone": "dark", "band_tone": "trim", "glow": 0.0,
 	},
 	# A fin hung from the shoulders behind the body, in two halves each its own length, with
-	# a hem band; `outline` picks plain, forked, torn, tail or banner.
+	# a hem band; `outline` picks plain, forked, torn, tail or banner. `lining` above 0 shows
+	# that much of a `lining_tone` lining round each half's edges, as a cloak lined in another
+	# cloth shows it.
 	SHAPE_CLOAK: {
 		"width": 0.6, "length_left": 0.9, "length_right": 0.9, "thickness": 0.04,
 		"offset": Vector3(0, 0.2, 0.36), "tilt": 0.12, "hem": 0.05,
 		"outline": OUTLINE_PLAIN, "fork": 0.22, "teeth": 3, "tooth": 0.12,
 		"tail_length": 0.45, "tail_width": 0.25, "banner_rise": 0.7, "banner_width": 0.3,
-		"tone": "base", "hem_tone": "trim", "tooth_tone": "dark", "glow": 0.0,
+		"lining": 0.0, "tone": "base", "hem_tone": "trim", "tooth_tone": "dark", "lining_tone": "dark", "glow": 0.0,
 	},
 	# An upright plate behind the neck leaning `tilt` back, over a dark backing, with a lit
 	# top edge: `kind` picks a high collar, a jagged collar with `teeth` points, a wider
@@ -567,16 +609,31 @@ const SHAPES := {
 	# +Y, the outermost bent `tip_bend` further back (a recurve), a `string` thick string
 	# below them, a round grip `grip_length` long round the middle in `grip_tone`, a ball
 	# `nock` wide at each tip in `nock_tone` (the highlight) and, when `cap_length` is above 0,
-	# a limb cap that long at each tip in `cap_tone`.
+	# a limb cap that long at each tip in `cap_tone`. The highlight (the glow colour, lit, when
+	# `glow` is above 0) also draws the string when `lit_string` is on, an `edge` thick strip
+	# along the back of every stave when `edge` is above 0, and a shard `shard` long standing
+	# off each tip when `shard` is above 0.
 	SHAPE_LONGBOW: {
 		"length": 1.1, "depth": 0.19, "segments": 6, "stave": 0.06, "string": 0.015, "tip_bend": 0.0,
 		"grip_length": 0.18, "grip_radius": 0.045, "cap_length": 0.0, "nock": 0.03,
+		"lit_string": false, "edge": 0.0, "shard": 0.0,
 		"tone": "base", "grip_tone": "dark", "cap_tone": "trim", "nock_tone": "trim", "string_tone": "trim", "glow": 0.0,
+	},
+	# `count` feathers fanning from `offset` turned by `tilt`, spread over `arc` about the
+	# stand's +Y in its X-Y plane: each a thin plate `length` long, `width` wide and `thickness`
+	# thick in `tone` with a `quill_tone` quill down its middle and a ball `tip` across at its
+	# end in the highlight (`tip_tone`: the glow colour, lit, when `glow` is above 0). A crest
+	# above the head, a wing off a shoulder.
+	SHAPE_PLUMES: {
+		"count": 5, "arc": PI * 0.8, "length": 0.4, "width": 0.07, "thickness": 0.025, "tip": 0.035,
+		"offset": Vector3(0, 0.6, 0), "tilt": Vector3.ZERO,
+		"tone": "base", "quill_tone": "dark", "tip_tone": "accent", "glow": 0.0,
 	},
 	# A case `length` long on the back, its root at `offset` low on the shoulder blade and turned
 	# by `tilt` so its mouth tops the right shoulder, clear of a tool slung the other way: a
 	# dark foot, a cap band round the mouth, and `tip_count` fletched shafts or shard tips
-	# standing `tip_length` out of it.
+	# standing `tip_length` out of it; the band, the fletching and the shard tips are the
+	# highlight (the glow colour, lit, when `glow` is above 0).
 	SHAPE_QUIVER: {
 		"length": 0.6, "radius": 0.09, "segments": 8, "offset": Vector3(0.2, -0.15, 0.4),
 		"tilt": Vector3(0.12, 0, -0.3), "foot": 0.06, "band_height": 0.05,
@@ -613,6 +670,7 @@ const KIT_SAMPLES := [
 	{"shape": SHAPE_GLAIVE, "glow": 1.0},
 	{"shape": SHAPE_CLEAVER, "glow": 0.8},
 	{"shape": SHAPE_LONGBOW, "cap_length": 0.12, "tip_bend": 0.3, "glow": 0.8},
+	{"shape": SHAPE_PLUMES, "offset": Vector3(0, 0.72, 0.05), "tilt": Vector3(0.3, 0, 0), "glow": 1.0},
 ]
 
 const LOOKS := {
@@ -1052,6 +1110,197 @@ const LOOKS := {
 	"steelpoint_bow": {"palette": STEELPOINT, PART_WEAPON: {"shape": SHAPE_LONGBOW, "tip_bend": 0.35, "cap_length": 0.14, "tone": "accent", "cap_tone": "base", "grip_tone": "base", "nock_tone": "base", "string_tone": BOWSTRING}},
 	# a pine leather quiver with a steel foot and cap band, dark shafts and amber fletching
 	"steelpoint_quiver": {"palette": STEELPOINT, PART_QUIVER: {"shape": SHAPE_QUIVER, "tone": "accent", "foot_tone": "base", "band_tone": "base", "shaft_tone": "dark", "fletch_tone": "trim", "tip_tone": "base"}},
+	# The ranged top sets (#165): the ranged sets above steel, each with one accent glow on its
+	# tips, hems, eyes, strings and nocks, emissive only: no light, no motes. Every colour,
+	# size, offset and glow is here, to be tuned live after playtesting with a re-shoot. Each
+	# keeps one feature past the body (a crest and wings, a banner, a shroud, a crown) and a
+	# dark or warm anchor against the snow.
+	# Ember Hawk (top): the warmth carried out of the gate, charred leather inlaid with ember
+	# glow, a hawk crest and wings on the shoulders. Glow: the crest's and wings' feather tips,
+	# the chest chevrons, the knee studs, the bow's limb tips and the quiver's fletching.
+	"ember_hawk_helm": {"palette": EMBER_HAWK, PART_HEAD: {
+		# a charcoal hawk hood with a gold hoop round the face, a beaked visor jutting from the
+		# brow with a gold edge, and a crest of five charred feathers fanning above the crown,
+		# tilted a little to the right, each tipped with an ember
+		"shape": SHAPE_FUR_HOOD, "hoop_tone": "trim",
+		LAYERS: [
+			{"shape": SHAPE_FIN, "size": Vector3(0.26, 0.2, 0.05), "offset": Vector3(0, 0.5, -0.4), "tilt": Vector3(-1.0, 0, 0), "edge": 0.025, "tone": "dark", "edge_tone": "trim"},
+			{"shape": SHAPE_PLUMES, "count": 5, "arc": PI * 0.85, "length": 0.46, "width": 0.1, "tip": 0.045, "offset": Vector3(0, 0.7, 0.08), "tilt": Vector3(0.35, 0, -0.12), "quill_tone": EMBER_HAWK_LIT, "glow": 1.1},
+		],
+	}},
+	"ember_hawk_body": {"palette": EMBER_HAWK, PART_BODY: {
+		# a charred jerkin with a gold collar and a charred belt, two glowing amber chevrons
+		# down the chest, and a charcoal pad on each shoulder carrying a wing of three
+		# ember-tipped feathers fanned out sideways, the left wing the longer
+		"shape": SHAPE_VEST,
+		LAYERS: [
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.345, "size": Vector3(0, 0.04, 0), "lip": 0.02, "offset": Vector3(0, 0.18, 0)},
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.365, "size": Vector3(0, 0.05, 0), "lip": 0.0, "offset": Vector3(0, -0.28, 0), "tone": "dark"},
+			{"shape": SHAPE_SEAM, "size": Vector3(0.03, 0.17, 0.03), "offset": Vector3(-0.07, 0.0, -0.36), "tilt": Vector3(-0.1, 0, -0.6), "glow": 1.3},
+			{"shape": SHAPE_SEAM, "size": Vector3(0.03, 0.17, 0.03), "offset": Vector3(0.07, 0.0, -0.36), "tilt": Vector3(-0.1, 0, 0.6), "glow": 1.3},
+			{"shape": SHAPE_SEAM, "size": Vector3(0.03, 0.17, 0.03), "offset": Vector3(-0.07, -0.15, -0.365), "tilt": Vector3(-0.1, 0, -0.6), "glow": 1.3},
+			{"shape": SHAPE_SEAM, "size": Vector3(0.03, 0.17, 0.03), "offset": Vector3(0.07, -0.15, -0.365), "tilt": Vector3(-0.1, 0, 0.6), "glow": 1.3},
+			{"shape": SHAPE_STACKED_PLATES, "plates_left": 1, "plates_right": 1, "size_left": Vector3(0.3, 0.08, 0.34), "size_right": Vector3(0.3, 0.08, 0.34), "trim_tone": "trim"},
+			{"shape": SHAPE_PLUMES, "count": 3, "arc": 0.9, "length": 0.46, "width": 0.09, "tip": 0.04, "offset": Vector3(-0.5, 0.2, 0.02), "tilt": Vector3(-PI * 0.5, 0.25, PI * 0.5), "quill_tone": EMBER_HAWK_LIT, "glow": 1.1},
+			{"shape": SHAPE_PLUMES, "count": 3, "arc": 0.9, "length": 0.38, "width": 0.09, "tip": 0.04, "offset": Vector3(0.5, 0.2, 0.02), "tilt": Vector3(-PI * 0.5, -0.25, -PI * 0.5), "quill_tone": EMBER_HAWK_LIT, "glow": 1.1},
+		],
+	}},
+	"ember_hawk_legs": {"palette": EMBER_HAWK, PART_HIPS: {
+		# a charcoal kilt under a charred belt with a gold hem
+		"shape": SHAPE_KILT, "tone": "base",
+		LAYERS: [
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.39, "size": Vector3(0, 0.05, 0), "lip": 0.0, "offset": Vector3(0, 0.03, 0), "tone": "dark"},
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.46, "size": Vector3(0, 0.035, 0), "lip": 0.0, "offset": Vector3(0, -0.19, 0), "shadow_tone": EMBER_HAWK_GOLD_DARK},
+		],
+	}, PART_SHIN: {
+		# a charcoal shin wrap under a charred knee strap, an ember stud at the knee
+		"shape": SHAPE_FUR_BAND, "band_tone": "dark", "band_radius": 0.175, "band_height": 0.05, "band_y": -0.03,
+		LAYERS: [{"shape": SHAPE_STUDS, "count": 1, "band": false, "radius": 0.18, "y": -0.03, "stud": 0.035, "glow": 1.2}],
+	}},
+	# the ember bow: a black stave with a gold grip and gold limb caps, a warm string and
+	# glowing limb tips
+	"ember_hawk_bow": {"palette": EMBER_HAWK, PART_WEAPON: {"shape": SHAPE_LONGBOW, "tip_bend": 0.2, "cap_length": 0.1, "grip_tone": "trim", "cap_tone": "trim", "string_tone": "accent", "glow": 1.3}},
+	# a charcoal quiver with a gold cap band, dark shafts and ember fletching
+	"ember_hawk_quiver": {"palette": EMBER_HAWK, PART_QUIVER: {"shape": SHAPE_QUIVER, "foot_tone": "dark", "band_tone": "trim", "shaft_tone": "dark", "fletch_tone": "trim", "glow": 1.2}},
+	# Auroral Warden (top): a bow blessed under the outer rings' aurora, the magic-hunter in
+	# snow-white hide, silver and a banner of green light. Glow: the banner, the kilt's and the
+	# mantle's hems, the bowstring and nocks, the quiver's fletching.
+	"auroral_warden_helm": {"palette": AURORAL_WARDEN, PART_HEAD: {
+		# a white hood lined violet round the face under a silver circlet, and a tall aurora
+		# banner rising from the back of the crown, lit in front and plain teal behind, with a
+		# violet core up its face, leaning back and a little to the left
+		"shape": SHAPE_FUR_HOOD, "hoop_tone": "dark",
+		LAYERS: [
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.47, "size": Vector3(0, 0.04, 0), "lip": 0.0, "offset": Vector3(0, 0.5, 0), "shadow_tone": "accent"},
+			{"shape": SHAPE_SEAM, "size": Vector3(0.22, 0.76, 0.03), "offset": Vector3(0, 0.98, 0.33), "tilt": Vector3(0.4, 0, 0.1), "lip": 0.0, "shadow_tone": "glow", "glow": 1.2},
+			{"shape": SHAPE_FIN, "size": Vector3(0.08, 0.5, 0.04), "offset": Vector3(0, 0.66, 0.15), "tilt": Vector3(0.4, 0, 0.1), "edge": 0.03, "tone": "dark", "edge_tone": AURORAL_WARDEN_VIOLET_LIT},
+		],
+	}},
+	"auroral_warden_body": {"palette": AURORAL_WARDEN, PART_BODY: {
+		# a white hide jerkin with a silver rim at the collar and a violet belt, three silver
+		# clasps down the chest, and a silver shoulder plate each side, two on the left
+		"shape": SHAPE_VEST,
+		LAYERS: [
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.345, "size": Vector3(0, 0.035, 0), "lip": 0.015, "offset": Vector3(0, 0.18, 0), "shadow_tone": "accent"},
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.365, "size": Vector3(0, 0.05, 0), "lip": 0.0, "offset": Vector3(0, -0.28, 0), "tone": "dark"},
+			{"shape": SHAPE_STUDS, "count": 1, "rows": 3, "row_step": 0.1, "band": false, "y": 0.06, "radius": 0.38, "stud": 0.03, "stud_tone": "trim"},
+			{"shape": SHAPE_STACKED_PLATES, "plates_left": 2, "plates_right": 1, "size_left": Vector3(0.28, 0.08, 0.32), "size_right": Vector3(0.26, 0.08, 0.3), "tone": "trim", "under_tone": "accent", "trim_tone": AURORAL_WARDEN_SILVER_LIT},
+		],
+	}},
+	"auroral_warden_legs": {"palette": AURORAL_WARDEN, PART_HIPS: {
+		# a long white kilt under a violet belt, its hem lit aurora green
+		"shape": SHAPE_KILT, "tone": "base", "height": 0.34, "bottom_radius": 0.48, "y": -0.12,
+		LAYERS: [
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.39, "size": Vector3(0, 0.05, 0), "lip": 0.0, "offset": Vector3(0, 0.03, 0), "tone": "dark"},
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.48, "size": Vector3(0, 0.035, 0), "lip": 0.0, "offset": Vector3(0, -0.27, 0), "shadow_tone": "accent", "glow": 1.1},
+		],
+	}, PART_SHIN: {
+		# a silver greave with a violet band at its top
+		"shape": SHAPE_FUR_BAND, "tone": "trim", "band_tone": "dark", "band_radius": 0.18, "band_height": 0.05, "band_y": -0.03,
+	}},
+	# the silver bow strung with light: a silver stave with a violet grip, its string and nocks
+	# glowing aurora green
+	"auroral_warden_bow": {"palette": AURORAL_WARDEN, PART_WEAPON: {"shape": SHAPE_LONGBOW, "tip_bend": 0.3, "tone": "trim", "grip_tone": "dark", "lit_string": true, "glow": 1.3}},
+	# a white quiver with a silver cap band and violet foot, dark shafts and glowing fletching
+	"auroral_warden_quiver": {"palette": AURORAL_WARDEN, PART_QUIVER: {"shape": SHAPE_QUIVER, "foot_tone": "dark", "band_tone": "trim", "shaft_tone": "dark", "fletch_tone": "trim", "glow": 1.2}},
+	# the long white mantle hung behind the body, lined violet along its edges, its hem lit
+	# aurora green, the left half the longer
+	"auroral_warden_cape": {"palette": AURORAL_WARDEN, PART_CAPE: {"shape": SHAPE_CLOAK, "width": 0.64, "length_left": 1.0, "length_right": 0.92, "hem": 0.06, "lining": 0.03, "glow": 1.2}},
+	# Ruin Stalker's Shroud (top): the ruin stalker's own hide and bone turned back on it, ink
+	# leathers, a bone mask, a tattered shroud. Glow: the mask's eyes and the bow's nocks only.
+	"ruin_stalker_helm": {"palette": RUIN_STALKER, PART_HEAD: {
+		# a low ink hood with an ash hoop round the face and a fold ridge over the crown, a bone
+		# skull mask over the face with two violet-glow eyes, and two short bone spurs curving
+		# up from the hood's sides, the left the longer
+		"shape": SHAPE_FUR_HOOD, "hoop_tone": "accent",
+		LAYERS: [
+			{"shape": SHAPE_FIN, "size": Vector3(0.09, 0.14, 0.6), "offset": Vector3(0, 0.72, 0.02), "tilt": Vector3(0.1, 0, 0), "edge": 0.03, "tone": RUIN_STALKER_INK_LIT, "edge_tone": "accent"},
+			{"shape": SHAPE_FIN, "size": Vector3(0.32, 0.28, 0.04), "offset": Vector3(0, 0.04, -0.52), "tilt": Vector3(-0.15, 0, 0), "edge": 0.02, "tone": "trim", "edge_tone": RUIN_STALKER_BONE_DARK},
+			{"shape": SHAPE_SEAM, "size": Vector3(0.08, 0.06, 0.03), "offset": Vector3(-0.085, 0.25, -0.565), "tilt": Vector3(-0.15, 0, 0), "lip": 0.015, "glow": 1.8},
+			{"shape": SHAPE_SEAM, "size": Vector3(0.08, 0.06, 0.03), "offset": Vector3(0.085, 0.25, -0.565), "tilt": Vector3(-0.15, 0, 0), "lip": 0.015, "glow": 1.8},
+			{"shape": SHAPE_PRISM_STACK, "count": 2, "length": 0.38, "radius": 0.065, "taper": 0.6, "bend": -0.5, "offset": Vector3(-0.4, 0.5, 0.0), "tilt": Vector3(0.9, -PI * 0.5, 0), "root_tone": RUIN_STALKER_BONE_DARK, "tone": "trim", "tip_tone": RUIN_STALKER_BONE_LIT},
+			{"shape": SHAPE_PRISM_STACK, "count": 2, "length": 0.3, "radius": 0.065, "taper": 0.6, "bend": -0.5, "offset": Vector3(0.4, 0.5, 0.0), "tilt": Vector3(0.9, PI * 0.5, 0), "root_tone": RUIN_STALKER_BONE_DARK, "tone": "trim", "tip_tone": RUIN_STALKER_BONE_LIT},
+		],
+	}},
+	"ruin_stalker_body": {"palette": RUIN_STALKER, PART_BODY: {
+		# an ink jerkin with an ash rim at the collar and an ash belt, three bone rib plates
+		# lashed across the chest, and an ash pad on each shoulder, the left the larger
+		"shape": SHAPE_VEST,
+		LAYERS: [
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.345, "size": Vector3(0, 0.035, 0), "lip": 0.015, "offset": Vector3(0, 0.18, 0), "tone": "accent"},
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.365, "size": Vector3(0, 0.05, 0), "lip": 0.0, "offset": Vector3(0, -0.28, 0), "tone": "accent"},
+			{"shape": SHAPE_FIN, "size": Vector3(0.32, 0.07, 0.04), "offset": Vector3(0, 0.07, -0.355), "tilt": Vector3(-0.1, 0, 0), "tone": "trim", "edge_tone": RUIN_STALKER_BONE_LIT, "edge": 0.018},
+			{"shape": SHAPE_FIN, "size": Vector3(0.32, 0.07, 0.04), "offset": Vector3(0, -0.05, -0.355), "tilt": Vector3(-0.1, 0, 0), "tone": "trim", "edge_tone": RUIN_STALKER_BONE_LIT, "edge": 0.018},
+			{"shape": SHAPE_FIN, "size": Vector3(0.32, 0.07, 0.04), "offset": Vector3(0, -0.17, -0.355), "tilt": Vector3(-0.1, 0, 0), "tone": "trim", "edge_tone": RUIN_STALKER_BONE_LIT, "edge": 0.018},
+			{"shape": SHAPE_STACKED_PLATES, "plates_left": 1, "plates_right": 1, "size_left": Vector3(0.3, 0.08, 0.34), "size_right": Vector3(0.26, 0.08, 0.3), "tone": "accent", "trim_tone": "trim"},
+		],
+	}},
+	"ruin_stalker_legs": {"palette": RUIN_STALKER, PART_HIPS: {
+		# an ink kilt under an ash belt with a hem of bone spikes hanging round it
+		"shape": SHAPE_KILT, "tone": "base",
+		LAYERS: [
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.39, "size": Vector3(0, 0.05, 0), "lip": 0.0, "offset": Vector3(0, 0.03, 0), "tone": "accent"},
+			{"shape": SHAPE_SHARD_CROWN, "count": 7, "arc": TAU, "radius": 0.45, "length": 0.13, "short": 0.75, "shard": 0.04, "lean": PI, "tip": 0.5, "offset": Vector3(0, -0.2, 0), "tone": "trim", "tip_tone": RUIN_STALKER_BONE_LIT},
+		],
+	}, PART_SHIN: {
+		# an ink shin wrap with a bone band at the knee and a second lower down
+		"shape": SHAPE_FUR_BAND, "band_tone": "trim", "band_radius": 0.18, "band_height": 0.05, "band_y": -0.03,
+		LAYERS: [
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.165, "size": Vector3(0, 0.035, 0), "lip": 0.0, "offset": Vector3(0, -0.16, 0), "shadow_tone": RUIN_STALKER_BONE_DARK},
+		],
+	}},
+	# the bone bow: a pale stave with an ink grip, a pale string and violet-glow nocks
+	"ruin_stalker_bow": {"palette": RUIN_STALKER, PART_WEAPON: {"shape": SHAPE_LONGBOW, "length": 1.2, "tone": "trim", "grip_tone": "base", "nock": 0.04, "string_tone": BOWSTRING, "glow": 1.3}},
+	# an ink quiver with a bone cap band and an ash foot, ash shafts and bone fletching
+	"ruin_stalker_quiver": {"palette": RUIN_STALKER, PART_QUIVER: {"shape": SHAPE_QUIVER, "foot_tone": "accent", "band_tone": "trim", "shaft_tone": "accent", "fletch_tone": "trim", "tip_tone": "trim"}},
+	# the long tattered shroud trailing behind, ink with bone-pale teeth at its ragged hem, the
+	# right half the longer
+	"ruin_stalker_cape": {"palette": RUIN_STALKER, PART_CAPE: {"shape": SHAPE_CLOAK, "outline": OUTLINE_TORN, "width": 0.62, "length_left": 0.95, "length_right": 1.05, "tilt": 0.3, "teeth": 4, "tooth": 0.14, "tooth_tone": RUIN_STALKER_BONE_DARK, "lining": 0.02, "lining_tone": RUIN_STALKER_INK_LIT}},
+	# Glacier Sovereign (top): ring two's ice crystals grown into a crown, deep-sea hide under
+	# ice plates, crystal spurs on the shoulders and frost shards for arrows. Glow: the crown's
+	# spikes, the pauldron spurs, the chest gem, the knee spurs, the bow's limb edges and tips,
+	# the quiver's shards.
+	"glacier_sovereign_helm": {"palette": GLACIER_SOVEREIGN, PART_HEAD: {
+		# a deep-sea hood with an ice hoop round the face under a crown of five crystal spikes
+		# across the front of the crown, glowing frost at the tips, tilted a little to the left
+		"shape": SHAPE_FUR_HOOD, "tone": "dark", "hoop_tone": "base",
+		LAYERS: [
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.49, "size": Vector3(0, 0.04, 0), "lip": 0.0, "offset": Vector3(0, 0.48, 0), "tone": "base", "shadow_tone": GLACIER_SOVEREIGN_SEA_LIT},
+			{"shape": SHAPE_SHARD_CROWN, "count": 5, "arc": PI * 1.2, "radius": 0.3, "length": 0.52, "short": 0.72, "shard": 0.08, "lean": 0.45, "tip": 0.45, "offset": Vector3(0, 0.52, -0.02), "tilt": Vector3(0.1, 0, 0.1), "tone": "trim", "glow": 1.1},
+		],
+	}},
+	"glacier_sovereign_body": {"palette": GLACIER_SOVEREIGN, PART_BODY: {
+		# an ice-blue jerkin crossed by two deep-sea straps with a lit edge, a deep-sea belt, a
+		# frost gem glowing at the chest, and crystal pauldrons, two plates on the left and one
+		# on the right, each with a cluster of glowing crystal spurs, the left the taller
+		"shape": SHAPE_VEST,
+		LAYERS: [
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.365, "size": Vector3(0, 0.05, 0), "lip": 0.0, "offset": Vector3(0, -0.28, 0), "tone": "dark"},
+			{"shape": SHAPE_SASH, "roll": 0.6, "tone": "dark", "edge_tone": GLACIER_SOVEREIGN_SEA_LIT},
+			{"shape": SHAPE_SASH, "roll": -0.6, "tone": "dark", "edge_tone": GLACIER_SOVEREIGN_SEA_LIT},
+			{"shape": SHAPE_CRYSTAL, "facets": 6, "length": 0.16, "radius": 0.08, "root": 0.35, "offset": Vector3(0, 0.02, -0.34), "tilt": Vector3(-1.2, 0, 0), "glow": 1.4, "root_tone": "dark"},
+			{"shape": SHAPE_STACKED_PLATES, "plates_left": 2, "plates_right": 1, "size_left": Vector3(0.3, 0.09, 0.34), "size_right": Vector3(0.28, 0.09, 0.32), "tone": "trim", "under_tone": "dark", "trim_tone": GLACIER_SOVEREIGN_LIT},
+			{"shape": SHAPE_SHARD_CROWN, "count": 3, "arc": PI, "radius": 0.06, "lean": 0.55, "length": 0.3, "shard": 0.06, "offset": Vector3(-0.44, 0.24, 0), "tilt": Vector3(0, 0, 0.3), "tone": "trim", "glow": 1.0},
+			{"shape": SHAPE_SHARD_CROWN, "count": 3, "arc": PI, "radius": 0.06, "lean": 0.55, "length": 0.22, "shard": 0.06, "offset": Vector3(0.44, 0.24, 0), "tilt": Vector3(0, 0, -0.3), "tone": "trim", "glow": 1.0},
+		],
+	}},
+	"glacier_sovereign_legs": {"palette": GLACIER_SOVEREIGN, PART_HIPS: {
+		# a deep-sea kilt under a deep-sea belt with an ice hem
+		"shape": SHAPE_KILT, "tone": "dark",
+		LAYERS: [
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.39, "size": Vector3(0, 0.05, 0), "lip": 0.0, "offset": Vector3(0, 0.03, 0), "tone": GLACIER_SOVEREIGN_SEA_LIT},
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.46, "size": Vector3(0, 0.04, 0), "lip": 0.0, "offset": Vector3(0, -0.19, 0), "tone": "base", "shadow_tone": "accent"},
+		],
+	}, PART_SHIN: {
+		# an ice greave with a deep-sea band at its top and a glowing crystal spur at the knee
+		"shape": SHAPE_FUR_BAND, "band_tone": "dark", "band_radius": 0.18, "band_height": 0.05, "band_y": -0.03,
+		LAYERS: [{"shape": SHAPE_SHARD_CROWN, "count": 1, "arc": PI, "radius": 0.17, "length": 0.14, "shard": 0.04, "lean": 1.1, "tip": 0.5, "offset": Vector3(0, -0.02, 0), "tone": "trim", "glow": 1.1}],
+	}},
+	# the crystal bow: crystal limbs edged in frost glow with a deep-sea grip, a light string,
+	# and a frost shard standing off each glowing tip
+	"glacier_sovereign_bow": {"palette": GLACIER_SOVEREIGN, PART_WEAPON: {"shape": SHAPE_LONGBOW, "tip_bend": 0.2, "edge": 0.018, "shard": 0.09, "tone": "trim", "grip_tone": "dark", "string_tone": BOWSTRING, "glow": 1.2}},
+	# a deep-sea quiver with an ice foot and cap band, bristling with glowing frost shards
+	"glacier_sovereign_quiver": {"palette": GLACIER_SOVEREIGN, PART_QUIVER: {"shape": SHAPE_QUIVER, "tone": "dark", "foot_tone": "base", "band_tone": "base", "tips": TIPS_SHARDS, "tip_count": 4, "tip_tone": "trim", "glow": 1.2}},
 }
 
 

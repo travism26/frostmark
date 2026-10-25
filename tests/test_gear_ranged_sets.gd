@@ -145,7 +145,7 @@ func test_the_fourteen_items_follow_the_set_item_and_quiver_rules() -> void:
 	assert_eq(n, 14, "fourteen items")
 	for item in ItemTable.ITEMS:
 		if ItemTable.slot(item) == ItemTable.SLOT_QUIVER:
-			assert_true(QUIVERS.has(item), "%s is one of the ranged quivers, the only quiver items" % item)
+			assert_true(ItemTable.set_of(item) != "", "%s is a set quiver: every quiver item belongs to a ranged set" % item)
 
 
 func test_the_three_bows_are_one_builder_with_their_own_numbers_in_the_left_hand() -> void:

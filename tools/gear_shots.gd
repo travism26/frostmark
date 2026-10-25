@@ -8,7 +8,10 @@
 ## outpost and on the ring-one and ring-two snow, each set's helm alone over steel, and pieces
 ## mixed across sets and tiers, and the ranged sets (#164): each full set, each set's helm alone
 ## over steel, pieces mixed across sets and tiers, and a quiver over other bodies and while
-## working. A scene may name a `spot` to stand at; the default is south of the gate.
+## working, and the ranged top sets (#165): each set's helm alone over steel, each full set at
+## the outpost and on the ring-one and ring-two snow, pieces mixed across sets and tiers, a
+## cape over other bodies and under other quivers, and a cape and quiver while working. A
+## scene may name a `spot` to stand at; the default is south of the gate.
 ##
 ##   godot --resolution 1280x720 -s tools/gear_shots.gd -- <out_dir> [scene ...]
 ##
@@ -98,6 +101,44 @@ const SCENES := [
 	{"name": "steelpoint_legs_only", "weapon": "iron_bow", "tool": "iron_axe", "legs": "steelpoint_legs"},
 	{"name": "trapper_helm_wolfmark_body_iron_legs", "weapon": "wolfstalker_bow", "tool": "iron_axe", "helm": "trapper_helm", "body": "wolfmark_body", "legs": "iron_legs"},
 	{"name": "chopping_with_quiver", "weapon": "steelpoint_bow", "tool": "steel_axe", "helm": "steelpoint_helm", "body": "wolfstalker_body", "legs": "trapper_legs", "quiver": "steelpoint_quiver", "gather": "tree_3"},
+	# The ranged top sets (#165): each set's helm alone over steel (the one-piece check against
+	# the tier below), each full set with its bow, quiver and cape at the outpost, on ring one
+	# and on ring two, and pieces mixed across sets and tiers: a cape over other lines' bodies
+	# and under other sets' quivers, pieces alone, and a cape and quiver while working.
+	{"name": "steel_ranged_set", "weapon": "steel_bow", "tool": "steel_axe", "helm": "steel_helm", "body": "steel_body", "legs": "steel_legs"},
+	{"name": "ember_hawk_helm_check", "weapon": "steel_bow", "tool": "steel_axe", "helm": "ember_hawk_helm", "body": "steel_body", "legs": "steel_legs"},
+	{"name": "auroral_warden_helm_check", "weapon": "steel_bow", "tool": "steel_axe", "helm": "auroral_warden_helm", "body": "steel_body", "legs": "steel_legs"},
+	{"name": "ruin_stalker_helm_check", "weapon": "steel_bow", "tool": "steel_axe", "helm": "ruin_stalker_helm", "body": "steel_body", "legs": "steel_legs"},
+	{"name": "glacier_sovereign_helm_check", "weapon": "steel_bow", "tool": "steel_axe", "helm": "glacier_sovereign_helm", "body": "steel_body", "legs": "steel_legs"},
+	{"name": "ember_hawk_set", "weapon": "ember_hawk_bow", "tool": "steel_axe", "helm": "ember_hawk_helm", "body": "ember_hawk_body", "legs": "ember_hawk_legs", "quiver": "ember_hawk_quiver"},
+	{"name": "auroral_warden_set", "weapon": "auroral_warden_bow", "tool": "steel_axe", "helm": "auroral_warden_helm", "body": "auroral_warden_body", "legs": "auroral_warden_legs", "quiver": "auroral_warden_quiver", "cape": "auroral_warden_cape"},
+	{"name": "ruin_stalker_set", "weapon": "ruin_stalker_bow", "tool": "steel_axe", "helm": "ruin_stalker_helm", "body": "ruin_stalker_body", "legs": "ruin_stalker_legs", "quiver": "ruin_stalker_quiver", "cape": "ruin_stalker_cape"},
+	{"name": "glacier_sovereign_set", "weapon": "glacier_sovereign_bow", "tool": "steel_axe", "helm": "glacier_sovereign_helm", "body": "glacier_sovereign_body", "legs": "glacier_sovereign_legs", "quiver": "glacier_sovereign_quiver"},
+	{"name": "ember_hawk_set_ring_one", "spot": SPOT_RING_ONE, "weapon": "ember_hawk_bow", "tool": "steel_axe", "helm": "ember_hawk_helm", "body": "ember_hawk_body", "legs": "ember_hawk_legs", "quiver": "ember_hawk_quiver"},
+	{"name": "auroral_warden_set_ring_one", "spot": SPOT_RING_ONE, "weapon": "auroral_warden_bow", "tool": "steel_axe", "helm": "auroral_warden_helm", "body": "auroral_warden_body", "legs": "auroral_warden_legs", "quiver": "auroral_warden_quiver", "cape": "auroral_warden_cape"},
+	{"name": "ruin_stalker_set_ring_one", "spot": SPOT_RING_ONE, "weapon": "ruin_stalker_bow", "tool": "steel_axe", "helm": "ruin_stalker_helm", "body": "ruin_stalker_body", "legs": "ruin_stalker_legs", "quiver": "ruin_stalker_quiver", "cape": "ruin_stalker_cape"},
+	{"name": "glacier_sovereign_set_ring_one", "spot": SPOT_RING_ONE, "weapon": "glacier_sovereign_bow", "tool": "steel_axe", "helm": "glacier_sovereign_helm", "body": "glacier_sovereign_body", "legs": "glacier_sovereign_legs", "quiver": "glacier_sovereign_quiver"},
+	{"name": "ember_hawk_set_ring_two", "spot": SPOT_RING_TWO, "weapon": "ember_hawk_bow", "tool": "steel_axe", "helm": "ember_hawk_helm", "body": "ember_hawk_body", "legs": "ember_hawk_legs", "quiver": "ember_hawk_quiver"},
+	{"name": "auroral_warden_set_ring_two", "spot": SPOT_RING_TWO, "weapon": "auroral_warden_bow", "tool": "steel_axe", "helm": "auroral_warden_helm", "body": "auroral_warden_body", "legs": "auroral_warden_legs", "quiver": "auroral_warden_quiver", "cape": "auroral_warden_cape"},
+	{"name": "ruin_stalker_set_ring_two", "spot": SPOT_RING_TWO, "weapon": "ruin_stalker_bow", "tool": "steel_axe", "helm": "ruin_stalker_helm", "body": "ruin_stalker_body", "legs": "ruin_stalker_legs", "quiver": "ruin_stalker_quiver", "cape": "ruin_stalker_cape"},
+	{"name": "glacier_sovereign_set_ring_two", "spot": SPOT_RING_TWO, "weapon": "glacier_sovereign_bow", "tool": "steel_axe", "helm": "glacier_sovereign_helm", "body": "glacier_sovereign_body", "legs": "glacier_sovereign_legs", "quiver": "glacier_sovereign_quiver"},
+	{"name": "top_ranged_mixed_sets", "weapon": "glacier_sovereign_bow", "tool": "steel_axe", "helm": "ember_hawk_helm", "body": "ruin_stalker_body", "legs": "auroral_warden_legs", "quiver": "glacier_sovereign_quiver", "cape": "auroral_warden_cape"},
+	{"name": "top_ranged_mixed_sets_2", "weapon": "ruin_stalker_bow", "tool": "iron_pickaxe", "helm": "glacier_sovereign_helm", "body": "auroral_warden_body", "legs": "ember_hawk_legs", "quiver": "ember_hawk_quiver", "cape": "ruin_stalker_cape"},
+	{"name": "ruin_stalker_cape_fur_coat_wolfstalker_quiver", "weapon": "wolfstalker_bow", "tool": "iron_axe", "helm": "fur_hood", "body": "fur_coat", "legs": "iron_legs", "quiver": "wolfstalker_quiver", "cape": "ruin_stalker_cape"},
+	{"name": "auroral_warden_cape_hearthguard_body_steelpoint_quiver", "weapon": "steelpoint_bow", "tool": "steel_pickaxe", "helm": "hearthguard_helm", "body": "hearthguard_body", "legs": "steel_legs", "quiver": "steelpoint_quiver", "cape": "auroral_warden_cape"},
+	{"name": "glacier_sovereign_body_trollbone_helm_trapper_legs", "weapon": "trapper_bow", "tool": "steel_axe", "helm": "trollbone_helm", "body": "glacier_sovereign_body", "legs": "trapper_legs"},
+	{"name": "ember_hawk_body_only", "weapon": "bronze_bow", "tool": "bronze_axe", "body": "ember_hawk_body"},
+	{"name": "glacier_sovereign_legs_only", "weapon": "iron_bow", "tool": "iron_axe", "legs": "glacier_sovereign_legs"},
+	{"name": "auroral_warden_cape_only", "weapon": "iron_bow", "tool": "iron_axe", "cape": "auroral_warden_cape"},
+	{"name": "ruin_stalker_helm_emberheart_body_hoarfrost_legs", "weapon": "ember_hawk_bow", "tool": "steel_pickaxe", "helm": "ruin_stalker_helm", "body": "emberheart_body", "legs": "hoarfrost_legs", "quiver": "ruin_stalker_quiver"},
+	{"name": "ember_hawk_legs_only", "weapon": "iron_bow", "tool": "iron_axe", "legs": "ember_hawk_legs"},
+	{"name": "ember_hawk_quiver_fur_coat", "weapon": "trapper_bow", "tool": "iron_axe", "helm": "fur_hood", "body": "fur_coat", "legs": "iron_legs", "quiver": "ember_hawk_quiver"},
+	{"name": "auroral_warden_legs_wolfmark_body", "weapon": "steel_bow", "tool": "steel_axe", "helm": "iron_helm", "body": "wolfmark_body", "legs": "auroral_warden_legs"},
+	{"name": "auroral_warden_quiver_only", "weapon": "iron_bow", "tool": "iron_axe", "quiver": "auroral_warden_quiver"},
+	{"name": "ruin_stalker_legs_steel_body", "weapon": "steel_bow", "tool": "steel_axe", "helm": "steel_helm", "body": "steel_body", "legs": "ruin_stalker_legs"},
+	{"name": "ruin_stalker_quiver_trapper_hood_iron_legs", "weapon": "trapper_bow", "tool": "steel_axe", "helm": "trapper_helm", "body": "trapper_body", "legs": "iron_legs", "quiver": "ruin_stalker_quiver"},
+	{"name": "glacier_sovereign_quiver_hoarfrost_body", "weapon": "iron_bow", "tool": "iron_axe", "helm": "hoarfrost_helm", "body": "hoarfrost_body", "legs": "iron_legs", "quiver": "glacier_sovereign_quiver"},
+	{"name": "chopping_with_cape_and_quiver", "weapon": "auroral_warden_bow", "tool": "steel_axe", "helm": "auroral_warden_helm", "body": "glacier_sovereign_body", "legs": "ruin_stalker_legs", "quiver": "auroral_warden_quiver", "cape": "ruin_stalker_cape", "gather": "tree_3"},
 ]
 
 var _out_dir := ""
