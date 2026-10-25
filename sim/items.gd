@@ -18,7 +18,8 @@
 ## with no rank until #138 places the sets on the ladder. Until #138 settles its stats and
 ## sources, a set item takes the stats of the steel item of its slot and style (weight, value
 ## and defence, and for a weapon its power, speed, reach and ammo), and it has no recipe and
-## no drop. Engine-free like sim/.
+## no drop. A quiver or a cape has no steel counterpart, so until #138 a quiver or cape set item
+## takes weight 1, value 40, no defence and no warmth. Engine-free like sim/.
 class_name ItemTable
 extends RefCounted
 
@@ -27,7 +28,13 @@ const SLOT_HELM := "helm"
 const SLOT_BODY := "body"
 const SLOT_LEGS := "legs"
 const SLOT_TOOL := "tool"
-const EQUIPMENT_SLOTS: Array[String] = [SLOT_WEAPON, SLOT_HELM, SLOT_BODY, SLOT_LEGS, SLOT_TOOL]
+## A quiver worn on the back and a cape hung behind the body (#161). Neither is an armour slot,
+## so neither adds to worn defence.
+const SLOT_QUIVER := "quiver"
+const SLOT_CAPE := "cape"
+const EQUIPMENT_SLOTS: Array[String] = [
+	SLOT_WEAPON, SLOT_HELM, SLOT_BODY, SLOT_LEGS, SLOT_TOOL, SLOT_QUIVER, SLOT_CAPE,
+]
 ## The three armour slots, head to foot.
 const ARMOUR_SLOTS: Array[String] = [SLOT_HELM, SLOT_BODY, SLOT_LEGS]
 

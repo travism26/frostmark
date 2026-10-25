@@ -21,7 +21,7 @@ const WALK_PER_TICK := WALK_SPEED * TICK_SECONDS
 const SNAP_RADIUS_CELLS := 2
 ## Bumped whenever the state shape changes. `restore()` migrates older snapshots forward
 ## (SaveCode.migrate) and refuses ones it cannot read.
-const STATE_VERSION := 10
+const STATE_VERSION := 11
 
 ## The pack: a fixed number of slots, and a carried weight (pack plus equipment, in kg)
 ## above which walking slows to OVERWEIGHT_SPEED of normal. BASE_CARRY_LIMIT is that weight
@@ -89,7 +89,7 @@ const TRAVEL_GATE_STEP := 2.5
 
 ## Death keeps this many of the most valuable things carried or worn (a stack is one thing):
 ## one for each equipment slot, so a full kit with nothing better carried comes home whole.
-const DEATH_KEEPS := 5
+const DEATH_KEEPS := 7
 ## Ground loot lies this many ticks (five minutes) before the snow takes it.
 const LOOT_TICKS := 600
 
@@ -158,6 +158,7 @@ func new_state() -> Dictionary:
 			"equipment": {
 				ItemTable.SLOT_WEAPON: "", ItemTable.SLOT_HELM: "", ItemTable.SLOT_BODY: "",
 				ItemTable.SLOT_LEGS: "", ItemTable.SLOT_TOOL: STARTING_TOOL,
+				ItemTable.SLOT_QUIVER: "", ItemTable.SLOT_CAPE: "",
 			},
 		},
 		"stash": {"capacity": STASH_START_SLOTS, "slots": stash},

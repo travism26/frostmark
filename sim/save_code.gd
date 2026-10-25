@@ -99,6 +99,8 @@ static func migrate(snapshot: Dictionary, target: int) -> Variant:
 				snap = _v8_to_v9(snap)
 			9:
 				snap = _v9_to_v10(snap)
+			10:
+				snap = _v10_to_v11(snap)
 			_:
 				return null
 		version = int(snap["version"])
@@ -248,6 +250,19 @@ static func _v9_to_v10(snap: Dictionary) -> Dictionary:
 					args["item"] = _as_body(str(args["item"]))
 				if str(args.get("unequip", "")) == "armour":
 					args["unequip"] = "body"
+	return snap
+
+
+## Version 10 had five equipment slots. Version 11 adds the quiver and the cape, both empty:
+## nothing could go in them before, so everything else stays exactly as it was.
+static func _v10_to_v11(snap: Dictionary) -> Dictionary:
+	snap["version"] = 11
+	var inventory: Variant = snap.get("inventory")
+	if inventory is Dictionary:
+		var worn: Variant = inventory.get("equipment")
+		if worn is Dictionary:
+			worn["quiver"] = ""
+			worn["cape"] = ""
 	return snap
 
 

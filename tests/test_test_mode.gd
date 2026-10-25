@@ -36,7 +36,11 @@ func test_every_skill_is_at_the_top_of_the_curve() -> void:
 func test_steel_is_worn_and_every_style_and_tool_is_carried_without_overweight() -> void:
 	var sim := _imported()
 	var worn: Dictionary = sim.state["inventory"]["equipment"]
+	# Steel exists for five slots; no quiver or cape is steel, so the character leaves both empty.
 	for slot in ItemTable.EQUIPMENT_SLOTS:
+		if slot == ItemTable.SLOT_QUIVER or slot == ItemTable.SLOT_CAPE:
+			assert_eq(worn[slot], "", "the %s slot is empty" % slot)
+			continue
 		assert_eq(ItemTable.tier(worn[slot]), ItemTable.TIER_STEEL, "the %s worn is steel" % slot)
 	for kind in ["steel_axe", "steel_pickaxe", "fishing_rod", "steel_sword", "steel_bow", "steel_staff"]:
 		var carried := H.pack_count(sim, kind) + (1 if worn.values().has(kind) else 0)

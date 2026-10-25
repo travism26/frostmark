@@ -125,3 +125,20 @@ func test_the_version_10_fixture_wears_the_wooden_set_it_made() -> void:
 	var worn: Dictionary = sim.state["inventory"]["equipment"]
 	assert_eq([worn["helm"], worn["body"], worn["legs"]], ["wooden_helm", "wooden_body", "wooden_legs"], "the helm, body and legs it made")
 	assert_eq(sim.state["inventory"]["pack"][0], {"item": "logs", "count": 2}, "with the logs it had left")
+
+
+func test_every_fixture_loads_with_an_empty_quiver_and_cape() -> void:
+	for v in range(1, Sim.STATE_VERSION + 1):
+		var sim := SimScript.new()
+		assert_true(sim.command(Vocab.IMPORT_SAVE, {"code": _fixture(v)})["ok"], "save_v%d imports" % v)
+		var worn: Dictionary = sim.state["inventory"]["equipment"]
+		assert_eq(worn.keys(), Array(ItemTable.EQUIPMENT_SLOTS), "save_v%d has every equipment slot" % v)
+		assert_eq(worn[ItemTable.SLOT_QUIVER], "", "save_v%d has an empty quiver slot" % v)
+		assert_eq(worn[ItemTable.SLOT_CAPE], "", "save_v%d has an empty cape slot" % v)
+
+
+func test_the_version_11_fixture_still_wears_its_wooden_set() -> void:
+	var sim := SimScript.new()
+	assert_true(sim.command(Vocab.IMPORT_SAVE, {"code": _fixture(11)})["ok"])
+	var worn: Dictionary = sim.state["inventory"]["equipment"]
+	assert_eq([worn["helm"], worn["body"], worn["legs"]], ["wooden_helm", "wooden_body", "wooden_legs"], "the helm, body and legs it wore")
