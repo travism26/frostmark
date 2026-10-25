@@ -4,10 +4,11 @@
 ## sword, a bow and a staff, the axe again while chopping a pine, and the armour sets (a full
 ## wooden, bronze, iron, steel and fur set, fur mixed with metal both ways, a helm alone and
 ## legs alone), and the melee sets (#162): each full set, each set's helm alone over steel, and
-## pieces mixed across sets and tiers), and the melee top sets (#163): each full set at the
+## pieces mixed across sets and tiers), the melee top sets (#163): each full set at the
 ## outpost and on the ring-one and ring-two snow, each set's helm alone over steel, and pieces
-## mixed across sets and tiers. A scene may name a `spot` to stand at; the default is south of
-## the gate.
+## mixed across sets and tiers, and the ranged sets (#164): each full set, each set's helm alone
+## over steel, pieces mixed across sets and tiers, and a quiver over other bodies and while
+## working. A scene may name a `spot` to stand at; the default is south of the gate.
 ##
 ##   godot --resolution 1280x720 -s tools/gear_shots.gd -- <out_dir> [scene ...]
 ##
@@ -80,6 +81,23 @@ const SCENES := [
 	{"name": "trollbone_body_hoarfrost_legs_steel_helm", "weapon": "emberheart_hammer", "tool": "steel_pickaxe", "helm": "steel_helm", "body": "trollbone_body", "legs": "hoarfrost_legs"},
 	{"name": "emberheart_body_only", "weapon": "bronze_sword", "tool": "bronze_axe", "body": "emberheart_body"},
 	{"name": "trollbone_legs_only", "weapon": "iron_sword", "tool": "iron_axe", "legs": "trollbone_legs"},
+	# The ranged sets (#164): each set's helm alone over steel (the one-piece check against
+	# the tier below), each full set with its bow and quiver, and pieces mixed across sets and
+	# tiers, a quiver over other lines' bodies and while working.
+	{"name": "trapper_helm_check", "weapon": "steel_bow", "tool": "steel_axe", "helm": "trapper_helm", "body": "steel_body", "legs": "steel_legs"},
+	{"name": "wolfstalker_helm_check", "weapon": "steel_bow", "tool": "steel_axe", "helm": "wolfstalker_helm", "body": "steel_body", "legs": "steel_legs"},
+	{"name": "steelpoint_helm_check", "weapon": "steel_bow", "tool": "steel_axe", "helm": "steelpoint_helm", "body": "steel_body", "legs": "steel_legs"},
+	{"name": "trapper_set", "weapon": "trapper_bow", "tool": "steel_axe", "helm": "trapper_helm", "body": "trapper_body", "legs": "trapper_legs"},
+	{"name": "wolfstalker_set", "weapon": "wolfstalker_bow", "tool": "steel_axe", "helm": "wolfstalker_helm", "body": "wolfstalker_body", "legs": "wolfstalker_legs", "quiver": "wolfstalker_quiver"},
+	{"name": "steelpoint_set", "weapon": "steelpoint_bow", "tool": "steel_axe", "helm": "steelpoint_helm", "body": "steelpoint_body", "legs": "steelpoint_legs", "quiver": "steelpoint_quiver"},
+	{"name": "ranged_mixed_sets", "weapon": "wolfstalker_bow", "tool": "steel_axe", "helm": "trapper_helm", "body": "steelpoint_body", "legs": "wolfstalker_legs", "quiver": "steelpoint_quiver"},
+	{"name": "ranged_mixed_sets_2", "weapon": "steelpoint_bow", "tool": "iron_pickaxe", "helm": "steelpoint_helm", "body": "trapper_body", "legs": "steelpoint_legs", "quiver": "wolfstalker_quiver"},
+	{"name": "wolfstalker_quiver_fur_coat", "weapon": "iron_bow", "tool": "iron_axe", "helm": "wolfstalker_helm", "body": "fur_coat", "legs": "iron_legs", "quiver": "wolfstalker_quiver"},
+	{"name": "steelpoint_quiver_hearthguard_body", "weapon": "trapper_bow", "tool": "steel_pickaxe", "helm": "hearthguard_helm", "body": "hearthguard_body", "legs": "trapper_legs", "quiver": "steelpoint_quiver"},
+	{"name": "wolfstalker_body_only", "weapon": "bronze_bow", "tool": "bronze_axe", "body": "wolfstalker_body"},
+	{"name": "steelpoint_legs_only", "weapon": "iron_bow", "tool": "iron_axe", "legs": "steelpoint_legs"},
+	{"name": "trapper_helm_wolfmark_body_iron_legs", "weapon": "wolfstalker_bow", "tool": "iron_axe", "helm": "trapper_helm", "body": "wolfmark_body", "legs": "iron_legs"},
+	{"name": "chopping_with_quiver", "weapon": "steelpoint_bow", "tool": "steel_axe", "helm": "steelpoint_helm", "body": "wolfstalker_body", "legs": "trapper_legs", "quiver": "steelpoint_quiver", "gather": "tree_3"},
 ]
 
 var _out_dir := ""
