@@ -1,20 +1,18 @@
 ## The build-from-scratch code (docs/testing.md): its short code and the page's query pair load
 ## a new character with nothing built and a stash holding every upgrade's cost, summed from the
 ## upgrade table (scenes/field_kit.gd), so the whole yard can be built up from it by hand.
+## Both are reached here through their stored hashes, never typed.
 extends "res://tests/run.gd".TestCase
 
 const H := preload("res://tests/sim_helpers.gd")
 const SimScript := preload("res://sim/sim.gd")
 const Vocab := preload("res://sim/vocab.gd")
 
-const SHORT_CODE := "RIMEKNOT"
-const QUERY_PAIR := "hearth=kindling"
-
 
 ## A new character that has imported the build-from-scratch short code.
 func _imported() -> Sim:
 	var sim := SimScript.new()
-	var result := sim.command(Vocab.IMPORT_SAVE, {"code": FieldKit.expand(SHORT_CODE)})
+	var result := sim.command(Vocab.IMPORT_SAVE, {"code": FieldKit.for_digest(FieldKit.BARE_SHORT_HASH)})
 	assert_true(result["ok"], "the short code imports: %s" % result["reason"])
 	sim.drain_events()
 	return sim
@@ -101,17 +99,9 @@ func test_every_upgrade_builds_in_order_from_the_save() -> void:
 	assert_eq(sim.state["stash"]["capacity"], int(fresh.state["stash"]["capacity"]) + slots_added, "the stash upgrades add their slots")
 
 
-func test_the_short_code_ignores_case_and_spacing_and_is_new_each_load() -> void:
+func test_both_stored_hashes_stand_for_a_new_save_each_load() -> void:
 	var full := FieldKit.bare_code()
 	assert_false(full.is_empty(), "the save restores in this version")
-	assert_eq(FieldKit.expand(SHORT_CODE), full)
-	assert_eq(FieldKit.expand("  rimeknot\n"), full, "case and spacing do not matter")
-	assert_true(FieldKit.expand(SHORT_CODE) != FieldKit.code(), "it is not the maxed save")
-	for typed in ["rimeknots", "rimekno", "kindling"]:
-		assert_eq(FieldKit.expand(typed), typed, "%s is left alone" % typed)
-
-
-func test_the_query_pair_matches_its_hash_and_asks_for_the_same_save() -> void:
-	assert_eq(QUERY_PAIR.sha256_text(), FieldKit.BARE_QUERY_HASH)
-	assert_eq(FieldKit.for_query("?" + QUERY_PAIR), FieldKit.bare_code())
-	assert_eq(FieldKit.for_query("?a=b&" + QUERY_PAIR), FieldKit.bare_code(), "beside other parameters too")
+	assert_eq(FieldKit.for_digest(FieldKit.BARE_SHORT_HASH), full, "the short code is the build-from-scratch code")
+	assert_eq(FieldKit.for_digest(FieldKit.BARE_QUERY_HASH), full, "the link is the build-from-scratch code")
+	assert_true(full != FieldKit.code(), "it is not the maxed save")
