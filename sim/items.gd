@@ -12,7 +12,13 @@
 ## and legs, each worn in its own slot) carries `defence`, and the worn pieces' defence added
 ## up is taken off every hit. `warmth` is points of cold kept out while worn (1 on each fur
 ## piece); the more is worn, the slower warmth drains outside (see Sim.WARMTH_PACE). Food
-## carries `heal`, the health it restores spread over `heal_ticks` ticks. Engine-free like sim/.
+## carries `heal`, the health it restores spread over `heal_ticks` ticks.
+##
+## A gear piece of a set carries `"set": "<set key>"` and no `tier`: like fur, a sideways piece
+## with no rank until #138 places the sets on the ladder. Until #138 settles its stats and
+## sources, a set item takes the stats of the steel item of its slot and style (weight, value
+## and defence, and for a weapon its power, speed, reach and ammo), and it has no recipe and
+## no drop. Engine-free like sim/.
 class_name ItemTable
 extends RefCounted
 
@@ -286,9 +292,15 @@ static func tool(kind: String) -> String:
 	return ITEMS[kind].get("tool", "")
 
 
-## The item's gear tier ("wooden", "bronze", "iron", "steel"), or "" for materials, food and fur.
+## The item's gear tier ("wooden", "bronze", "iron", "steel"), or "" for materials, food, fur
+## and set items.
 static func tier(kind: String) -> String:
 	return ITEMS[kind].get("tier", "") if ITEMS.has(kind) else ""
+
+
+## The key of the set the item belongs to, or "" for an item in no set.
+static func set_of(kind: String) -> String:
+	return ITEMS[kind].get("set", "") if ITEMS.has(kind) else ""
 
 
 ## A tier's rank: wooden 0, bronze 1, iron 2, steel 3, and -1 for "" or anything unknown.

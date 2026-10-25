@@ -1,15 +1,12 @@
 ## The character's visible gear, placed by GearLayout from the equipment slots: the item in use
 ## in the hand (a bow in the left, a staff upright in the right), the tool slung on the back
 ## while the hands are free of it, and each worn armour piece in its place (the helm on the
-## head, the body on the chest, the legs on the hips and shins), each in its tier's colour
-## (wood, bronze, iron, steel) and hung on the CharacterView's bone slots so it swings with the
-## animation. While the view chops, mines or fishes, the tool moves to the right hand (the rod
-## tipped forward over the water) and the weapon is put away. A piece shows because it is worn,
-## whatever its tier; the tier changes its shape (pauldrons on a body from bronze, a band on a
-## helm from bronze and a nose guard from iron, greaves under the kilt from iron), so progress
-## reads at a glance from the top-down camera. A fur piece, which has no tier, has its own
-## shape in fur: a rounded hood with a pale trim round the face, a coat with a thick collar
-## ruff, and leggings with a fur band at each shin.
+## head, the body on the chest, the legs on the hips and shins), hung on the CharacterView's
+## bone slots so it swings with the animation. While the view chops, mines or fishes, the tool
+## moves to the right hand (the rod tipped forward over the water) and the weapon is put away.
+## A piece shows because it is worn. What it draws, its colours, shape and numbers, comes from
+## its GearLook entry (`scenes/gear_look.gd`), so progress reads at a glance from the top-down
+## camera and a look is tuned there, not here.
 ##
 ## The armour shapes are static builders (`head_piece`, `body_piece`, `hips_piece`,
 ## `shin_piece`) so the shader warm-up can draw one of every armour look (`samples`) before
@@ -20,28 +17,15 @@
 ## gear node may be added before or after the view.
 extends Node3D
 
-const TIER_COLORS := {
-	ItemTable.TIER_WOODEN: Color(0.55, 0.38, 0.22),
-	ItemTable.TIER_BRONZE: Color(0.82, 0.52, 0.22),
-	ItemTable.TIER_IRON: Color(0.58, 0.62, 0.68),
-	ItemTable.TIER_STEEL: Color(0.42, 0.50, 0.62),
-}
-## Tierless armour is fur, drawn in a pelt grey-brown with a pale trim.
-const FUR_COLOR := Color(0.56, 0.48, 0.40)
-const FUR_TRIM_COLOR := Color(0.80, 0.74, 0.64)
-
 ## The names of the armour shape nodes, so a test can tell which shape a slot drew.
-const SHAPE_HELM := "Helm"
-const SHAPE_FUR_HOOD := "FurHood"
-const SHAPE_VEST := "Vest"
-const SHAPE_FUR_COAT := "FurCoat"
-const SHAPE_KILT := "Kilt"
-const SHAPE_FUR_LEGGINGS := "FurLeggings"
-const SHAPE_GREAVE := "Greave"
-const SHAPE_FUR_BAND := "FurBand"
-
-## How far up its own height a tool in the hand is gripped.
-const TOOL_GRIP := 0.22
+const SHAPE_HELM := GearLook.SHAPE_HELM
+const SHAPE_FUR_HOOD := GearLook.SHAPE_FUR_HOOD
+const SHAPE_VEST := GearLook.SHAPE_VEST
+const SHAPE_FUR_COAT := GearLook.SHAPE_FUR_COAT
+const SHAPE_KILT := GearLook.SHAPE_KILT
+const SHAPE_FUR_LEGGINGS := GearLook.SHAPE_FUR_LEGGINGS
+const SHAPE_GREAVE := GearLook.SHAPE_GREAVE
+const SHAPE_FUR_BAND := GearLook.SHAPE_FUR_BAND
 
 var _shown := {}  # place -> item currently drawn there
 var _pieces := {}  # place -> the nodes drawn for it, to free when it changes
@@ -124,21 +108,23 @@ func _mount(view: CharacterView, place: String, slot_name: String) -> Node3D:
 
 
 func _build_weapon(view: CharacterView, place: String, item: String) -> void:
-	var colour := colour_of(item)
-	var style: String = ItemTable.ITEMS[item].get("style", CombatTable.STYLE_MELEE)
-	if style == CombatTable.STYLE_RANGED:
-		_mount(view, place, "handslot_l").add_child(Figures.bow(colour, 1.1))
-		return
-	if style == CombatTable.STYLE_MAGIC:
-		_mount(view, place, "handslot_r").add_child(Figures.staff(colour))
-		return
-	if ItemTable.tier(item) == ItemTable.TIER_WOODEN:
-		_mount(view, place, "handslot_r").add_child(Figures.club(colour))
-		return
+	var look := GearLook.piece(item, GearLook.PART_WEAPON)
+	var colours := GearLook.palette(item)
+	match look["shape"]:
+		GearLook.SHAPE_BOW:
+			_mount(view, place, "handslot_l").add_child(Figures.bow(colours["base"], look["length"]))
+			return
+		GearLook.SHAPE_STAFF:
+			var staff := Figures.staff(colours["base"], look["length"], colours["glow"], colours["glow_energy"])
+			_mount(view, place, "handslot_r").add_child(staff)
+			return
+		GearLook.SHAPE_CLUB:
+			_mount(view, place, "handslot_r").add_child(Figures.club(colours["base"]))
+			return
 	var hand := view.bone_slot("handslot_r")
 	if hand == null:
 		return
-	var sword := Figures.sword(colour, 1.0, view.model_scale())
+	var sword := Figures.sword(colours["base"], look["length"], view.model_scale())
 	hand.add_child(sword)
 	_pieces[place].append(sword)
 
@@ -160,188 +146,124 @@ func _build_legs(view: CharacterView, place: String, item: String) -> void:
 		_mount(view, place, "lowerleg_" + side).add_child(shin)
 
 
-## What `item` draws on the head: a fur hood for fur, else a dome over the crown; from
-## bronze, a band round its rim; from iron, a nose guard.
+## What `item` draws on the head: a helm or a fur hood.
 static func head_piece(item: String) -> Node3D:
-	var colour := colour_of(item)
-	if is_fur(item):
-		return _fur_hood(colour)
-	var rank := _rank(item)
-	var head := Node3D.new()
-	head.name = SHAPE_HELM
-	var helm := SphereMesh.new()
-	helm.radius = 0.47
-	helm.height = 0.42
-	helm.radial_segments = 8
-	helm.rings = 3
-	helm.is_hemisphere = true
-	helm.material = Props.flat(colour)
-	Figures.part(head, helm, Vector3(0, 0.4, 0))
-	if rank >= 1:
-		var band := CylinderMesh.new()
-		band.top_radius = 0.48
-		band.bottom_radius = 0.48
-		band.height = 0.08
-		band.radial_segments = 8
-		band.material = Props.flat(colour.darkened(0.2))
-		Figures.part(head, band, Vector3(0, 0.42, 0))
-	if rank >= 2:
-		Figures.part(head, Props.box(Vector3(0.07, 0.2, 0.06), colour.darkened(0.2)), Vector3(0, 0.34, -0.47))
-	return head
+	var look := GearLook.piece(item, GearLook.PART_HEAD)
+	if look["shape"] == SHAPE_FUR_HOOD:
+		return _fur_hood(look, GearLook.palette(item))
+	return _helm(look, GearLook.palette(item))
 
 
-## What `item` draws on the chest: a fur coat for fur, else a vest round the chest; from
-## bronze, pauldrons on the shoulders.
+## What `item` draws on the chest: a vest or a fur coat.
 static func body_piece(item: String) -> Node3D:
-	var colour := colour_of(item)
-	if is_fur(item):
-		return _fur_coat(colour)
-	var chest := Node3D.new()
-	chest.name = SHAPE_VEST
-	var vest := CylinderMesh.new()
-	vest.top_radius = 0.34
-	vest.bottom_radius = 0.36
-	vest.height = 0.5
-	vest.radial_segments = 8
-	vest.material = Props.flat(colour)
-	Figures.part(chest, vest, Vector3(0, -0.06, 0))
-	if _rank(item) >= 1:
-		for side in [-1, 1]:
-			var pad := Figures.part(chest, Props.box(Vector3(0.26, 0.1, 0.32), colour.lightened(0.1)), Vector3(side * 0.4, 0.16, 0))
-			pad.rotation.z = side * -0.35
-	return chest
+	var look := GearLook.piece(item, GearLook.PART_BODY)
+	if look["shape"] == SHAPE_FUR_COAT:
+		return _fur_coat(look, GearLook.palette(item))
+	return _vest(look, GearLook.palette(item))
 
 
-## What `item` draws on the hips: fur leggings for fur, else a kilt.
+## What `item` draws on the hips: a kilt or fur leggings.
 static func hips_piece(item: String) -> Node3D:
-	var colour := colour_of(item)
-	if is_fur(item):
-		return _fur_leggings(colour)
-	var hips := Node3D.new()
-	hips.name = SHAPE_KILT
-	var kilt := CylinderMesh.new()
-	kilt.top_radius = 0.38
-	kilt.bottom_radius = 0.46
-	kilt.height = 0.26
-	kilt.radial_segments = 8
-	kilt.material = Props.flat(colour.darkened(0.1))
-	Figures.part(hips, kilt, Vector3(0, -0.08, 0))
-	return hips
+	var look := GearLook.piece(item, GearLook.PART_HIPS)
+	if look["shape"] == SHAPE_FUR_LEGGINGS:
+		return _wrap(SHAPE_FUR_LEGGINGS, look, GearLook.palette(item)["base"])
+	return _wrap(SHAPE_KILT, look, GearLook.palette(item)["dark"])
 
 
-## What `item` draws on each shin: a fur band for fur, a greave from iron, nothing below.
+## What `item` draws on each shin: a greave, a fur band, or null for a bare shin.
 static func shin_piece(item: String) -> Node3D:
-	var colour := colour_of(item)
-	if is_fur(item):
-		return _fur_band(colour)
-	if _rank(item) < 2:
+	var look := GearLook.piece(item, GearLook.PART_SHIN)
+	if look.is_empty():
 		return null
-	var shin := Node3D.new()
-	shin.name = SHAPE_GREAVE
-	var greave := CylinderMesh.new()
-	greave.top_radius = 0.16
-	greave.bottom_radius = 0.14
-	greave.height = 0.22
-	greave.radial_segments = 8
-	greave.material = Props.flat(colour)
-	Figures.part(shin, greave, Vector3(0, -0.12, 0))
+	var colours := GearLook.palette(item)
+	var shin := _wrap(look["shape"], look, colours["base"])
+	if look["shape"] == SHAPE_FUR_BAND:
+		Figures.part(shin, _cylinder(look["band_radius"], look["band_radius"], look["band_height"], look["segments"], colours["trim"]), Vector3(0, look["band_y"], 0))
 	return shin
 
 
-## A rounded hood: a full round crown, a drape down the back of the head and a pale trim
+## A dome over the crown, with a band round its rim and a nose guard when the look has them.
+static func _helm(look: Dictionary, colours: Dictionary) -> Node3D:
+	var head := Node3D.new()
+	head.name = SHAPE_HELM
+	Figures.part(head, _dome(look, colours["base"]), Vector3(0, look["y"], 0))
+	if look["band"]:
+		Figures.part(head, _cylinder(look["band_radius"], look["band_radius"], look["band_height"], look["segments"], colours["trim"]), Vector3(0, look["band_y"], 0))
+	if look["nose_guard"]:
+		Figures.part(head, Props.box(look["nose_size"], colours["trim"]), look["nose_offset"])
+	return head
+
+
+## A rounded hood: a full round crown, a drape down the back of the head and a pale hoop
 ## framing the face.
-static func _fur_hood(colour: Color) -> Node3D:
+static func _fur_hood(look: Dictionary, colours: Dictionary) -> Node3D:
 	var hood := Node3D.new()
 	hood.name = SHAPE_FUR_HOOD
-	var crown := SphereMesh.new()
-	crown.radius = 0.5
-	crown.height = 0.5
-	crown.radial_segments = 10
-	crown.rings = 4
-	crown.is_hemisphere = true
-	crown.material = Props.flat(colour)
-	Figures.part(hood, crown, Vector3(0, 0.34, 0))
-	var drape := SphereMesh.new()
-	drape.radius = 0.5
-	drape.height = 0.5
-	drape.radial_segments = 10
-	drape.rings = 4
-	drape.is_hemisphere = true
-	drape.material = Props.flat(colour)
-	var back := Figures.part(hood, drape, Vector3(0, 0.24, 0.02))
+	Figures.part(hood, _dome(look, colours["base"]), Vector3(0, look["y"], 0))
+	var back := Figures.part(hood, _dome(look, colours["base"]), look["drape_offset"])
 	back.rotation.x = PI * 0.5  # the dome points behind the head, down the neck
-	var trim := TorusMesh.new()
-	trim.inner_radius = 0.38
-	trim.outer_radius = 0.5
-	trim.rings = 10
-	trim.ring_segments = 6
-	trim.material = Props.flat(colour.lightened(0.35))
-	var face := Figures.part(hood, trim, Vector3(0, 0.2, -0.36))
+	var hoop := _torus(look["hoop_inner"], look["hoop_outer"], look["hoop_rings"], look["hoop_segments"], colours["accent"])
+	var face := Figures.part(hood, hoop, look["hoop_offset"])
 	face.rotation.x = PI * 0.5  # a hoop framing the face, flush with the crown's front edge
 	return hood
 
 
+## A vest round the chest, with a pad on each shoulder when the look has pauldrons.
+static func _vest(look: Dictionary, colours: Dictionary) -> Node3D:
+	var chest := _wrap(SHAPE_VEST, look, colours["base"])
+	if look["pauldrons"]:
+		for side in [-1, 1]:
+			var pad := Figures.part(chest, Props.box(look["pauldron_size"], colours["accent"]), Vector3(side * look["pauldron_x"], look["pauldron_y"], 0))
+			pad.rotation.z = side * -look["pauldron_tilt"]
+	return chest
+
+
 ## A coat: a bulky body flaring to the hem, a thick pale collar ruff and a pale hem.
-static func _fur_coat(colour: Color) -> Node3D:
-	var coat := Node3D.new()
-	coat.name = SHAPE_FUR_COAT
-	var body := CylinderMesh.new()
-	body.top_radius = 0.40
-	body.bottom_radius = 0.46
-	body.height = 0.6
-	body.radial_segments = 10
-	body.material = Props.flat(colour)
-	Figures.part(coat, body, Vector3(0, -0.1, 0))
-	var ruff := TorusMesh.new()
-	ruff.inner_radius = 0.24
-	ruff.outer_radius = 0.54
-	ruff.rings = 10
-	ruff.ring_segments = 6
-	ruff.material = Props.flat(FUR_TRIM_COLOR)
-	Figures.part(coat, ruff, Vector3(0, 0.22, 0))
-	var hem := CylinderMesh.new()
-	hem.top_radius = 0.47
-	hem.bottom_radius = 0.47
-	hem.height = 0.08
-	hem.radial_segments = 10
-	hem.material = Props.flat(FUR_TRIM_COLOR)
-	Figures.part(coat, hem, Vector3(0, -0.38, 0))
+static func _fur_coat(look: Dictionary, colours: Dictionary) -> Node3D:
+	var coat := _wrap(SHAPE_FUR_COAT, look, colours["base"])
+	Figures.part(coat, _torus(look["ruff_inner"], look["ruff_outer"], look["ruff_rings"], look["ruff_segments"], colours["trim"]), Vector3(0, look["ruff_y"], 0))
+	Figures.part(coat, _cylinder(look["hem_radius"], look["hem_radius"], look["hem_height"], look["segments"], colours["trim"]), Vector3(0, look["hem_y"], 0))
 	return coat
 
 
-## Leggings round the hips: a close fur wrap, not a flaring kilt.
-static func _fur_leggings(colour: Color) -> Node3D:
-	var legs := Node3D.new()
-	legs.name = SHAPE_FUR_LEGGINGS
-	var wrap := CylinderMesh.new()
-	wrap.top_radius = 0.40
-	wrap.bottom_radius = 0.41
-	wrap.height = 0.3
-	wrap.radial_segments = 10
-	wrap.material = Props.flat(colour)
-	Figures.part(legs, wrap, Vector3(0, -0.1, 0))
-	return legs
+## A node named `shape` holding one cylinder from the look's radii, height and segments, `y`
+## down its frame: a vest, a kilt, leggings, a greave or a shin's wrap.
+static func _wrap(shape: String, look: Dictionary, colour: Color) -> Node3D:
+	var root := Node3D.new()
+	root.name = shape
+	Figures.part(root, _cylinder(look["top_radius"], look["bottom_radius"], look["height"], look["segments"], colour), Vector3(0, look["y"], 0))
+	return root
 
 
-## A fur band at the shin: a wrap down the shin with a thick pale band at its top.
-static func _fur_band(colour: Color) -> Node3D:
-	var shin := Node3D.new()
-	shin.name = SHAPE_FUR_BAND
-	var wrap := CylinderMesh.new()
-	wrap.top_radius = 0.165
-	wrap.bottom_radius = 0.15
-	wrap.height = 0.24
-	wrap.radial_segments = 8
-	wrap.material = Props.flat(colour)
-	Figures.part(shin, wrap, Vector3(0, -0.12, 0))
-	var band := CylinderMesh.new()
-	band.top_radius = 0.19
-	band.bottom_radius = 0.19
-	band.height = 0.12
-	band.radial_segments = 8
-	band.material = Props.flat(FUR_TRIM_COLOR)
-	Figures.part(shin, band, Vector3(0, -0.04, 0))
-	return shin
+static func _cylinder(top: float, bottom: float, height: float, segments: int, colour: Color) -> CylinderMesh:
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = top
+	mesh.bottom_radius = bottom
+	mesh.height = height
+	mesh.radial_segments = segments
+	mesh.material = Props.flat(colour)
+	return mesh
+
+
+static func _dome(look: Dictionary, colour: Color) -> SphereMesh:
+	var mesh := SphereMesh.new()
+	mesh.radius = look["radius"]
+	mesh.height = look["height"]
+	mesh.radial_segments = look["segments"]
+	mesh.rings = look["rings"]
+	mesh.is_hemisphere = true
+	mesh.material = Props.flat(colour)
+	return mesh
+
+
+static func _torus(inner: float, outer: float, rings: int, segments: int, colour: Color) -> TorusMesh:
+	var mesh := TorusMesh.new()
+	mesh.inner_radius = inner
+	mesh.outer_radius = outer
+	mesh.rings = rings
+	mesh.ring_segments = segments
+	mesh.material = Props.flat(colour)
+	return mesh
 
 
 ## One of every armour look (every helm, body and legs in the item table, metal and fur,
@@ -364,17 +286,18 @@ static func samples() -> Node3D:
 
 ## The tool slung across the back: Kenney's axe or pickaxe, or the fishing rod.
 func _build_slung_tool(view: CharacterView, place: String, item: String) -> void:
-	var colour := colour_of(item)
+	var look := GearLook.piece(item, GearLook.PART_TOOL)
+	var colour: Color = GearLook.palette(item)["base"]
 	var sling := Node3D.new()
-	sling.position = Vector3(0.12, -0.38, 0.34)
-	sling.rotation.z = 0.5
+	sling.position = look["sling_offset"]
+	sling.rotation.z = look["sling_roll"]
 	_mount(view, place, "chest").add_child(sling)
-	if ItemTable.tool(item) == ItemTable.TOOL_ROD:
-		var rod := Figures.rod(colour, 1.4)
-		rod.position = Vector3(0, 0.2, 0)
+	if look["shape"] == GearLook.SHAPE_ROD:
+		var rod := Figures.rod(colour, look["length"])
+		rod.position = Vector3(0, look["slung_lift"], 0)
 		sling.add_child(rod)
 		return
-	var tool := Figures.tool(ItemTable.tool(item), colour, 0.95)
+	var tool := Figures.tool(_tool_kind(look), colour, look["slung_height"])
 	tool.rotation.y = PI * 0.5  # the head stands off the back, not into it
 	sling.add_child(tool)
 
@@ -382,37 +305,32 @@ func _build_slung_tool(view: CharacterView, place: String, item: String) -> void
 ## The tool in the right hand: the rod tipped forward over the water, or the axe or pickaxe
 ## gripped low on its haft the way the barbarian held his own axe, so the chop clip swings it.
 func _build_held_tool(view: CharacterView, place: String, item: String) -> void:
-	var colour := colour_of(item)
-	if ItemTable.tool(item) == ItemTable.TOOL_ROD:
-		var rod := Figures.rod(colour, 1.4)
-		rod.rotation.x = -1.0  # tipped forward over the water
+	var look := GearLook.piece(item, GearLook.PART_TOOL)
+	var colour: Color = GearLook.palette(item)["base"]
+	if look["shape"] == GearLook.SHAPE_ROD:
+		var rod := Figures.rod(colour, look["length"])
+		rod.rotation.x = look["held_tilt"]
 		_mount(view, place, "handslot_r").add_child(rod)
 		return
 	var hand := view.bone_slot("handslot_r")
 	if hand == null:
 		return
-	var height := 0.85
+	var height: float = look["held_height"]
 	var grip := Node3D.new()
 	grip.scale = Vector3.ONE / view.model_scale()
 	hand.add_child(grip)
 	_pieces[place].append(grip)
-	var tool := Figures.tool(ItemTable.tool(item), colour, height)
-	tool.position.y = -height * TOOL_GRIP
+	var tool := Figures.tool(_tool_kind(look), colour, height)
+	tool.position.y = -height * look["grip"]
 	grip.add_child(tool)
 
 
-static func _rank(item: String) -> int:
-	return ItemTable.tier_rank(ItemTable.tier(item))
+## The Kenney model a tool look draws: the pickaxe or the axe.
+static func _tool_kind(look: Dictionary) -> String:
+	return ItemTable.TOOL_PICKAXE if look["shape"] == GearLook.SHAPE_PICKAXE else ItemTable.TOOL_AXE
 
 
-## Fur is the armour with no tier.
-static func is_fur(item: String) -> bool:
-	return ItemTable.tier(item) == "" and ItemTable.ARMOUR_SLOTS.has(ItemTable.slot(item))
-
-
-## The colour `item` is drawn in: its tier's, fur for tierless armour, magenta for anything
-## else so a missing colour shows.
+## The colour `item` is drawn in: its look's base, magenta when it has no look so a missing
+## one shows.
 static func colour_of(item: String) -> Color:
-	if is_fur(item):
-		return FUR_COLOR
-	return TIER_COLORS.get(ItemTable.tier(item), Color.MAGENTA)
+	return GearLook.palette(item)["base"]
