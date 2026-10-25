@@ -21,9 +21,9 @@
 ##
 ## The kit builders (`peaked_hood`, `under_robe`, `cloak`, `collar`, `stacked_plates`,
 ## `crystal`, `fin`, `prism_stack`, `studs`, `edge_trim`, `quiver`, `sash`, `ruff`, `faulds`,
-## `tassets`, `seam`, `shard_crown`, `antlers`, `plumes`, `broadsword`, `bearded_axe`,
-## `greatsword`, `forge_hammer`, `glaive`, `cleaver`, `longbow`) are the layered, non-round shapes the set
-## looks are built from. Each takes a look (its shape's numbers, from `GearLook.numbers` or
+## `tassets`, `seam`, `shard_crown`, `antlers`, `plumes`, `pouch`, `broadsword`, `bearded_axe`,
+## `greatsword`, `forge_hammer`, `glaive`, `cleaver`, `longbow`, `mage_staff`) are the layered,
+## non-round shapes the set looks are built from. Each takes a look (its shape's numbers, from `GearLook.numbers` or
 ## `GearLook.piece`) and a palette, names its root after its shape, and draws at least two
 ## tones (a base plus a darker underside or a lighter trim) so it reads lit from above. Which
 ## palette field a part takes is the look's tone number (`tone`, `edge_tone`...), or a Color
@@ -84,6 +84,8 @@ const SHAPE_GLAIVE := GearLook.SHAPE_GLAIVE
 const SHAPE_CLEAVER := GearLook.SHAPE_CLEAVER
 const SHAPE_LONGBOW := GearLook.SHAPE_LONGBOW
 const SHAPE_PLUMES := GearLook.SHAPE_PLUMES
+const SHAPE_POUCH := GearLook.SHAPE_POUCH
+const SHAPE_MAGE_STAFF := GearLook.SHAPE_MAGE_STAFF
 ## The names of a two-sided builder's side nodes, so a test can measure each side.
 const SIDE_LEFT := "Left"
 const SIDE_RIGHT := "Right"
@@ -256,8 +258,8 @@ static func shin_piece(item: String) -> Node3D:
 
 
 ## What `item` draws in the hand when its weapon is a kit shape (a broadsword, a bearded axe,
-## a greatsword, a forge hammer, a glaive, a cleaver, a longbow), or null for a weapon drawn
-## from a model (a sword, a bow, a staff, a club).
+## a greatsword, a forge hammer, a glaive, a cleaver, a longbow, a mage staff), or null for a
+## weapon drawn from a model (a sword, a bow, a staff, a club).
 static func weapon_piece(item: String) -> Node3D:
 	var look := GearLook.piece(item, GearLook.PART_WEAPON)
 	if not GearLook.WEAPON_SHAPES.has(look["shape"]):
@@ -552,6 +554,10 @@ static func kit_builder(shape: String) -> Callable:
 			return longbow
 		SHAPE_PLUMES:
 			return plumes
+		SHAPE_POUCH:
+			return pouch
+		SHAPE_MAGE_STAFF:
+			return mage_staff
 	return Callable()
 
 
@@ -586,7 +592,8 @@ static func peaked_hood(look: Dictionary, colours: Dictionary) -> Node3D:
 
 ## A flaring under-robe in the dark tone under a coat shell set back so the robe shows at the
 ## open front, two front panels hanging from the coat's hem each its own length (`Left` and
-## `Right`), and bands up the robe from its hem in the highlight.
+## `Right`), edged along their inner side and hem in `edge_tone` when `panel_edge` is above 0,
+## and bands up the robe from its hem in the highlight.
 static func under_robe(look: Dictionary, colours: Dictionary) -> Node3D:
 	var robe := _wrap(SHAPE_UNDER_ROBE, look, _tone(look, colours, "robe_tone"))
 	var tone := _tone(look, colours, "tone")
@@ -599,7 +606,15 @@ static func under_robe(look: Dictionary, colours: Dictionary) -> Node3D:
 		panel.rotation.x = -look["panel_lean"]  # and lean forward, clear of the robe's flare
 		robe.add_child(panel)
 		var length: float = side[2]
-		Figures.part(panel, _box(Vector3(look["panel_width"], length, look["panel_thickness"]), tone), Vector3(0, -length * 0.5, 0))
+		var width: float = look["panel_width"]
+		var thickness: float = look["panel_thickness"]
+		Figures.part(panel, _box(Vector3(width, length, thickness), tone), Vector3(0, -length * 0.5, 0))
+		var edge: float = look["panel_edge"]
+		if edge > 0.0:
+			var edging := _highlight(look, colours, "edge_tone")
+			# the inner edge, where the coat opens, and the hem
+			Figures.part(panel, _box(Vector3(edge, length, thickness + 0.01), edging), Vector3(-side[0] * (width - edge) * 0.5, -length * 0.5, 0))
+			Figures.part(panel, _box(Vector3(width, edge, thickness + 0.01), edging), Vector3(0, -length + edge * 0.5, 0))
 	var top: float = look["y"] + look["height"] * 0.5
 	var band := _highlight(look, colours, "band_tone")
 	for i in int(look["bands"]):
@@ -1423,6 +1438,94 @@ static func plumes(look: Dictionary, colours: Dictionary) -> Node3D:
 		Figures.part(feather, _box(Vector3(width * 0.3, length * 0.85, thickness + 0.008), quill), Vector3(0, length * 0.45, 0))
 		Figures.part(feather, _ball(look["tip"], point), Vector3(0, length, 0))
 	return root
+
+
+## A belt pouch, a satchel, a book or a scroll case hung at `offset`, turned by `tilt`: a box
+## `size` wide, tall and deep in the base tone with a flap over its top in the highlight and a
+## shadow line under the flap, or when `round` a tube `size.x` across and `size.y` long with a
+## cap band at each end in the highlight.
+static func pouch(look: Dictionary, colours: Dictionary) -> Node3D:
+	var root := Node3D.new()
+	root.name = SHAPE_POUCH
+	var stand := Node3D.new()
+	stand.position = look["offset"]
+	stand.rotation = look["tilt"]
+	root.add_child(stand)
+	var size: Vector3 = look["size"]
+	var tone := _tone(look, colours, "tone")
+	var flap := _highlight(look, colours, "flap_tone")
+	if look["round"]:
+		var radius: float = size.x * 0.5
+		var cap: float = look["cap"]
+		Figures.part(stand, _cylinder(radius, radius, size.y, 8, tone), Vector3.ZERO)
+		for side: float in [-1.0, 1.0]:
+			Figures.part(stand, _cylinder(radius + 0.01, radius + 0.01, cap, 8, flap), Vector3(0, side * (size.y - cap) * 0.5, 0))
+		return root
+	var flap_height: float = look["flap"]
+	Figures.part(stand, _box(size, tone), Vector3.ZERO)
+	Figures.part(stand, _box(Vector3(size.x + 0.01, flap_height, size.z + 0.02), flap), Vector3(0, (size.y - flap_height) * 0.5, -0.005))
+	Figures.part(stand, _box(Vector3(size.x + 0.01, 0.012, size.z + 0.01), _tone(look, colours, "shadow_tone")), Vector3(0, size.y * 0.5 - flap_height - 0.006, -0.005))
+	return root
+
+
+## A mage's staff, upright in the hand as the tier staff stands (`foot` of its `length` below
+## the hand, turned by `tilt`): a shaft, a wrapped grip band when `grip` is above 0, a collar
+## under the head when `collar` is, and a faceted prism shining in the glow colour, held by the head kind the look names, in a holder
+## named after it: lashed (the prism on the shaft's top with a rope hoop round the join), forked
+## (two arms leaning apart from the top with the prism floating in the gap) or ring (a hoop on
+## the top holding the prism, a small prism floating above it).
+static func mage_staff(look: Dictionary, colours: Dictionary) -> Node3D:
+	var root := Node3D.new()
+	root.name = SHAPE_MAGE_STAFF
+	var hilt := Node3D.new()
+	hilt.rotation = look["tilt"]
+	root.add_child(hilt)
+	var length: float = look["length"]
+	var radius: float = look["radius"]
+	var segments := int(look["segments"])
+	var top: float = length - look["foot"]
+	Figures.part(hilt, _cylinder(radius * 0.9, radius, length, segments, _tone(look, colours, "tone")), Vector3(0, top - length * 0.5, 0))
+	var grip: float = look["grip"]
+	if grip > 0.0:
+		Figures.part(hilt, _cylinder(radius * 1.3, radius * 1.3, grip, segments, _tone(look, colours, "grip_tone")), Vector3(0, look["grip_y"] + grip * 0.5, 0))
+	var collar: float = look["collar"]
+	if collar > 0.0:
+		Figures.part(hilt, _cylinder(look["collar_radius"], look["collar_radius"], collar, segments, _tone(look, colours, "collar_tone")), Vector3(0, top - collar * 0.5, 0))
+	var head := Node3D.new()
+	head.name = look["head"]
+	head.position.y = top
+	hilt.add_child(head)
+	var prism_length: float = look["prism_length"]
+	var prism_radius: float = look["prism_radius"]
+	match look["head"]:
+		GearLook.HEAD_LASHED:
+			_prism(head, look, colours, prism_length, prism_radius, 0.0)
+			var lash := Figures.part(head, _torus(radius, radius + look["lash"], 8, 6, _tone(look, colours, "lash_tone")), Vector3.ZERO)
+			lash.rotation.x = PI * 0.5  # a rope round the join, lying across the shaft
+		GearLook.HEAD_FORKED:
+			var fork_length: float = look["fork_length"]
+			for side: float in [-1.0, 1.0]:
+				var arm := Node3D.new()
+				arm.rotation.z = side * look["fork_spread"]  # the arms lean apart
+				head.add_child(arm)
+				Figures.part(arm, _cylinder(look["fork_radius"], look["fork_radius"] * 1.2, fork_length, 6, _tone(look, colours, "fork_tone")), Vector3(0, fork_length * 0.5, 0))
+			_prism(head, look, colours, prism_length, prism_radius, look["rise"])
+		GearLook.HEAD_RING:
+			var ring_outer: float = look["ring_outer"]
+			var hoop := Figures.part(head, _torus(look["ring_inner"], ring_outer, int(look["ring_rings"]), int(look["ring_segments"]), _tone(look, colours, "ring_tone")), Vector3(0, ring_outer, 0))
+			hoop.rotation.x = PI * 0.5  # upright on the shaft's top, facing front
+			_prism(head, look, colours, prism_length, prism_radius, 0.02)
+			_prism(head, look, colours, look["small_length"], look["small_radius"], ring_outer * 2.0 + look["rise"])
+	return root
+
+
+## A faceted prism of `length` standing up from `y` under `holder`: `root` of its length a
+## root in `root_tone`, the rest a cone shining in the glow colour at `glow`.
+static func _prism(holder: Node3D, look: Dictionary, colours: Dictionary, length: float, radius: float, y: float) -> void:
+	var join: float = length * look["root"]
+	var facets := int(look["facets"])
+	Figures.part(holder, _cylinder(radius, radius * 0.5, join, facets, _tone(look, colours, "root_tone")), Vector3(0, y + join * 0.5, 0))
+	Figures.part(holder, _cone(radius, length - join, facets, Props.flat(colours["glow"], look["glow"])), Vector3(0, y + join + (length - join) * 0.5, 0))
 
 
 ## The material a look's `key` tone names: the palette field it names, or the Color it

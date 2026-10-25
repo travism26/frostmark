@@ -26,11 +26,11 @@
 ##
 ## The kit shapes (a peaked hood, an under-robe with coat panels, a cloak, a collar, stacked
 ## plates, a crystal, a fin, a prism stack, studs, edge trim, a quiver, a sash, a ruff, faulds,
-## tassets, a seam, a shard crown, antlers, plumes, and the hand-held weapons: a broadsword, a
-## bearded axe, a greatsword, a forge hammer, a glaive, a cleaver and a longbow) are the layered,
-## non-round pieces the set looks are built from. Each has its numbers in SHAPES like any other
-## shape and a builder of the same name in CharacterGear; KIT_SAMPLES holds one look of each
-## for the shader warm-up and the kit shots.
+## tassets, a seam, a shard crown, antlers, plumes, a pouch, and the hand-held weapons: a
+## broadsword, a bearded axe, a greatsword, a forge hammer, a glaive, a cleaver, a longbow and
+## a mage staff) are the layered, non-round pieces the set looks are built from. Each has its
+## numbers in SHAPES like any other shape and a builder of the same name in CharacterGear;
+## KIT_SAMPLES holds one look of each for the shader warm-up and the kit shots.
 ##
 ## A top set's light and particles are look numbers too: a crystal, a shard crown or a forge
 ## hammer carries one small light (`light`) or a few motes (`motes`) only when its entry asks,
@@ -95,18 +95,22 @@ const SHAPE_CLEAVER := "Cleaver"
 const SHAPE_LONGBOW := "Longbow"
 ## The ranged top set shape (#165): a fan of feathers, a crest or a wing.
 const SHAPE_PLUMES := "Plumes"
+## The magic set shapes (#166).
+const SHAPE_POUCH := "Pouch"
+const SHAPE_MAGE_STAFF := "MageStaff"
 const KIT_SHAPES := [
 	SHAPE_PEAKED_HOOD, SHAPE_UNDER_ROBE, SHAPE_CLOAK, SHAPE_COLLAR, SHAPE_STACKED_PLATES,
 	SHAPE_CRYSTAL, SHAPE_FIN, SHAPE_PRISM_STACK, SHAPE_STUDS, SHAPE_EDGE_TRIM, SHAPE_QUIVER,
 	SHAPE_SASH, SHAPE_RUFF, SHAPE_FAULDS, SHAPE_TASSETS, SHAPE_SEAM, SHAPE_SHARD_CROWN, SHAPE_ANTLERS,
 	SHAPE_BROADSWORD, SHAPE_BEARDED_AXE, SHAPE_GREATSWORD, SHAPE_FORGE_HAMMER, SHAPE_GLAIVE, SHAPE_CLEAVER,
 	SHAPE_LONGBOW, SHAPE_PLUMES,
+	SHAPE_POUCH, SHAPE_MAGE_STAFF,
 ]
 ## The kit shapes held in the hand: each is a whole weapon, gripped in the right hand, or in
 ## the left for the BOW_SHAPES, held as the tier bows are.
 const WEAPON_SHAPES := [
 	SHAPE_BROADSWORD, SHAPE_BEARDED_AXE, SHAPE_GREATSWORD, SHAPE_FORGE_HAMMER, SHAPE_GLAIVE, SHAPE_CLEAVER,
-	SHAPE_LONGBOW,
+	SHAPE_LONGBOW, SHAPE_MAGE_STAFF,
 ]
 const BOW_SHAPES := [SHAPE_LONGBOW]
 ## The kit shapes that may carry the one small light and the few motes a top set is allowed.
@@ -131,6 +135,12 @@ const COLLARS := [COLLAR_HIGH, COLLAR_JAGGED, COLLAR_PLATE, COLLAR_HOOP]
 const TIPS_FLETCHING := "fletching"
 const TIPS_SHARDS := "shards"
 const QUIVER_TIPS := [TIPS_FLETCHING, TIPS_SHARDS]
+## A mage staff's head: one raw shard lashed to the shaft, two fork arms holding a floating
+## prism, or a hoop cradling a large prism with a small one riding above it.
+const HEAD_LASHED := "lashed"
+const HEAD_FORKED := "forked"
+const HEAD_RING := "ring"
+const STAFF_HEADS := [HEAD_LASHED, HEAD_FORKED, HEAD_RING]
 
 ## Every palette carries exactly these fields.
 ##   base         Color  the piece itself: a dome, vest, greave or fur wrap, a blade or haft
@@ -249,6 +259,35 @@ const TROLLBONE_BONE_DARK := Color("#b8a98c")
 const TROLLBONE_BONE_LIT := Color("#f6efdc")
 const TROLLBONE_HIDE_LIT := Color("#62503f")
 const TROLLBONE_BLOOD_DARK := Color("#731f1b")
+## The magic sets' palettes (#166, the approved round-2 board on #157). Each has a staff, but
+## its glow is per part (the shard, the brow prism, the glyph band), so glow_energy is 0 and
+## `Figures.staff` is never drawn for a set: the glow colour is what those parts shine in. No
+## magic set carries a light or motes.
+## Shardweaver: undyed wool and its shade, cream trim, rope; the frost of a raw shard.
+const SHARDWEAVER := {
+	"base": Color("#5e6d8a"), "dark": Color("#45526b"),
+	"trim": Color("#d9d2c2"), "accent": Color("#b59a6a"),
+	"glow": Color("#9ecbff"), "glow_energy": 0.0,
+}
+## Rimecaller: indigo and its shade, frost white, dark ash; frost glow.
+const RIMECALLER := {
+	"base": Color("#3b4a8c"), "dark": Color("#2b3668"),
+	"trim": Color("#cfe2ff"), "accent": Color("#5c4a3a"),
+	"glow": Color("#9ecbff"), "glow_energy": 0.0,
+}
+## Glacier Warden: teal and its shade, silver, iron; ice glow.
+const GLACIER_WARDEN := {
+	"base": Color("#1f6e7a"), "dark": Color("#154e58"),
+	"trim": Color("#c9d7de"), "accent": Color("#39404a"),
+	"glow": Color("#8fe6f0"), "glow_energy": 0.0,
+}
+## The magic sets' extra materials and lit rim tints.
+const SHARDWEAVER_PINE := Color("#7a5234")
+const SHARDWEAVER_ROPE_DARK := Color("#8a7450")
+const RIMECALLER_FROST_LIT := Color("#e8f2ff")
+const RIMECALLER_ASH_LIT := Color("#7a6450")
+const GLACIER_WARDEN_LIT := Color("#e3ebef")
+const GLACIER_WARDEN_IRON_LIT := Color("#4f5866")
 
 ## The ranged sets' palettes (#164, the approved board on #157). No set glows, so glow is
 ## black and glow_energy 0 (none has a staff).
@@ -393,14 +432,16 @@ const SHAPES := {
 	},
 	# A flaring under-robe in the dark tone with `bands` bands up from its hem, under a coat
 	# shell set `coat_back` behind the body so the robe shows at the open front, and two
-	# front panels hanging from the coat's hem, each its own length and flared apart.
+	# front panels hanging from the coat's hem, each its own length and flared apart;
+	# `panel_edge` above 0 runs an edging strip that wide in `edge_tone` down each panel's
+	# inner edge and along its hem.
 	SHAPE_UNDER_ROBE: {
 		"top_radius": 0.36, "bottom_radius": 0.56, "height": 1.05, "segments": 10, "y": -0.35,
 		"coat_top_radius": 0.4, "coat_bottom_radius": 0.52, "coat_height": 0.6, "coat_y": -0.12, "coat_back": 0.1,
 		"panel_left": 0.55, "panel_right": 0.4, "panel_width": 0.2, "panel_thickness": 0.04,
 		"panel_x": 0.17, "panel_z": -0.46, "panel_top": -0.3, "panel_flare": 0.12, "panel_lean": 0.2,
-		"bands": 2, "band_height": 0.05, "band_from": -0.75, "band_step": 0.2,
-		"tone": "base", "robe_tone": "dark", "band_tone": "trim", "glow": 0.0,
+		"bands": 2, "band_height": 0.05, "band_from": -0.75, "band_step": 0.2, "panel_edge": 0.0,
+		"tone": "base", "robe_tone": "dark", "band_tone": "trim", "edge_tone": "trim", "glow": 0.0,
 	},
 	# A fin hung from the shoulders behind the body, in two halves each its own length, with
 	# a hem band; `outline` picks plain, forked, torn, tail or banner. `lining` above 0 shows
@@ -640,6 +681,36 @@ const SHAPES := {
 		"tips": TIPS_FLETCHING, "tip_count": 3, "tip_length": 0.16, "tone": "base", "foot_tone": "dark",
 		"band_tone": "trim", "shaft_tone": "dark", "fletch_tone": "trim", "tip_tone": "accent", "glow": 0.0,
 	},
+	# The magic set shapes (#166). A pouch hung at `offset` turned by `tilt`: a box `size`
+	# across in `tone` with a flap `flap` tall across its top front in the highlight
+	# (`flap_tone`) over a `shadow_tone` line under the flap, or when `round` a case lying
+	# along the stand's Y of `size.x` across and `size.y` long with a cap `cap` long at each
+	# end in `flap_tone`: a belt pouch, a satchel, a book pouch, a scroll case.
+	SHAPE_POUCH: {
+		"size": Vector3(0.16, 0.14, 0.08), "offset": Vector3(0.38, -0.26, -0.1), "tilt": Vector3(0, 0.3, 0),
+		"flap": 0.05, "round": false, "cap": 0.035,
+		"tone": "accent", "flap_tone": "trim", "shadow_tone": "dark", "glow": 0.0,
+	},
+	# A mage staff held upright in the right hand like the tier staves (`tilt` zero): a shaft
+	# `length` long in `tone` standing `foot` below the hand, a collar `collar` tall in
+	# `collar_tone` under the head and a grip band `grip` tall in `grip_tone` `grip_y` above
+	# the hand (0 for none), and a head of three or four parts picked by `head`: lashed, one
+	# raw `facets`-sided prism `prism_length` long on the shaft's top with a rope torus `lash`
+	# thick round the join in `lash_tone`; forked, two arms `fork_length` long leaning
+	# `fork_spread` apart in `fork_tone` with the prism floating `rise` over the shaft in the
+	# gap; ring, a hoop `ring_inner` to `ring_outer` across in `ring_tone` standing on the
+	# shaft, the prism rising through it and a small prism `small_length` long riding `rise`
+	# above its top. Every prism is the glow colour over a `root_tone` root, lit at `glow`.
+	SHAPE_MAGE_STAFF: {
+		"head": HEAD_LASHED, "length": 1.5, "foot": 0.35, "radius": 0.04, "segments": 6, "tilt": Vector3.ZERO,
+		"collar": 0.05, "collar_radius": 0.065, "grip": 0.12, "grip_y": 0.08, "lash": 0.03,
+		"facets": 4, "prism_length": 0.3, "prism_radius": 0.065, "root": 0.3,
+		"small_length": 0.14, "small_radius": 0.04, "rise": 0.08,
+		"fork_length": 0.32, "fork_spread": 0.45, "fork_radius": 0.022,
+		"ring_inner": 0.15, "ring_outer": 0.19, "ring_rings": 10, "ring_segments": 6,
+		"tone": "accent", "collar_tone": "trim", "grip_tone": "dark", "lash_tone": "trim", "fork_tone": "accent",
+		"ring_tone": "trim", "root_tone": "dark", "glow": 0.0,
+	},
 }
 
 ## One look of each kit shape, for the shader warm-up (a light and motes included) and the kit
@@ -671,6 +742,8 @@ const KIT_SAMPLES := [
 	{"shape": SHAPE_CLEAVER, "glow": 0.8},
 	{"shape": SHAPE_LONGBOW, "cap_length": 0.12, "tip_bend": 0.3, "glow": 0.8},
 	{"shape": SHAPE_PLUMES, "offset": Vector3(0, 0.72, 0.05), "tilt": Vector3(0.3, 0, 0), "glow": 1.0},
+	{"shape": SHAPE_POUCH, "size": Vector3(0.2, 0.18, 0.1), "offset": Vector3(-0.4, -0.3, 0.0), "tilt": Vector3(0, -0.4, 0), "glow": 0.6},
+	{"shape": SHAPE_MAGE_STAFF, "head": HEAD_RING, "glow": 1.2},
 ]
 
 const LOOKS := {
@@ -1301,6 +1374,131 @@ const LOOKS := {
 	"glacier_sovereign_bow": {"palette": GLACIER_SOVEREIGN, PART_WEAPON: {"shape": SHAPE_LONGBOW, "tip_bend": 0.2, "edge": 0.018, "shard": 0.09, "tone": "trim", "grip_tone": "dark", "string_tone": BOWSTRING, "glow": 1.2}},
 	# a deep-sea quiver with an ice foot and cap band, bristling with glowing frost shards
 	"glacier_sovereign_quiver": {"palette": GLACIER_SOVEREIGN, PART_QUIVER: {"shape": SHAPE_QUIVER, "tone": "dark", "foot_tone": "base", "band_tone": "base", "tips": TIPS_SHARDS, "tip_count": 4, "tip_tone": "trim", "glow": 1.2}},
+	# The magic sets (#166, the approved round-2 board on #157). No light, no motes: each glow is
+	# emission on the part the issue names, in the set's glow colour.
+	"shardweaver_helm": {"palette": SHARDWEAVER, PART_HEAD: {
+		# a wool cowl: the rounded hood with a cream hoop at the face, a rope band round the
+		# brow, a short drape hanging behind the neck, a cream scarf round the throat with one
+		# loose end hanging at the left, so the footprint is a teardrop with a tail, not a disc
+		"shape": SHAPE_FUR_HOOD, "hoop_tone": "trim", "hoop_inner": 0.4, "hoop_outer": 0.48,
+		LAYERS: [
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.49, "size": Vector3(0, 0.05, 0), "lip": 0.0, "offset": Vector3(0, 0.4, 0), "tone": "accent"},
+			{"shape": SHAPE_FIN, "size": Vector3(0.34, 0.32, 0.05), "offset": Vector3(0, 0.36, 0.42), "tilt": Vector3(PI * 0.85, 0, 0), "tone": "dark", "edge_tone": "trim"},
+			{"shape": SHAPE_RUFF, "inner": 0.3, "outer": 0.46, "y": 0.02, "trim": 0.03, "tone": "trim", "trim_tone": "base"},
+			{"shape": SHAPE_FIN, "size": Vector3(0.1, 0.22, 0.04), "offset": Vector3(-0.3, 0.0, -0.28), "tilt": Vector3(PI, 0, 0.3), "tone": "trim", "edge_tone": "accent"},
+		],
+	}},
+	"rimecaller_helm": {"palette": RIMECALLER, PART_HEAD: {
+		# a peaked indigo hood: a longer swept-back peak, a frost hoop at the face and one small
+		# four-facet prism at the brow, leaning out over the face, shining faintly
+		"shape": SHAPE_PEAKED_HOOD, "hoop_tone": "trim", "peak_length": 0.55,
+		LAYERS: [
+			{"shape": SHAPE_CRYSTAL, "facets": 4, "length": 0.16, "radius": 0.045, "root": 0.3, "offset": Vector3(0, 0.5, -0.44), "tilt": Vector3(-0.9, 0, 0), "glow": 0.8, "root_tone": "trim"},
+		],
+	}},
+	"glacier_warden_helm": {"palette": GLACIER_WARDEN, PART_HEAD: {
+		# a peaked teal hood with a silver hoop at the face and a silver band round the brow,
+		# under a crest of three prisms fanned up from the crown, the centre tallest and the outer
+		# two leaning apart, all shining ice
+		"shape": SHAPE_PEAKED_HOOD, "hoop_tone": "trim", "peak_width": 0.4,
+		LAYERS: [
+			{"shape": SHAPE_CRYSTAL, "facets": 4, "length": 0.42, "radius": 0.07, "root": 0.25, "offset": Vector3(0, 0.78, -0.05), "tilt": Vector3(-0.15, 0, 0), "glow": 1.2, "root_tone": "trim"},
+			{"shape": SHAPE_CRYSTAL, "facets": 4, "length": 0.34, "radius": 0.06, "root": 0.25, "offset": Vector3(-0.17, 0.74, -0.04), "tilt": Vector3(-0.15, 0, 0.55), "glow": 1.2, "root_tone": "trim"},
+			{"shape": SHAPE_CRYSTAL, "facets": 4, "length": 0.28, "radius": 0.06, "root": 0.25, "offset": Vector3(0.17, 0.74, -0.04), "tilt": Vector3(-0.15, 0, -0.55), "glow": 1.2, "root_tone": "trim"},
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.5, "size": Vector3(0, 0.04, 0), "lip": 0.0, "offset": Vector3(0, 0.42, 0), "tone": "trim"},
+		],
+	}},
+	"shardweaver_body": {"palette": SHARDWEAVER, PART_BODY: {
+		# an open wool coat over a dark under-robe, the front panels two lengths (left longer)
+		# edged in cream, a rope belt, a pouch on the right hip and a satchel on the left hung
+		# from a rope strap across the chest
+		"shape": SHAPE_UNDER_ROBE, "bands": 0, "panel_left": 0.55, "panel_right": 0.38, "panel_edge": 0.03,
+		LAYERS: [
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.4, "size": Vector3(0, 0.05, 0), "lip": 0.0, "offset": Vector3(0, -0.2, 0.05), "tone": "accent"},
+			{"shape": SHAPE_POUCH, "size": Vector3(0.14, 0.14, 0.08), "offset": Vector3(0.36, -0.3, -0.12), "tilt": Vector3(0, 0.3, 0), "tone": "accent", "flap_tone": "trim"},
+			{"shape": SHAPE_POUCH, "size": Vector3(0.2, 0.18, 0.1), "offset": Vector3(-0.4, -0.34, 0.0), "tilt": Vector3(0, -0.4, 0), "tone": "dark", "flap_tone": "accent"},
+			{"shape": SHAPE_SASH, "roll": -0.6, "width": 0.06, "tone": "accent", "edge_tone": SHARDWEAVER_ROPE_DARK},
+		],
+	}},
+	"rimecaller_body": {"palette": RIMECALLER, PART_BODY: {
+		# an indigo under-robe with two frost bands and a frost hem under an open indigo coat
+		# edged in frost, frost shoulder plates (the left the larger) over dark under-plates, a
+		# frost collar behind the neck, a book pouch at the left hip, an unlit vial hanging at
+		# the right and a frost belt
+		"shape": SHAPE_UNDER_ROBE, "bands": 3, "band_from": -0.85, "band_step": 0.14, "panel_left": 0.5, "panel_right": 0.4, "panel_edge": 0.025,
+		LAYERS: [
+			{"shape": SHAPE_STACKED_PLATES, "plates_left": 2, "plates_right": 2, "size_left": Vector3(0.3, 0.07, 0.34), "size_right": Vector3(0.26, 0.07, 0.3), "x": 0.4, "y": 0.17, "tone": "trim", "under_tone": "dark", "trim_tone": RIMECALLER_FROST_LIT},
+			{"shape": SHAPE_COLLAR, "kind": COLLAR_HIGH, "width": 0.5, "height": 0.3, "offset": Vector3(0, 0.22, 0.3), "tone": "trim", "back_tone": "dark", "edge_tone": RIMECALLER_FROST_LIT},
+			{"shape": SHAPE_POUCH, "size": Vector3(0.16, 0.2, 0.07), "offset": Vector3(-0.4, -0.32, -0.06), "tilt": Vector3(0, -0.35, 0), "tone": "accent", "flap_tone": "trim"},
+			{"shape": SHAPE_CRYSTAL, "facets": 4, "length": 0.14, "radius": 0.035, "root": 0.35, "offset": Vector3(0.38, -0.24, -0.16), "tilt": Vector3(PI, 0, 0), "glow": 0.0, "root_tone": RIMECALLER_ASH_LIT},
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.4, "size": Vector3(0, 0.04, 0), "lip": 0.0, "offset": Vector3(0, -0.22, 0.05), "tone": "trim"},
+		],
+	}},
+	"glacier_warden_body": {"palette": GLACIER_WARDEN, PART_BODY: {
+		# a teal under-robe with a silver hem and a glowing glyph band under an open teal coat
+		# edged in silver, a silver chest plate with a lit glyph, silver upper plates stepped
+		# over dark-teal lower plates with a third plate on the left, a tall silver collar and a
+		# scroll case slung at the right hip
+		"shape": SHAPE_UNDER_ROBE, "bands": 1, "band_from": -0.85, "band_height": 0.06, "panel_left": 0.58, "panel_right": 0.44, "panel_edge": 0.03,
+		LAYERS: [
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.52, "size": Vector3(0, 0.035, 0), "lip": 0.0, "offset": Vector3(0, -0.62, 0), "glow": 1.0},
+			{"shape": SHAPE_FIN, "size": Vector3(0.3, 0.24, 0.03), "offset": Vector3(0, -0.26, -0.465), "tilt": Vector3(0.19, 0, 0), "edge": 0.02, "tone": "trim", "edge_tone": GLACIER_WARDEN_LIT},
+			{"shape": SHAPE_SEAM, "size": Vector3(0.03, 0.16, 0.02), "offset": Vector3(0, -0.137, -0.472), "tilt": Vector3(0.19, 0, 0), "glow": 1.0},
+			{"shape": SHAPE_SEAM, "size": Vector3(0.12, 0.025, 0.02), "offset": Vector3(0, -0.087, -0.462), "tilt": Vector3(0.19, 0, 0), "glow": 1.0},
+			{"shape": SHAPE_STACKED_PLATES, "plates_left": 3, "plates_right": 2, "size_left": Vector3(0.32, 0.08, 0.36), "size_right": Vector3(0.28, 0.08, 0.32), "x": 0.42, "y": 0.18, "tilt": 0.3, "step": Vector3(0.05, -0.08, 0), "tone": "trim", "under_tone": "dark", "trim_tone": GLACIER_WARDEN_LIT},
+			{"shape": SHAPE_COLLAR, "kind": COLLAR_HIGH, "width": 0.56, "height": 0.42, "offset": Vector3(0, 0.22, 0.3), "tone": "trim", "back_tone": "dark", "edge_tone": GLACIER_WARDEN_LIT},
+			{"shape": SHAPE_POUCH, "round": true, "size": Vector3(0.09, 0.3, 0.09), "offset": Vector3(0.42, -0.36, -0.02), "tilt": Vector3(1.3, 0, 0), "tone": "accent", "flap_tone": "trim"},
+		],
+	}},
+	"shardweaver_legs": {"palette": SHARDWEAVER, PART_HIPS: {
+		# wrapped wool leggings with a cream band at the hem
+		"shape": SHAPE_FUR_LEGGINGS,
+		LAYERS: [
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.42, "size": Vector3(0, 0.04, 0), "lip": 0.0, "offset": Vector3(0, -0.22, 0), "tone": "trim"},
+		],
+	}, PART_SHIN: {
+		# a wool shin wrap under a cream puttee
+		"shape": SHAPE_FUR_BAND, "band_tone": "trim", "band_radius": 0.19, "band_height": 0.1, "band_y": -0.03,
+	}},
+	"rimecaller_legs": {"palette": RIMECALLER, PART_HIPS: {
+		# indigo leggings with a frost band at the hem
+		"shape": SHAPE_FUR_LEGGINGS,
+		LAYERS: [
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.42, "size": Vector3(0, 0.04, 0), "lip": 0.0, "offset": Vector3(0, -0.22, 0), "tone": "trim"},
+		],
+	}, PART_SHIN: {
+		# an indigo shin wrap with a frost band at the knee and another at the ankle
+		"shape": SHAPE_FUR_BAND, "band_tone": "trim", "band_height": 0.05,
+		LAYERS: [
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.165, "size": Vector3(0, 0.035, 0), "lip": 0.0, "offset": Vector3(0, -0.18, 0), "tone": "trim"},
+		],
+	}},
+	"glacier_warden_legs": {"palette": GLACIER_WARDEN, PART_HIPS: {
+		# teal leggings with a silver band at the hem
+		"shape": SHAPE_FUR_LEGGINGS,
+		LAYERS: [
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.42, "size": Vector3(0, 0.04, 0), "lip": 0.0, "offset": Vector3(0, -0.22, 0), "tone": "trim"},
+		],
+	}, PART_SHIN: {
+		# a silver greave with a teal band at the knee and a lit silver knee plate
+		"shape": SHAPE_FUR_BAND, "tone": "trim", "band_tone": "base", "band_radius": 0.175, "band_height": 0.05, "band_y": -0.02,
+		LAYERS: [
+			{"shape": SHAPE_FIN, "size": Vector3(0.12, 0.08, 0.03), "offset": Vector3(0, -0.04, -0.17), "tilt": Vector3(-0.2, 0, 0), "tone": "trim", "edge_tone": GLACIER_WARDEN_LIT},
+		],
+	}},
+	# a pine haft with a rope grip band and one raw four-facet shard lashed on with rope, no
+	# collar, the shard glowing faintly
+	"shardweaver_staff": {"palette": SHARDWEAVER, PART_WEAPON: {"shape": SHAPE_MAGE_STAFF, "head": HEAD_LASHED, "collar": 0.0, "tone": SHARDWEAVER_PINE, "grip_tone": "accent", "lash_tone": "accent", "root_tone": SHARDWEAVER_ROPE_DARK, "glow": 0.5}},
+	# an ash shaft with a frost collar under two fork arms leaning apart, a prism floating in
+	# the gap
+	"rimecaller_staff": {"palette": RIMECALLER, PART_WEAPON: {"shape": SHAPE_MAGE_STAFF, "head": HEAD_FORKED, "tone": "accent", "fork_tone": "accent", "collar_tone": "trim", "grip_tone": "dark", "root_tone": "trim", "glow": 1.0}},
+	# an iron shaft with a silver collar and a silver hoop on top holding a large prism, a small
+	# one floating above the hoop, both shining ice
+	"glacier_warden_staff": {"palette": GLACIER_WARDEN, PART_WEAPON: {"shape": SHAPE_MAGE_STAFF, "head": HEAD_RING, "tone": "accent", "ring_tone": "trim", "collar_tone": "trim", "grip_tone": GLACIER_WARDEN_IRON_LIT, "root_tone": "trim", "glow": 1.4}},
+	# a short indigo cloak with a frost hem, the left half the longer
+	"rimecaller_cape": {"palette": RIMECALLER, PART_CAPE: {"shape": SHAPE_CLOAK, "width": 0.56, "length_left": 0.5, "length_right": 0.44, "hem": 0.05, "tone": "base", "hem_tone": "trim"}},
+	# a long teal cloak with a silver hem, the left half the longer
+	"glacier_warden_cape": {"palette": GLACIER_WARDEN, PART_CAPE: {"shape": SHAPE_CLOAK, "width": 0.62, "length_left": 0.98, "length_right": 0.92, "hem": 0.06, "tone": "base", "hem_tone": "trim"}},
 }
 
 

@@ -183,9 +183,6 @@ func test_the_twenty_two_items_follow_the_set_item_quiver_and_cape_rules() -> vo
 	assert_eq(n, 22, "twenty-two items")
 	assert_eq(quivers, 4, "four quivers")
 	assert_eq(capes, 2, "two capes")
-	for item in ItemTable.ITEMS:
-		if ItemTable.slot(item) == ItemTable.SLOT_CAPE:
-			assert_true(CAPES.has(item), "%s is one of the two ranged top set capes, the first cape items" % item)
 
 
 func test_every_armour_piece_draws_its_layers_beside_steel_and_swaps_with_steel_both_ways() -> void:
