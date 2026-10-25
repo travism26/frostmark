@@ -22,8 +22,8 @@
 ## The kit builders (`peaked_hood`, `under_robe`, `cloak`, `collar`, `stacked_plates`,
 ## `crystal`, `fin`, `prism_stack`, `studs`, `edge_trim`, `quiver`, `sash`, `ruff`, `faulds`,
 ## `tassets`, `seam`, `shard_crown`, `antlers`, `broadsword`, `bearded_axe`, `greatsword`,
-## `forge_hammer`, `glaive`, `cleaver`) are the layered, non-round shapes the set looks are
-## built from. Each takes a look (its shape's numbers, from `GearLook.numbers` or
+## `forge_hammer`, `glaive`, `cleaver`, `longbow`) are the layered, non-round shapes the set
+## looks are built from. Each takes a look (its shape's numbers, from `GearLook.numbers` or
 ## `GearLook.piece`) and a palette, names its root after its shape, and draws at least two
 ## tones (a base plus a darker underside or a lighter trim) so it reads lit from above. Which
 ## palette field a part takes is the look's tone number (`tone`, `edge_tone`...), or a Color
@@ -82,6 +82,7 @@ const SHAPE_ANTLERS := GearLook.SHAPE_ANTLERS
 const SHAPE_FORGE_HAMMER := GearLook.SHAPE_FORGE_HAMMER
 const SHAPE_GLAIVE := GearLook.SHAPE_GLAIVE
 const SHAPE_CLEAVER := GearLook.SHAPE_CLEAVER
+const SHAPE_LONGBOW := GearLook.SHAPE_LONGBOW
 ## The names of a two-sided builder's side nodes, so a test can measure each side.
 const SIDE_LEFT := "Left"
 const SIDE_RIGHT := "Right"
@@ -203,7 +204,8 @@ func _build_weapon(view: CharacterView, place: String, item: String) -> void:
 			_mount(view, place, "handslot_r").add_child(Figures.club(colours["base"]))
 			return
 	if GearLook.WEAPON_SHAPES.has(look["shape"]):
-		_mount(view, place, "handslot_r").add_child(weapon_piece(item))
+		# a kit bow goes in the left hand like the tier bows, the rest in the right
+		_mount(view, place, "handslot_l" if GearLook.BOW_SHAPES.has(look["shape"]) else "handslot_r").add_child(weapon_piece(item))
 		return
 	var hand := view.bone_slot("handslot_r")
 	if hand == null:
@@ -253,8 +255,8 @@ static func shin_piece(item: String) -> Node3D:
 
 
 ## What `item` draws in the hand when its weapon is a kit shape (a broadsword, a bearded axe,
-## a greatsword, a forge hammer, a glaive, a cleaver), or null for a weapon drawn from a model
-## (a sword, a bow, a staff, a club).
+## a greatsword, a forge hammer, a glaive, a cleaver, a longbow), or null for a weapon drawn
+## from a model (a sword, a bow, a staff, a club).
 static func weapon_piece(item: String) -> Node3D:
 	var look := GearLook.piece(item, GearLook.PART_WEAPON)
 	if not GearLook.WEAPON_SHAPES.has(look["shape"]):
@@ -545,6 +547,8 @@ static func kit_builder(shape: String) -> Callable:
 			return glaive
 		SHAPE_CLEAVER:
 			return cleaver
+		SHAPE_LONGBOW:
+			return longbow
 	return Callable()
 
 
@@ -844,13 +848,16 @@ static func prism_stack(look: Dictionary, colours: Dictionary) -> Node3D:
 
 
 ## `count` small spheres in the accent tone (the glow colour, lit, when `glow` is above 0)
-## spaced over `arc` of a dark band of `radius`, centred on the front. Rivets, studs and bead
-## belts.
+## spaced over `arc` of a dark band of `radius`, centred on the front, in `rows` rows each
+## `row_step` lower; `band` off draws the studs alone. Rivets, studs, bead belts, lace knots
+## and a column of chest studs.
 static func studs(look: Dictionary, colours: Dictionary) -> Node3D:
 	var root := Node3D.new()
 	root.name = SHAPE_STUDS
 	var radius: float = look["radius"]
-	Figures.part(root, _cylinder(radius, radius, look["band_height"], look["segments"], _tone(look, colours, "band_tone")), Vector3(0, look["y"], 0))
+	var y: float = look["y"]
+	if look["band"]:
+		Figures.part(root, _cylinder(radius, radius, look["band_height"], look["segments"], _tone(look, colours, "band_tone")), Vector3(0, y, 0))
 	var count := int(look["count"])
 	var arc: float = look["arc"]
 	var stud := SphereMesh.new()
@@ -859,9 +866,10 @@ static func studs(look: Dictionary, colours: Dictionary) -> Node3D:
 	stud.radial_segments = 6
 	stud.rings = 3
 	stud.material = _highlight(look, colours, "stud_tone")
-	for i in count:
-		var a := (i - (count - 1) * 0.5) * (arc / maxf(count - 1, 1))
-		Figures.part(root, stud, Vector3(sin(a) * radius, look["y"], -cos(a) * radius))
+	for row in int(look["rows"]):
+		for i in count:
+			var a := (i - (count - 1) * 0.5) * (arc / maxf(count - 1, 1))
+			Figures.part(root, stud, Vector3(sin(a) * radius, y - row * float(look["row_step"]), -cos(a) * radius))
 	return root
 
 
@@ -1328,6 +1336,40 @@ static func cleaver(look: Dictionary, colours: Dictionary) -> Node3D:
 	Figures.part(blade, _box(Vector3(back, long, thickness + 0.006), back_tone), Vector3(-width * 0.3 + back * 0.5, long * 0.5, 0))
 	var edge: float = look["edge"]
 	Figures.part(blade, _box(Vector3(edge, long * 0.55, thickness + 0.01), _highlight(look, colours, "edge_tone")), Vector3(width - edge * 0.5, long * 0.65, 0))
+	return root
+
+
+## A bow held by its grip in the left hand's mount frame, the frame of the tier bows
+## (Figures.bow): `segments` staves along Z bulging `depth` toward +Y, the outermost bent
+## `tip_bend` further back for a recurve, the string below them in `string_tone`, a round grip
+## in `grip_tone` round the middle, a ball nock at each tip in `nock_tone` (the highlight)
+## and, when `cap_length` is above 0, a limb cap that long at each tip in `cap_tone`.
+static func longbow(look: Dictionary, colours: Dictionary) -> Node3D:
+	var root := Node3D.new()
+	root.name = SHAPE_LONGBOW
+	var length: float = look["length"]
+	var depth: float = look["depth"]
+	var segments := int(look["segments"])
+	var stave: float = look["stave"]
+	var wood := _tone(look, colours, "tone")
+	for i in segments:
+		var a := lerpf(-1.0, 1.0, (i + 0.5) / segments)
+		var piece := Figures.part(root, _box(Vector3(stave, stave, length / segments * 1.1), wood), Vector3(0, depth * (1.0 - a * a), a * length * 0.5))
+		piece.rotation.x = atan2(2.0 * depth * a, length)
+		if i == 0 or i == segments - 1:
+			piece.rotation.x += signf(a) * float(look["tip_bend"])
+	Figures.part(root, _box(Vector3(look["string"], look["string"], length), _tone(look, colours, "string_tone")), Vector3(0, -0.02, 0))
+	var grip := Figures.part(root, _cylinder(look["grip_radius"], look["grip_radius"], look["grip_length"], 6, _tone(look, colours, "grip_tone")), Vector3(0, depth * 0.95, 0))
+	grip.rotation.x = PI * 0.5  # the grip lies along the staves
+	var nock := _highlight(look, colours, "nock_tone")
+	var cap_length: float = look["cap_length"]
+	for side: float in [-1.0, 1.0]:
+		Figures.part(root, _ball(look["nock"], nock), Vector3(0, 0, side * length * 0.5))
+		if cap_length <= 0.0:
+			continue
+		var a: float = side * (1.0 - cap_length / length)
+		var cap := Figures.part(root, _box(Vector3(stave * 1.4, stave * 1.4, cap_length), _tone(look, colours, "cap_tone")), Vector3(0, depth * (1.0 - a * a), a * length * 0.5))
+		cap.rotation.x = atan2(2.0 * depth * a, length) + side * float(look["tip_bend"])
 	return root
 
 
