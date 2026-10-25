@@ -243,7 +243,7 @@ The reader clears the bar of more than 60 health left. The non-reader does not c
 
 | Fight | Result |
 |-------|--------|
-| Reader: steel staff, in the blade's reach | The knight falls on the seventh tick; 86 health at the end (one hack of 1 and one cleave of 10 into the staff's edge) |
+| Reader: steel staff, in the blade's reach | The knight falls on the seventh tick; 86 health at the end (two hacks of 2 and one cleave of 10, all into the staff's edge) |
 | Reader: steel staff, from 5.5 m | The knight falls on the seventh tick; 98 health at the end |
 | Non-reader: steel sword, in reach, swinging, no meal | The knight falls on the ninth tick; 36 health at the end (hack 8, cleave 24, hack 8, cleave 24) |
 | Non-reader: the same, eating a trout the tick after any heavy is told | The knight falls on the tenth tick; 76 health at the lowest, 92 at the end |
