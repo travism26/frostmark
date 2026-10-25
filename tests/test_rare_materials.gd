@@ -1,6 +1,7 @@
 ## Ring three's rare materials (#179): rime steel, frost sinew and aurora glass are materials
 ## like a troll hide, which stack, weigh, and go in and out of the stash, and which no enemy,
-## recipe or upgrade touches until their own tickets land.
+## recipe or upgrade touches until their own tickets land; so far only the Snowveil archer drops
+## one.
 extends "res://tests/run.gd".TestCase
 
 const H := preload("res://tests/sim_helpers.gd")
@@ -8,6 +9,8 @@ const SimScript := preload("res://sim/sim.gd")
 const Vocab := preload("res://sim/vocab.gd")
 
 const RARES: Array[String] = ["rime_steel", "frost_sinew", "aurora_glass"]
+## The enemy kinds that drop each one so far.
+const DROPPED_BY := {"frost_sinew": ["snowveil_archer"]}
 
 
 func test_each_is_a_material_with_no_slot_or_tier_weighing_1_worth_25_in_stacks_of_10() -> void:
@@ -61,10 +64,13 @@ func test_they_stack_weigh_and_go_in_and_out_of_the_stash() -> void:
 	assert_eq(H.pack_count(sim, "rime_steel"), 10, "a full stack comes back out")
 
 
-func test_no_enemy_recipe_or_upgrade_uses_them_yet() -> void:
-	var tables := var_to_str([CombatTable.ENEMIES, CombatTable.RARE_LOOT, RecipeTable.RECIPES, UpgradeTable.UPGRADES])
+func test_no_recipe_or_upgrade_uses_them_yet_and_only_the_listed_enemies_drop_them() -> void:
+	var tables := var_to_str([CombatTable.RARE_LOOT, RecipeTable.RECIPES, UpgradeTable.UPGRADES])
 	for kind in RARES:
-		assert_false(tables.contains('"%s"' % kind), "%s is not dropped or spent yet" % kind)
+		assert_false(tables.contains('"%s"' % kind), "%s is not spent or in the common rare roll yet" % kind)
+		for enemy in CombatTable.ENEMIES:
+			var drops := var_to_str(CombatTable.ENEMIES[enemy]["loot"]).contains('"%s"' % kind)
+			assert_eq(drops, DROPPED_BY.get(kind, []).has(enemy), "%s drops %s only if listed" % [enemy, kind])
 
 
 func test_the_all_gear_stash_leaves_them_out() -> void:

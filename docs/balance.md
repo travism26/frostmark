@@ -222,6 +222,21 @@ The play bot used to fight back only in ring two, so ring one could kill it mid-
 
 [#113](https://github.com/travism26/frostmark/issues/113) put a mine of three copper and three tin rocks against ring one's west cliff, north of the watch post, and moved `witch_2` from the north-west flank to its mouth, within earshot of every side of every rock. A visit there is 12 copper and 12 tin ore, but only after the witch. The run takes none of it: it mines its bronze in the inner ring before its first fight, and none of its ring-one trips passes the mine or the witch, so the measured run is unchanged at 28:48 and `tests/test_pacing.gd` still reaches the fallen captain at tick 1715. No number was retuned.
 
+## Ring three
+
+Ring three's enemies are deadlier by being harder to read, not by having more health ([#173](https://github.com/travism26/frostmark/issues/173)). They sit past the timed route, so the measured run and `tests/test_pacing.gd` don't change. Each enemy's fight is measured by a reader and a non-reader in `tests/test_ring_three.gd`: the reference character (steel head to foot, every combat skill at 40, 100 health, five cooked trout) against one enemy, deterministic like every fight.
+
+### The Snowveil archer
+
+[#181](https://github.com/travism26/frostmark/issues/181): 70 health, quick shot 7, piercing shot 22 (heavy), kiting inside 4 m, and a bluffed second piercing shot. The numbers in the fights below are what the tests print.
+
+| Fight | Result |
+|-------|--------|
+| Reader: steel sword from 6 m, pins it against the ridge, eats on rest ticks only | The archer falls on the sixth tick; 86 health at the lowest, 100 at the end (the reader ate once) |
+| Non-reader: steel bow from 8 m, eats on every heavy telegraph | The archer falls on the seventh tick; 87 health at the lowest, 100 at the end |
+
+The reader clears the bar of more than 60 health left. The non-reader does not come near the bar of below 40 or dead: a 70-health archer dies to the reference character's first piercing shot, six or seven ticks in, before its bluff is ever played, and a meal heals 40 over five ticks against a piercing shot that lands for 18 (22 less 4 armour) at neutral range. Giving the archer more health does not close it: with the other numbers held, the bow-trader that eats on every heavy ends below 40 only with 300 health and two meals in the pack, and still at 74 with five. See the decision in the PR.
+
 ## Off the timed route
 
 What the run deliberately leaves out, and why.

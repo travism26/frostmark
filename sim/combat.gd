@@ -50,6 +50,7 @@ const NATURAL_WEAPONS := {
 	"captain_staff": {"label": "Rime staff", "style": STYLE_MAGIC, "power": 0, "speed": 1, "reach": 6.0},
 	"troll_club": {"label": "Ice club", "style": STYLE_MELEE, "power": 0, "speed": 1, "reach": CLOSE_RANGE},
 	"stalker_bow": {"label": "Bone bow", "style": STYLE_RANGED, "power": 0, "speed": 1, "reach": 8.0},
+	"veil_bow": {"label": "Veil bow", "style": STYLE_RANGED, "power": 0, "speed": 1, "reach": 8.0},
 }
 const UNARMED := "fists"
 
@@ -82,7 +83,7 @@ const NOTICE_HIT := "hit"
 ## two ticks out. A `windup` commits the enemy: the next action of its cycle is declared even
 ## if the player has stepped out of reach, and a blow that finds nobody misses. A `feint` names
 ## the attack it pretends to be: it is declared and telegraphed exactly as that attack, then
-## lands nothing (no enemy feints yet; ring three's will).
+## lands nothing (the Snowveil archer's piercing shot is the first; ring three's others will).
 const ACTION_MOVE := "move"
 const ACTION_REST := "rest"
 const ACTIONS := {
@@ -108,6 +109,9 @@ const ACTIONS := {
 	"crush": {"label": "Crush", "damage": 26, "heavy": true},
 	"dart": {"label": "Dart", "damage": 4},
 	"barbed_volley": {"label": "Barbed volley", "damage": 10, "heavy": true},
+	"quick_shot": {"label": "Quick shot", "damage": 7},
+	"piercing_shot": {"label": "Piercing shot", "damage": 22, "heavy": true},
+	"feint_pierce": {"label": "Piercing shot", "damage": 0, "feint": "piercing_shot"},
 }
 
 ## Enemy kinds. `weapon` sets the style and reach. `speed` is metres per tick (the player walks
@@ -181,6 +185,18 @@ const ENEMIES := {
 		"kite": 4.0, "actions": ["dart", "dart", ACTION_REST, "barbed_volley", ACTION_REST, ACTION_REST],
 		"loot": [{"item": "arrows", "count": 12}, {"item": "coal", "count": 1}], "rare_percent": 10,
 		"respawn_ticks": 300,
+	},
+	# Ring three. A hunter in white who keeps its distance and bluffs its heaviest shot: the
+	# first piercing shot is honest, the second is a feint and the real one comes straight
+	# after. A blade has the edge up close, so it has to be cornered against a ridge or the
+	# cliff; a bow trading shots at range is neutral, and a staff walks into its edge.
+	"snowveil_archer": {
+		"label": "Snowveil archer", "health": 70, "weapon": "veil_bow", "speed": 1.5, "sight": 10.0,
+		"kite": 4.0, "actions": [
+			"quick_shot", ACTION_REST, "piercing_shot", ACTION_REST, ACTION_REST,
+			"quick_shot", "feint_pierce", "piercing_shot", ACTION_REST, ACTION_REST,
+		],
+		"loot": [{"item": "frost_sinew", "count": 1}], "rare_percent": 0, "respawn_ticks": 300,
 	},
 }
 ## The rare drop in both rings: one piece of iron gear, ahead of smithing it at the Bloomery.
