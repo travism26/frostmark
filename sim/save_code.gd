@@ -103,6 +103,8 @@ static func migrate(snapshot: Dictionary, target: int) -> Variant:
 				snap = _v10_to_v11(snap)
 			11:
 				snap = _v11_to_v12(snap)
+			12:
+				snap = _v12_to_v13(snap)
 			_:
 				return null
 		version = int(snap["version"])
@@ -277,6 +279,18 @@ static func _v11_to_v12(snap: Dictionary) -> Dictionary:
 		for e in enemies.values():
 			if e is Dictionary:
 				e["phase"] = 0
+	return snap
+
+
+## Version 12 had no answers. Version 13 records the tick of each enemy's last answer, and no
+## enemy saved before then had answered: -1 on every one, everything else as it was.
+static func _v12_to_v13(snap: Dictionary) -> Dictionary:
+	snap["version"] = 13
+	var enemies: Variant = snap.get("enemies")
+	if enemies is Dictionary:
+		for e in enemies.values():
+			if e is Dictionary:
+				e["answered_tick"] = -1
 	return snap
 
 

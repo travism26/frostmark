@@ -158,3 +158,18 @@ func test_the_version_12_fixture_is_saved_mid_fight_with_a_wolf() -> void:
 	var wolf: Dictionary = sim.state["enemies"]["wolf_1"]
 	assert_eq(wolf["mode"], Sim.MODE_ENGAGED, "the wolf it was fighting")
 	assert_true(int(wolf["health"]) < int(CombatTable.ENEMIES["wolf"]["health"]), "is hurt")
+
+
+func test_every_fixture_loads_with_no_enemy_having_answered() -> void:
+	for v in range(1, Sim.STATE_VERSION + 1):
+		var sim := SimScript.new()
+		assert_true(sim.command(Vocab.IMPORT_SAVE, {"code": _fixture(v)})["ok"], "save_v%d imports" % v)
+		for id in sim.state["enemies"]:
+			assert_eq(sim.state["enemies"][id]["answered_tick"], -1, "save_v%d: %s has not answered" % [v, id])
+
+
+func test_the_version_13_fixture_is_saved_mid_fight_with_the_captain_holding_his_bow() -> void:
+	var sim := SimScript.new()
+	assert_true(sim.command(Vocab.IMPORT_SAVE, {"code": _fixture(13)})["ok"])
+	assert_eq(sim.state["enemies"]["captain"]["mode"], Sim.MODE_ENGAGED, "the captain it was fighting")
+	assert_eq(sim.combatant("captain")["weapon"], "captain_bow", "holds his bow")

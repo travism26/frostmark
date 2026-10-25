@@ -89,3 +89,7 @@ _Avoid_: Fake attack, bluff, fake-out
 **Fight phase**:
 A change in how an enemy fights once its health falls below a mark: from then until it dies or heals, it works through a quicker cycle, so the end of a fight is the most dangerous part. The change is announced a tick ahead like a change of weapon.
 _Avoid_: Enrage, rage mode, stage
+
+**Answer**:
+An enemy's switch of style in reply to the player's counter: the player swaps to the style with the edge on it, and on its next declaration it announces a stance into the style that beats theirs, early, instead of at its place in its cycle. It cannot answer again for a few ticks, and that gap is the player's opening.
+_Avoid_: Counter-switch, adapt, react

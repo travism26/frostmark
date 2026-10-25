@@ -134,6 +134,12 @@ const ACTIONS := {
 ## below a phase's mark, its next declaration from the cycle starts that phase's `actions` from
 ## the first, which is always a stance so the change is announced, and the phase's `actions`
 ## and `stances` replace the kind's for the rest of that life (see `phase_problems`).
+##
+## A kind (or one of its phases) with `answers` answers a counter: {player style: cycle index},
+## where the action at each index is a stance. When the player's style has the edge on the
+## enemy's, it declares the stance answering that style instead of its next action, at most
+## once every `answer_ticks` ticks and never straight after a wind-up (see `answer_problems`).
+## No enemy answers yet; ring three's will.
 const ENEMIES := {
 	"wolf": {
 		"label": "Wolf", "health": 15, "weapon": "fangs", "speed": 2.5, "sight": 6.0,
@@ -326,6 +332,42 @@ static func phase_problems(def: Dictionary) -> Array[String]:
 		var stances: Array = phase.get("stances", [])
 		if not stances.is_empty() and stances.size() != actions.size():
 			out.append("phase %d: %d stances for %d actions" % [i + 1, stances.size(), actions.size()])
+	return out
+
+
+## What an enemy of `kind` in `phase` answers each player style with: {style: cycle index}.
+static func answers(kind: String, phase := 0) -> Dictionary:
+	return _phase(kind, phase).get("answers", {})
+
+
+## The fewest ticks between two answers of an enemy of `kind` in `phase`.
+static func answer_ticks(kind: String, phase := 0) -> int:
+	return int(_phase(kind, phase).get("answer_ticks", 0))
+
+
+## What is wrong with the `answers` of an enemy definition and of each of its phases, or []
+## when nothing is: each answer names a style and the index of a stance in that cycle, so the
+## switch is announced a tick ahead, and a cycle with answers has `answer_ticks` of at least 1.
+static func answer_problems(def: Dictionary) -> Array[String]:
+	var out: Array[String] = []
+	var cycles: Array = [def] + def.get("phases", [])
+	for i in cycles.size():
+		var where := "the kind" if i == 0 else "phase %d" % i
+		var answered: Dictionary = cycles[i].get("answers", {})
+		if answered.is_empty():
+			continue
+		var actions: Array = cycles[i].get("actions", [])
+		for style in answered:
+			var index: Variant = answered[style]
+			if not STYLE_SKILLS.has(style):
+				out.append("%s: %s is not a style" % [where, style])
+			elif not (index is int) or index < 0 or index >= actions.size():
+				out.append("%s: the answer to %s, %s, is not in its cycle" % [where, style, index])
+			elif not is_stance(str(actions[index])):
+				out.append("%s: the answer to %s, %s, is not a stance" % [where, style, actions[index]])
+		var ticks: Variant = cycles[i].get("answer_ticks")
+		if not (ticks is int) or ticks < 1:
+			out.append("%s: answer_ticks %s is not a whole number of ticks" % [where, ticks])
 	return out
 
 
