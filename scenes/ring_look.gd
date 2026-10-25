@@ -5,7 +5,9 @@
 ## A look is a Dictionary with every field in FIELDS. `at(world, pos)` resolves the ring
 ## through the world definition's region lookup and blends the two looks across a fixed
 ## band at every boundary, so nothing jumps as the player walks out. Each ring out is
-## colder and darker than the one inside it: the look is the danger signal.
+## colder and darker than the one inside it: the look is the danger signal. Out to ring two
+## the snow, the wind and the fog thicken too; ring three's glacier breaks that, a clear night
+## under the full aurora, so it reads as a place apart and not as more blizzard.
 ##
 ## The world definition names the rings "regions"; new code says ring.
 class_name RingLook
@@ -79,6 +81,18 @@ const LOOKS := {
 		"snow_tone": Color(0.56, 0.60, 0.78), "stone": Color(0.34, 0.37, 0.50),
 		"foliage": Color(0.22, 0.28, 0.36), "density": 1.0, "drift": 1.0,
 	},
+	# The glacier under the aurora: blue-white ice under a violet sky, lit green by the aurora
+	# rather than the sun, the snow thinned so the sky shows. Bare: ice shards and drifts, few
+	# stones, nothing growing.
+	WorldDef.REGION_RING_THREE: {
+		"tint": Color(0.56, 0.66, 0.84), "sky": Color(0.11, 0.07, 0.21),
+		"fog_color": Color(0.16, 0.24, 0.34), "fog_distance": 36.0,
+		"sun_color": Color(0.55, 0.80, 0.80), "sun_energy": 0.32,
+		"ambient_color": Color(0.34, 0.30, 0.58), "ambient_energy": 0.6,
+		"snow_density": 0.45, "wind": 0.7, "wind_direction": Vector2(0.6, 0.8), "aurora": 1.0, "ambience": "glacier",
+		"snow_tone": Color(0.70, 0.84, 0.98), "stone": Color(0.40, 0.48, 0.62),
+		"foliage": Color(0.20, 0.30, 0.34), "density": 0.6, "drift": 0.5,
+	},
 }
 
 
@@ -98,6 +112,10 @@ static func entry(ring: String) -> Dictionary:
 
 ## The look at `pos`: the ring's entry, blended with the neighbouring ring's across the
 ## band at a boundary. Past the last ring's edge the last look holds.
+##
+## A ring's polygon holds the rings inside it, so the next ring out starts at this ring's
+## edge; ring three's lies beside ring two's instead, so it starts at its own. The gap to the
+## next ring is whichever of the two is farther.
 static func at(world: WorldDef, pos: Vector2) -> Dictionary:
 	var names := rings(world)
 	var depth: Array[float] = []  # signed distance to each ring's polygon: negative inside
@@ -109,8 +127,9 @@ static func at(world: WorldDef, pos: Vector2) -> Dictionary:
 	if index < 0:
 		return entry(names.back())
 	var half := BLEND_METRES * 0.5
-	if index + 1 < names.size() and depth[index] > -half:
-		return blend(entry(names[index]), entry(names[index + 1]), (depth[index] + half) / BLEND_METRES)
+	var gap := maxf(-depth[index], depth[index + 1]) if index + 1 < names.size() else INF
+	if gap < half:
+		return blend(entry(names[index]), entry(names[index + 1]), (half - gap) / BLEND_METRES)
 	if index > 0 and depth[index - 1] < half:
 		return blend(entry(names[index - 1]), entry(names[index]), (depth[index - 1] + half) / BLEND_METRES)
 	return entry(names[index])

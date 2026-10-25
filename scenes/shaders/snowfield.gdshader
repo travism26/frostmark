@@ -22,14 +22,16 @@ uniform vec4 tint : source_color = vec4(1.0);
 // Painted by ring instead: the snow tone steps from one ring's to the next across a band
 // `edge_band` wide at each ring edge (the outpost wall, the safe ring's edge, the cliffs),
 // so a player sees the moment they cross. Edges are how far from the world's centre each
-// ring reaches, outpost then safe ring then ring one; past the last lies ring two.
+// ring reaches, outpost then safe ring then ring one then ring two; past the last lies ring
+// three, south of ring two's cliffs (the only side where the world reaches that far).
 uniform bool ring_tones = false;
-uniform vec3 ring_edges = vec3(10.0, 24.0, 60.0);
+uniform vec4 ring_edges = vec4(10.0, 24.0, 60.0, 128.0);
 uniform float edge_band = 2.5;
 uniform vec4 tone_outpost : source_color = vec4(1.0);
 uniform vec4 tone_inner : source_color = vec4(1.0);
 uniform vec4 tone_one : source_color = vec4(1.0);
 uniform vec4 tone_two : source_color = vec4(1.0);
+uniform vec4 tone_three : source_color = vec4(1.0);
 
 varying vec3 world_pos;
 
@@ -56,6 +58,7 @@ void fragment() {
 		tone = mix(tone, tone_inner.rgb, smoothstep(ring_edges.x - half_band, ring_edges.x + half_band, reach));
 		tone = mix(tone, tone_one.rgb, smoothstep(ring_edges.y - half_band, ring_edges.y + half_band, reach));
 		tone = mix(tone, tone_two.rgb, smoothstep(ring_edges.z - half_band, ring_edges.z + half_band, reach));
+		tone = mix(tone, tone_three.rgb, smoothstep(ring_edges.w - half_band, ring_edges.w + half_band, reach));
 	}
 	ALBEDO = (col + sparkle * sparkle_strength) * tone;
 	ROUGHNESS = 0.9;

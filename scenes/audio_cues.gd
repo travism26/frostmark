@@ -80,6 +80,8 @@ const BEDS := {
 	WorldDef.REGION_OUTPOST: {"wind": -22.0, "pitch": 1.0, "snow": SILENT_DB},
 	WorldDef.REGION_INNER_RING: {"wind": -12.0, "pitch": 1.0, "snow": -26.0},
 	WorldDef.REGION_RING_ONE: {"wind": -6.0, "pitch": 0.85, "snow": -15.0},
+	# The glacier under a clear aurora: the wind thin and high over the ice, little snow.
+	WorldDef.REGION_RING_THREE: {"wind": -10.0, "pitch": 1.2, "snow": -28.0},
 }
 ## The strike a gathering skill makes while it works, and the sound of its success.
 const GATHER_STRIKE := {SkillTable.WOODCUTTING: CHOP, SkillTable.MINING: MINE}
@@ -147,7 +149,7 @@ static func event_cues(e: Dictionary) -> Array[String]:
 			out.append(FALL)
 		SimVocab.EV_DIED:
 			out.append(STING_DEATH)
-		SimVocab.EV_RETURNED, SimVocab.EV_RING_TWO_REACHED:
+		SimVocab.EV_RETURNED, SimVocab.EV_RING_TWO_REACHED, SimVocab.EV_RING_THREE_REACHED:
 			out.append(STING_BANK)
 		SimVocab.EV_LEVELLED:
 			out.append(STING_LEVEL)

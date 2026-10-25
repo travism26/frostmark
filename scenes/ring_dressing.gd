@@ -18,7 +18,9 @@ const DIRECTIONS := ["north", "east", "south", "west"]
 ## past the iron, the caravan wreck south on the road to the gate, a ruined watch post west.
 ## Ring two: a collapsed tower in the gate yard (north), a fallen arch over the east gap in
 ## the outer wall, a ring of old stones around the waystone in the far ruins (south), a spire
-## of ice on the frozen lake (west).
+## of ice on the frozen lake (west). Ring three: a cairn marking the way in from the gate
+## (north), a spire of ice out on the glacier (east), a frozen fall down the south cliff, a
+## split erratic boulder (west).
 const LANDMARKS := {
 	WorldDef.REGION_INNER_RING: {
 		"north": {"kind": "fallen_pine", "at": [9.0, -21.5], "turn": 0.35, "size": 7.0},
@@ -37,6 +39,12 @@ const LANDMARKS := {
 		"east": {"kind": "fallen_arch", "at": [32.0, 78.5], "turn": 0.0, "size": 4.0},
 		"south": {"kind": "stone_ring", "at": [0.5, 118.5], "turn": 0.0, "size": 4.8},
 		"west": {"kind": "ice_spire", "at": [-55.0, 95.0], "turn": 0.0, "size": 4.5},
+	},
+	WorldDef.REGION_RING_THREE: {
+		"north": {"kind": "cairn", "at": [-14.0, 134.0], "turn": 0.0, "size": 2.2},
+		"east": {"kind": "ice_spire", "at": [52.0, 162.0], "turn": 0.0, "size": 5.5},
+		"south": {"kind": "frozen_waterfall", "at": [20.0, 188.0], "turn": PI, "size": 6.0},
+		"west": {"kind": "split_rock", "at": [-54.0, 150.0], "turn": 0.6, "size": 3.4},
 	},
 }
 
@@ -71,6 +79,11 @@ const SCATTER := {
 		{"what": "ice_shard", "count": 30, "spacing": 2.4, "scale": [0.7, 1.5]},
 		{"what": "stone", "count": 18, "spacing": 1.8, "scale": [0.8, 1.6]},
 		{"what": "dead_tree", "count": 16, "spacing": 3.0, "scale": [0.8, 1.3]},
+	],
+	WorldDef.REGION_RING_THREE: [
+		{"what": "drift", "count": 40, "spacing": 2.5},
+		{"what": "ice_shard", "count": 60, "spacing": 2.0, "scale": [0.8, 1.8]},
+		{"what": "stone", "count": 12, "spacing": 2.0, "scale": [0.8, 1.4]},
 	],
 }
 
@@ -114,7 +127,7 @@ const CAMP_KINDS := {"wolf": "wolf_den", "bandit_archer": "bandit_camp"}
 
 ## The rings that get dressing, innermost first (the outpost is dressed by hand).
 static func rings() -> Array[String]:
-	return [WorldDef.REGION_INNER_RING, WorldDef.REGION_RING_ONE, WorldDef.REGION_RING_TWO]
+	return [WorldDef.REGION_INNER_RING, WorldDef.REGION_RING_ONE, WorldDef.REGION_RING_TWO, WorldDef.REGION_RING_THREE]
 
 
 ## The landmark at `ring`/`direction`.
@@ -187,7 +200,8 @@ static func ring_centre(world: WorldDef, ring: String) -> Vector2:
 				lo = lo.min(Vector2(p[0], p[1]))
 				hi = hi.max(Vector2(p[0], p[1]))
 			if ring == WorldDef.REGION_RING_TWO:
-				# Ring two's polygon is the whole world; its walkable ruins lie south of the cliffs.
+				# Ring two's polygon holds the rings inside it; its walkable ruins lie south of ring
+				# one's cliffs.
 				return Vector2(0.0, 94.0)
 			return (lo + hi) * 0.5
 	return Vector2.ZERO

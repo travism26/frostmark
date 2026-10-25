@@ -28,7 +28,7 @@ func test_lines_come_first_in_step_order_then_the_singles() -> void:
 	assert_eq(groups.size(), 3)
 	assert_eq(groups[0], {"title": "Stash line", "ids": ["stash_shelves", "stash_cellar", "stash_vault"]})
 	assert_eq(groups[1], {"title": "Smithing line", "ids": ["forge", "bloomery", "blast_furnace"]})
-	assert_eq(groups[2], {"title": UpgradeRowsScript.SINGLES, "ids": ["armoury", "pack_frame", "ring_two_gate", "waystone"]})
+	assert_eq(groups[2], {"title": UpgradeRowsScript.SINGLES, "ids": ["armoury", "pack_frame", "ring_two_gate", "ring_three_gate", "waystone"]})
 
 
 func test_every_upgrade_has_exactly_one_row() -> void:

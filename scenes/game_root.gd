@@ -22,6 +22,7 @@ const COLOR_BY_SOLID := {
 	WorldDef.KIND_WALL: Color(0.47, 0.36, 0.25),
 	WorldDef.KIND_CLIFF: Color(0.62, 0.68, 0.76),
 	WorldDef.KIND_RUIN: Color(0.52, 0.53, 0.56),
+	WorldDef.KIND_RIDGE: Color(0.60, 0.74, 0.90),
 }
 const COLOR_GATE := Color(0.45, 0.32, 0.20)
 const COLOR_BY_ENEMY := {
@@ -75,7 +76,7 @@ const REASON_TEXT := {
 	SimVocab.REASON_NOT_COOKABLE: "That can't be cooked.",
 	SimVocab.REASON_NOTHING_LEFT: "Nothing left to cook.",
 	SimVocab.REASON_TIER_CAPPED: "Smithing doesn't reach that metal yet: the Bloomery lifts it to iron, the blast furnace to steel.",
-	SimVocab.REASON_UNREACHABLE: "You can't get there from here. Ring two is only reached through its gate.",
+	SimVocab.REASON_UNREACHABLE: "You can't get there from here. Rings two and three are only reached through their gates.",
 	SimVocab.REASON_UPGRADE_MISSING: "Build the upgrade that unlocks it first.",
 	SimVocab.REASON_ALREADY_BUILT: "Already built.",
 	SimVocab.REASON_UPGRADE_LOCKED: "That isn't open yet.",
@@ -580,7 +581,7 @@ func _apply_events(events: Array[Dictionary]) -> void:
 					_build_beat.start(_yard_pieces[e["upgrade"]]["node"], _yard_pieces[e["upgrade"]]["piece"])
 			SimVocab.EV_RING_GATE_OPENED:
 				_sync_ring_gates()
-				_hud.banner("The gate to ring two is open.")
+				_hud.banner("The %s is open." % str(sim.world.objects[e["object_id"]]["label"]).to_lower())
 			SimVocab.EV_WAYSTONE_ATTUNED:
 				_sync_waystones()
 				_hud.banner("You lay a hand on the waystone. It will remember you.")
@@ -593,6 +594,8 @@ func _apply_events(events: Array[Dictionary]) -> void:
 				_hud.banner("The waystone sets you down outside the outpost gate. Walk through it to be home safe.")
 			SimVocab.EV_RING_TWO_REACHED:
 				_hud.banner("Ring two. The snow lies over broken walls older than the outpost, and the tracks in it are not wolves'. An old brazier still burns past the gate.")
+			SimVocab.EV_RING_THREE_REACHED:
+				_hud.banner("Ring three. A glacier under the aurora, split by pressure ridges, and nothing here is as slow to read as a troll. Someone left a fire burning past the gate.")
 			SimVocab.EV_ENEMY_STANCE:
 				_show_cue(e)
 			SimVocab.EV_LEVELLED:
@@ -742,6 +745,8 @@ static func _entered_text(e: Dictionary) -> String:
 		text += " Wolves and bandits hunt here."
 	elif to == WorldDef.REGION_RING_TWO:
 		text += " Trolls and stalkers keep the ruins."
+	elif to == WorldDef.REGION_RING_THREE:
+		text += " The glacier: the ice cracks underfoot."
 	return text
 
 
@@ -1164,7 +1169,7 @@ func _sync_ring_gates() -> void:
 	for id in _ring_gates:
 		var open := sim.ring_gate_open(id)
 		(_ring_gates[id]["bars"] as Node3D).visible = not open
-		(_ring_gates[id]["label"] as Label3D).text = "Gate to ring two (open)" if open else "Gate to ring two (barred)"
+		(_ring_gates[id]["label"] as Label3D).text = "%s (%s)" % [sim.world.objects[id]["label"], "open" if open else "barred"]
 
 
 ## A waystone's runes glow once the outpost has woken it; its label says whether it knows you.
@@ -1195,6 +1200,9 @@ func _sync_yard() -> void:
 
 func _ring_gate_text(id: String) -> String:
 	var gate: Dictionary = sim.world.objects[id]
+	if not gate.has("guardian"):
+		var upgrade := str(UpgradeTable.get_upgrade(gate["upgrade"])["label"]).to_lower()
+		return "The gate is barred. Build the %s at the outpost to open it." % upgrade
 	var guardian_down := (sim.state["bosses_defeated"] as Array).has(gate["guardian"])
 	var built := (sim.state["upgrades"] as Array).has(gate["upgrade"])
 	if not guardian_down and not built:

@@ -18,6 +18,12 @@ const SINGLES := "Single upgrades"
 ## How long the row just built flashes, in seconds: one rise and fall, then it rests as built.
 const FLASH_SECONDS := 0.9
 
+## What readying each ring gate does, by the gate's object id.
+const RING_GATE_TEXT := {
+	"ring_two_gate": "works the gate to ring two once its captain falls",
+	"ring_three_gate": "opens the gate to ring three, in ring two's southern cliffs",
+}
+
 
 ## The tab's groups in order: `{title, ids}`. An upgrade line is a YardLook line with more
 ## than one step; its rows come in step order, and lines in the order the table first names
@@ -133,7 +139,7 @@ static func effect_text(effects: Dictionary) -> String:
 	if effects.has("smithing_tier"):
 		parts.append("smithing works up to %s" % effects["smithing_tier"])
 	if effects.has("ring_gate"):
-		parts.append("works the gate to ring two once its captain falls")
+		parts.append(RING_GATE_TEXT.get(effects["ring_gate"], "opens a ring gate"))
 	if effects.has("waystones"):
 		parts.append("wakes the waystones in ring one and ring two: visit one, then travel home from it")
 	var text := "; ".join(parts)
