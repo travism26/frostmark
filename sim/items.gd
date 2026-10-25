@@ -49,6 +49,11 @@ const TIER_STEEL := "steel"
 ## The gear tiers in order. A tier's rank is its index: wooden 0, bronze 1, iron 2, steel 3.
 const TIERS: Array[String] = [TIER_WOODEN, TIER_BRONZE, TIER_IRON, TIER_STEEL]
 
+## The set keys (#157). The magic line's Ruinwarden is `ruinwarden_mage`, so no item id collides.
+const SET_HEARTHGUARD := "hearthguard"
+const SET_WOLFMARK := "wolfmark"
+const SET_RUINWARDEN := "ruinwarden"
+
 const ITEMS := {
 	# Materials
 	"logs": {
@@ -267,6 +272,57 @@ const ITEMS := {
 	"fur_legs": {
 		"label": "Fur leggings", "stack": 1, "weight": 1, "value": 20, "slot": SLOT_LEGS,
 		"defence": 0, "warmth": 1,
+	},
+	# The melee sets (#162): Hearthguard (mid), Wolfmark (mid-high) and Ruinwarden (high), each
+	# a helm, a body, legs and a weapon under the set-item rule above. The weapon's kind (a
+	# broadsword, a bearded axe, a greatsword) is look only; its stats are the steel sword's.
+	"hearthguard_helm": {
+		"label": "Hearthguard helm", "stack": 1, "weight": 2, "value": 40, "slot": SLOT_HELM,
+		"defence": 1, "set": SET_HEARTHGUARD,
+	},
+	"hearthguard_body": {
+		"label": "Hearthguard body", "stack": 1, "weight": 3, "value": 80, "slot": SLOT_BODY,
+		"defence": 2, "set": SET_HEARTHGUARD,
+	},
+	"hearthguard_legs": {
+		"label": "Hearthguard legs", "stack": 1, "weight": 2, "value": 60, "slot": SLOT_LEGS,
+		"defence": 1, "set": SET_HEARTHGUARD,
+	},
+	"hearthguard_broadsword": {
+		"label": "Hearthguard broadsword", "stack": 1, "weight": 4, "value": 160, "slot": SLOT_WEAPON,
+		"style": "melee", "power": 11, "speed": 2, "reach": 1.5, "set": SET_HEARTHGUARD,
+	},
+	"wolfmark_helm": {
+		"label": "Wolfmark helm", "stack": 1, "weight": 2, "value": 40, "slot": SLOT_HELM,
+		"defence": 1, "set": SET_WOLFMARK,
+	},
+	"wolfmark_body": {
+		"label": "Wolfmark body", "stack": 1, "weight": 3, "value": 80, "slot": SLOT_BODY,
+		"defence": 2, "set": SET_WOLFMARK,
+	},
+	"wolfmark_legs": {
+		"label": "Wolfmark legs", "stack": 1, "weight": 2, "value": 60, "slot": SLOT_LEGS,
+		"defence": 1, "set": SET_WOLFMARK,
+	},
+	"wolfmark_axe": {
+		"label": "Wolfmark axe", "stack": 1, "weight": 4, "value": 160, "slot": SLOT_WEAPON,
+		"style": "melee", "power": 11, "speed": 2, "reach": 1.5, "set": SET_WOLFMARK,
+	},
+	"ruinwarden_helm": {
+		"label": "Ruinwarden helm", "stack": 1, "weight": 2, "value": 40, "slot": SLOT_HELM,
+		"defence": 1, "set": SET_RUINWARDEN,
+	},
+	"ruinwarden_body": {
+		"label": "Ruinwarden body", "stack": 1, "weight": 3, "value": 80, "slot": SLOT_BODY,
+		"defence": 2, "set": SET_RUINWARDEN,
+	},
+	"ruinwarden_legs": {
+		"label": "Ruinwarden legs", "stack": 1, "weight": 2, "value": 60, "slot": SLOT_LEGS,
+		"defence": 1, "set": SET_RUINWARDEN,
+	},
+	"ruinwarden_greatsword": {
+		"label": "Ruinwarden greatsword", "stack": 1, "weight": 4, "value": 160, "slot": SLOT_WEAPON,
+		"style": "melee", "power": 11, "speed": 2, "reach": 1.5, "set": SET_RUINWARDEN,
 	},
 }
 

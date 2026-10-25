@@ -147,6 +147,19 @@ const ICONS := {
 	"fur_hood": {"icon": "lorc/visored-helm", "tint": TINT_FUR},
 	"fur_coat": {"icon": "lorc/breastplate", "tint": TINT_FUR},
 	"fur_legs": {"icon": "delapouite/leg-armor", "tint": TINT_FUR},
+	# Set pieces (#162): each slot's glyph, in the set's base colour from its gear look.
+	"hearthguard_helm": {"icon": "lorc/visored-helm"},
+	"hearthguard_body": {"icon": "lorc/breastplate"},
+	"hearthguard_legs": {"icon": "delapouite/leg-armor"},
+	"hearthguard_broadsword": {"icon": "lorc/broadsword"},
+	"wolfmark_helm": {"icon": "lorc/visored-helm"},
+	"wolfmark_body": {"icon": "lorc/breastplate"},
+	"wolfmark_legs": {"icon": "delapouite/leg-armor"},
+	"wolfmark_axe": {"icon": "lorc/broadsword"},
+	"ruinwarden_helm": {"icon": "lorc/visored-helm"},
+	"ruinwarden_body": {"icon": "lorc/breastplate"},
+	"ruinwarden_legs": {"icon": "delapouite/leg-armor"},
+	"ruinwarden_greatsword": {"icon": "lorc/broadsword"},
 	# The side panel's tabs.
 	TAB_PACK: {"icon": "lorc/knapsack", "tint": TINT_TAB},
 	TAB_EQUIPMENT: {"icon": "lorc/battle-gear", "tint": TINT_TAB},
@@ -191,11 +204,14 @@ static func texture(key: String) -> Texture2D:
 	return load(path(key))
 
 
-## The badge colour behind a key's glyph: the table's own, or the item's tier colour.
+## The badge colour behind a key's glyph: the table's own, a set piece's base colour from its
+## gear look (so a set's colour is tuned in one place), or the item's tier colour.
 static func tint(key: String) -> Color:
 	var entry: Dictionary = ICONS[key]
 	if entry.has("tint"):
 		return entry["tint"]
+	if ItemTable.set_of(key) != "":
+		return GearLook.palette(key)["base"]
 	return TIER_TINTS.get(ItemTable.tier(key), TINT_TAB)
 
 
