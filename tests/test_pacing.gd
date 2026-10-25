@@ -54,7 +54,6 @@ func _play_to_the_captain() -> int:
 	bot.head_out()
 	bot.gather(SOUTH_TREES, "logs", 20)
 	bot.home()
-	bot.withdraw("logs", 6)
 	bot.smith("wooden_pickaxe")
 	bot.smith("fishing_rod")
 	bot.build("stash_shelves")
@@ -76,15 +75,10 @@ func _play_to_the_captain() -> int:
 	bot.build("forge")
 	bot.withdraw("raw_fish")
 	bot.cook_all()
-	bot.withdraw("copper_ore")
-	bot.withdraw("tin_ore")
-	bot.withdraw("logs", 3)
 	for i in 7:
 		bot.smith("bronze_bar")
 	bot.smith("bronze_pickaxe")
 	bot.smith("bronze_sword")
-	bot.withdraw("ice_crystal")
-	bot.withdraw("logs", 3)
 	bot.smith("wooden_staff")
 	bot.smith("frost_shards")
 	bot.smith("frost_shards")
@@ -123,8 +117,6 @@ func _play_to_the_captain() -> int:
 	bot.gather(["fishing_hole"], "raw_fish", 6)
 	bot.fight(["wolf_8", "wolf_9", "wolf_10"])
 	bot.home()
-	bot.withdraw("copper_ore")
-	bot.withdraw("tin_ore")
 	for i in 9:
 		bot.smith("bronze_bar")
 	bot.build("armoury")
@@ -169,8 +161,6 @@ func test_ring_two_to_a_steel_kit_takes_an_evening() -> void:
 	bot.home()
 	bot.withdraw("raw_fish")
 	bot.cook_all()
-	bot.withdraw("copper_ore")
-	bot.withdraw("tin_ore")
 	for i in 4:
 		bot.smith("bronze_bar")
 	bot.build("stash_cellar")
@@ -211,10 +201,6 @@ func test_ring_two_to_a_steel_kit_takes_an_evening() -> void:
 	# Kit stays in the pack through the gate, so the tools, spare armour and outgrown bronze no
 	# steel recipe uses go to the stash to make room for the smithing.
 	bot.put_away(["fishing_rod", "wooden_staff", "frost_shards", "bronze_body", "bronze_sword", "bronze_pickaxe"])
-	bot.withdraw("iron_ore")
-	bot.withdraw("coal")
-	bot.withdraw("troll_hide", 1)
-	bot.withdraw("logs", 6)
 	for i in 7:
 		bot.smith("steel_bar")
 	bot.smith("steel_pickaxe")

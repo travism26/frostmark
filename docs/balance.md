@@ -24,6 +24,7 @@ It plays sensibly but not perfectly, the way someone new to the game would:
 - It makes a wooden helm, body and legs before its first fight, then drops them once the bronze set is on, because by then the stash is full.
 - It cooks every fish it catches, eats below half health, and takes its food, bow, arrows, staff and shards out before each trip into ring one.
 - It clicks Deposit haul at the stash on each return and before each outing, so its kit stays in the pack from trip to trip.
+- It smiths straight from what the stash and the pack hold, without withdrawing the inputs first.
 - It gathers for each upgrade from the cost the Upgrades tab shows, so a repriced upgrade changes the route instead of breaking it, and builds the Stash cellar when the stash runs out of room.
 - It uses all eight skills: woodcutting, mining, fishing, cooking, smithing, melee (bronze sword), ranged (the starting bow) and magic (a wooden staff).
 
@@ -152,6 +153,29 @@ The estimate is two seconds shorter, 28:46 instead of 28:48, and the run still d
 - Before smithing steel it puts the fishing rod, staff, shards and the bronze it outgrew in the stash, to free pack slots.
 
 Without these it died once or twice in ring two.
+## The workbench
+
+Where smithing takes its inputs from.
+
+### Smithing from the stash
+
+[#99](https://github.com/travism26/frostmark/issues/99) let the workbench take its inputs from the stash first, then the pack, the way an upgrade pays. The bot no longer withdraws ore, logs and ice crystals before smithing; it still withdraws raw fish to cook, and food, weapons and arrows before an outing. The route is otherwise the same:
+
+| Phase | Sim time | World clicks | Panel clicks | Outings | Firsts | Allowance | Estimate |
+|-------|----------|--------------|--------------|---------|--------|-----------|----------|
+| first tools | 0:36 | 8 | 2 | 1 | 2 | 1:12 | 1:48 |
+| inner ring | 4:12 | 24 | 7 | 2 | 2 | 2:19 | 6:31 |
+| bronze and a wooden set | 0:53 | 8 | 20 | 1 | 8 | 3:36 | 4:29 |
+| first fights | 1:12 | 16 | 12 | 1 | 0 | 1:28 | 2:40 |
+| iron, armour and the winch | 6:06 | 51 | 31 | 4 | 6 | 6:05 | 12:11 |
+| to the captain | 0:15 | 2 | 1 | 1 | 0 | 0:27 | 0:42 |
+| captain fight | 0:29 | 3 | 7 | 0 | 0 | 0:27 | 0:56 |
+| **to the captain** | **13:13** | | | | | **15:07** | **28:20** |
+
+The estimate drops 26 seconds, from 28:46 to 28:20, and stays inside 26 to 34 minutes. Panel clicks moved: 25 to 20 in the bronze phase (the copper, tin, logs and ice crystal withdrawals) and 33 to 31 in the iron phase (the copper and tin). Sim time drops 5 seconds, the ticks those withdrawals took. With half the allowance it is 20:47, with half as much again 35:54. The run still dies no times and beats the captain. No number was retuned.
+
+`tests/test_pacing.gd` drops its withdrawals of ore, coal, logs, ice crystals and the troll hide before smithing as well. It reaches the fallen captain at tick 1656 (13.8 minutes), down from 1664, and its ring-two half takes 1740 ticks, down from 1751, both inside their windows. It has to drop them: a part withdrawal, such as 6 of the stash's logs, now stays in the pack while the stash pays first, and the pack ran out of room for the steel armour.
+
 ## Where the ore and fish are
 
 Where the rocks and fishing holes stand, and what guards them.
