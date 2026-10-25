@@ -6,6 +6,8 @@
 ##
 ## Beside it, the build-from-scratch character: a new character with nothing built and the
 ## stash holding the summed cost of every upgrade in the table, for building the yard up by hand.
+## And the all-gear character: the test-mode character with a stash of one of every gear item
+## in the item table, and a full stack of each weapon's ammunition, for trying gear on in game.
 ##
 ## A short code typed into Import code, or a query parameter on the page, stands for each full
 ## save code. Only their hashes live here; the repo is public, so this is obscurity, not a lock.
@@ -20,6 +22,9 @@ const QUERY_HASH := "3b56c406c45b0c8a43371bdeda47567153511ba1521c1d895ce31d94d84
 ## The same two hashes for the build-from-scratch character.
 const BARE_SHORT_HASH := "b17b2820c6322457ba8198b77384821ace5a35a605b42c418ea23194d9d70053"
 const BARE_QUERY_HASH := "fd4d2de984044370d48fd4dbd8d7211f4794441f55d6c268e446755046e43309"
+## The same two hashes for the all-gear character.
+const GEAR_SHORT_HASH := "42f844b41b3e15bfec56a0369b5cb9869330ab9f453cce94a36bc8720e7c0331"
+const GEAR_QUERY_HASH := "3124d5a39569a062831c017b1cc7ce0688b4e0bb8e5611b614a76139ad7a9545"
 
 ## Where `ring=<name>` beside the test-mode query pair stands the character: ring two just
 ## inside its gate, within reach of the brazier so the character starts warming.
@@ -53,12 +58,26 @@ const STASH := [
 
 ## The full save code when `typed` is a short code, otherwise `typed` unchanged.
 static func expand(typed: String, world: WorldDef = null) -> String:
-	var digest := typed.strip_edges().to_lower().sha256_text()
-	if digest == SHORT_HASH:
-		return code(world)
-	if digest == BARE_SHORT_HASH:
-		return bare_code(world)
-	return typed
+	var full := for_digest(normalise(typed).sha256_text(), world)
+	return full if full != "" else typed
+
+
+## Typed text as its short code's hash was taken: lower-cased, without surrounding whitespace.
+static func normalise(typed: String) -> String:
+	return typed.strip_edges().to_lower()
+
+
+## The full save code a stored hash stands for, or "" for any other digest. `spot` stands the
+## test-mode character somewhere other than the outpost; the other characters ignore it.
+static func for_digest(digest: String, world: WorldDef = null, spot: Array = []) -> String:
+	match digest:
+		SHORT_HASH, QUERY_HASH:
+			return code(world, spot)
+		BARE_SHORT_HASH, BARE_QUERY_HASH:
+			return bare_code(world)
+		GEAR_SHORT_HASH, GEAR_QUERY_HASH:
+			return gear_code(world)
+	return ""
 
 
 ## The full save code the web page's query string asks for, or "" when it asks for none.
@@ -81,17 +100,55 @@ static func for_query(search: String, world: WorldDef = null) -> String:
 		if pair.begins_with("ring="):
 			spot = RING_SPOTS.get(pair.trim_prefix("ring="), [])
 	for pair in pairs:
-		match pair.sha256_text():
-			QUERY_HASH:
-				return code(world, spot)
-			BARE_QUERY_HASH:
-				return bare_code(world)
+		var digest := pair.sha256_text()
+		if digest in [QUERY_HASH, BARE_QUERY_HASH, GEAR_QUERY_HASH]:
+			return for_digest(digest, world, spot)
 	return ""
 
 
 ## The maxed character as a save code, or "" if this version would not restore it. It stands
 ## at `spot` when one is given, otherwise in the outpost.
 static func code(world: WorldDef = null, spot: Array = []) -> String:
+	return _maxed(world, {"capacity": built_capacity(), "slots": STASH.duplicate(true)}, spot)
+
+
+## The all-gear character as a save code, or "" if this version would not restore it: the
+## maxed character in the outpost with its stash holding gear_stash(). Like the
+## build-from-scratch stash, it starts with as many slots as it fills when that is more.
+static func gear_code(world: WorldDef = null) -> String:
+	var slots := gear_stash()
+	return _maxed(world, {"capacity": maxi(built_capacity(), slots.size()), "slots": slots})
+
+
+## One of every item with an equipment slot, in the item table's order so a set's pieces sit
+## side by side, then a full stack of each ammunition a weapon fires. Read from the table each
+## time, so new gear needs no edit here.
+static func gear_stash() -> Array:
+	var slots: Array = []
+	var ammo: Array = []
+	for kind in ItemTable.ITEMS:
+		if ItemTable.slot(kind) == "":
+			continue
+		slots.append({"item": kind, "count": 1})
+		var shot: String = ItemTable.ITEMS[kind].get("ammo", "")
+		if shot != "" and not ammo.has(shot):
+			ammo.append(shot)
+	for kind in ammo:
+		slots.append({"item": kind, "count": ItemTable.stack_size(kind)})
+	return slots
+
+
+## The stash slots with every upgrade built.
+static func built_capacity() -> int:
+	var capacity := Sim.STASH_START_SLOTS
+	for id in UpgradeTable.ids():
+		capacity += int(UpgradeTable.get_upgrade(id)["effects"].get("stash", 0))
+	return capacity
+
+
+## The maxed character holding `stash`, as a save code, or "" if this version would not
+## restore it.
+static func _maxed(world: WorldDef, stash: Dictionary, spot: Array = []) -> String:
 	var sim := Sim.new(world)
 	sim.command(SimVocab.NEW_CHARACTER, {"previous": ""})
 	sim.command(SimVocab.SET_HINTS, {"on": false})
@@ -103,10 +160,7 @@ static func code(world: WorldDef = null, spot: Array = []) -> String:
 	var pack: Array = PACK.duplicate(true)
 	pack.resize(Sim.PACK_SLOTS)
 	snap["inventory"] = {"pack": pack, "equipment": EQUIPMENT.duplicate()}
-	var capacity := Sim.STASH_START_SLOTS
-	for id in UpgradeTable.ids():
-		capacity += int(UpgradeTable.get_upgrade(id)["effects"].get("stash", 0))
-	snap["stash"] = {"capacity": capacity, "slots": STASH.duplicate(true)}
+	snap["stash"] = stash
 	snap["upgrades"] = UpgradeTable.ids()
 	snap["bosses_defeated"] = ["captain"]
 	snap["enemies"]["captain"].merge({"mode": Sim.MODE_DEAD, "health": 0}, true)
