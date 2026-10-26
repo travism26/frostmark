@@ -275,7 +275,7 @@ const ENEMIES := {
 	# after. A blade has the edge up close, so it has to be cornered against a ridge or the
 	# cliff; a bow trading shots at range is neutral, and a staff walks into its edge.
 	"snowveil_archer": {
-		"label": "Snowveil archer", "health": 70, "weapon": "veil_bow", "speed": 1.5, "sight": 10.0,
+		"label": "Snowveil archer", "health": 100, "weapon": "veil_bow", "speed": 1.5, "sight": 10.0,
 		"kite": 4.0, "actions": [
 			"quick_shot", ACTION_REST, "piercing_shot", ACTION_REST, ACTION_REST,
 			"quick_shot", "feint_pierce", "piercing_shot", ACTION_REST, ACTION_REST,
@@ -301,7 +301,7 @@ const ENEMIES := {
 	# a conjured blade and it closes in, a staff turned on the blade by its staff raised again.
 	# Left alone it works through both stances in turn.
 	"aurora_seer": {
-		"label": "Aurora seer", "health": 60, "weapon": "aurora_staff", "speed": 1.5, "sight": 8.0,
+		"label": "Aurora seer", "health": 120, "weapon": "aurora_staff", "speed": 1.5, "sight": 8.0,
 		"actions": [
 			"aurora_bolt", ACTION_REST, "aurora_lance", ACTION_REST, ACTION_REST,
 			"conjure_blade", "ice_slash", ACTION_REST, "ice_rend", ACTION_REST, "raise_aurora",
