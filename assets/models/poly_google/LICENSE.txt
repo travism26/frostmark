@@ -1,0 +1,4 @@
+bear.glb: "Bear" by Poly by Google, via Poly Pizza (https://poly.pizza/m/0PXWfxfb0Hu).
+Licensed under Creative Commons Attribution 3.0 (CC BY 3.0):
+https://creativecommons.org/licenses/by/3.0/
+Used unmodified; the game recolours it at run time.

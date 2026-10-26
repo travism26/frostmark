@@ -1,6 +1,7 @@
 ## Builders for the living figures: the enemies of rings one and two as animated CC0 models
 ## (KayKit Adventurers for the bandits and the frost witch, a KayKit Skeleton for the ruin
-## stalker, the Quaternius wolf and yeti; credited in docs/assets/CREDITS.md) and the hand-held
+## stalker, the Quaternius wolf and yeti), the great frost bear as Poly by Google's CC-BY bear
+## moved in code (all credited in docs/assets/CREDITS.md), and the hand-held
 ## pieces the player and the bandits share (a bow of staves, a club, a frost staff, the KayKit
 ## sword, Kenney's axe and pickaxe, the Quaternius fishing rod).
 ##
@@ -17,6 +18,7 @@ const ADVENTURERS := "res://assets/models/kaykit_adventurers/"
 const SKELETONS := "res://assets/models/kaykit_skeletons/"
 const QUATERNIUS := "res://assets/models/quaternius/"
 const SURVIVAL := "res://assets/models/kenney_survival/"
+const POLY_GOOGLE := "res://assets/models/poly_google/"
 
 ## Rig heights in model units (measured from the skinned rest pose): a KayKit adventurer's
 ## body without its hat, the Quaternius wolf and yeti with their armatures' scale and turn
@@ -24,6 +26,11 @@ const SURVIVAL := "res://assets/models/kenney_survival/"
 const KAYKIT_HEIGHT := 2.2
 const WOLF_HEIGHT := 2.7
 const YETI_HEIGHT := 2.83
+## The Poly by Google bear, in its own units: feet to ears, its origin above its feet, and its
+## hind feet behind its origin.
+const BEAR_HEIGHT := 140.0
+const BEAR_LIFT := 70.0
+const BEAR_REAR := 95.0
 
 const HUMANOID_CLIPS := {
 	"idle": "Idle", "walk": "Walking_A", "run": "Running_A",
@@ -59,7 +66,7 @@ const COLOR_AURORA := Color(0.35, 1.0, 0.72)  # the green of its staff's crystal
 const COLOR_TYRANT := Color(0.82, 0.90, 0.98)  # the knight redrawn in ice-white
 const COLOR_CAPTAIN_CAPE := Color(0.62, 0.08, 0.08)
 const COLOR_WOLF := Color(1.45, 1.5, 1.6)  # the grey coat lifted towards snow
-const COLOR_GREAT_WOLF := Color(0.62, 0.66, 0.78)  # a darker, frost-blue coat
+const COLOR_FROST_BEAR := Color(1.9, 1.9, 2.15)  # its brown coat lifted and cooled by frost, warm against the blue snow
 const COLOR_WITCH := Color("#6670b3")  # the mage in a rimed blue-violet
 const COLOR_BONE := Color(0.86, 0.82, 0.72)
 const COLOR_IRON := Color(0.30, 0.32, 0.36)
@@ -69,8 +76,9 @@ const ROGUE_SPARES := ["Knife", "Knife_Offhand", "1H_Crossbow", "2H_Crossbow", "
 const MAGE_SPARES := ["Spellbook", "Spellbook_open", "1H_Wand", "2H_Staff"]
 
 
-## An enemy of `kind`: a 1 m wolf that lunges with its bite, the ring-one dungeon's great wolf
-## (the same wolf, nearly twice the size, in a darker frost-blue coat), a hooded archer with a bow, a
+## An enemy of `kind`: a 1 m wolf that lunges with its bite, the ring-one dungeon's great frost
+## bear (a 2 m bear on all fours, three long, its brown coat lifted and cooled by frost, that
+## rears up to smash and stomp), a hooded archer with a bow, a
 ## frost witch (the wide-hatted mage in blue-violet with a staff), a ruin stalker (a bare
 ## skeleton with a bone bow), a Snowveil archer (the hooded rogue in snow-white with a pale
 ## bow), a Frostbound knight (the armoured knight in frost-blue with a long blade), an Aurora seer (the hatless
@@ -87,13 +95,12 @@ static func enemy(kind: String) -> FigureBody:
 			wolf.lunge = 0.8
 			wolf.tint(COLOR_WOLF)
 			return wolf
-		"great_wolf":
-			var great := FigureBody.new()
-			great.setup(QUATERNIUS + "wolf.glb", WOLF_HEIGHT, 1.9, WOLF_CLIPS)
-			great.run_speed = 2.0
-			great.lunge = 1.2
-			great.tint(COLOR_GREAT_WOLF)
-			return great
+		"great_frost_bear":
+			var bear := BeastBody.new()
+			bear.setup_static(POLY_GOOGLE + "bear.glb", BEAR_HEIGHT, 2.0, BEAR_LIFT, BEAR_REAR, true)
+			bear.tint(COLOR_FROST_BEAR)
+			bear.set_meta("height", 2.8)  # its labels clear it when it rears
+			return bear
 		"bandit_captain":
 			var captain := humanoid("knight.glb", 1.8 * 1.15, ["1H_Sword_Offhand", "2H_Sword", "Badge_Shield", "Rectangle_Shield", "Round_Shield", "Spike_Shield"])
 			FigureBody.tint_meshes(captain.bone_slot("chest"), COLOR_CAPTAIN_CAPE)

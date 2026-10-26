@@ -31,7 +31,7 @@ const COLOR_BY_ENEMY := {
 	"ice_troll": Color(0.58, 0.70, 0.78), "ruin_stalker": Color(0.24, 0.26, 0.30),
 	"snowveil_archer": Color(0.82, 0.90, 0.96), "frostbound_knight": Color(0.55, 0.72, 0.92),
 	"aurora_seer": Color(0.52, 0.40, 0.78), "frost_tyrant": Color(0.86, 0.94, 0.98),
-	"great_wolf": Color(0.30, 0.33, 0.42),
+	"great_frost_bear": Color(0.66, 0.74, 0.82),
 }
 ## Telegraph cues take the style's colour from the icon table, so the ring on the ground, the
 ## name over the enemy and the style badge in the panel always agree.
@@ -699,7 +699,7 @@ func _apply_events(events: Array[Dictionary]) -> void:
 				if e.get("burning", false):
 					_flinch(e["target"])
 				elif e.get("area", false):
-					_cues.land_mark(e["attacker"])
+					_land_mark(e["attacker"])
 					_flinch(e["target"])
 				elif e["attacker"] != SimVocab.PLAYER:
 					_swing(e["attacker"])
@@ -721,7 +721,7 @@ func _apply_events(events: Array[Dictionary]) -> void:
 					_sentence(_enemy_name(e["attacker"])), CombatTable.action_label(e["action"]).to_lower(),
 				]
 				if e.get("area", false):
-					_cues.land_mark(e["attacker"])
+					_land_mark(e["attacker"])
 				elif e["attacker"] != SimVocab.PLAYER:
 					_swing(e["attacker"])
 					_projectiles.resolve(e["attacker"], false)
@@ -735,7 +735,11 @@ func _apply_events(events: Array[Dictionary]) -> void:
 				elif e["enemy_kind"] == "frost_tyrant" and not _bosses_before.has(e["enemy_id"]):
 					_hud.banner("The Frost tyrant falls. Its rime steel, frost sinew and aurora glass lie in the snow.")
 				elif _way_out_of_boss(e["enemy_id"]) != "":
-					_hud.banner("%s falls. The way out beside it stands open." % _sentence(_enemy_name(e["enemy_id"])))
+					var banner := dungeon_boss_fall_text(_enemy_name(e["enemy_id"]), not _bosses_before.has(e["enemy_id"]))
+					if banner != "":
+						_hud.banner(banner)
+					else:
+						_last_event = "%s falls. The way out stands open." % _sentence(_enemy_name(e["enemy_id"]))
 				_sync_way_outs()
 			SimVocab.EV_ENEMY_RESPAWNED:
 				_sync_way_outs()
@@ -1340,6 +1344,14 @@ func _sync_way_outs() -> void:
 		(_way_outs[id]["label"] as Label3D).text = way_out_text(open, CombatTable.enemy(sim.world.enemies[boss]["kind"])["label"])
 
 
+## The banner for a dungeon boss named `boss_name` falling: only its first fall has one, as
+## other bosses' first falls do; "" for a later one.
+static func dungeon_boss_fall_text(boss_name: String, first: bool) -> String:
+	if not first:
+		return ""
+	return "%s falls. The way out beside it stands open." % _sentence(boss_name)
+
+
 ## A way out's label: open, or shut while the boss named `boss_label` stands.
 static func way_out_text(open: bool, boss_label: String) -> String:
 	if open:
@@ -1611,7 +1623,17 @@ func _show_mark(e: Dictionary) -> void:
 	cue.modulate = CombatCues.MARK_COLOUR
 	cue.visible = true
 	drawn["cue_at"] = int(e["at"])
+	drawn["mark_shape"] = e["mark"]["shape"]
 	(root.get_node("Figure") as FigureBody).wind_up(e["style"])
+
+
+## An area blow lands on enemy `id`'s ground mark: the mark brightens and the enemy brings its
+## blow down on it.
+func _land_mark(id: String) -> void:
+	_cues.land_mark(id)
+	if _enemies.has(id):
+		var drawn: Dictionary = _enemies[id]
+		((drawn["root"] as Node3D).get_node("Figure") as FigureBody).slam(drawn.get("mark_shape", ""))
 
 
 ## The telegraphed blow was a feint: the ring under the enemy breaks off and the word over its
