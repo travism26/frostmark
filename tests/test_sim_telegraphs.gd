@@ -44,6 +44,7 @@ func _fight(kind: String, seed: int) -> void:
 	var told := {}  # tick -> the telegraph naming it
 	var marked := {}  # tick -> the tick its ground mark was told on
 	var warned := {}  # tick -> the ticks of warning its ground mark gave
+	var burning := {}  # patch id -> [the tick it was laid on, the tick it goes out]
 	var style: String = sim.combatant("foe")["style"]
 	var blows := 0
 	var changes := 0
@@ -72,6 +73,12 @@ func _fight(kind: String, seed: int) -> void:
 					assert_eq(e["at"], tick + CombatTable.mark_ticks(e["action"]), "%s: a ground mark lands as many ticks on as its blow warns" % kind)
 					marked[int(e["at"])] = tick
 					warned[int(e["at"])] = CombatTable.mark_ticks(e["action"])
+				Vocab.EV_BURNING_STARTED:
+					assert_true(marked.has(tick), "%s: the patch laid on tick %d came from a marked blow" % [kind, tick])
+					burning[e["patch_id"]] = [tick, int(e["until"])]
+				Vocab.EV_HIT when e.get("burning", false):
+					var lit := burning.values().filter(func(p: Array) -> bool: return p[0] < tick and tick <= p[1])
+					assert_false(lit.is_empty(), "%s: the burn on tick %d came from a patch told with burning_started" % [kind, tick])
 				Vocab.EV_ENEMY_STANCE:
 					stanced = true
 				Vocab.EV_ENEMY_RESPAWNED:

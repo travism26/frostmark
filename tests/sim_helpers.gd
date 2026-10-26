@@ -131,6 +131,8 @@ const STAND_IN_ACTIONS := {
 	"quicken": {"label": "Quickens", "damage": 0, "stance": true},
 	"ground_smash": {"label": "Smash", "damage": 20, "heavy": true, "shape": CombatTable.MARK_FRONT, "size": 3.0},
 	"ground_stomp": {"label": "Stomp", "damage": 16, "heavy": true, "shape": CombatTable.MARK_RING, "size": 3.0},
+	"ground_scorch": {"label": "Scorch", "damage": 16, "heavy": true, "shape": CombatTable.MARK_RING, "size": 3.0, "burn_ticks": 3, "burn_damage": 5},
+	"ground_sear": {"label": "Sear", "damage": 20, "heavy": true, "shape": CombatTable.MARK_FRONT, "size": 4.0, "burn_ticks": 4, "burn_damage": 4},
 	"ice_fall": {"label": "Ice fall", "damage": 14, "heavy": true, "shape": CombatTable.MARK_DROP, "size": 2.5},
 	"quick_fall": {"label": "Quick fall", "damage": 12, "shape": CombatTable.MARK_DROP, "size": 1.5, "warn": 1},
 	"quick_smash": {"label": "Quick smash", "damage": 12, "shape": CombatTable.MARK_FRONT, "size": 4.0, "warn": 1},
@@ -214,6 +216,18 @@ const STAND_IN_KINDS := {
 	"stand_in_stomper": {
 		"label": "Stomper", "health": 500, "weapon": "fangs", "speed": 2.0, "sight": 6.0,
 		"actions": ["ground_stomp", CombatTable.ACTION_REST, "bite", CombatTable.ACTION_REST],
+		"loot": [], "rare_percent": 0, "respawn_ticks": 100,
+	},
+	# Scorches a ring round itself, leaving fire, rests, bites, rests.
+	"stand_in_scorcher": {
+		"label": "Scorcher", "health": 500, "weapon": "fangs", "speed": 2.0, "sight": 6.0,
+		"actions": ["ground_scorch", CombatTable.ACTION_REST, "bite", CombatTable.ACTION_REST],
+		"loot": [], "rare_percent": 0, "respawn_ticks": 100,
+	},
+	# Sears the ground in front of it, leaving fire, then rests.
+	"stand_in_searer": {
+		"label": "Searer", "health": 500, "weapon": "fangs", "speed": 2.0, "sight": 6.0,
+		"actions": ["ground_sear", CombatTable.ACTION_REST, CombatTable.ACTION_REST],
 		"loot": [], "rare_percent": 0, "respawn_ticks": 100,
 	},
 	# Smashes and rests until below half health, where it quickens and bites instead.

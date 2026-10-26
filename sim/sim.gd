@@ -59,6 +59,7 @@ const USE_REACH := 1.5
 const FIELD_FIRE_LOGS := 3
 const FIELD_FIRE_TICKS := 120
 ## Field fire ids are this prefix and a number, so they never clash with placed objects.
+const BURNING_PREFIX := "burn_"
 const FIELD_FIRE_PREFIX := "campfire_"
 
 ## Gathering: one attempt takes `gather_ticks(level)` ticks and succeeds with
@@ -184,6 +185,8 @@ func new_state() -> Dictionary:
 		"loot_seq": 0,
 		"fires": {},
 		"fire_seq": 0,
+		"burning": {},
+		"burning_seq": 0,
 		"bosses_defeated": [],
 		"rings_reached": [],
 		"dungeons_reached": [],
@@ -1171,6 +1174,7 @@ func _step_pursuit() -> void:
 ## its first turn next tick, and one that left takes no more.
 func _step_combat() -> void:
 	_step_player_attack()
+	_step_burning()
 	for id in state["enemies"].keys():
 		if state["enemies"].has(id):
 			_step_enemy(id)
@@ -1353,6 +1357,7 @@ func _disengage(id: String) -> void:
 	e["mode"] = MODE_RETURNING
 	e["next"] = {}
 	_emit({"kind": SimVocab.EV_ENEMY_DISENGAGED, "enemy_id": id})
+	_put_out_of(id)
 	_dismiss_adds(id)
 
 
@@ -1408,6 +1413,7 @@ func _dismiss_adds(boss: String) -> void:
 ## Add `id` leaves the world, and the player stops attacking it.
 func _leave(id: String) -> void:
 	var boss: String = state["enemies"][id]["called_by"]
+	_put_out_of(id)
 	state["enemies"].erase(id)
 	if _attack_target() == id:
 		_stop_activity(SimVocab.REASON_UNKNOWN_ENEMY)
@@ -1455,14 +1461,76 @@ func _enemy_act(id: String) -> String:
 
 
 ## An area blow lands on its ground mark: a hit, through the area-blow arithmetic, on a player
-## standing inside it, else a miss. Both are marked `area`.
+## standing inside it, else a miss. Both are marked `area`. A blow that burns then leaves its
+## patch on the mark, hit or miss.
 func _land_area_blow(id: String, action: String, mark: Dictionary) -> void:
 	if not CombatTable.in_mark(mark, player_pos()):
 		_emit({"kind": SimVocab.EV_MISSED, "attacker": id, "target": SimVocab.PLAYER, "action": action, "area": true})
-		return
-	_strike(id, SimVocab.PLAYER, CombatTable.action_damage(action), true)
-	if int(state["health"]) <= 0:
-		_dead_cause = state["enemies"][id]["kind"]
+	else:
+		_strike(id, SimVocab.PLAYER, CombatTable.action_damage(action), true)
+		if int(state["health"]) <= 0:
+			_dead_cause = state["enemies"][id]["kind"]
+	if CombatTable.burns(action):
+		_light_patch(id, action, mark)
+
+
+# --- Burning ground ---------------------------------------------------------------------
+
+## Leaves a patch of burning ground on `mark` for the action's `burn_ticks` ticks, starting the
+## tick after this one, so it goes out on tick + burn_ticks.
+func _light_patch(id: String, action: String, mark: Dictionary) -> void:
+	state["burning_seq"] = int(state["burning_seq"]) + 1
+	var patch_id := BURNING_PREFIX + str(int(state["burning_seq"]))
+	var until := int(state["tick"]) + CombatTable.burn_ticks(action)
+	var damage := CombatTable.burn_damage(action)
+	state["burning"][patch_id] = {"enemy_id": id, "mark": mark.duplicate(true), "damage": damage, "until": until}
+	_emit({
+		"kind": SimVocab.EV_BURNING_STARTED, "patch_id": patch_id, "enemy_id": id,
+		"mark": mark.duplicate(true), "damage": damage, "until": until,
+	})
+
+
+## Each patch burns a player standing on it, through armour, and goes out on its last tick.
+## Burning ground never touches an enemy. A player the fire kills dies at the end of the tick
+## like any other.
+func _step_burning() -> void:
+	var tick := int(state["tick"])
+	var burning: Dictionary = state["burning"]
+	for patch_id in burning.keys():
+		var patch: Dictionary = burning[patch_id]
+		if _dead_cause == "" and not in_outpost() and CombatTable.in_mark(patch["mark"], player_pos()):
+			_burn_player(patch)
+		if tick >= int(patch["until"]):
+			_put_out(patch_id)
+
+
+func _burn_player(patch: Dictionary) -> void:
+	var attacker: String = patch["enemy_id"]
+	var me := combatant(attacker)
+	var amount := CombatTable.area_damage(int(patch["damage"]), int(combatant(SimVocab.PLAYER)["defence"]))
+	var health := maxi(0, int(state["health"]) - amount)
+	state["health"] = health
+	_emit({
+		"kind": SimVocab.EV_HIT, "attacker": attacker, "target": SimVocab.PLAYER, "amount": amount,
+		"style": me["style"], "multiplier": 1.0, "health": health, "area": true, "burning": true,
+	})
+	_emit({"kind": SimVocab.EV_TOOK_DAMAGE, "amount": amount, "cause": me["kind"], "health": health})
+	if is_travelling():
+		_stop_activity(SimVocab.REASON_INTERRUPTED)
+	if health <= 0:
+		_dead_cause = me["kind"]
+
+
+## Every patch enemy `id` left burning goes out.
+func _put_out_of(id: String) -> void:
+	for patch_id in (state["burning"] as Dictionary).keys():
+		if state["burning"][patch_id]["enemy_id"] == id:
+			_put_out(patch_id)
+
+
+func _put_out(patch_id: String) -> void:
+	(state["burning"] as Dictionary).erase(patch_id)
+	_emit({"kind": SimVocab.EV_BURNING_OUT, "patch_id": patch_id})
 
 
 ## An enemy of a kind that kites backs one step straight away from a player who has come within
@@ -2364,6 +2432,8 @@ func restore(snap: Dictionary) -> bool:
 	copy["loot_seq"] = maxi(0, int(copy["loot_seq"])) if _is_number(copy.get("loot_seq")) else 0
 	copy["fires"] = _restored_fires(copy.get("fires"))
 	copy["fire_seq"] = maxi(0, int(copy["fire_seq"])) if _is_number(copy.get("fire_seq")) else 0
+	copy["burning"] = _restored_burning(copy.get("burning"), copy["enemies"])
+	copy["burning_seq"] = maxi(0, int(copy["burning_seq"])) if _is_number(copy.get("burning_seq")) else 0
 	var defeated: Array = []
 	if copy.get("bosses_defeated") is Array:
 		for id in copy["bosses_defeated"]:
@@ -2630,6 +2700,25 @@ func _restored_fires(saved: Variant) -> Dictionary:
 		var fire: Variant = saved[id]
 		if str(id).begins_with(FIELD_FIRE_PREFIX) and fire is Dictionary and _is_xz(fire.get("pos")) and _is_number(fire.get("expires_tick")):
 			out[str(id)] = {"pos": _xz(Vector2(fire["pos"][0], fire["pos"][1])), "expires_tick": int(fire["expires_tick"])}
+	return out
+
+
+## Burning ground from saved data: patches under the burning prefix with a known enemy, a
+## readable mark, a damage above 0 and the tick they go out.
+func _restored_burning(saved: Variant, enemies: Dictionary) -> Dictionary:
+	var out := {}
+	if not (saved is Dictionary):
+		return out
+	for id in saved:
+		var patch: Variant = saved[id]
+		if not (str(id).begins_with(BURNING_PREFIX) and patch is Dictionary):
+			continue
+		var mark := _restored_mark(patch.get("mark"))
+		if mark.is_empty() or not enemies.has(str(patch.get("enemy_id", ""))):
+			continue
+		if not _is_number(patch.get("damage")) or int(patch["damage"]) <= 0 or not _is_number(patch.get("until")):
+			continue
+		out[str(id)] = {"enemy_id": str(patch["enemy_id"]), "mark": mark, "damage": int(patch["damage"]), "until": int(patch["until"])}
 	return out
 
 
