@@ -12,7 +12,7 @@ extends SceneTree
 const H := preload("res://tests/sim_helpers.gd")
 
 const BOSS := "ring_one_dungeon_boss"
-const CALLER := "shot_great_wolf"
+const CALLER := "shot_great_frost_bear"
 ## A metre and a half south of the boss's home, in its fangs' reach.
 const SPOT := [73.0, 45.5]
 const ENTRIES := [[-8.0, 0.0], [8.0, 0.0]]
@@ -44,7 +44,7 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 	var main: Node = current_scene
-	var caller: Dictionary = CombatTable.enemy("great_wolf").duplicate(true)
+	var caller: Dictionary = CombatTable.enemy("great_frost_bear").duplicate(true)
 	caller["phases"] = [{
 		"below": 50, "actions": ["tyrant_roars", "slash", CombatTable.ACTION_REST, CombatTable.ACTION_REST],
 		"adds": [{"kind": "wolf", "entry": ENTRIES[0]}, {"kind": "wolf", "entry": ENTRIES[1]}],
