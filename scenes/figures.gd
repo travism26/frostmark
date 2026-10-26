@@ -59,6 +59,7 @@ const COLOR_AURORA := Color(0.35, 1.0, 0.72)  # the green of its staff's crystal
 const COLOR_TYRANT := Color(0.82, 0.90, 0.98)  # the knight redrawn in ice-white
 const COLOR_CAPTAIN_CAPE := Color(0.62, 0.08, 0.08)
 const COLOR_WOLF := Color(1.45, 1.5, 1.6)  # the grey coat lifted towards snow
+const COLOR_GREAT_WOLF := Color(0.62, 0.66, 0.78)  # a darker, frost-blue coat
 const COLOR_WITCH := Color("#6670b3")  # the mage in a rimed blue-violet
 const COLOR_BONE := Color(0.86, 0.82, 0.72)
 const COLOR_IRON := Color(0.30, 0.32, 0.36)
@@ -68,7 +69,8 @@ const ROGUE_SPARES := ["Knife", "Knife_Offhand", "1H_Crossbow", "2H_Crossbow", "
 const MAGE_SPARES := ["Spellbook", "Spellbook_open", "1H_Wand", "2H_Staff"]
 
 
-## An enemy of `kind`: a 1 m wolf that lunges with its bite, a hooded archer with a bow, a
+## An enemy of `kind`: a 1 m wolf that lunges with its bite, the ring-one dungeon's great wolf
+## (the same wolf, nearly twice the size, in a darker frost-blue coat), a hooded archer with a bow, a
 ## frost witch (the wide-hatted mage in blue-violet with a staff), a ruin stalker (a bare
 ## skeleton with a bone bow), a Snowveil archer (the hooded rogue in snow-white with a pale
 ## bow), a Frostbound knight (the armoured knight in frost-blue with a long blade), an Aurora seer (the hatless
@@ -85,6 +87,13 @@ static func enemy(kind: String) -> FigureBody:
 			wolf.lunge = 0.8
 			wolf.tint(COLOR_WOLF)
 			return wolf
+		"great_wolf":
+			var great := FigureBody.new()
+			great.setup(QUATERNIUS + "wolf.glb", WOLF_HEIGHT, 1.9, WOLF_CLIPS)
+			great.run_speed = 2.0
+			great.lunge = 1.2
+			great.tint(COLOR_GREAT_WOLF)
+			return great
 		"bandit_captain":
 			var captain := humanoid("knight.glb", 1.8 * 1.15, ["1H_Sword_Offhand", "2H_Sword", "Badge_Shield", "Rectangle_Shield", "Round_Shield", "Spike_Shield"])
 			FigureBody.tint_meshes(captain.bone_slot("chest"), COLOR_CAPTAIN_CAPE)
