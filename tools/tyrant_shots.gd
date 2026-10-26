@@ -63,6 +63,8 @@ func _run() -> void:
 	await _until_marked(main, "falling_ice", "tyrant_falling_ice")
 	await _until_burning(main, "tyrant_burning")
 	await _until_marked(main, "ice_shards", "tyrant_ice_shards")
+	# A staff held on the greatblade would be answered before the smash comes round.
+	_swap_to(main, "steel_sword")
 	await _until_marked(main, "greatblade_smash", "tyrant_smash")
 	await _until_marked(main, "tyrant_stomp", "tyrant_stomp")
 	if _had_save:
