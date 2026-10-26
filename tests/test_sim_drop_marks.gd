@@ -160,8 +160,8 @@ func test_a_mark_fits_a_tick_when_every_point_is_within_a_walk_of_its_edge() -> 
 	assert_almost_eq(CombatTable.mark_depth(CombatTable.MARK_FRONT, 4.0), 1.857, 0.001)
 
 
-func test_the_game_table_has_no_one_tick_marks_and_no_problems() -> void:
+func test_the_game_tables_one_tick_marks_are_the_tyrants_ice_shards_and_it_has_no_problems() -> void:
 	for kind in CombatTable.ENEMIES:
 		assert_eq(CombatTable.area_problems(CombatTable.enemy(kind)), [] as Array[String], kind)
 	for action in CombatTable.ACTIONS:
-		assert_false(CombatTable.ACTIONS[action].has("warn"), "%s: no game blow is told early yet" % action)
+		assert_eq(CombatTable.ACTIONS[action].has("warn"), action == "ice_shards", "%s: only the Frost tyrant's ice shards are told early" % action)
