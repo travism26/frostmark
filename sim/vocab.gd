@@ -73,7 +73,7 @@ const EV_WARMTH_CHANGED := "warmth_changed"      # {warmth, max}
 const EV_TOOK_DAMAGE := "took_damage"            # {amount, cause, health}  cause: "cold" or an enemy kind
 const EV_HEALED := "healed"                      # {amount, health}
 const EV_ATE := "ate"                            # {item, heal, ticks}
-const EV_DIED := "died"                          # {cause, kept, lost, spare, pos}  kept/lost: lists of {item, count}; spare: item given back or ""
+const EV_DIED := "died"                          # {cause, kept, lost, spare, pos, chest}  kept/lost: lists of {item, count}; spare: item given back or ""; chest: the death chest the lost things went into, "" when they were destroyed
 const EV_SAVED := "saved"                        # {reason, tick}  a save point: persist sim.export_code()
 const EV_SAVE_REJECTED := "save_rejected"        # {reason}
 # Combat
@@ -90,7 +90,7 @@ const EV_LOOT_DROPPED := "loot_dropped"          # {loot_id, item, count, pos}
 const EV_PICKED_UP := "picked_up"                # {loot_id, item, count}
 const EV_LOOT_GONE := "loot_gone"                # {loot_id}  lay too long; the snow took it
 const EV_ENEMY_STANCE := "enemy_stance"          # {enemy_id, action, style, at}  a weapon change, announced a tick ahead
-# Cooking, field fires, the outpost, the ring gates and the dungeon mouths
+# Cooking, field fires, the outpost, the ring gates, the dungeon mouths and the death chests
 const EV_COOKED := "cooked"                      # {item, output, burnt, xp}  output is "" when it burnt
 const EV_FIRE_LIT := "fire_lit"                  # {fire_id, pos, expires_tick}
 const EV_FIRE_OUT := "fire_out"                  # {fire_id}
@@ -100,6 +100,7 @@ const EV_RING_TWO_REACHED := "ring_two_reached"  # {object_id}  first walked int
 const EV_RING_THREE_REACHED := "ring_three_reached"  # {object_id}  first walked into ring three, through that gate; once per character
 const EV_DUNGEON_REACHED := "dungeon_reached"    # {dungeon_id, object_id}  first walked into a dungeon, through its mouth; once per dungeon per character
 const EV_LEFT_DUNGEON := "left_dungeon"          # {dungeon_id, object_id, from, to}  took a dungeon's way out: the player stands at its set-down spot
+const EV_TOOK_FROM_CHEST := "took_from_chest"    # {object_id, dungeon_id, items, left}  items: what moved from a death chest into the pack; left: what stays in the chest
 # Waystones
 const EV_WAYSTONE_ATTUNED := "waystone_attuned"  # {object_id}  first visit to a waystone; once per waystone
 const EV_TRAVEL_STARTED := "travel_started"      # {object_id, ticks}  channelling began; done in `ticks` ticks unless interrupted
@@ -123,6 +124,7 @@ const ACTION_PICK_UP := "pick_up"
 const ACTION_RING_GATE := "ring_gate"
 const ACTION_WAYSTONE := "waystone"
 const ACTION_WAY_OUT := "way_out"
+const ACTION_DEATH_CHEST := "death_chest"
 
 # --- Upgrade status (the `status` of each `Sim.upgrade_status()` entry) ----------
 

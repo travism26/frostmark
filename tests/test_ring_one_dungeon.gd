@@ -300,9 +300,9 @@ func test_the_reserved_spots_are_the_dungeons_open_ground_reached_from_the_mouth
 	var r: Dictionary = WorldDef.DUNGEONS[DUNGEON]["reserved"]
 	var inside := _flood(w, _spot(INSIDE))
 	var spots: Array = [r["fire"], r["chest"], r["boss"], r["way_out"]] + r["fights"] + r["nodes"]
-	# The fire and the nodes are built (#206), so their own footprints block; the ground round
-	# them is the open ground that matters.
-	var built: Array = [r["fire"]] + r["nodes"]
+	# The fire, the nodes (#206) and the death chest (#208) are built, so their own footprints
+	# block; the ground round them is the open ground that matters.
+	var built: Array = [r["fire"], r["chest"]] + r["nodes"]
 	# The way out stands on its own spot now (#207), in the boss room's corner.
 	for at in spots.filter(func(at: Array) -> bool: return at != r["way_out"]):
 		var p := _spot(at)
