@@ -70,8 +70,8 @@ const RING_ONE_DUNGEON_MOUTH_Z := -47.0
 ##             are only reached past a fight, `boss_room` [min, max] at the far end with the
 ##             `boss` spot in it, `way_out` in the boss room, and `set_down` on ring-one ground
 ##             on the outpost side of the dungeon.
-## The fire, the death chest, the boss, the way out and the set-down spot join the entry itself
-## as they are built.
+## The fire (gentle only: the id of an ordinary fire object), the death chest, the boss, the way
+## out and the set-down spot join the entry itself as they are built.
 ##
 ## The ring-one dungeon runs from the mouth in ring one's east cliff (x 60 to 64) to the cliffs
 ## at x 108, and from z -60 to 60. Three cave walls part it into four legs: east along the
@@ -81,9 +81,10 @@ const DUNGEONS := {
 	"ring_one_dungeon": {
 		"label": "The ring-one dungeon", "ring": REGION_RING_ONE, "depth": DUNGEON_GENTLE,
 		"region": REGION_RING_ONE_DUNGEON, "mouth": "ring_one_dungeon_mouth",
+		"fire": "ring_one_dungeon_fire",
 		"reserved": {
 			"fire": [69.0, -42.0], "chest": [69.0, -53.0],
-			"fights": [[100.0, -47.0], [80.0, -19.0], [100.0, 9.0], [97.0, 42.0]],
+			"fights": [[96.0, -38.0], [80.0, -26.0], [90.0, 10.0], [92.0, 40.0]],
 			"nodes": [[68.0, -24.0], [104.0, 17.0]],
 			"boss_room": [[64.0, 24.0], [84.0, 60.0]], "boss": [73.0, 44.0], "way_out": [66.5, 57.5],
 			"set_down": [44.5, -44.5],
@@ -510,6 +511,35 @@ static func _ring_one_dungeon(w: WorldDef) -> void:
 		"kind": KIND_RING_GATE, "label": "Dungeon mouth", "blocks": true, "height": 3.5,
 		"min": [edge, z - 2.0], "max": [near, z + 2.0], "outward": [1.0, 0.0],
 	}
+	# The dungeon's one fire, 5 m in from the mouth like ring two's brazier. Nothing past it.
+	var fire: Array = DUNGEONS["ring_one_dungeon"]["reserved"]["fire"]
+	w.objects[DUNGEONS["ring_one_dungeon"]["fire"]] = {
+		"kind": KIND_FIRE, "label": "Fire", "blocks": true, "height": 0.6,
+		"min": [fire[0] - 0.75, fire[1] - 0.75], "max": [fire[0] + 0.75, fire[1] + 0.75],
+	}
+	# Two iron rocks, each at a reserved node spot and reached only past a fight.
+	var nodes: Array = DUNGEONS["ring_one_dungeon"]["reserved"]["nodes"]
+	for i in nodes.size():
+		_place(w, "dungeon_iron_%d" % (i + 1), KIND_IRON_ROCK, "Iron rock", [nodes[i][0] - 1.0, nodes[i][1] - 1.0], [2.0, 2.0], 1.2)
+	# Ring one's own kinds in four groups, one on each reserved fight spot, one in each leg of
+	# the lane: wolves, then an archer, then wolves, then two archers. Each group stands on the
+	# shortest way through its leg, so no route to a node or the boss slips past it, and is
+	# more than a fight's noise (CombatTable.NOISE_FIGHT) and every ring-one kind's sight from
+	# the next and from the fire, so each is fought on its own.
+	var fights: Array = DUNGEONS["ring_one_dungeon"]["reserved"]["fights"]
+	var groups := [
+		[["wolf", 0.0, 0.0], ["wolf", 2.0, 1.0]],
+		[["bandit_archer", 0.0, 0.0]],
+		[["wolf", 0.0, 0.0], ["wolf", 2.0, 1.0]],
+		[["bandit_archer", 0.0, 0.0], ["bandit_archer", 2.0, 1.0]],
+	]
+	for g in groups.size():
+		for m in groups[g].size():
+			var member: Array = groups[g][m]
+			w.enemies["dungeon_%s_%d_%d" % [member[0], g + 1, m + 1]] = {
+				"kind": member[0], "home": [fights[g][0] + member[1], fights[g][1] + member[2]],
+				"pack": "dungeon_fight_%d" % (g + 1),
+			}
 
 
 ## The id of the dungeon whose region is `region`, or "" for a ring, the outpost or nowhere.

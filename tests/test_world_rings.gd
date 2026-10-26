@@ -14,7 +14,7 @@ func test_the_inner_ring_has_no_enemies() -> void:
 	for id in w.enemies:
 		var home: Array = w.enemies[id]["home"]
 		var region := w.region_at(Vector2(home[0], home[1]))
-		assert_true(region in [WorldDef.REGION_RING_ONE, WorldDef.REGION_RING_TWO, WorldDef.REGION_RING_THREE], "%s lives out in a ring" % id)
+		assert_true(region in [WorldDef.REGION_RING_ONE, WorldDef.REGION_RING_ONE_DUNGEON, WorldDef.REGION_RING_TWO, WorldDef.REGION_RING_THREE], "%s lives out in a ring or a dungeon" % id)
 		count[region] = int(count.get(region, 0)) + 1
 	assert_true(int(count.get(WorldDef.REGION_RING_ONE, 0)) >= 10, "ring one is populated")
 	assert_true(int(count.get(WorldDef.REGION_RING_TWO, 0)) >= 6, "ring two is populated")
@@ -34,6 +34,8 @@ func test_the_inner_ring_has_trees_rocks_and_two_fishing_holes() -> void:
 			# The mine's copper and tin are ordinary rocks; it pays because six stand together.
 			if kind not in [WorldDef.KIND_COPPER_ROCK, WorldDef.KIND_TIN_ROCK]:
 				assert_eq(tier, 2, "%s in ring one is a better node" % id)
+		elif region == WorldDef.REGION_RING_ONE_DUNGEON:
+			assert_eq(tier, 2, "%s in the ring-one dungeon is a better node" % id)
 		else:
 			assert_eq(region, WorldDef.REGION_RING_TWO, "%s is in a ring" % id)
 			assert_eq(tier, 3, "%s in ring two is a third-tier node" % id)
@@ -367,6 +369,8 @@ func test_everything_placed_can_be_reached_from_its_side_of_the_gate() -> void:
 	var start_of := {
 		WorldDef.REGION_RING_TWO: w.cell_of(Vector2(0.5, 64.5)),
 		WorldDef.REGION_RING_THREE: w.cell_of(Vector2(-39.5, 130.5)),
+		# Inside the ring-one dungeon, just through its mouth (the dungeon is reached from inside).
+		WorldDef.REGION_RING_ONE_DUNGEON: w.cell_of(Vector2(66.5, -47.0)),
 	}
 	var outpost := w.cell_of(Vector2(w.spawn[0], w.spawn[1]))
 	for id in w.objects:

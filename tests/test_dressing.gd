@@ -162,8 +162,9 @@ func test_camps_mark_the_packs_the_sim_places() -> void:
 			assert_false(by_pack.has(e["pack"]), "%s (%s) keeps no camp" % [id, e["kind"]])
 		if by_pack.has(e["pack"]):
 			assert_true((by_pack[e["pack"]]["at"] as Vector2).distance_to(home) < 6.0, "%s's camp sits by its home" % id)
-			assert_eq(w.region_at(by_pack[e["pack"]]["at"]), WorldDef.REGION_RING_ONE, "%s's camp is in ring one" % id)
-	assert_eq(camps.size(), 8, "four dens and four camps")
+			assert_eq(w.region_at(by_pack[e["pack"]]["at"]), w.region_at(home), "%s's camp is in its home's region" % id)
+			assert_true(w.region_at(home) in [WorldDef.REGION_RING_ONE, WorldDef.REGION_RING_ONE_DUNGEON], "%s's camp is in ring one or its dungeon" % id)
+	assert_eq(camps.size(), 12, "six dens and six camps, two of each in the dungeon")
 
 
 func test_scatter_thickens_outward_and_every_ring_has_a_table() -> void:
