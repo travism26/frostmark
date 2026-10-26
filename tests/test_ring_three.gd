@@ -62,7 +62,7 @@ func _hoist_ready(sim: Sim) -> void:
 func test_ring_three_lies_south_of_ring_twos_cliffs() -> void:
 	var w := WorldDefScript.outpost()
 	assert_eq(w.rows, 256, "the grid runs on south")
-	assert_eq(w.cols, 128)
+	assert_eq(w.cols, 176, "and east, for the dungeons")
 	assert_eq(w.origin, [-64.0, -64.0])
 	for at in [Vector2(0.5, 64.5), Vector2(0.5, 100.0), Vector2(-50.0, 127.5), Vector2(63.5, 0.0)]:
 		assert_eq(w.region_at(at), WorldDef.REGION_RING_TWO, "ring two at %s" % at)

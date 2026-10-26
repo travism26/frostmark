@@ -39,14 +39,60 @@ const REGION_INNER_RING := "inner_ring"
 const REGION_RING_ONE := "ring_one"
 const REGION_RING_TWO := "ring_two"
 const REGION_RING_THREE := "ring_three"
+const REGION_RING_ONE_DUNGEON := "ring_one_dungeon"
+
+## A gentle dungeon has a fire and a death chest just inside its mouth; a deep one has neither.
+const DUNGEON_GENTLE := "gentle"
+const DUNGEON_DEEP := "deep"
 
 ## Where ring two ends and ring three begins: the outside of ring two's southern cliffs.
 const RING_TWO_FAR := 128.0
 ## The middle of the gate to ring three, along ring two's southern cliff.
 const RING_THREE_GATE_X := -40.0
+## Where the rings end eastward: the outside of their eastern cliffs. The dungeons lie past it.
+const RINGS_EAST := 64.0
+## The middle of the ring-one dungeon's mouth, along ring one's east cliff.
+const RING_ONE_DUNGEON_MOUTH_Z := -47.0
+
+## The dungeons, by id (ADR 0001, *Dungeons share the world grid*): each a pocket of the grid
+## east of the rings, fenced off by cliffs and reached only through its mouth. The sim reads
+## only this table, never per-dungeon constants. Each entry names:
+##   label     what the presentation calls it
+##   ring      the ring its mouth opens from
+##   depth     DUNGEON_GENTLE or DUNGEON_DEEP
+##   region    its region, ahead of the rings in `regions`; the sim gives it a band of its own
+##   mouth     its mouth: a ring gate with no upgrade and no guardian, so always open, whose
+##             `outward` points into the dungeon
+##   reserved  where the pieces still to come will stand, as [x, z] spots, so they are placed
+##             without colliding: `fire` and `chest` just inside the mouth, `fights` the lane
+##             of fight spots from the mouth to the boss (each more than a fight's noise and
+##             every ring-one sight from the next and from the fire), `nodes` two spots that
+##             are only reached past a fight, `boss_room` [min, max] at the far end with the
+##             `boss` spot in it, `way_out` in the boss room, and `set_down` on ring-one ground
+##             on the outpost side of the dungeon.
+## The fire, the death chest, the boss, the way out and the set-down spot join the entry itself
+## as they are built.
+##
+## The ring-one dungeon runs from the mouth in ring one's east cliff (x 60 to 64) to the cliffs
+## at x 108, and from z -60 to 60. Three cave walls part it into four legs: east along the
+## first, back west along the second, east along the third, and west along the fourth to the
+## boss room in its west end.
+const DUNGEONS := {
+	"ring_one_dungeon": {
+		"label": "The ring-one dungeon", "ring": REGION_RING_ONE, "depth": DUNGEON_GENTLE,
+		"region": REGION_RING_ONE_DUNGEON, "mouth": "ring_one_dungeon_mouth",
+		"reserved": {
+			"fire": [69.0, -42.0], "chest": [69.0, -53.0],
+			"fights": [[100.0, -47.0], [80.0, -19.0], [100.0, 9.0], [97.0, 42.0]],
+			"nodes": [[68.0, -24.0], [104.0, 17.0]],
+			"boss_room": [[64.0, 24.0], [84.0, 60.0]], "boss": [73.0, 44.0], "way_out": [66.5, 57.5],
+			"set_down": [44.5, -44.5],
+		},
+	},
+}
 
 var cell_size := 1.0
-var cols := 128
+var cols := 176
 var rows := 256
 var origin: Array = [-64.0, -64.0]
 var spawn: Array = [0.5, 4.5]
@@ -152,13 +198,14 @@ static func outpost() -> WorldDef:
 		# The keeper's tent in the south-east corner of the yard.
 		_solid("tent", [6.0, 6.0], [9.0, 9.0], 1.6, KIND_DECOR),
 	]
-	# Ring one's outer edge: ice cliffs on all four sides, open only at the ring-two gate, so the
-	# only way between ring one and ring two is through it.
+	# Ring one's outer edge: ice cliffs on all four sides, open only at the ring-two gate and the
+	# dungeon's mouth, so the only way between ring one and ring two is through the gate.
 	var edge := 60.0
 	var c := 4.0  # cliff thickness
 	w.solids.append_array([
 		_solid("cliff_north", [-edge - c, -edge - c], [edge + c, -edge], 3.0, KIND_CLIFF),
-		_solid("cliff_east", [edge, -edge - c], [edge + c, edge + c], 3.0, KIND_CLIFF),
+		_solid("cliff_east_north", [edge, -edge - c], [edge + c, RING_ONE_DUNGEON_MOUTH_Z - 2.0], 3.0, KIND_CLIFF),
+		_solid("cliff_east_south", [edge, RING_ONE_DUNGEON_MOUTH_Z + 2.0], [edge + c, edge + c], 3.0, KIND_CLIFF),
 		_solid("cliff_west", [-edge - c, -edge - c], [-edge, edge + c], 3.0, KIND_CLIFF),
 		_solid("cliff_south_west", [-edge - c, edge], [-gate_half_width, edge + c], 3.0, KIND_CLIFF),
 		_solid("cliff_south_east", [gate_half_width, edge], [edge + c, edge + c], 3.0, KIND_CLIFF),
@@ -280,15 +327,20 @@ static func outpost() -> WorldDef:
 		w.enemies[p[0]] = {"kind": p[1], "home": p[2], "pack": p[3]}
 	_ring_two(w)
 	_ring_three(w)
+	_ring_one_dungeon(w)
 	var far: Array = [w.origin[0] + w.cols * w.cell_size, w.origin[1] + w.rows * w.cell_size]
-	# Ring two runs from the grid's edges to the outside of its southern cliffs, so ring one's
-	# own cliffs and ring two's count as ring two; ring three is everything south of them.
+	# Ring two runs from the grid's west edge to the rings' east edge (RINGS_EAST) and the
+	# outside of its southern cliffs, so ring one's own cliffs and ring two's count as ring two;
+	# ring three is everything south of them. The dungeons come first, so no ring's rectangle
+	# can claim their ground; the cliffs east of the rings and outside every dungeon lie in no
+	# region.
 	w.regions = [
+		{"name": REGION_RING_ONE_DUNGEON, "polygon": _rect_polygon([RINGS_EAST, -edge - c], [far[0], edge + c])},
 		{"name": REGION_OUTPOST, "polygon": _rect_polygon([-half, -half], [half, half])},
 		{"name": REGION_INNER_RING, "polygon": _rect_polygon([-24.0, -24.0], [24.0, 24.0])},
 		{"name": REGION_RING_ONE, "polygon": _rect_polygon([-edge, -edge], [edge, edge])},
-		{"name": REGION_RING_TWO, "polygon": _rect_polygon(w.origin, [far[0], RING_TWO_FAR])},
-		{"name": REGION_RING_THREE, "polygon": _rect_polygon([w.origin[0], RING_TWO_FAR], far)},
+		{"name": REGION_RING_TWO, "polygon": _rect_polygon(w.origin, [RINGS_EAST, RING_TWO_FAR])},
+		{"name": REGION_RING_THREE, "polygon": _rect_polygon([w.origin[0], RING_TWO_FAR], [RINGS_EAST, far[1]])},
 	]
 	w.bake()
 	return w
@@ -423,6 +475,52 @@ static func _ring_three(w: WorldDef) -> void:
 	placements.append(["frost_tyrant", "frost_tyrant", [-24.0, 183.0], "tyrant"])
 	for p in placements:
 		w.enemies[p[0]] = {"kind": p[1], "home": p[2], "pack": p[3]}
+
+
+## The ring-one dungeon: the pocket east of ring one's east cliff, from x 64 to the cliffs at
+## 108 and z -60 to 60 (see DUNGEONS), and the cliffs that fill the rest of the grid east of
+## the rings, so the only new ground that can be walked is the dungeon's. Its mouth stands in
+## ring one's east cliff, a long way north of the road to the captain and out of the frost
+## witches' sight; it fills the cliff's whole depth, so a walk through it either way ends clear
+## of both sides. The walls between the legs are the cave's own rock.
+static func _ring_one_dungeon(w: WorldDef) -> void:
+	var near := RINGS_EAST
+	var far := 108.0
+	var edge := 60.0
+	var c := 4.0
+	var grid_far: Array = [w.origin[0] + w.cols * w.cell_size, w.origin[1] + w.rows * w.cell_size]
+	w.solids.append_array([
+		_solid("cliff_dungeon_north", [near, -edge - c], [grid_far[0], -edge], 3.0, KIND_CLIFF),
+		_solid("cliff_dungeon_east", [far, -edge], [grid_far[0], edge], 3.0, KIND_CLIFF),
+		# Everything east of rings two and three, for the dungeons still to come.
+		_solid("cliff_far_east", [near, edge], grid_far, 3.0, KIND_CLIFF),
+		_solid("dungeon_wall_1", [near, -34.0], [96.0, -32.0], 3.0, KIND_CLIFF),
+		_solid("dungeon_wall_2", [76.0, -6.0], [far, -4.0], 3.0, KIND_CLIFF),
+		_solid("dungeon_wall_3", [near, 22.0], [96.0, 24.0], 3.0, KIND_CLIFF),
+		# The boss room's east wall, open at its south end.
+		_solid("dungeon_wall_4", [84.0, 24.0], [86.0, 52.0], 3.0, KIND_CLIFF),
+	])
+	var z := RING_ONE_DUNGEON_MOUTH_Z
+	w.objects[DUNGEONS["ring_one_dungeon"]["mouth"]] = {
+		"kind": KIND_RING_GATE, "label": "Dungeon mouth", "blocks": true, "height": 3.5,
+		"min": [edge, z - 2.0], "max": [near, z + 2.0], "outward": [1.0, 0.0],
+	}
+
+
+## The id of the dungeon whose region is `region`, or "" for a ring, the outpost or nowhere.
+static func dungeon_of_region(region: String) -> String:
+	for id in DUNGEONS:
+		if DUNGEONS[id]["region"] == region:
+			return id
+	return ""
+
+
+## The id of the dungeon whose mouth is the object `object_id`, or "".
+static func dungeon_of_mouth(object_id: String) -> String:
+	for id in DUNGEONS:
+		if DUNGEONS[id]["mouth"] == object_id:
+			return id
+	return ""
 
 
 static func _place(w: WorldDef, id: String, kind: String, label: String, at: Array, size: Array, height: float) -> void:

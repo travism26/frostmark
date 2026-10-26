@@ -109,17 +109,22 @@ func test_every_cliff_is_capped_in_the_snow_of_its_ring() -> void:
 		assert_true(snow.get_luminance() > WorldDressingScript.COLOR_ICE_DEEP.get_luminance(), "%s still reads as snow-capped over its deep ice" % s["id"])
 		# Ring one's edge cliffs stand just past its polygon, where region_at already says ring
 		# two, so a cliff's ring is the one it walls in: ring two's and three's are named for it.
+		# A dungeon's walls stand in its own region, and the cliffs east of rings two and three
+		# lie in no region and take the last ring's look.
 		var ring := WorldDef.REGION_RING_ONE
 		if (s["id"] as String).begins_with("cliff_ring_two"):
 			ring = WorldDef.REGION_RING_TWO
-		elif (s["id"] as String).begins_with("cliff_ring_three"):
+		elif (s["id"] as String).begins_with("cliff_ring_three") or s["id"] == "cliff_far_east":
 			ring = WorldDef.REGION_RING_THREE
+		elif WorldDef.dungeon_of_region(w.region_at(centre)) != "":
+			ring = w.region_at(centre)
 		if not tones.has(ring):
 			tones[ring] = []
 		tones[ring].append(snow.get_luminance())
 	assert_true(tones.has(WorldDef.REGION_RING_ONE) and tones.has(WorldDef.REGION_RING_TWO), "both rings have cliffs")
 	assert_true(tones[WorldDef.REGION_RING_TWO].max() < tones[WorldDef.REGION_RING_ONE].min(), "ring two's cliffs are capped darker than ring one's")
 	assert_true(tones[WorldDef.REGION_RING_THREE].min() > tones[WorldDef.REGION_RING_TWO].max(), "ring three's cliffs carry the glacier's paler ice")
+	assert_true(tones[WorldDef.REGION_RING_ONE_DUNGEON].max() < tones[WorldDef.REGION_RING_ONE].min(), "the dungeon's walls are capped darker than ring one's cliffs")
 
 
 func test_ring_threes_pressure_ridges_are_ice_in_their_own_footprint() -> void:

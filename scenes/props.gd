@@ -191,6 +191,16 @@ static func ring_gate(width: float, height: float) -> Node3D:
 	return root
 
 
+## A dungeon's mouth through a cliff, from the ruin kit: a dark passage under rock, `depth`
+## metres long along +x (turn it so +x is the mouth's `outward`) and `width` across.
+static func cave_mouth(width: float, depth: float, height: float, at: Vector2, stone: Color) -> Node3D:
+	var root := Node3D.new()
+	var rock := MeshInstance3D.new()
+	rock.mesh = RuinKit.cave_mouth(width, depth, height, at, stone)
+	root.add_child(rock)
+	return root
+
+
 ## A waystone: a carved standing stone `height` tall from the ruin kit, in the stone of the
 ## ring it stands in (older hands than the outpost's), on a ring of fallen blocks, with frost
 ## runes and a cold light (`Glow`) that wake once the outpost has woken it.

@@ -82,7 +82,9 @@ const SMITHING_TIER_CAP := ItemTable.TIER_BRONZE
 ## Passing an open ring gate walks the player this far past the gate's centre on the far side.
 const RING_GATE_STEP := 3.0
 ## The bands the ring gates part the world into: the outpost, the inner ring and ring one are
-## band 0 (any region not listed), ring two band 1 and ring three band 2.
+## band 0 (any region not listed), ring two band 1 and ring three band 2. Every dungeon in
+## WorldDef.DUNGEONS has a band of its own after those, so its mouth parts it from its ring
+## the way a ring gate does. A band is who is on the same side, not how far out it lies.
 const BANDS := {WorldDef.REGION_RING_TWO: 1, WorldDef.REGION_RING_THREE: 2}
 ## The rings whose first walk in is marked, with the event that marks it. The arrival is a
 ## save point whose reason is the ring's name.
@@ -180,6 +182,7 @@ func new_state() -> Dictionary:
 		"fire_seq": 0,
 		"bosses_defeated": [],
 		"rings_reached": [],
+		"dungeons_reached": [],
 		"waystones": [],
 		"upgrades": [],
 		"pending": [],
@@ -583,6 +586,8 @@ func _step_movement() -> void:
 			(state["rings_reached"] as Array).append(region)
 			_emit({"kind": FIRST_ARRIVALS[region], "object_id": _nearest_ring_gate(pos)})
 			_save_due = region
+		else:
+			_arrive_in_dungeon(WorldDef.dungeon_of_region(region))
 	if path.is_empty():
 		var object_id: String = player["target_object"]
 		player["target_object"] = ""
@@ -728,15 +733,29 @@ func _nearest_ring_gate(pos: Vector2) -> String:
 	return best
 
 
-## Whether the player and an enemy's home lie in the same band between the ring gates (BANDS).
-## Nothing fights, notices or chases across a ring gate.
+## The player walked into a dungeon's region (`dungeon` is "" for anywhere else). The first walk
+## into each dungeon is marked, once per character, and is a save point whose reason is the
+## dungeon's id.
+func _arrive_in_dungeon(dungeon: String) -> void:
+	if dungeon == "" or (state["dungeons_reached"] as Array).has(dungeon):
+		return
+	(state["dungeons_reached"] as Array).append(dungeon)
+	_emit({"kind": SimVocab.EV_DUNGEON_REACHED, "dungeon_id": dungeon, "object_id": WorldDef.DUNGEONS[dungeon]["mouth"]})
+	_save_due = dungeon
+
+
+## Whether the player and an enemy's home lie in the same band between the ring gates and
+## dungeon mouths (BANDS). Nothing fights, notices or chases across a ring gate or a mouth.
 func _same_side(enemy_id: String) -> bool:
 	return _band(world.region_at(_home(enemy_id))) == _band(state["player"]["region"])
 
 
 ## Which band between the ring gates a region lies in: 0 nearest the outpost, one more past
-## each ring gate.
+## each ring gate, and one of its own for each dungeon, after the rings', in table order.
 static func _band(region: String) -> int:
+	var dungeon := WorldDef.dungeon_of_region(region)
+	if dungeon != "":
+		return BANDS.size() + 1 + WorldDef.DUNGEONS.keys().find(dungeon)
 	return int(BANDS.get(region, 0))
 
 
@@ -2134,6 +2153,12 @@ func restore(snap: Dictionary) -> bool:
 			if FIRST_ARRIVALS.has(r) and not reached.has(r):
 				reached.append(r)
 	copy["rings_reached"] = reached
+	var dungeons: Array = []
+	if copy.get("dungeons_reached") is Array:
+		for d in copy["dungeons_reached"]:
+			if WorldDef.DUNGEONS.has(d) and not dungeons.has(d):
+				dungeons.append(d)
+	copy["dungeons_reached"] = dungeons
 	var attuned: Array = []
 	if copy.get("waystones") is Array:
 		for id in copy["waystones"]:
