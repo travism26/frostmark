@@ -1149,6 +1149,7 @@ func _build_world(world: WorldDef) -> void:
 			elif kind == WorldDef.KIND_WAY_OUT:
 				_way_outs[id] = {"open": prop.get_node("Open"), "shut": prop.get_node("Shut"), "label": label}
 			elif kind == WorldDef.KIND_DEATH_CHEST:
+				label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM  # its list grows up, off the chest
 				_death_chests[id] = {"full": prop.get_node("Full"), "label": label}
 
 

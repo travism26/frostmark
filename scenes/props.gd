@@ -163,14 +163,14 @@ static func chest(height: float) -> Node3D:
 ## holds something: bundles heaped on the lid and a lantern burning beside it, so from the
 ## default camera a lit chest is one worth the walk back.
 static func death_chest(height: float) -> Node3D:
-	var root := model(SURVIVAL + "chest.glb", height, 0.55, Color(0.62, 0.58, 0.55))
+	var root := model(SURVIVAL + "chest.glb", height, 0.55, Color(0.80, 0.74, 0.68))
 	var full := Node3D.new()
 	full.name = "Full"
 	root.add_child(full)
 	var bundles := [
-		[Vector3(0.55, 0.30, 0.40), Vector3(-0.18, height + 0.15, 0.0), COLOR_WOOD.lightened(0.25)],
-		[Vector3(0.40, 0.26, 0.34), Vector3(0.24, height + 0.13, 0.06), Color(0.55, 0.42, 0.30)],
-		[Vector3(0.34, 0.22, 0.30), Vector3(0.02, height + 0.38, -0.02), Color(0.66, 0.52, 0.36)],
+		[Vector3(0.70, 0.40, 0.50), Vector3(-0.22, height + 0.20, 0.0), COLOR_WOOD.lightened(0.35)],
+		[Vector3(0.55, 0.34, 0.44), Vector3(0.30, height + 0.17, 0.06), Color(0.70, 0.55, 0.38)],
+		[Vector3(0.44, 0.30, 0.38), Vector3(0.02, height + 0.52, -0.02), Color(0.80, 0.64, 0.44)],
 	]
 	for b in bundles:
 		var bundle := MeshInstance3D.new()
@@ -180,16 +180,16 @@ static func death_chest(height: float) -> Node3D:
 		full.add_child(bundle)
 	var lantern := MeshInstance3D.new()
 	lantern.mesh = BoxMesh.new()
-	(lantern.mesh as BoxMesh).size = Vector3(0.22, 0.32, 0.22)
-	(lantern.mesh as BoxMesh).material = flat(COLOR_LANTERN, 3.0)
-	lantern.position = Vector3(0.75, 0.16, 0.45)
+	(lantern.mesh as BoxMesh).size = Vector3(0.30, 0.44, 0.30)
+	(lantern.mesh as BoxMesh).material = flat(COLOR_LANTERN, 4.0)
+	lantern.position = Vector3(0.85, 0.22, 0.50)
 	full.add_child(lantern)
 	var light := OmniLight3D.new()
 	light.light_color = COLOR_LANTERN
-	light.light_energy = 1.6
-	light.omni_range = 5.0
-	light.omni_attenuation = 1.4
-	light.position = Vector3(0.75, 0.9, 0.45)
+	light.light_energy = 2.6
+	light.omni_range = 6.5
+	light.omni_attenuation = 1.2
+	light.position = Vector3(0.85, 1.0, 0.50)
 	full.add_child(light)
 	return root
 
