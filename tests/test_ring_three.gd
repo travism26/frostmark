@@ -1729,24 +1729,24 @@ func _read_the_tyrant(heeds_marks := true) -> Dictionary:
 		"health": int(sim.state["health"]), "lowest": lowest, "ticks": ticks, "died": died,
 		"dead": sim.state["enemies"]["foe"]["mode"] == Sim.MODE_DEAD, "baited": baited, "stepped": stepped,
 		"dodged": dodged, "struck": struck, "answers": answers, "trout": H.pack_count(sim, "cooked_trout"),
+		"tyrant": int(sim.state["enemies"]["foe"]["health"]),
 	}
 
 
-## Walks the player half a metre past the edge of `mark`: straight out from its centre, or off
-## a drop mark centred on them to one side of the tyrant, whichever side is open ground. Returns
+## Walks the player to the nearest open ground half a metre past the edge of `mark`, or off a
+## drop mark centred on them to the side, keeping their distance from the tyrant. Returns
 ## whether a way off was found.
 func _step_off(sim: Sim, mark: Dictionary) -> bool:
 	var centre := Vector2(mark["centre"][0], mark["centre"][1])
-	var out := float(mark["radius"]) + 0.5
 	var here := sim.player_pos()
+	var foe: Vector2 = sim.combatant("foe")["pos"]
 	var ways: Array[Vector2] = []
-	if here.distance_to(centre) > 0.01:
-		ways.append((here - centre).normalized())
-	else:
-		var toward: Vector2 = ((sim.combatant("foe")["pos"] as Vector2) - here).normalized()
-		ways.append_array([toward.orthogonal(), -toward.orthogonal(), -toward])
-	for way in ways:
-		var to: Vector2 = centre + way * out
+	for i in 16:
+		ways.append(centre + Vector2.from_angle(TAU * i / 16.0) * (float(mark["radius"]) + 0.5))
+	var cost := func(to: Vector2) -> float:
+		return absf(to.distance_to(foe) - here.distance_to(foe)) if here.distance_to(centre) < 0.01 else to.distance_to(here)
+	ways.sort_custom(func(a: Vector2, b: Vector2) -> bool: return cost.call(a) < cost.call(b))
+	for to in ways:
 		if sim.world.is_walkable(to) and sim.command(Vocab.MOVE_TO, {"pos": [to.x, to.y]})["ok"]:
 			return true
 	return false
