@@ -57,6 +57,7 @@ const NATURAL_WEAPONS := {
 	"tyrant_greatblade": {"label": "Greatblade", "style": STYLE_MELEE, "power": 0, "speed": 1, "reach": CLOSE_RANGE},
 	"tyrant_bow": {"label": "Warbow", "style": STYLE_RANGED, "power": 0, "speed": 1, "reach": 8.0},
 	"tyrant_staff": {"label": "Tyrant's staff", "style": STYLE_MAGIC, "power": 0, "speed": 1, "reach": 6.0},
+	"bear_claws": {"label": "Claws", "style": STYLE_MELEE, "power": 0, "speed": 1, "reach": CLOSE_RANGE},
 }
 const UNARMED := "fists"
 
@@ -146,6 +147,11 @@ const ACTIONS := {
 	"feint_storm": {"label": "Whiteout", "damage": 0, "feint": "tyrant_storm"},
 	"draw_greatblade": {"label": "Draws its greatblade", "damage": 0, "stance": true},
 	"tyrant_roars": {"label": "Roars", "damage": 0, "stance": true},
+	"bear_swipe": {"label": "Swipe", "damage": 9},
+	"bear_maul": {"label": "Maul", "damage": 20, "heavy": true},
+	"bear_smash": {"label": "Smash", "damage": 26, "heavy": true, "shape": MARK_FRONT, "size": 4.0},
+	"bear_stomp": {"label": "Stomp", "damage": 24, "heavy": true, "shape": MARK_RING, "size": 3.5},
+	"bear_rears": {"label": "Rears and roars", "damage": 0, "stance": true},
 }
 
 ## Enemy kinds. `weapon` sets the style and reach. `speed` is metres per tick (the player walks
@@ -219,14 +225,27 @@ const ENEMIES := {
 		"boss_loot": ["iron_sword", "iron_bow", "iron_staff", "iron_helm", "iron_body", "iron_legs"],
 		"rare_percent": 25, "respawn_ticks": 600, "boss": true,
 	},
-	# The ring-one dungeon's boss, a placeholder until its own fight is designed (#203): a wolf
-	# grown past the captain, with his sabre's slash and cleave in its jaws and more health than
-	# anything in ring one. It guards no gate, so it comes back, and the dungeon's way out is shut
-	# while it stands.
-	"great_wolf": {
-		"label": "Great wolf", "health": 300, "weapon": "fangs", "speed": 2.0, "sight": 7.0,
-		"actions": ["slash", ACTION_REST, ACTION_REST, "cleave", ACTION_REST, ACTION_REST],
-		"loot": [{"item": "wolf_pelt", "count": 2}], "rare_percent": 10, "respawn_ticks": 600, "boss": true,
+	# The ring-one dungeon's boss. Its claws swipe and maul like any telegraphed blow, so magic
+	# has the edge on it, and between them it smashes the ground in front of it and stomps a
+	# ring round itself, each marked two ticks ahead. Below half health it rears up, roars and
+	# calls two wolves in from the room's west and east edges. It guards no gate, so it comes
+	# back, and the dungeon's way out is shut while it stands.
+	"great_frost_bear": {
+		"label": "Great frost bear", "health": 700, "weapon": "bear_claws", "speed": 2.0, "sight": 7.0,
+		"actions": [
+			"bear_swipe", ACTION_REST, "bear_smash", ACTION_REST,
+			"bear_maul", ACTION_REST, ACTION_REST, "bear_stomp", ACTION_REST,
+		],
+		"phases": [{
+			"below": 50,
+			"actions": [
+				"bear_rears", "bear_swipe", "bear_stomp", ACTION_REST,
+				"bear_maul", ACTION_REST, "bear_smash", ACTION_REST,
+			],
+			"adds": [{"kind": "wolf", "entry": [-8.5, 0.0]}, {"kind": "wolf", "entry": [10.5, 0.0]}],
+		}],
+		"loot": [{"item": "iron_ore", "count": 6}, {"item": "wolf_pelt", "count": 4}],
+		"rare_percent": 0, "respawn_ticks": 600, "boss": true,
 	},
 	# Ring two. A troll smashes, rests, then winds up a tick before its crush: the longest
 	# warning in the game, for the hardest blow. Slow, so it can be stepped away from.

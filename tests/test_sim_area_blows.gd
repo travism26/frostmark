@@ -1,6 +1,6 @@
-## Area blows: a blow that strikes a ground mark rather than the player. No enemy uses one yet,
-## so the stand-in smasher (a front mark) and stomper (a ring mark) in tests/sim_helpers.gd
-## carry the rule: the mark is told two ticks before it lands, the enemy is rooted until then,
+## Area blows: a blow that strikes a ground mark rather than the player. The stand-in smasher
+## (a front mark) and stomper (a ring mark) in tests/sim_helpers.gd carry the rule apart from
+## any boss's content: the mark is told two ticks before it lands, the enemy is rooted until then,
 ## and the blow hits a player inside the mark and misses one who stepped off it, for the same
 ## damage whatever style they hold, less their armour.
 extends "res://tests/run.gd".TestCase
@@ -273,8 +273,12 @@ func test_the_game_table_and_the_stand_ins_have_no_area_problems() -> void:
 	H.add_stand_ins()
 	for kind in CombatTable.ENEMIES.keys() + H.STAND_IN_KINDS.keys():
 		assert_eq(CombatTable.area_problems(CombatTable.enemy(kind)), [] as Array[String], "%s's area blows" % kind)
-	for action in CombatTable.ACTIONS:
-		assert_false(CombatTable.is_area_blow(action), "no game kind strikes a ground mark yet: %s" % action)
+	for kind in CombatTable.ENEMIES:
+		var cycles: Array = [CombatTable.ENEMIES[kind]] + CombatTable.ENEMIES[kind].get("phases", [])
+		for cycle in cycles:
+			for action in cycle["actions"]:
+				if CombatTable.is_area_blow(action):
+					assert_true(CombatTable.ENEMIES[kind].get("boss", false), "only a boss strikes a ground mark: %s's %s" % [kind, action])
 
 
 func test_in_mark_reads_the_arc_and_the_radius() -> void:

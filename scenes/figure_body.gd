@@ -3,7 +3,8 @@
 ## forward). It picks its own clip: Idle while still, the walk or run clip while its global
 ## position changes between frames (so GameRoot keeps moving the node and nothing else), a
 ## one-shot attack on `strike(style)`, paced so the blow lands one simulation tick after the
-## telegraph, a held `wind_up(style)` the next strike resumes from, a `flinch()` when hit and
+## telegraph, a held `wind_up(style)` the next strike resumes from (or `slam(shape)` swings
+## through when an area blow lands), a `flinch()` when hit and
 ## the death clip on `die()`. Gear hangs off the rig's BoneAttachment3D slots through
 ## `bone_slot` and `mount`, so it moves with the animation.
 ##
@@ -151,6 +152,15 @@ func wind_up(style: String) -> void:
 	_player.play(clip, BLEND)
 	_player.seek(0.0, true)
 	_player.speed_scale = clampf(length * raise / Sim.TICK_SECONDS, PACE_MIN, PACE_MAX)
+
+
+## An area blow lands on its mark (`shape`): a held wind-up swings through at once.
+func slam(_shape: String) -> void:
+	if _dead or _player == null or not _held:
+		return
+	_held = false
+	_player.speed_scale = PACE_MAX
+	_player.play()
 
 
 ## A blow taken: the flinch clip once, unless a strike or wind-up has the body.

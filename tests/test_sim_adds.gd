@@ -1,5 +1,5 @@
-## Adds: lesser enemies a boss calls into its fight once, as a fight phase starts. No game kind
-## calls adds yet, so the stand-in caller in tests/sim_helpers.gd carries the rule: below half
+## Adds: lesser enemies a boss calls into its fight once, as a fight phase starts. The stand-in
+## caller in tests/sim_helpers.gd carries the rule apart from any boss's content: below half
 ## health it calls two wolves from 5 m either side of its home, announced a tick ahead, and
 ## below 30 % it calls nobody. Adds never respawn, drop their usual loot, and leave when the
 ## boss gives up the fight; its next fight calls them again.
@@ -254,7 +254,9 @@ func test_the_game_table_and_the_stand_ins_have_no_add_problems() -> void:
 	assert_eq(CombatTable.adds("stand_in_caller", 2), [])
 
 
-func test_no_game_kind_calls_adds_yet() -> void:
+func test_only_a_boss_calls_adds_and_the_table_has_no_add_problems() -> void:
 	for kind in CombatTable.ENEMIES:
+		assert_eq(CombatTable.add_problems(CombatTable.ENEMIES[kind]), [] as Array[String], "%s's adds" % kind)
 		for phase in range(1, CombatTable.phase_count(kind) + 1):
-			assert_eq(CombatTable.adds(kind, phase), [], "%s's phase %d" % [kind, phase])
+			if not CombatTable.adds(kind, phase).is_empty():
+				assert_true(CombatTable.ENEMIES[kind].get("boss", false), "%s calls adds in phase %d" % [kind, phase])

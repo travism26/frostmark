@@ -558,7 +558,7 @@ static func _ring_one_dungeon(w: WorldDef) -> void:
 	# corner and faces north, into the room; `outward` only turns its look.
 	var dungeon: Dictionary = DUNGEONS["ring_one_dungeon"]
 	var r: Dictionary = dungeon["reserved"]
-	w.enemies[dungeon["boss"]] = {"kind": "great_wolf", "home": r["boss"], "pack": dungeon["boss"]}
+	w.enemies[dungeon["boss"]] = {"kind": "great_frost_bear", "home": r["boss"], "pack": dungeon["boss"]}
 	var at: Array = r["way_out"]
 	w.objects[dungeon["way_out"]] = {
 		"kind": KIND_WAY_OUT, "label": "Way out", "blocks": true, "height": 3.0,

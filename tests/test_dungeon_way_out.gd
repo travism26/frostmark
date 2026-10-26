@@ -1,5 +1,5 @@
-## The end of the ring-one dungeon: a placeholder boss in the boss room, stronger than anything
-## in ring one, and the way out beside it, shut while the boss stands and open from its fall until
+## The end of the ring-one dungeon: its boss, the great frost bear, in the boss room, stronger
+## than anything in ring one, and the way out beside it, shut while the boss stands and open from its fall until
 ## it comes back. Taking the way out is a walk-up that sets the player down on ring-one ground on
 ## the outpost's side of the dungeon, as waystone travel sets them down outside the gate.
 extends "res://tests/run.gd".TestCase
@@ -42,10 +42,12 @@ static func _spot(at: Array) -> Vector2:
 	return Vector2(at[0], at[1])
 
 
+## The heaviest blow in any of `kind`'s cycles, its phases' included.
 static func _heaviest(kind: String) -> int:
 	var most := 0
-	for action in CombatTable.enemy(kind)["actions"]:
-		most = maxi(most, int(CombatTable.ACTIONS[action]["damage"]))
+	for phase in CombatTable.phase_count(kind) + 1:
+		for action in CombatTable.cycle(kind, phase):
+			most = maxi(most, CombatTable.action_damage(action))
 	return most
 
 
@@ -80,18 +82,18 @@ func test_the_boss_is_one_placement_of_a_new_kind_stronger_than_all_of_ring_one(
 	assert_true(def["boss"], "it is flagged as a boss")
 	for other in ring_one:
 		assert_true(int(def["health"]) > int(CombatTable.enemy(other)["health"]), "more health than a %s" % other)
-		assert_true(_heaviest(kind) >= _heaviest(other), "a blow as heavy as a %s's" % other)
-	assert_false(def.has("boss_loot"), "it drops nothing special yet")
+		assert_true(_heaviest(kind) > _heaviest(other), "a heavier blow than a %s's" % other)
+	assert_false(def.has("boss_loot"), "it drops nothing special")
 
 
-func test_the_boss_telegraphs_its_blows_like_any_enemy() -> void:
+func test_the_boss_telegraphs_its_ordinary_blows_like_any_enemy() -> void:
 	var sim := SimScript.new()
 	H.arm(sim, "", [])
 	H.place(sim, BESIDE_BOSS)
 	sim.command(Vocab.SET_AUTO_RETALIATE, {"on": false})
 	var events := H.run_stamped(sim, 12)
 	var told := H.where(events, Vocab.EV_ENEMY_TELEGRAPHED, "enemy_id", BOSS)
-	var hits := H.where(events, Vocab.EV_HIT, "attacker", BOSS)
+	var hits := H.where(events, Vocab.EV_HIT, "attacker", BOSS).filter(func(e: Dictionary) -> bool: return not e.get("area", false))
 	assert_true(hits.size() >= 1, "it strikes")
 	for hit in hits:
 		var warned := told.filter(func(t: Dictionary) -> bool: return int(t["at"]) == int(hit["tick"]))
@@ -102,11 +104,11 @@ func test_the_boss_comes_back_after_its_respawn_time() -> void:
 	var sim := SimScript.new()
 	_fell_boss(sim)
 	H.place(sim, ROOM_NORTH)
-	var ticks := int(CombatTable.enemy("great_wolf")["respawn_ticks"])
+	var ticks := int(CombatTable.enemy("great_frost_bear")["respawn_ticks"])
 	assert_eq(H.of_kind(H.run(sim, ticks - 3), Vocab.EV_ENEMY_RESPAWNED).size(), 0, "not before its time")
 	var back := H.run(sim, 3)
 	assert_eq(H.where(back, Vocab.EV_ENEMY_RESPAWNED, "enemy_id", BOSS).size(), 1, "back at home")
-	assert_eq(int(sim.state["enemies"][BOSS]["health"]), int(CombatTable.enemy("great_wolf")["health"]))
+	assert_eq(int(sim.state["enemies"][BOSS]["health"]), int(CombatTable.enemy("great_frost_bear")["health"]))
 
 
 # --- The way out --------------------------------------------------------------------------
@@ -150,7 +152,7 @@ func test_after_the_boss_falls_the_way_out_sets_the_player_down_in_ring_one() ->
 
 func test_taking_the_way_out_sends_every_engaged_enemy_home() -> void:
 	var home: Array = WorldDef.DUNGEONS[DUNGEON]["reserved"]["boss"]
-	var sim := H.arena({BOSS: {"kind": "great_wolf", "home": home}, "foe": {"kind": "wolf", "home": [76.5, 46.5]}})
+	var sim := H.arena({BOSS: {"kind": "great_frost_bear", "home": home}, "foe": {"kind": "wolf", "home": [76.5, 46.5]}})
 	_fell_boss(sim)
 	assert_eq(sim.state["enemies"]["foe"]["mode"], Sim.MODE_ENGAGED, "a wolf in the room joins the fight")
 	var events := _use(sim)
@@ -163,7 +165,7 @@ func test_when_the_boss_comes_back_the_way_out_shuts_again() -> void:
 	var sim := SimScript.new()
 	_fell_boss(sim)
 	H.place(sim, ROOM_NORTH)
-	H.run(sim, int(CombatTable.enemy("great_wolf")["respawn_ticks"]))
+	H.run(sim, int(CombatTable.enemy("great_frost_bear")["respawn_ticks"]))
 	assert_eq(sim.state["enemies"][BOSS]["mode"], Sim.MODE_IDLE, "the boss is back")
 	assert_false(sim.way_out_open(WAY_OUT), "and the way out shut")
 	assert_eq(sim.command(Vocab.INTERACT, {"object_id": WAY_OUT})["reason"], Vocab.REASON_WAY_OUT_SHUT)
@@ -194,7 +196,7 @@ func test_defeating_the_boss_opens_and_shuts_no_ring_gate() -> void:
 	H.patch(open, {"upgrades": upgrades, "bosses_defeated": ["captain"]})
 	_fell_boss(open)
 	H.place(open, ROOM_NORTH)
-	H.run(open, int(CombatTable.enemy("great_wolf")["respawn_ticks"]))
+	H.run(open, int(CombatTable.enemy("great_frost_bear")["respawn_ticks"]))
 	assert_eq(open.state["enemies"][BOSS]["mode"], Sim.MODE_IDLE)
 	for gate in gates:
 		assert_true(open.ring_gate_open(gate), "%s stays open through its fall and return" % gate)
