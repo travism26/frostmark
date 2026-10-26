@@ -222,6 +222,40 @@ The play bot used to fight back only in ring two, so ring one could kill it mid-
 
 [#113](https://github.com/travism26/frostmark/issues/113) put a mine of three copper and three tin rocks against ring one's west cliff, north of the watch post, and moved `witch_2` from the north-west flank to its mouth, within earshot of every side of every rock. A visit there is 12 copper and 12 tin ore, but only after the witch. The run takes none of it: it mines its bronze in the inner ring before its first fight, and none of its ring-one trips passes the mine or the witch, so the measured run is unchanged at 28:48 and `tests/test_pacing.gd` still reaches the fallen captain at tick 1715. No number was retuned.
 
+## The ring-one dungeon
+
+The dungeon sits off the timed route, so the measured run and `tests/test_pacing.gd` don't change.
+
+### The great frost bear
+
+[#217](https://github.com/travism26/frostmark/issues/217): the dungeon's boss. 600 health, claws (melee, so magic has the edge), swipe 9, maul 20 (heavy), smash 30 (heavy, a front mark 4 m deep), stomp 26 (heavy, a ring mark 3.5 m round it), both marks told two ticks ahead, and below 300 health a phase that rears, roars and calls in two wolves. It drops 6 iron ore and 4 wolf pelts every time and comes back 600 ticks after it falls.
+
+It is fought in `tests/test_great_frost_bear.gd` by the boss test code's character (docs/testing.md): melee, ranged and magic at 20, iron helm, body and legs (3 defence), an iron staff, 100 health and five cooked trout, starting beside it. Both fighters strike whenever they can (the wolves first once they come in) and eat a trout below half health. The numbers below are what the tests print (`test_the_reader_steps_off_every_mark_and_beats_the_bear`, `test_the_non_reader_standing_still_takes_the_smash_and_stomp_and_dies`).
+
+| Fight | Result |
+|-------|--------|
+| Reader: holds the staff and steps off every mark the tick it is told (to the bear's side for a smash, a metre past the ring for a stomp) | The bear falls on the 68th tick (34 s); 52 health at the lowest and at the end, no trout eaten. It steps off 11 marks and none lands; the two wolves come in at half health and are killed first |
+| Non-reader: holds the staff and stands its ground | Dies on the 52nd tick, all five trout eaten, with the bear on 96. All ten of its marks land |
+
+What each of its blows does to that character, by the weapon it holds (`test_swapping_style_changes_its_claws_by_the_triangle_but_never_its_smash_or_stomp`):
+
+| Blow | Staff | Sword | Bow (up close) |
+|------|-------|-------|----------------|
+| Swipe 9 | 2 | 6 | 11 |
+| Maul 20 (heavy) | 7 | 17 | 27 |
+| Smash 30 (heavy, front mark) | 27 | 27 | 27 |
+| Stomp 26 (heavy, ring mark) | 23 | 23 | 23 |
+
+Why each number:
+
+- **Health 600, measured.** It was first set at 420. There the reader won in 47 ticks, but the non-reader standing still also won, in 43 ticks: it ate its five trout and ended on 79, its lowest 36. At 600 the bear outlasts the trout: standing still dies with the bear on 96, while the reader still wins in 34 seconds with half its health left, about as long as the bandit captain fight on the timed route. It matches the Frost tyrant's 600, but the ring-one character deals 21 a hit with the edge (an iron staff's 8 and 6 for level 20, times 1.5) every other tick, so the fight is the same length with simpler reading. 600 is also more than any other ring-one kind (the captain's 240).
+- **Swipe 9 and maul 20.** The maul is the heaviest aimed blow in ring one, over the captain's cleave 17, so a player who walks in with the wrong style feels it: 27 a maul with a bow up close. With the staff the bear's claws are an annoyance, 2 and 7, so the fight's real damage is in the marks.
+- **Smash 30 and stomp 26.** The heaviest blows in ring one, and over the maul, so the bear's heaviest blow is above every ring-one kind's. Through iron armour they land for 27 and 23, so four of them take a full health bar and standing in them is what kills. The first try was 26 and 22, with the health at 420 above.
+- **Smash 4 m deep, stomp 3.5 m round.** A player beside the bear (1.2 m from its centre) steps off a smash by walking about 2 m round to its side, in one tick, and off a stomp by walking more than 2.3 m straight out, in two ticks, so each is a decision inside its two-tick warning, as the spec asks. Both are bigger than a one-tick mark may be; the bear has none.
+- **Two wolves at half health.** Ring one's own kind, 15 health each: they bite an iron-armoured player for 1, and die to one staff hit each, so they turn the fight (the reader breaks off the bear for two hits) without stalling it.
+- **6 iron ore and 4 wolf pelts.** Two iron rocks' worth of ore and four wolves' pelts, so a kill pays half the ring-two winch's 12 ore and most of its 5 pelts, and a little more than the dungeon's own two rocks. No rare drop: the pile is fixed, as the spec asks.
+- **Respawn 600 ticks** (five minutes), the captain's, so it is up again on the next run through the dungeon.
+
 ## Ring three
 
 Ring three's enemies are deadlier by being harder to read, not by having more health ([#173](https://github.com/travism26/frostmark/issues/173)). They sit past the timed route, so the measured run and `tests/test_pacing.gd` don't change. Each enemy's fight is measured by a reader and a non-reader in `tests/test_ring_three.gd`: the reference character (steel head to foot, every combat skill at 40, 100 health, five cooked trout) against one enemy, deterministic like every fight.
