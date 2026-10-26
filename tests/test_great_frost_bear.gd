@@ -158,11 +158,10 @@ func test_it_fights_in_melee_with_a_smash_a_stomp_and_one_phase_and_nothing_more
 	assert_true(CombatTable.is_stance(CombatTable.cycle(KIND, 1)[0]), "announced by a stance")
 	assert_eq(CombatTable.answers(KIND, 0), {}, "no answers")
 	assert_eq(CombatTable.answers(KIND, 1), {}, "in either cycle")
-	for key in ["ward", "burn"]:
-		assert_false(def.has(key) or def["phases"][0].has(key), "no %s" % key)
-	for action in CombatTable.ACTIONS:
-		if CombatTable.is_area_blow(action) and action.begins_with("bear_"):
-			assert_false(CombatTable.ACTIONS[action].has("burn"), "%s leaves no burning ground" % action)
+	assert_false(def.has("ward") or def["phases"][0].has("ward"), "no ward")
+	for phase in CombatTable.phase_count(KIND) + 1:
+		for action in CombatTable.cycle(KIND, phase):
+			assert_false(CombatTable.burns(action), "%s leaves no burning ground" % action)
 	assert_eq(CombatTable.phase_problems(def), [] as Array[String])
 	assert_eq(CombatTable.area_problems(def), [] as Array[String])
 	assert_eq(CombatTable.add_problems(def), [] as Array[String])
