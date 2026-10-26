@@ -84,6 +84,10 @@ _Avoid_: Cluster, patch
 A fixed place where many rocks (about six) of one or two kinds stand together, often guarded. Its rocks yield no more than anywhere else; there are just more of them.
 _Avoid_: Hotspot, quarry, mining area
 
+**Point of interest**:
+A fixed place you find just by exploring, such as a wreck with a cache or a lore stone. It sets you no task.
+_Avoid_: Landmark, secret, discovery
+
 ### Gear
 
 **Gear tier**:
@@ -98,6 +102,10 @@ _Avoid_: Smithing tier, craft limit
 A material only ring three's enemies drop: rime steel, frost sinew or aurora glass, one for each combat style, each feeding that style's top gear sets.
 _Avoid_: Rare drop, rare item (the rare drop is the iron piece any enemy may drop on top of its loot)
 
+**Fur piece**:
+Armour sewn from wolf pelts that slows the drain on your warmth but gives no defence. It has no gear tier, so it competes with metal armour at every stage.
+_Avoid_: Fur armour, leather, lining
+
 ### Outpost
 
 **Outpost upgrade**:
@@ -111,6 +119,10 @@ _Avoid_: Backpack upgrade
 **Bloomery**:
 The outpost upgrade that raises the smithing cap from bronze to iron. It is optional: nothing past it requires it.
 _Avoid_: Smelter, iron forge
+
+**Bounty**:
+A short task posted at the outpost, such as killing five wolves, that pays a reward when done. It has no dialogue and no story.
+_Avoid_: Quest, mission, task
 
 ### Combat
 
