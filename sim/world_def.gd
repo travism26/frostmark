@@ -34,6 +34,7 @@ const KIND_DEEP_HOLE := "deep_hole"
 const KIND_RING_GATE := "ring_gate"
 const KIND_WAYSTONE := "waystone"
 const KIND_WAY_OUT := "way_out"
+const KIND_DEATH_CHEST := "death_chest"
 
 const REGION_OUTPOST := "outpost"
 const REGION_INNER_RING := "inner_ring"
@@ -75,8 +76,9 @@ const RING_ONE_DUNGEON_MOUTH_Z := -47.0
 ##             open from its fall until it comes back
 ##   set_down  where the way out sets the player down, as [x, z]: ring-one ground on the
 ##             outpost side of the dungeon, outside the outpost and short of every ring gate
-## The fire (gentle only: the id of an ordinary fire object) and the death chest join the entry
-## itself as they are built.
+##   fire      gentle only: the id of an ordinary fire object just inside the mouth
+##   chest     gentle only: the id of its death chest object, which holds what a death inside
+##             the dungeon would otherwise destroy (Sim, `death_chests`)
 ##
 ## The ring-one dungeon runs from the mouth in ring one's east cliff (x 60 to 64) to the cliffs
 ## at x 108, and from z -60 to 60. Three cave walls part it into four legs: east along the
@@ -86,7 +88,7 @@ const DUNGEONS := {
 	"ring_one_dungeon": {
 		"label": "The ring-one dungeon", "ring": REGION_RING_ONE, "depth": DUNGEON_GENTLE,
 		"region": REGION_RING_ONE_DUNGEON, "mouth": "ring_one_dungeon_mouth",
-		"fire": "ring_one_dungeon_fire",
+		"fire": "ring_one_dungeon_fire", "chest": "ring_one_dungeon_chest",
 		"reserved": {
 			"fire": [69.0, -42.0], "chest": [69.0, -53.0],
 			"fights": [[96.0, -38.0], [80.0, -26.0], [90.0, 10.0], [92.0, 40.0]],
@@ -522,6 +524,12 @@ static func _ring_one_dungeon(w: WorldDef) -> void:
 		"kind": KIND_FIRE, "label": "Fire", "blocks": true, "height": 0.6,
 		"min": [fire[0] - 0.75, fire[1] - 0.75], "max": [fire[0] + 0.75, fire[1] + 0.75],
 	}
+	# The death chest, beside the fire on the other side of the way in.
+	var chest: Array = DUNGEONS["ring_one_dungeon"]["reserved"]["chest"]
+	w.objects[DUNGEONS["ring_one_dungeon"]["chest"]] = {
+		"kind": KIND_DEATH_CHEST, "label": "Death chest", "blocks": true, "height": 1.0,
+		"min": [chest[0] - 0.75, chest[1] - 0.75], "max": [chest[0] + 0.75, chest[1] + 0.75],
+	}
 	# Two iron rocks, each at a reserved node spot and reached only past a fight.
 	var nodes: Array = DUNGEONS["ring_one_dungeon"]["reserved"]["nodes"]
 	for i in nodes.size():
@@ -561,6 +569,14 @@ static func _ring_one_dungeon(w: WorldDef) -> void:
 static func dungeon_of_region(region: String) -> String:
 	for id in DUNGEONS:
 		if DUNGEONS[id]["region"] == region:
+			return id
+	return ""
+
+
+## The id of the dungeon whose death chest is the object `object_id`, or "".
+static func dungeon_of_chest(object_id: String) -> String:
+	for id in DUNGEONS:
+		if DUNGEONS[id].get("chest", "") == object_id and object_id != "":
 			return id
 	return ""
 

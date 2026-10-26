@@ -128,6 +128,7 @@ var _node_looks := {}  # node object id -> its prop, whose Full/Spent children s
 var _ring_gates := {}  # ring gate object id -> {bars, label}
 var _waystones := {}  # waystone object id -> {glow, label}
 var _way_outs := {}  # way out object id -> {open, shut, label}
+var _death_chests := {}  # death chest object id -> {full, label}
 var _fires := {}  # field fire id -> its prop
 var _placed_fires: Array = []  # the props of the fires placed in the world: the outpost's, the brazier
 var _light_anchor := Vector3(INF, INF, INF)  # where the character stood when the fire lights were last sorted
@@ -441,6 +442,7 @@ func _show_sim() -> void:
 	_sync_ring_gates()
 	_sync_waystones()
 	_sync_way_outs()
+	_sync_death_chests()
 	_sync_yard()
 	for id in _fires:
 		(_fires[id] as Node).queue_free()
@@ -563,6 +565,9 @@ func _apply_events(events: Array[Dictionary]) -> void:
 					SimVocab.ACTION_WAY_OUT:
 						if not sim.way_out_open(e["object_id"]):
 							_last_event = _reason_text(SimVocab.REASON_WAY_OUT_SHUT)
+					SimVocab.ACTION_DEATH_CHEST:
+						# What it gives up follows in `took_from_chest`; this stands when it held nothing.
+						_last_event = "The death chest is empty."
 			SimVocab.EV_REGION_CHANGED:
 				_last_event = _entered_text(e)
 			SimVocab.EV_GATHERED:
@@ -648,6 +653,10 @@ func _apply_events(events: Array[Dictionary]) -> void:
 			SimVocab.EV_DIED:
 				_playing = false
 				_death_screen.show_death(e)
+				_sync_death_chests()
+			SimVocab.EV_TOOK_FROM_CHEST:
+				_last_event = _took_from_chest_text(e)
+				_sync_death_chests()
 			SimVocab.EV_ENEMY_NOTICED:
 				if e["cause"] != CombatTable.NOTICE_PACK:
 					_last_event = "%s has noticed you!" % _sentence(_enemy_name(e["enemy_id"]))
@@ -1089,6 +1098,8 @@ func _build_world(world: WorldDef) -> void:
 				prop = Props.chest(1.0)
 			WorldDef.KIND_WORKBENCH:
 				prop = Props.anvil(1.1)
+			WorldDef.KIND_DEATH_CHEST:
+				prop = Props.death_chest(o["height"])
 			WorldDef.KIND_RING_GATE:
 				if WorldDef.dungeon_of_mouth(id) != "":
 					prop = _cave_mouth(world, id)
@@ -1137,6 +1148,9 @@ func _build_world(world: WorldDef) -> void:
 				_waystones[id] = {"glow": prop.get_node("Glow"), "label": label}
 			elif kind == WorldDef.KIND_WAY_OUT:
 				_way_outs[id] = {"open": prop.get_node("Open"), "shut": prop.get_node("Shut"), "label": label}
+			elif kind == WorldDef.KIND_DEATH_CHEST:
+				label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM  # its list grows up, off the chest
+				_death_chests[id] = {"full": prop.get_node("Full"), "label": label}
 
 
 ## A dungeon's mouth in its ring's cliff, in the stone of that ring, its passage turned along
@@ -1303,6 +1317,34 @@ func _way_out_of_boss(enemy_id: String) -> String:
 		if WorldDef.DUNGEONS[dungeon]["boss"] == enemy_id:
 			return WorldDef.DUNGEONS[dungeon]["way_out"]
 	return ""
+
+
+## A death chest's lantern burns while it holds something; its label lists what it holds.
+func _sync_death_chests() -> void:
+	for id in _death_chests:
+		var held: Array = sim.state["death_chests"][WorldDef.dungeon_of_chest(id)]
+		(_death_chests[id]["full"] as Node3D).visible = not held.is_empty()
+		(_death_chests[id]["label"] as Label3D).text = _death_chest_text(held)
+
+
+## A death chest's label: "Death chest (empty)", or its name over one line per stack it holds.
+static func _death_chest_text(held: Array) -> String:
+	if held.is_empty():
+		return "Death chest (empty)"
+	var lines: PackedStringArray = ["Death chest"]
+	for s in held:
+		var count := int(s["count"])
+		var name := ItemTable.label(s["item"])
+		lines.append(name if count <= 1 else "%d %s" % [count, name])
+	return "\n".join(lines)
+
+
+## The status line for a `took_from_chest` event: what came out, and what a full pack left.
+static func _took_from_chest_text(e: Dictionary) -> String:
+	var text := "You take %s from the death chest." % _item_list(e["items"])
+	if not (e["left"] as Array).is_empty():
+		text += " Pack full: %s stays in it." % _item_list(e["left"])
+	return text
 
 
 ## The yard shows a piece for every built upgrade (YardLook), redrawn when the list changes.

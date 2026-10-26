@@ -183,11 +183,21 @@ func new_state() -> Dictionary:
 		"bosses_defeated": [],
 		"rings_reached": [],
 		"dungeons_reached": [],
+		"death_chests": _empty_death_chests(),
 		"waystones": [],
 		"upgrades": [],
 		"pending": [],
 		"guide": {"on": true, "step": 0, "tips": {}},
 	}
+
+
+## Every gentle dungeon's death chest, empty: dungeon id -> a list of {item, count}.
+static func _empty_death_chests() -> Dictionary:
+	var out := {}
+	for id in WorldDef.DUNGEONS:
+		if WorldDef.DUNGEONS[id].get("chest", "") != "":
+			out[id] = []
+	return out
 
 
 func _full_nodes() -> Dictionary:
@@ -619,6 +629,8 @@ func _step_movement() -> void:
 				_attune(object_id)
 			elif action == SimVocab.ACTION_WAY_OUT and way_out_open(object_id):
 				_take_way_out(object_id)
+			elif action == SimVocab.ACTION_DEATH_CHEST:
+				_take_from_chest(object_id)
 
 
 func _action_for(object_id: String) -> String:
@@ -637,6 +649,8 @@ func _action_for(object_id: String) -> String:
 			return SimVocab.ACTION_WAYSTONE
 		WorldDef.KIND_WAY_OUT:
 			return SimVocab.ACTION_WAY_OUT
+		WorldDef.KIND_DEATH_CHEST:
+			return SimVocab.ACTION_DEATH_CHEST
 	return SimVocab.ACTION_NONE
 
 
@@ -1722,12 +1736,13 @@ func _drains_this_tick() -> bool:
 	return (t + 1) * WARMTH_PACE / span > t * WARMTH_PACE / span
 
 
-## Health ran out, to a blow or to the cold. Everything carried or worn is lost for good except
-## the DEATH_KEEPS most valuable, which stay where they were: a stack counts as one thing,
-## valued at its whole count, and ties go to what is worn, then to the earlier pack slot. The
-## player wakes beside the outpost fire, warm and healed; skills, stash and upgrades are
-## untouched, every enemy breaks off, and a spare axe waits if the last one was lost. Always a
-## save point.
+## Health ran out, to a blow or to the cold. Everything carried or worn is lost except the
+## DEATH_KEEPS most valuable, which stay where they were: a stack counts as one thing, valued at
+## its whole count, and ties go to what is worn, then to the earlier pack slot. What is lost is
+## destroyed, unless the player died in a gentle dungeon: then it goes into that dungeon's death
+## chest, replacing whatever the chest held. The player wakes beside the outpost fire, warm and
+## healed; skills, stash and upgrades are untouched, every enemy breaks off, and a spare axe
+## waits if the last one was lost. Always a save point.
 func _die(cause: String) -> void:
 	var player: Dictionary = state["player"]
 	var inventory: Dictionary = state["inventory"]
@@ -1746,6 +1761,10 @@ func _die(cause: String) -> void:
 			inventory["equipment"][h["slot"]] = ""
 		else:
 			inventory["pack"][h["slot"]] = null
+	var dungeon := WorldDef.dungeon_of_region(player["region"])
+	var chest: String = WorldDef.DUNGEONS[dungeon].get("chest", "") if dungeon != "" else ""
+	if chest != "":
+		state["death_chests"][dungeon] = lost.duplicate(true)
 	var spare := _spare_axe()
 	var to := Vector2(world.rescue[0], world.rescue[1])
 	player["pos"] = _xz(to)
@@ -1758,6 +1777,7 @@ func _die(cause: String) -> void:
 	state["pending"] = []
 	_emit({
 		"kind": SimVocab.EV_DIED, "cause": cause, "kept": kept, "lost": lost, "spare": spare, "pos": _xz(to),
+		"chest": chest,
 	})
 	var region := world.region_at(to)
 	if region != player["region"]:
@@ -1767,6 +1787,34 @@ func _die(cause: String) -> void:
 		if state["enemies"][id]["mode"] == MODE_ENGAGED:
 			_disengage(id)
 	_save_due = "death"
+
+
+## Takes what a death chest holds into the pack: each stack in turn, as many of it as fit, so a
+## full pack leaves the rest in the chest for another visit. A save point when anything moved.
+func _take_from_chest(object_id: String) -> void:
+	var dungeon := WorldDef.dungeon_of_chest(object_id)
+	var held: Array = state["death_chests"][dungeon]
+	if held.is_empty():
+		return
+	var pack: Array = state["inventory"]["pack"]
+	var taken: Array = []
+	var left: Array = []
+	for s in held:
+		var count := int(s["count"])
+		var stays := Inventory.add(pack, s["item"], count)
+		if stays < count:
+			taken.append({"item": s["item"], "count": count - stays})
+		if stays > 0:
+			left.append({"item": s["item"], "count": stays})
+	if taken.is_empty():
+		_reject(SimVocab.INTERACT, {"object_id": object_id}, SimVocab.REASON_PACK_FULL)
+		return
+	state["death_chests"][dungeon] = left
+	_emit({
+		"kind": SimVocab.EV_TOOK_FROM_CHEST, "object_id": object_id, "dungeon_id": dungeon,
+		"items": taken, "left": left.duplicate(true),
+	})
+	_save_due = "death_chest"
 
 
 ## The workbench makes an axe only from logs, which need an axe, so a death that took the last
@@ -2195,6 +2243,7 @@ func restore(snap: Dictionary) -> bool:
 			if WorldDef.DUNGEONS.has(d) and not dungeons.has(d):
 				dungeons.append(d)
 	copy["dungeons_reached"] = dungeons
+	copy["death_chests"] = _restored_death_chests(copy.get("death_chests"))
 	var attuned: Array = []
 	if copy.get("waystones") is Array:
 		for id in copy["waystones"]:
@@ -2285,6 +2334,24 @@ static func _restored_guide(saved: Variant) -> Dictionary:
 			if GuideTable.TIPS.has(str(id)) and _is_number(saved["tips"][id]):
 				guide["tips"][str(id)] = int(saved["tips"][id])
 	return guide
+
+
+## Every gentle dungeon's death chest from saved data: known items only, counts clamped to the
+## stack size, and a chest that is missing or unreadable empty.
+func _restored_death_chests(saved: Variant) -> Dictionary:
+	var out := _empty_death_chests()
+	if not (saved is Dictionary):
+		return out
+	for id in out:
+		if not (saved.get(id) is Array):
+			continue
+		for s in saved[id]:
+			if s is Dictionary and ItemTable.has(str(s.get("item", ""))) and _is_number(s.get("count")):
+				var kind := str(s["item"])
+				var count := clampi(int(s["count"]), 0, ItemTable.stack_size(kind))
+				if count > 0:
+					out[id].append({"item": kind, "count": count})
+	return out
 
 
 ## A slot array of exactly `size` entries from saved data: known items only, counts clamped
