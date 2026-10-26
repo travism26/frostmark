@@ -4,7 +4,8 @@
 ## landing tick, and cleared after. An add a boss has called shows where it will enter, a pale
 ## ring on the snow at its entry point, until it comes in or leaves. Burning ground an area blow
 ## leaves is a glowing orange patch with flames, drawn from its `burning_started` event to its
-## `burning_out`. Driven only by the `enemy_telegraphed`, `enemy_stance`, `ground_marked`,
+## `burning_out`. A blow a ward turns aside is a pale deflection flaring at the enemy toward the
+## one who struck it, not a flinch. Driven only by the `enemy_telegraphed`, `enemy_stance`, `ground_marked`,
 ## `add_called`, `hit`, `missed`, `burning_started` and `burning_out` events the simulation
 ## already emits, on the tick they arrive; it keeps no state of its own beyond what is on
 ## screen. Rings and marks sit on the
@@ -20,6 +21,7 @@ const LIFT := 0.04  # above the snow, clear of z-fighting
 const MARK_COLOUR := Color(0.93, 0.13, 0.09)
 const MARK_TOLD_ALPHA := 0.45
 const MARK_LANDING_ALPHA := 0.95
+const DEFLECT_COLOUR := Color(0.85, 0.95, 1.0)
 const CALL_COLOUR := Color(0.78, 0.88, 1.0, 0.9)
 const CALL_RADIUS := 1.2
 const BURN_COLOUR := Color(1.0, 0.45, 0.08)
@@ -69,12 +71,24 @@ func clear_ring(enemy_id: String) -> void:
 
 ## A swing arc at the enemy's feet, opening toward `toward`, that fades over ARC_SECONDS.
 func arc(anchor: Node3D, toward: Vector3, colour: Color) -> void:
+	_sweep(anchor.global_position, toward, colour)
+
+
+## A warded blow glances off: a pale arc flares at `at`, the enemy's feet, toward `toward`, where
+## the blow came from, and fades like a swing arc.
+func deflect(at: Vector3, toward: Vector3) -> void:
+	_sweep(at, toward, DEFLECT_COLOUR)
+
+
+## An arc at world point `at` opening toward `toward`. This node sits at the world origin, so
+## world points are its own.
+func _sweep(at: Vector3, toward: Vector3, colour: Color) -> void:
 	var mesh := _flat_quad(_arc_tex())
 	mesh.scale = Vector3(ARC_RADIUS * 2.0, 1.0, ARC_RADIUS * 2.0)
 	(mesh.material_override as StandardMaterial3D).albedo_color = Color(colour, 1.0)
 	add_child(mesh)
-	mesh.global_position = anchor.global_position + Vector3(0, LIFT * 2.0, 0)
-	var dir := Vector3(toward.x - anchor.global_position.x, 0.0, toward.z - anchor.global_position.z)
+	mesh.position = at + Vector3(0, LIFT * 2.0, 0)
+	var dir := Vector3(toward.x - at.x, 0.0, toward.z - at.z)
 	if dir.length_squared() > 0.001:
 		mesh.rotation.y = atan2(dir.x, dir.z)
 	_arcs.append({"mesh": mesh, "left": ARC_SECONDS})
