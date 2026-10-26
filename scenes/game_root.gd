@@ -275,6 +275,7 @@ func _process(delta: float) -> void:
 			else:
 				_save_notice.show_unstored()
 		_expire_cues()
+		_build_adds()
 		_apply_events(sim.drain_events())
 		# Some enemy changes carry no event (healing on reaching home), so redraw them all.
 		for id in _enemies:
@@ -456,7 +457,15 @@ func _show_sim() -> void:
 	_atmosphere.clear_footprints()
 	_audio.set_region(sim.state["player"]["region"])
 	_audio.sync_fires(_world.get_node("fire").position, sim.state["fires"])
+	for id in _enemies.keys():
+		if not sim.state["enemies"].has(id):
+			_drop_enemy(id)
+	_build_adds()
 	for id in _enemies:
+		_cues.clear_call(id)
+		var e: Dictionary = sim.state["enemies"][id]
+		if e["mode"] == Sim.MODE_CALLED:
+			_cues.call_in({"enemy_id": id, "pos": e["pos"]})
 		_sync_enemy(id)
 	for id in _loot:
 		(_loot[id] as Node).queue_free()
@@ -658,8 +667,17 @@ func _apply_events(events: Array[Dictionary]) -> void:
 				_last_event = _took_from_chest_text(e)
 				_sync_death_chests()
 			SimVocab.EV_ENEMY_NOTICED:
-				if e["cause"] != CombatTable.NOTICE_PACK:
+				if e["cause"] == CombatTable.NOTICE_CALLED:
+					_cues.clear_call(e["enemy_id"])
+				elif e["cause"] != CombatTable.NOTICE_PACK:
 					_last_event = "%s has noticed you!" % _sentence(_enemy_name(e["enemy_id"]))
+			SimVocab.EV_ADD_CALLED:
+				_cues.call_in(e)
+				_last_event = "%s calls in a %s." % [
+					_sentence(_enemy_name(e["boss_id"])), str(CombatTable.enemy(e["enemy_kind"])["label"]).to_lower(),
+				]
+			SimVocab.EV_ADD_LEFT:
+				_drop_enemy(e["enemy_id"])
 			SimVocab.EV_ENEMY_MOVED:
 				var walked: Array = []
 				for p in e["path"]:
@@ -1447,52 +1465,78 @@ func _flicker() -> void:
 
 # --- Enemies and loot -----------------------------------------------------------------
 
-## One figure per placed enemy: an animated model from Figures (the captain's sabre, bow and
+## One figure per placed enemy.
+func _build_enemies(world: WorldDef) -> void:
+	for id in world.enemies:
+		_build_enemy(id, world.enemies[id]["kind"])
+
+
+## An enemy's figure: an animated model from Figures (the captain's sabre, bow and
 ## staff are its `captain_sabre`, `captain_bow` and `captain_staff` nodes, the Aurora seer's
 ## its `aurora_staff` and `seer_blade`, the Frost tyrant's its `tyrant_greatblade`, `tyrant_bow`
 ## and `tyrant_staff`; the one in hand follows the stance),
 ## a click volume that becomes `attack`, a name-and-health label and a telegraph cue above it.
-func _build_enemies(world: WorldDef) -> void:
-	for id in world.enemies:
-		var kind: String = world.enemies[id]["kind"]
-		var root := Node3D.new()
-		root.name = id
-		_enemy_layer.add_child(root)
-		var figure := Figures.enemy(kind)
-		figure.name = "Figure"
-		root.add_child(figure)
-		var weapons := {}
-		for w in [
-			"captain_sabre", "captain_bow", "captain_staff", "aurora_staff", "seer_blade",
-			"tyrant_greatblade", "tyrant_bow", "tyrant_staff",
-		]:
-			var piece := figure.find_child(w, true, false)
-			if piece != null:
-				weapons[w] = piece
-		var height: float = figure.get_meta("height")
-		var click := _add_box_body(root, Vector3(1.1, height, 1.3), Vector3(0, height * 0.5, 0))
-		click.set_meta("enemy_id", id)
-		var label := _label3d("", 48)
-		label.position = Vector3(0, height + 0.2, 0)
-		label.visible = false
-		root.add_child(label)
-		click.set_meta("hover_label", label)
-		var cue := _label3d("", CUE_FONT)
-		cue.position = Vector3(0, height + 0.9, 0)
-		cue.visible = false
-		root.add_child(cue)
-		_enemies[id] = {
-			"root": root, "body": click, "label": label, "cue": cue, "cue_at": 0, "feint_tick": -1,
-			"segment": [], "length": 0.0, "weapons": weapons,
-		}
+func _build_enemy(id: String, kind: String) -> void:
+	var root := Node3D.new()
+	root.name = id
+	_enemy_layer.add_child(root)
+	var figure := Figures.enemy(kind)
+	figure.name = "Figure"
+	root.add_child(figure)
+	var weapons := {}
+	for w in [
+		"captain_sabre", "captain_bow", "captain_staff", "aurora_staff", "seer_blade",
+		"tyrant_greatblade", "tyrant_bow", "tyrant_staff",
+	]:
+		var piece := figure.find_child(w, true, false)
+		if piece != null:
+			weapons[w] = piece
+	var height: float = figure.get_meta("height")
+	var click := _add_box_body(root, Vector3(1.1, height, 1.3), Vector3(0, height * 0.5, 0))
+	click.set_meta("enemy_id", id)
+	var label := _label3d("", 48)
+	label.position = Vector3(0, height + 0.2, 0)
+	label.visible = false
+	root.add_child(label)
+	click.set_meta("hover_label", label)
+	var cue := _label3d("", CUE_FONT)
+	cue.position = Vector3(0, height + 0.9, 0)
+	cue.visible = false
+	root.add_child(cue)
+	_enemies[id] = {
+		"root": root, "body": click, "label": label, "cue": cue, "cue_at": 0, "feint_tick": -1,
+		"segment": [], "length": 0.0, "weapons": weapons,
+	}
 
 
-## Redraws one enemy from the state: hidden and unclickable while dead, its health label, the
+## A figure for each add in the state that has none yet: one a boss has just called, or one a
+## loaded save brought.
+func _build_adds() -> void:
+	for id in sim.state["enemies"]:
+		if not _enemies.has(id):
+			_build_enemy(id, sim.state["enemies"][id]["kind"])
+
+
+## Takes away an add's figure and its cues: it left, or a loaded save does not hold it.
+func _drop_enemy(id: String) -> void:
+	var drawn: Dictionary = _enemies[id]
+	if drawn["label"] == _hovered_label:
+		_hovered_label = null
+	(drawn["root"] as Node3D).queue_free()
+	_enemies.erase(id)
+	_cues.clear_ring(id)
+	_cues.clear_mark(id)
+	_cues.clear_call(id)
+	_projectiles.fade(id)
+
+
+## Redraws one enemy from the state: hidden and unclickable while dead or, for an add, still
+## to come, its health label, the
 ## weapon in its hand, and no cue unless one is still due.
 func _sync_enemy(id: String) -> void:
 	var drawn: Dictionary = _enemies[id]
 	var e: Dictionary = sim.state["enemies"][id]
-	var alive: bool = e["mode"] != Sim.MODE_DEAD
+	var alive: bool = e["mode"] != Sim.MODE_DEAD and e["mode"] != Sim.MODE_CALLED
 	var root: Node3D = drawn["root"]
 	root.visible = alive
 	(drawn["body"] as StaticBody3D).collision_layer = 1 if alive else 0

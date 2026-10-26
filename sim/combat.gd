@@ -75,11 +75,12 @@ const NOISE_GATHER := 9.0
 const NOISE_FIGHT := 12.0
 
 ## Why an enemy joined the fight (the `cause` of `enemy_noticed`): it saw the player, heard
-## them, its pack went, or the player struck it first.
+## them, its pack went, the player struck it first, or it is an add its boss called in.
 const NOTICE_SIGHT := "sight"
 const NOTICE_NOISE := "noise"
 const NOTICE_PACK := "pack"
 const NOTICE_HIT := "hit"
+const NOTICE_CALLED := "called"
 
 ## What an enemy can do on a tick. `move` (close in) and `rest` are not attacks and are not
 ## telegraphed; every other action with a `damage` is an attack with that base damage before
@@ -164,10 +165,16 @@ const ACTIONS := {
 ## tyrant, a dungeon's boss) keeps coming back.
 ##
 ## A kind with `phases` fights differently near the end: each phase is {below, actions,
-## stances?}, in order of falling `below`, a percentage of its health. Once a blow takes it
+## stances?, adds?}, in order of falling `below`, a percentage of its health. Once a blow takes it
 ## below a phase's mark, its next declaration from the cycle starts that phase's `actions` from
 ## the first, which is always a stance so the change is announced, and the phase's `actions`
 ## and `stances` replace the kind's for the rest of that life (see `phase_problems`).
+##
+## A phase may name `adds`, a list of {kind, entry}: lesser enemies its boss calls into the fight
+## once, as that phase starts, each an enemy kind and an entry point `entry`, [x, z] metres from
+## the boss's home (the edge of its room). Each is announced a tick ahead and then comes in at
+## its entry point, fighting; adds never respawn, drop their kind's usual loot, and leave when
+## the boss gives up the fight (see `add_problems`).
 ##
 ## A kind (or one of its phases) with `answers` answers a counter: {player style: cycle index},
 ## where the action at each index is a stance. When the player's style has the edge on the
@@ -549,6 +556,34 @@ static func phase_problems(def: Dictionary) -> Array[String]:
 		var stances: Array = phase.get("stances", [])
 		if not stances.is_empty() and stances.size() != actions.size():
 			out.append("phase %d: %d stances for %d actions" % [i + 1, stances.size(), actions.size()])
+	return out
+
+
+## The adds an enemy of `kind` calls in as `phase` starts: a list of {kind, entry}.
+static func adds(kind: String, phase: int) -> Array:
+	return _phase(kind, phase).get("adds", []) if phase > 0 else []
+
+
+## What is wrong with the `adds` of an enemy definition's phases, or [] when nothing is: adds
+## come only with a fight phase, and each names a known enemy kind and an entry point, [x, z]
+## metres from the boss's home.
+static func add_problems(def: Dictionary) -> Array[String]:
+	var out: Array[String] = []
+	if def.has("adds"):
+		out.append("the kind: adds come only with a fight phase")
+	var phases: Array = def.get("phases", [])
+	for i in phases.size():
+		var called: Variant = phases[i].get("adds", [])
+		if not (called is Array):
+			out.append("phase %d: adds %s is not a list" % [i + 1, called])
+			continue
+		for add in called:
+			var kind := str(add.get("kind", "")) if add is Dictionary else ""
+			if not is_enemy_kind(kind):
+				out.append("phase %d: the add %s is not an enemy kind" % [i + 1, kind if kind != "" else add])
+			var entry: Variant = add.get("entry") if add is Dictionary else null
+			if not (entry is Array and entry.size() == 2 and (entry[0] is int or entry[0] is float) and (entry[1] is int or entry[1] is float)):
+				out.append("phase %d: the add %s has no entry point" % [i + 1, kind])
 	return out
 
 

@@ -1,9 +1,11 @@
 ## The telegraph on the ground: a ring under an enemy in the colour of the style it has
 ## declared for the next tick, and a brief swing arc toward the player when the blow lands.
 ## An area blow's ground mark is drawn red from its telegraph until it lands, brighter on the
-## landing tick, and cleared after. Driven only by the `enemy_telegraphed`, `enemy_stance`,
-## `ground_marked`, `hit` and `missed` events the simulation already emits, on the tick they
-## arrive; it keeps no state of its own beyond what is on screen. Rings and marks sit on the
+## landing tick, and cleared after. An add a boss has called shows where it will enter, a pale
+## ring on the snow at its entry point, until it comes in or leaves. Driven only by the
+## `enemy_telegraphed`, `enemy_stance`, `ground_marked`, `add_called`, `hit` and `missed` events
+## the simulation already emits, on the tick they arrive; it keeps no state of its own beyond
+## what is on screen. Rings and marks sit on the
 ## snow with no depth test, so they read in a crowd.
 class_name CombatCues
 extends Node3D
@@ -16,6 +18,8 @@ const LIFT := 0.04  # above the snow, clear of z-fighting
 const MARK_COLOUR := Color(0.93, 0.13, 0.09)
 const MARK_TOLD_ALPHA := 0.45
 const MARK_LANDING_ALPHA := 0.95
+const CALL_COLOUR := Color(0.78, 0.88, 1.0, 0.9)
+const CALL_RADIUS := 1.2
 
 static var _ring_texture: Texture2D
 static var _arc_texture: Texture2D
@@ -25,6 +29,7 @@ static var _disc_texture: Texture2D
 var _rings := {}  # enemy id -> MeshInstance3D
 var _arcs: Array[Dictionary] = []  # {mesh, left}
 var _marks := {}  # enemy id -> {mesh, at}
+var _calls := {}  # add id -> MeshInstance3D
 
 
 ## Lays the ring under `anchor` (the enemy's root) in `colour`, bigger for a heavy blow.
@@ -121,6 +126,30 @@ func mark_colour(enemy_id: String) -> Color:
 	if not _marks.has(enemy_id):
 		return Color(0, 0, 0, 0)
 	return ((_marks[enemy_id]["mesh"] as MeshInstance3D).material_override as StandardMaterial3D).albedo_color
+
+
+## Shows where an add will enter from its `add_called` event: a pale ring on the snow at its
+## entry point, at height `ground_y`.
+func call_in(e: Dictionary, ground_y := 0.0) -> void:
+	clear_call(e["enemy_id"])
+	var mesh := _flat_quad(_ring_tex())
+	mesh.scale = Vector3(CALL_RADIUS * 2.0, 1.0, CALL_RADIUS * 2.0)
+	(mesh.material_override as StandardMaterial3D).albedo_color = CALL_COLOUR
+	mesh.position = Vector3(float(e["pos"][0]), ground_y + LIFT, float(e["pos"][1]))
+	add_child(mesh)
+	_calls[e["enemy_id"]] = mesh
+
+
+## The add has come in, or left before it did.
+func clear_call(enemy_id: String) -> void:
+	if _calls.has(enemy_id):
+		(_calls[enemy_id] as MeshInstance3D).queue_free()
+		_calls.erase(enemy_id)
+
+
+## Where an add's entry is shown, or null when none is.
+func call_point(enemy_id: String) -> Variant:
+	return (_calls[enemy_id] as MeshInstance3D).position if _calls.has(enemy_id) else null
 
 
 ## Keeps a ring on its enemy as the enemy is drawn along its path.
