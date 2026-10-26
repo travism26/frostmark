@@ -333,9 +333,14 @@ static func outpost() -> WorldDef:
 	# outside of its southern cliffs, so ring one's own cliffs and ring two's count as ring two;
 	# ring three is everything south of them. The dungeons come first, so no ring's rectangle
 	# can claim their ground; the cliffs east of the rings and outside every dungeon lie in no
-	# region.
+	# region. The ring-one dungeon's region takes in its mouth's own cells, so a walk through
+	# the mouth goes from ring one straight into the dungeon and never through ring two's.
+	var mouth_z := RING_ONE_DUNGEON_MOUTH_Z
 	w.regions = [
-		{"name": REGION_RING_ONE_DUNGEON, "polygon": _rect_polygon([RINGS_EAST, -edge - c], [far[0], edge + c])},
+		{"name": REGION_RING_ONE_DUNGEON, "polygon": [
+			[RINGS_EAST, -edge - c], [far[0], -edge - c], [far[0], edge + c], [RINGS_EAST, edge + c],
+			[RINGS_EAST, mouth_z + 2.0], [edge, mouth_z + 2.0], [edge, mouth_z - 2.0], [RINGS_EAST, mouth_z - 2.0],
+		]},
 		{"name": REGION_OUTPOST, "polygon": _rect_polygon([-half, -half], [half, half])},
 		{"name": REGION_INNER_RING, "polygon": _rect_polygon([-24.0, -24.0], [24.0, 24.0])},
 		{"name": REGION_RING_ONE, "polygon": _rect_polygon([-edge, -edge], [edge, edge])},

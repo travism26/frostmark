@@ -1,6 +1,7 @@
 ## The ring-look table: one look per ring and for the outpost, colder and darker the farther
 ## out, blended across a fixed band at every boundary so nothing jumps; ring three's glacier
-## is a clear night under the aurora rather than a deeper blizzard.
+## is a clear night under the aurora rather than a deeper blizzard. A dungeon has a look of its
+## own, darker and closer than its ring's, blended with it only across the dungeon's mouth.
 extends "res://tests/run.gd".TestCase
 
 const WorldDefScript := preload("res://sim/world_def.gd")
@@ -120,7 +121,7 @@ func test_past_the_last_ring_the_last_look_holds() -> void:
 	assert_eq(RingLookScript.at(w, Vector2(0.5, 500.0)), RingLookScript.entry(WorldDef.REGION_RING_THREE))
 
 
-## Ring two's polygon runs to the grid's edges east and west, beside ring three's own: its
+## Ring two's polygon runs to the rings' edges east and west, beside ring three's own: its
 ## cliffs there take ring two's look, not a blend with the glacier's.
 func test_ring_two_blends_into_ring_three_only_across_their_shared_edge() -> void:
 	var w := WorldDefScript.outpost()
@@ -143,3 +144,60 @@ func test_blend_lerps_numbers_and_colours_and_picks_the_nearer_cue() -> void:
 	assert_eq(RingLookScript.blend(a, b, 0.51)["ambience"], b["ambience"])
 	assert_eq(RingLookScript.distance(a, a), 0.0)
 	assert_true(RingLookScript.distance(a, b) > 0.5, "the outpost and ring two look nothing alike")
+
+
+# --- The ring-one dungeon -----------------------------------------------------------------
+
+const DUNGEON_MOUTH := "ring_one_dungeon_mouth"
+
+
+func test_the_dungeon_is_no_ring_but_has_a_complete_look() -> void:
+	var w := WorldDefScript.outpost()
+	assert_false(RingLookScript.rings(w).has(WorldDef.REGION_RING_ONE_DUNGEON), "it sits beside its ring, not around it")
+	var look := RingLookScript.entry(WorldDef.REGION_RING_ONE_DUNGEON)
+	for field in RingLookScript.FIELDS:
+		assert_true(look.has(field), "the dungeon has %s" % field)
+	assert_eq(look.keys().size(), RingLookScript.FIELDS.size(), "and only the known fields")
+	assert_true(look["ambience"] is String and look["ambience"] != "", "it names an ambience cue")
+	for field in ["tint", "sky", "fog_color", "sun_color", "ambient_color", "snow_tone", "stone", "foliage"]:
+		assert_true(look[field] is Color, "its %s is a colour" % field)
+	assert_almost_eq((look["wind_direction"] as Vector2).length(), 1.0, 0.02, "its wind_direction is a heading")
+
+
+func test_the_dungeon_is_darker_and_closer_than_ring_one_under_no_sky() -> void:
+	var one := RingLookScript.entry(WorldDef.REGION_RING_ONE)
+	var dungeon := RingLookScript.entry(WorldDef.REGION_RING_ONE_DUNGEON)
+	assert_true(RingLookScript.brightness(dungeon) < RingLookScript.brightness(one), "darker than ring one")
+	assert_true(float(dungeon["fog_distance"]) < float(one["fog_distance"]), "the fog closes in nearer")
+	assert_eq(float(dungeon["aurora"]), 0.0, "no aurora")
+	assert_true(float(dungeon["snow_density"]) <= 0.1, "little or no snowfall")
+	assert_true(dungeon["ambience"] != one["ambience"], "an ambience of its own")
+	var w := WorldDefScript.outpost()
+	assert_eq(RingLookScript.at(w, Vector2(100.5, 40.5)), dungeon, "deep inside, the look is the dungeon's")
+
+
+func test_the_dungeon_blends_with_ring_one_only_across_its_mouth() -> void:
+	var w := WorldDefScript.outpost()
+	var dungeon := RingLookScript.entry(WorldDef.REGION_RING_ONE_DUNGEON)
+	var mouth := w.object_center(DUNGEON_MOUTH)
+	# Along the inside of the west wall, away from the mouth, the look is the dungeon's alone.
+	for z in [-58.5, -30.5, 0.5, 30.5, 58.5]:
+		assert_eq(RingLookScript.at(w, Vector2(64.5, z)), dungeon, "the dungeon's look at x 64.5, z %s" % z)
+		var outside := Vector2(59.5, z)
+		assert_true(RingLookScript.distance(RingLookScript.at(w, outside), dungeon) > 0.2, "ring one's look at %s" % outside)
+	var on_mouth := RingLookScript.at(w, mouth)
+	assert_true(RingLookScript.distance(on_mouth, dungeon) > 0.05, "on the mouth it is half the dungeon's")
+	assert_true(RingLookScript.distance(on_mouth, RingLookScript.at(w, mouth - Vector2(8.0, 0.0))) > 0.05, "and half ring one's")
+
+
+func test_the_look_never_jumps_on_the_walk_through_the_mouth() -> void:
+	var w := WorldDefScript.outpost()
+	var z := w.object_center(DUNGEON_MOUTH).y
+	var x := 50.0
+	var previous := RingLookScript.at(w, Vector2(x, z))
+	while x < 76.0:
+		x += 0.25
+		var look := RingLookScript.at(w, Vector2(x, z))
+		assert_true(RingLookScript.distance(previous, look) < 0.08, "a quarter metre at x=%.2f changes the look by %.3f" % [x, RingLookScript.distance(previous, look)])
+		previous = look
+	assert_eq(previous, RingLookScript.entry(WorldDef.REGION_RING_ONE_DUNGEON), "and ends on the dungeon's")

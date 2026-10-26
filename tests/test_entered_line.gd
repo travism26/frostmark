@@ -21,3 +21,8 @@ func test_the_numbered_rings_are_named_bare() -> void:
 func test_walking_back_in_names_the_inner_rings_with_the() -> void:
 	assert_eq(_entered(WorldDef.REGION_RING_ONE, WorldDef.REGION_INNER_RING), "Entered the inner ring.")
 	assert_eq(_entered(WorldDef.REGION_INNER_RING, WorldDef.REGION_OUTPOST), "Entered the outpost.")
+
+
+func test_a_dungeon_is_named_by_its_label() -> void:
+	assert_eq(_entered(WorldDef.REGION_RING_ONE, WorldDef.REGION_RING_ONE_DUNGEON), "Entered the ring-one dungeon. Nothing out in the ring follows you in.")
+	assert_eq(_entered(WorldDef.REGION_RING_ONE_DUNGEON, WorldDef.REGION_RING_ONE), "Entered ring one. Wolves and bandits hunt here.")
