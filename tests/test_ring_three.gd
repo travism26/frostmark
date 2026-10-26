@@ -25,6 +25,13 @@ const ACROSS_THE_ICE := [17.5, 146.0]
 const AT_BOW_RANGE := [19.5, 146.0]
 ## The reference character: steel from head to foot, and every combat skill at 40.
 const REFERENCE_LEVEL := 40
+## Every ring-three fight is judged against one line at 60 health (#198). The reader ends with
+## more than READER_KEEPS health left and takes under NON_READER_TAKES over the whole fight; the
+## non-reader dies, or takes NON_READER_TAKES or more, which would leave it at READER_KEEPS or
+## below had it not eaten. The bar counts damage taken, not health left, because a trout heals 40
+## and puts health back, but it cannot take a blow back (docs/balance.md, "Ring three").
+const READER_KEEPS := 60
+const NON_READER_TAKES := 100 - READER_KEEPS
 
 
 ## A character whose ring-three gate stands open: the hoist is built. The captain still stands.
@@ -372,10 +379,34 @@ func _blows(events: Array[Dictionary]) -> Array:
 	return out
 
 
+## Adds what `events` cost the player to `tally`: `taken`, every point of damage that landed on
+## it (blows, area blows and burns alike, whatever a meal later put back), and `meals`, the
+## trout it ate. A meal hides damage from the health left; it cannot hide it from `taken`.
+func _tally(tally: Dictionary, events: Array) -> void:
+	for e in events:
+		if e["kind"] == Vocab.EV_TOOK_DAMAGE:
+			tally["taken"] = int(tally.get("taken", 0)) + int(e["amount"])
+		elif e["kind"] == Vocab.EV_ATE:
+			tally["meals"] = int(tally.get("meals", 0)) + 1
+
+
+## The reader's bar: it wins, keeps more than READER_KEEPS health and takes under NON_READER_TAKES.
+func _assert_reads(fight: Dictionary, what: String) -> void:
+	assert_true(fight["dead"], "%s falls" % what)
+	assert_true(fight["health"] > READER_KEEPS, "with %d health left" % fight["health"])
+	assert_true(fight["taken"] < NON_READER_TAKES, "having taken %d" % fight["taken"])
+
+
+## The non-reader's bar: it dies, or takes NON_READER_TAKES or more over the fight, whatever it ate.
+func _assert_does_not_read(fight: Dictionary, what: String) -> void:
+	var died: bool = fight.get("died", false) or int(fight.get("died_on", -1)) > 0 or int(fight.get("health", 1)) <= 0
+	assert_true(died or fight["taken"] >= NON_READER_TAKES, "against %s it took %d, with %d meals" % [what, fight["taken"], fight["meals"]])
+
+
 func test_the_snowveil_archer_is_a_feinting_kiting_bowman_with_its_own_loot() -> void:
 	var def := CombatTable.enemy("snowveil_archer")
 	assert_eq(def["label"], "Snowveil archer")
-	assert_eq([def["health"], def["speed"], def["sight"], def["kite"]], [70, 1.5, 10.0, 4.0])
+	assert_eq([def["health"], def["speed"], def["sight"], def["kite"]], [100, 1.5, 10.0, 4.0])
 	assert_eq(def["weapon"], "veil_bow")
 	var bow := CombatTable.weapon("veil_bow")
 	assert_eq([bow["style"], bow["reach"]], [CombatTable.STYLE_RANGED, 8.0], "a natural bow, 8 m")
@@ -459,7 +490,7 @@ func test_a_dead_archer_drops_one_frost_sinew_and_no_iron_and_comes_back_300_tic
 	H.place(sim, PAST_THE_GATE)  # well out of its sight
 	var back := H.run(sim, int(CombatTable.enemy("snowveil_archer")["respawn_ticks"]))
 	assert_eq(H.of_kind(back, Vocab.EV_ENEMY_RESPAWNED).size(), 1, "back at home")
-	assert_eq(int(sim.state["enemies"]["foe"]["health"]), 70)
+	assert_eq(int(sim.state["enemies"]["foe"]["health"]), 100)
 	assert_eq(Vector2(sim.state["enemies"]["foe"]["pos"][0], sim.state["enemies"]["foe"]["pos"][1]), Vector2(RIDGE_HOME[0], RIDGE_HOME[1]))
 	# Every kill drops exactly one, across a run of them.
 	for i in 5:
@@ -504,6 +535,7 @@ func _read_the_archer() -> Dictionary:
 	var ate_on: Array = []
 	var ticks := 0
 	var lowest := int(sim.state["health"])
+	var tally := {"taken": 0, "meals": 0}
 	while ticks < 120 and sim.state["enemies"]["foe"]["mode"] != Sim.MODE_DEAD and int(sim.state["health"]) > 0:
 		H.patch(sim, {"warmth": Sim.WARMTH_MAX})
 		var cycle: Array = CombatTable.enemy("snowveil_archer")["actions"]
@@ -511,10 +543,10 @@ func _read_the_archer() -> Dictionary:
 		if raw_next == CombatTable.ACTION_REST and int(sim.state["health"]) < 90 and sim.command(Vocab.EAT, {"index": 0})["ok"]:
 			ate_on.append(raw_next)
 		sim.step()
-		sim.drain_events()
+		_tally(tally, sim.drain_events())
 		lowest = mini(lowest, int(sim.state["health"]))
 		ticks += 1
-	return {"health": int(sim.state["health"]), "lowest": lowest, "ate_on": ate_on, "ticks": ticks, "dead": sim.state["enemies"]["foe"]["mode"] == Sim.MODE_DEAD}
+	return tally.merged({"health": int(sim.state["health"]), "lowest": lowest, "ate_on": ate_on, "ticks": ticks, "dead": sim.state["enemies"]["foe"]["mode"] == Sim.MODE_DEAD})
 
 
 ## The non-reader trades shots with a steel bow from where it stands and eats whenever a heavy
@@ -526,6 +558,7 @@ func _trade_shots() -> Dictionary:
 	var ate_on_feint := 0
 	var ticks := 0
 	var lowest := int(sim.state["health"])
+	var tally := {"taken": 0, "meals": 0}
 	while ticks < 120 and sim.state["enemies"]["foe"]["mode"] != Sim.MODE_DEAD and int(sim.state["health"]) > 0:
 		H.patch(sim, {"warmth": Sim.WARMTH_MAX})
 		if eat_next:
@@ -534,28 +567,28 @@ func _trade_shots() -> Dictionary:
 				ate_on_feint += 1
 			eat_next = false
 		sim.step()
-		for e in sim.drain_events():
+		var events := sim.drain_events()
+		_tally(tally, events)
+		for e in events:
 			if e["kind"] == Vocab.EV_ENEMY_TELEGRAPHED and e["heavy"]:
 				eat_next = true
 		lowest = mini(lowest, int(sim.state["health"]))
 		ticks += 1
-	return {"health": int(sim.state["health"]), "lowest": lowest, "ate_on_feint": ate_on_feint, "ticks": ticks, "dead": sim.state["enemies"]["foe"]["mode"] == Sim.MODE_DEAD}
+	return tally.merged({"health": int(sim.state["health"]), "lowest": lowest, "ate_on_feint": ate_on_feint, "ticks": ticks, "dead": sim.state["enemies"]["foe"]["mode"] == Sim.MODE_DEAD})
 
 
 func test_the_reader_pins_the_archer_and_wins_with_over_60_health_left() -> void:
 	var fight := _read_the_archer()
-	assert_true(fight["dead"], "the archer falls")
-	assert_true(fight["health"] > 60, "with %d health left" % fight["health"])
+	_assert_reads(fight, "the archer")
 	assert_eq(fight["ate_on"].filter(func(a: String) -> bool: return a != CombatTable.ACTION_REST).size(), 0, "eating only on rest ticks")
 
 
-## The issue asks for this character to end below 40 health or dead. At 70 health and a piercing
-## shot of 22 it does not: the archer is dead before its bluff is played (docs/balance.md, "Ring
-## three"). This pins what does hold until that is settled: it takes damage, and it still wins.
-func test_the_non_reader_trading_shots_and_eating_on_every_heavy_telegraph() -> void:
+## At 100 health the archer lives to play its bluff: the non-reader eats on it, takes the real
+## shot after it, and takes 40 or more over the fight, though its meals leave it on full health.
+func test_the_non_reader_trading_shots_and_eating_on_every_heavy_telegraph_takes_40_or_more() -> void:
 	var fight := _trade_shots()
-	assert_true(fight["dead"], "the archer falls")
-	assert_true(fight["lowest"] < 90, "but not before it hurts: %d at the lowest" % fight["lowest"])
+	assert_true(fight["ate_on_feint"] >= 1, "it ate on the bluff")
+	_assert_does_not_read(fight, "the archer")
 
 
 # --- The Frostbound knight ----------------------------------------------------------------
@@ -831,10 +864,13 @@ func _read_the_knight(weapon := "steel_staff", at := IN_REACH) -> Dictionary:
 	var stepped := 0
 	var ticks := 0
 	var lowest := int(sim.state["health"])
+	var tally := {"taken": 0, "meals": 0}
 	while ticks < 160 and sim.state["enemies"]["foe"]["mode"] != Sim.MODE_DEAD and int(sim.state["health"]) > 0:
 		H.patch(sim, {"warmth": Sim.WARMTH_MAX})
 		sim.step()
-		for e in sim.drain_events():
+		var events := sim.drain_events()
+		_tally(tally, events)
+		for e in events:
 			if e["kind"] == Vocab.EV_ENEMY_STANCE and e["action"] == "raise_blade":
 				var away: Vector2 = (sim.player_pos() - sim.combatant("foe")["pos"]).normalized()
 				var to: Vector2 = sim.player_pos() + away * 2.0
@@ -844,7 +880,7 @@ func _read_the_knight(weapon := "steel_staff", at := IN_REACH) -> Dictionary:
 			sim.command(Vocab.ATTACK, {"enemy_id": "foe"})
 		lowest = mini(lowest, int(sim.state["health"]))
 		ticks += 1
-	return {"health": int(sim.state["health"]), "lowest": lowest, "stepped": stepped, "ticks": ticks, "dead": sim.state["enemies"]["foe"]["mode"] == Sim.MODE_DEAD}
+	return tally.merged({"health": int(sim.state["health"]), "lowest": lowest, "stepped": stepped, "ticks": ticks, "dead": sim.state["enemies"]["foe"]["mode"] == Sim.MODE_DEAD})
 
 
 ## The non-reader stands in the knight's reach swinging a steel sword, and eats a trout the tick
@@ -855,27 +891,27 @@ func _trade_blows(eats: bool) -> Dictionary:
 	var eat_next := false
 	var ticks := 0
 	var lowest := int(sim.state["health"])
+	var tally := {"taken": 0, "meals": 0}
 	while ticks < 160 and sim.state["enemies"]["foe"]["mode"] != Sim.MODE_DEAD and int(sim.state["health"]) > 0:
 		H.patch(sim, {"warmth": Sim.WARMTH_MAX})
 		if eat_next and eats:
 			sim.command(Vocab.EAT, {"index": 0})
 		eat_next = false
 		sim.step()
-		for e in sim.drain_events():
+		var events := sim.drain_events()
+		_tally(tally, events)
+		for e in events:
 			if e["kind"] == Vocab.EV_ENEMY_TELEGRAPHED and e["heavy"]:
 				eat_next = true
 		lowest = mini(lowest, int(sim.state["health"]))
 		ticks += 1
-	return {"health": int(sim.state["health"]), "lowest": lowest, "ticks": ticks, "dead": sim.state["enemies"]["foe"]["mode"] == Sim.MODE_DEAD}
+	return tally.merged({"health": int(sim.state["health"]), "lowest": lowest, "ticks": ticks, "dead": sim.state["enemies"]["foe"]["mode"] == Sim.MODE_DEAD})
 
 
 func test_the_reader_holds_a_staff_and_wins_with_over_60_health_left() -> void:
-	var fight := _read_the_knight()
-	assert_true(fight["dead"], "the knight falls")
-	assert_true(fight["health"] > 60, "with %d health left" % fight["health"])
+	_assert_reads(_read_the_knight(), "the knight")
 	# From a staff's range it is the same fight, only the walk in is added.
-	var ranged := _read_the_knight("steel_staff", STAFF_RANGE)
-	assert_true(ranged["dead"] and ranged["health"] > 60, "from range: %d health left" % ranged["health"])
+	_assert_reads(_read_the_knight("steel_staff", STAFF_RANGE), "the knight, from range")
 
 
 ## The issue's non-reader: the reference character standing in reach with a steel sword and
@@ -887,13 +923,17 @@ func test_the_non_reader_standing_in_reach_swinging_a_sword_ends_below_40_health
 	assert_true(fight["health"] < 40, "but the swinger is left with %d" % fight["health"])
 
 
-## With a meal after every heavy blow told, the same swinger wins and is hurt: a trout heals 40
-## over five ticks, in a fight of nine to ten. This is the archer's problem too (#198, and
-## docs/balance.md, "Ring three"); this pins what holds until the threshold is settled.
-func test_the_non_reader_that_eats_on_every_heavy_telegraph_wins_but_is_hurt() -> void:
-	var fight := _trade_blows(true)
-	assert_true(fight["dead"], "the knight falls")
-	assert_true(fight["lowest"] < 80, "but not before it hurts: %d at the lowest" % fight["lowest"])
+## With a meal after every heavy blow told, the same swinger ends on 92 health, a trout healing
+## 40 over five ticks in a fight of ten, but it takes the same blows as the one that did not eat,
+## and that is the bar (#198).
+func test_the_non_reader_takes_40_or_more_whether_it_eats_or_not() -> void:
+	var fasting := _trade_blows(false)
+	var eating := _trade_blows(true)
+	assert_true(eating["meals"] > 0, "it ate")
+	assert_true(eating["health"] > fasting["health"], "and the meals put health back: %d against %d" % [eating["health"], fasting["health"]])
+	assert_eq(eating["taken"], fasting["taken"], "but took back no blow")
+	for fight in [fasting, eating]:
+		_assert_does_not_read(fight, "the knight")
 
 
 # --- The Aurora seer ----------------------------------------------------------------------
@@ -960,7 +1000,7 @@ func _held(sim: Sim) -> String:
 func test_the_aurora_seer_is_a_caster_that_reads_the_player_back_with_its_own_loot() -> void:
 	var def := CombatTable.enemy("aurora_seer")
 	assert_eq(def["label"], "Aurora seer")
-	assert_eq([def["health"], def["speed"], def["sight"]], [60, 1.5, 8.0])
+	assert_eq([def["health"], def["speed"], def["sight"]], [120, 1.5, 8.0])
 	assert_eq(def["weapon"], "aurora_staff")
 	var staff := CombatTable.weapon("aurora_staff")
 	assert_eq([staff["style"], staff["reach"]], [CombatTable.STYLE_MAGIC, 6.0], "a natural staff, 6 m")
@@ -1110,7 +1150,7 @@ func test_a_dead_seer_drops_one_aurora_glass_and_no_iron_and_comes_back_300_tick
 	H.place(sim, PAST_THE_GATE)  # well out of its sight
 	var back := H.run(sim, int(CombatTable.enemy("aurora_seer")["respawn_ticks"]))
 	assert_eq(H.of_kind(back, Vocab.EV_ENEMY_RESPAWNED).size(), 1, "back at home")
-	assert_eq(int(sim.state["enemies"]["foe"]["health"]), 60)
+	assert_eq(int(sim.state["enemies"]["foe"]["health"]), 120)
 	assert_eq(Vector2(sim.state["enemies"]["foe"]["pos"][0], sim.state["enemies"]["foe"]["pos"][1]), Vector2(SEER_HOME[0], SEER_HOME[1]))
 	# Every kill drops exactly one, across a run of them.
 	for i in 5:
@@ -1157,6 +1197,7 @@ func _read_the_seer() -> Dictionary:
 	var swaps: Array = []
 	var ticks := 0
 	var lowest := int(sim.state["health"])
+	var tally := {"taken": 0, "meals": 0}
 	while ticks < 120 and sim.state["enemies"]["foe"]["mode"] != Sim.MODE_DEAD and int(sim.state["health"]) > 0:
 		H.patch(sim, {"warmth": Sim.WARMTH_MAX})
 		var raw_next: String = str(sim.state["enemies"]["foe"].get("next", {}).get("action", ""))
@@ -1164,13 +1205,15 @@ func _read_the_seer() -> Dictionary:
 			sim.command(Vocab.EAT, {"index": 0})
 		sim.step()
 		ticks += 1
-		for e in sim.drain_events():
+		var events := sim.drain_events()
+		_tally(tally, events)
+		for e in events:
 			if e["kind"] == Vocab.EV_ENEMY_STANCE:
 				var style := CombatTable.STYLE_MAGIC if e["action"] == "conjure_blade" else CombatTable.STYLE_RANGED
 				_seer_swap_to(sim, style)
 				swaps.append("%d:%s" % [ticks, e["action"]])
 		lowest = mini(lowest, int(sim.state["health"]))
-	return {"health": int(sim.state["health"]), "lowest": lowest, "swaps": swaps, "ticks": ticks, "dead": sim.state["enemies"]["foe"]["mode"] == Sim.MODE_DEAD}
+	return tally.merged({"health": int(sim.state["health"]), "lowest": lowest, "swaps": swaps, "ticks": ticks, "dead": sim.state["enemies"]["foe"]["mode"] == Sim.MODE_DEAD})
 
 
 ## The non-reader holds a steel bow throughout and eats a trout the tick after any heavy blow
@@ -1181,6 +1224,7 @@ func _hold_the_bow(eats: bool) -> Dictionary:
 	var eat_next := false
 	var ticks := 0
 	var lowest := int(sim.state["health"])
+	var tally := {"taken": 0, "meals": 0}
 	while ticks < 120 and sim.state["enemies"]["foe"]["mode"] != Sim.MODE_DEAD and int(sim.state["health"]) > 0:
 		H.patch(sim, {"warmth": Sim.WARMTH_MAX})
 		if eat_next and eats:
@@ -1188,30 +1232,32 @@ func _hold_the_bow(eats: bool) -> Dictionary:
 		eat_next = false
 		sim.step()
 		ticks += 1
-		for e in sim.drain_events():
+		var events := sim.drain_events()
+		_tally(tally, events)
+		for e in events:
 			if e["kind"] == Vocab.EV_ENEMY_TELEGRAPHED and e["heavy"]:
 				eat_next = true
 		lowest = mini(lowest, int(sim.state["health"]))
-	return {"health": int(sim.state["health"]), "lowest": lowest, "ticks": ticks, "dead": sim.state["enemies"]["foe"]["mode"] == Sim.MODE_DEAD}
+	return tally.merged({"health": int(sim.state["health"]), "lowest": lowest, "ticks": ticks, "dead": sim.state["enemies"]["foe"]["mode"] == Sim.MODE_DEAD})
 
 
 func test_the_reader_baits_the_blade_swaps_to_the_staff_and_wins_with_over_60_health_left() -> void:
 	var fight := _read_the_seer()
-	assert_true(fight["dead"], "the seer falls")
-	assert_true(fight["health"] > 60, "with %d health left" % fight["health"])
+	_assert_reads(fight, "the seer")
 	assert_true((fight["swaps"] as Array)[0].ends_with("conjure_blade"), "it was baited into the blade first")
 
 
-## The issue asks for this character to end below 40 health or dead. At 60 health it does not:
-## two steel-bow shots, with the edge on a staff, kill the seer on the third tick, before the blade
-## it conjures in answer has closed in (docs/balance.md, "Ring three"; the threshold is #198's).
-## This pins what holds until that is settled: the bow-holder wins, and the answer never lands.
-func test_the_non_reader_holding_a_bow_throughout_kills_the_seer_before_it_answers_with_a_blow() -> void:
-	for eats in [false, true]:
-		var fight := _hold_the_bow(eats)
-		assert_true(fight["dead"], "the seer falls")
-		assert_eq(fight["ticks"], 3, "on the third tick")
-		assert_eq(fight["lowest"], 100, "without having hurt it")
+## At 120 health the seer lives past its answer: the blade it conjures against the bow closes in
+## and lands on a player who keeps the bow, so the bow-holder takes 40 or more whether it eats or
+## not. At 60 the seer fell on the third tick, before the blade had closed (#198).
+func test_the_non_reader_holding_a_bow_throughout_takes_40_or_more_whether_it_eats_or_not() -> void:
+	var fasting := _hold_the_bow(false)
+	var eating := _hold_the_bow(true)
+	assert_true(eating["meals"] > 0, "it ate")
+	assert_eq(eating["taken"], fasting["taken"], "and took back no blow")
+	for fight in [fasting, eating]:
+		assert_true(fight["dead"], "the seer still falls")
+		_assert_does_not_read(fight, "the seer")
 
 
 # --- The Frost tyrant ---------------------------------------------------------------------
@@ -1684,6 +1730,7 @@ func _read_the_tyrant(heeds_marks := true) -> Dictionary:
 	var answered := -1
 	var lands := -1
 	var died := false
+	var tally := {"taken": 0, "meals": 0}
 	while ticks < 200 and sim.state["enemies"]["foe"]["mode"] != Sim.MODE_DEAD and not died:
 		H.patch(sim, {"warmth": Sim.WARMTH_MAX})
 		var raw_next: String = str(sim.state["enemies"]["foe"].get("next", {}).get("action", ""))
@@ -1695,7 +1742,9 @@ func _read_the_tyrant(heeds_marks := true) -> Dictionary:
 		if int(foe["answered_tick"]) != answered:
 			answered = int(foe["answered_tick"])
 			answers += 1
-		for e in sim.drain_events():
+		var events := sim.drain_events()
+		_tally(tally, events)
+		for e in events:
 			died = died or e["kind"] == Vocab.EV_DIED
 			if e["kind"] == Vocab.EV_HIT and e["target"] == Vocab.PLAYER and e.get("area", false):
 				struck += 1
@@ -1725,12 +1774,12 @@ func _read_the_tyrant(heeds_marks := true) -> Dictionary:
 		if not waiting and not sim.is_attacking() and not sim.is_moving():
 			sim.command(Vocab.ATTACK, {"enemy_id": "foe"})
 		lowest = mini(lowest, int(sim.state["health"]))
-	return {
+	return tally.merged({
 		"health": int(sim.state["health"]), "lowest": lowest, "ticks": ticks, "died": died,
 		"dead": sim.state["enemies"]["foe"]["mode"] == Sim.MODE_DEAD, "baited": baited, "stepped": stepped,
 		"dodged": dodged, "struck": struck, "answers": answers, "trout": H.pack_count(sim, "cooked_trout"),
 		"tyrant": int(sim.state["enemies"]["foe"]["health"]),
-	}
+	})
 
 
 ## Walks the player to the nearest open ground half a metre past the edge of `mark`, or off a
@@ -1759,24 +1808,27 @@ func _hold_one_style(weapon: String) -> Dictionary:
 	var sim := _tyrant(weapon, TYRANT_IN_REACH, true)
 	sim.command(Vocab.ATTACK, {"enemy_id": "foe"})
 	var ticks := 0
+	var tally := {"taken": 0, "meals": 0}
 	while ticks < 200 and sim.state["enemies"]["foe"]["mode"] != Sim.MODE_DEAD:
 		H.patch(sim, {"warmth": Sim.WARMTH_MAX})
 		if int(sim.state["health"]) < Sim.HEALTH_MAX / 2 and _trout(sim) >= 0:
 			sim.command(Vocab.EAT, {"index": _trout(sim)})
 		sim.step()
 		ticks += 1
-		if not H.of_kind(sim.drain_events(), Vocab.EV_DIED).is_empty():
-			return {"died_on": ticks, "tyrant": int(sim.state["enemies"]["foe"]["health"])}
+		var events := sim.drain_events()
+		_tally(tally, events)
+		if not H.of_kind(events, Vocab.EV_DIED).is_empty():
+			return tally.merged({"died_on": ticks, "tyrant": int(sim.state["enemies"]["foe"]["health"])})
 		if not sim.is_attacking() and not sim.is_moving():
 			sim.command(Vocab.ATTACK, {"enemy_id": "foe"})
-	return {"died_on": -1, "tyrant": int(sim.state["enemies"]["foe"]["health"])}
+	return tally.merged({"died_on": -1, "tyrant": int(sim.state["enemies"]["foe"]["health"])})
 
 
 func test_the_reader_reads_every_stance_and_beats_the_tyrant() -> void:
 	var fight := _read_the_tyrant()
 	print("  tyrant, the reader: %s" % fight)
-	assert_true(fight["dead"] and not fight["died"], "the tyrant falls and the reader stands")
-	assert_true(fight["health"] > 50, "with %d health left" % fight["health"])
+	assert_false(fight["died"], "the reader stands")
+	_assert_reads(fight, "the tyrant")
 	assert_true(fight["answers"] >= 3 and fight["baited"] >= 3, "it baited %d of %d answers" % [fight["baited"], fight["answers"]])
 	assert_true(fight["dodged"] >= 4, "it stepped off %d marks" % fight["dodged"])
 
@@ -1793,3 +1845,4 @@ func test_the_non_reader_holding_one_style_dies() -> void:
 		var fight := _hold_one_style(weapon)
 		print("  tyrant, holding the %s: %s" % [weapon, fight])
 		assert_true(fight["died_on"] > 0, "holding the %s dies (the tyrant left on %d)" % [weapon, fight["tyrant"]])
+		_assert_does_not_read(fight, "the tyrant")

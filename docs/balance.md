@@ -260,16 +260,51 @@ Why each number:
 
 Ring three's enemies are deadlier by being harder to read, not by having more health ([#173](https://github.com/travism26/frostmark/issues/173)). They sit past the timed route, so the measured run and `tests/test_pacing.gd` don't change. Each enemy's fight is measured by a reader and a non-reader in `tests/test_ring_three.gd`: the reference character (steel head to foot, every combat skill at 40, 100 health, five cooked trout) against one enemy, deterministic like every fight.
 
+### The bar
+
+[#198](https://github.com/travism26/frostmark/issues/198) set one bar for every ring-three fight, a line at 60 health, counted in **damage taken** over the whole fight rather than health left:
+
+- **The reader** wins, ends with more than 60 health, and takes under 40.
+- **The non-reader** dies, or takes 40 or more: what would leave it at 60 or below had it not eaten.
+
+Damage taken is every point that landed on the player (blows, area blows and burning ground), whatever a meal put back afterwards. A trout heals 40 over five ticks, so the health left measures the pack as much as the reading: the knight's sword-swinger ends on 36 without a meal and on 92 eating on every heavy, and it takes 64 either way. Meals spent tracks the eating rule the test gives the non-reader, not the reading, and time to kill barely moves (the reader and the non-reader kill the archer, the knight and the seer within one to three ticks of each other). The tests use `READER_KEEPS` (60) and `NON_READER_TAKES` (40) in `tests/test_ring_three.gd`.
+
+So the food and the meal take no lever. The reference character keeps five trout, the trout keeps its 40 over five ticks, and the non-readers keep eating as each ticket wrote them; the bar no longer sees the meals. A smaller heal would move rings one and two and the timed run, and fewer trout would only shift the eating fights' health left, which the bar does not count.
+
+What the bar did need was health for the two kinds that died before their trick was played. At 70 the archer died to the reference bow on the seventh tick, before its bluff; at 60 the seer died on the third, before the blade it conjures in answer had closed. Swept with everything else held (the non-reader eats on every heavy; the seer's no-meal non-reader takes the same):
+
+| Health | Archer: reader taken / non-reader taken (ticks) | Seer: reader taken / non-reader taken (ticks) |
+|--------|-----------------------------------------------|-----------------------------------------------|
+| 60 | | 0 / 0 (3) |
+| 70 | 14 / 21 (7) | |
+| 80 | 15 / 21 (7) | |
+| 90 | 15 / 21 (7) | 0 / 0 (5) |
+| 100 | **15 / 42 (10)** | 0 / 0 (5) |
+| 110 | 22 / 42 (10) | 1 / 11 (7) |
+| 120 | | **1 / 43 (9)** |
+| 130 | | 1 / 43 (11) |
+| 150 | 22 / 63 (15) | 9 / 54 (13) |
+| 180 | 22 / 63 (17) | 9 / 86 (17) |
+
+The archer is now 100, the least that meets the bar and the ceiling of about 100 its ticket set, and the seer 120, the least that meets it and the knight's health. Their damage, timing and cycles are unchanged, so the readability floor (`tests/test_sim_telegraphs.gd`) and its top-up are as they were. A bar of 60 taken (the old "below 40 health" without a meal) would have needed the archer at 150 and the seer at 180.
+
+| Enemy | Reader: health left, taken, meals | Non-reader: taken, meals, health left |
+|-------|------------------------------------|---------------------------------------|
+| Snowveil archer (100) | 100, 15, 1 | 42, 3, 100 (eats on every heavy) |
+| Frostbound knight (120) | 86, 14, 0 (98, 2, 0 from range) | 64, 0, 36 (no meal); 64, 2, 92 (eats on every heavy) |
+| Aurora seer (120) | 99, 1, 0 | 43, 0, 57 (no meal); 43, 1, 73 (eats on every heavy) |
+| Frost tyrant (600) | 100, 38, 1 | dies with the sword, the bow or the staff, 290 to 304 taken, five meals |
+
 ### The Snowveil archer
 
-[#181](https://github.com/travism26/frostmark/issues/181): 70 health, quick shot 7, piercing shot 22 (heavy), kiting inside 4 m, and a bluffed second piercing shot. The numbers in the fights below are what the tests print.
+[#181](https://github.com/travism26/frostmark/issues/181): 100 health (70 until #198), quick shot 7, piercing shot 22 (heavy), kiting inside 4 m, and a bluffed second piercing shot. The numbers in the fights below are what the tests print.
 
 | Fight | Result |
 |-------|--------|
-| Reader: steel sword from 6 m, pins it against the ridge, eats on rest ticks only | The archer falls on the sixth tick; 86 health at the lowest, 100 at the end (the reader ate once) |
-| Non-reader: steel bow from 8 m, eats on every heavy telegraph | The archer falls on the seventh tick; 87 health at the lowest, 100 at the end |
+| Reader: steel sword from 6 m, pins it against the ridge, eats on rest ticks only | The archer falls on the eighth tick; 86 health at the lowest, 100 at the end, 15 taken (the reader ate once) |
+| Non-reader: steel bow from 8 m, eats on every heavy telegraph | The archer falls on the tenth tick; 87 health at the lowest, 100 at the end, 42 taken, three meals, one of them on the bluff |
 
-The reader clears the bar of more than 60 health left. The non-reader does not come near the bar of below 40 or dead: a 70-health archer dies to the reference character's first piercing shot, six or seven ticks in, before its bluff is ever played, and a meal heals 40 over five ticks against a piercing shot that lands for 18 (22 less 4 armour) at neutral range. Giving the archer more health does not close it: with the other numbers held, the bow-trader that eats on every heavy ends below 40 only with 300 health and two meals in the pack, and still at 74 with five. See the decision in the PR.
+Both clear the bar. At 70 health the archer died to the reference character's bow on the seventh tick, before its bluff was ever played, and the non-reader took 21; with #181's ticket asking for "below 40 health or dead", a meal healing 40 over five ticks against a piercing shot that lands for 18 (22 less 4 armour) put any health-left bar out of reach. At 100 it lives to play the bluff: the non-reader eats on it, takes the real shot straight after, and takes 42 in all. Its meals still leave it on full health, which is why the bar counts damage taken.
 
 ### The Frostbound knight
 
@@ -282,26 +317,26 @@ The reader clears the bar of more than 60 health left. The non-reader does not c
 | Non-reader: steel sword, in reach, swinging, no meal | The knight falls on the ninth tick; 36 health at the end (hack 8, cleave 24, hack 8, cleave 24) |
 | Non-reader: the same, eating a trout the tick after any heavy is told | The knight falls on the tenth tick; 76 health at the lowest, 92 at the end |
 
-The reader clears the bar of more than 60 health left, and the non-reader swinging without a meal clears the bar of below 40. That took one retune: with the ticket's hack of 10 the swinger ended at exactly 40, not below it, so the hack is 12. Health stayed at 120.
+The reader clears the bar, taking 14 (2 from range), and both non-readers take 64. The swinger without a meal also clears the ticket's own bar of below 40. That took one retune: with the ticket's hack of 10 the swinger ended at exactly 40, not below it, so the hack is 12. Health stayed at 120.
 
 Two things the numbers show:
 
 - **The reference staff outruns the knight's first wind-up.** Four casts of 35 (23, 1.5 times for the staff's edge) fell a 120-health knight in seven ticks, and the second takes it under 60 on the third tick, the tick it would declare its first wind-up. The reader's step back from a wind-up is pinned on its own (`test_stepping_back_from_the_wind_up_makes_the_committed_cleave_miss`) rather than by the fight, which never gets there. The wind-ups and the bluff are for a player who deals less than the reference character, with a lower tier or fewer levels.
-- **A meal still decides a swinger's fight**, as for the archer: a trout heals 40 over five ticks in a fight of ten, so the non-reader that eats on every heavy ends at 92. The bar holds only for a swinger that does not eat, the ticket's wording. This is the same open question as [#198](https://github.com/travism26/frostmark/issues/198), which asks what the non-reader's bar should be for all of ring three; the test pins what holds (it wins and is hurt) until that is settled.
+- **A meal decides a swinger's health left, not what it took**: a trout heals 40 over five ticks in a fight of ten, so the non-reader that eats on every heavy ends at 92, but it takes the same 64 as the one that does not eat. That is why the bar counts damage taken ([#198](https://github.com/travism26/frostmark/issues/198)).
 
 ### The Aurora seer
 
-[#182](https://github.com/travism26/frostmark/issues/182): 60 health, aurora bolt 8, aurora lance 22 (heavy), ice slash 10, ice rend 24 (heavy), and answers: a bow turned on its staff is answered with a conjured blade, a staff turned on the blade with its staff raised again, with 8 ticks between answers. The numbers below are what the tests print.
+[#182](https://github.com/travism26/frostmark/issues/182): 120 health (60 until #198), aurora bolt 8, aurora lance 22 (heavy), ice slash 10, ice rend 24 (heavy), and answers: a bow turned on its staff is answered with a conjured blade, a staff turned on the blade with its staff raised again, with 8 ticks between answers. The numbers below are what the tests print.
 
 | Fight | Result |
 |-------|--------|
-| Reader: steel bow from 5 m, swaps to a steel staff on `conjure_blade`, back to the bow on `raise_aurora`, eats on rest ticks only | The seer falls on the third tick; 100 health at the end, never hurt |
-| Non-reader: steel bow throughout, no meal | The seer falls on the third tick; 100 health at the end |
-| Non-reader: the same, eating a trout the tick after any heavy is told | The seer falls on the third tick; 100 health at the end |
+| Reader: steel bow from 5 m, swaps to a steel staff on `conjure_blade`, back to the bow on `raise_aurora`, eats on rest ticks only | The seer falls on the seventh tick; 99 health at the end, 1 taken |
+| Non-reader: steel bow throughout, no meal | The seer falls on the ninth tick; 57 health at the end, 43 taken |
+| Non-reader: the same, eating a trout the tick after any heavy is told | The seer falls on the ninth tick; 65 at the lowest, 73 at the end, 43 taken, one meal |
 
-The reader clears the bar of more than 60 health left, and so does the non-reader, who was meant to end below 40 or dead. The bar is out of reach at 60 health, and it is health, not damage or timing, that decides it: the reference bow shoots 35 at a staff (23, 1.5 times for the edge), two shots two ticks apart take the seer's 60, and the first lands on the tick it notices the player, so the seer is dead on the third tick, before the blade that answers the bow has closed the 5 m, let alone struck. Nothing in the seer's damage or timing can change that, since it never gets to a blow; the answer, the cooldown and the bait are all pinned in the sim tests rather than by a fight (`tests/test_ring_three.gd`, `tests/test_sim_answers.gd`).
+Both clear the bar. At 60 health neither could be told apart: the reference bow shoots 35 at a staff (23, 1.5 times for the edge), two shots two ticks apart took the seer's 60, and the first lands on the tick it notices the player, so the seer was dead on the third tick, before the blade that answers the bow had closed the 5 m, let alone struck. Nothing in its damage or timing could change that, since it never got to a blow, so [#198](https://github.com/travism26/frostmark/issues/198) raised its health to 120, the least that meets the bar. Now the blade closes and lands on the bow-holder, and the reader that swaps to the staff on the answer takes 1.
 
-With the other numbers held and only the seer's health raised, the same fights come out:
+With the other numbers held and only the seer's health raised, the same fights come out in health left:
 
 | Seer health | Reader | Non-reader, no meal | Non-reader, eating on every heavy |
 |-------------|--------|---------------------|-----------------------------------|
@@ -310,7 +345,7 @@ With the other numbers held and only the seer's health raised, the same fights c
 | 150 | 91 left, 9 ticks | 46 left, 13 ticks | 86 left (65 at the lowest), 13 ticks |
 | 180 | 91 left, 11 ticks | 14 left, 17 ticks | 86 left (62 at the lowest), 17 ticks |
 
-So the bar of below 40 for a non-reader that does not eat is met somewhere between 150 and 180 health, and the reader still clears 60 by a wide margin: at 180 the reader is baited into the blade, swaps to the staff, and is read again on the second answer. Health was settled at 60 for this ticket (the recommendations were accepted as written), so the numbers are not changed here; the choice between a higher health and a lower bar belongs with [#198](https://github.com/travism26/frostmark/issues/198), which asks what the non-reader's bar should be for all of ring three. The non-reader that eats on every heavy ends well above 40 at every health, as for the archer and the knight; the tests pin what holds (the seer falls on the third tick, unhurt).
+So the ticket's bar of below 40 for a non-reader that does not eat was met somewhere between 150 and 180 health, and the non-reader that eats on every heavy ends well above 40 at every health. Counted in damage taken (40 or more), the bar is met from 120.
 
 ### The Frost tyrant
 
@@ -318,7 +353,7 @@ So the bar of below 40 for a non-reader that does not eat is met somewhere betwe
 
 | Fight | Result |
 |-------|--------|
-| Reader: opens with the staff beside it, swaps to the counter on every stance, steps back on the wind-up, does nothing on a feint, eats on rest ticks below 70, and steps to the nearest open ground off each mark as it is told, holding its swing until the blow lands | The tyrant falls on the 49th tick; 62 health at the lowest, 100 at the end, one trout eaten. It stepped off 9 marks and none struck it. It answered 7 times, and 11 of the reader's swaps came inside an answer's cooldown |
+| Reader: opens with the staff beside it, swaps to the counter on every stance, steps back on the wind-up, does nothing on a feint, eats on rest ticks below 70, and steps to the nearest open ground off each mark as it is told, holding its swing until the blow lands | The tyrant falls on the 49th tick; 62 health at the lowest, 100 at the end, 38 taken, one trout eaten. It stepped off 9 marks and none struck it. It answered 7 times, and 11 of the reader's swaps came inside an answer's cooldown |
 | The same reader standing on its marks | Dies on the 17th tick, with the tyrant on 282. Four blows and five ticks on the burning ground struck it, 106 damage of the 119 it took, and it never ate: its swaps draw so many answers that no rest came round |
 | Non-reader: steel sword throughout, eating below half health | Dies on the 34th tick, with the tyrant on 264 |
 | Non-reader: steel bow throughout, the same | Dies on the 37th tick, with the tyrant on 307 |
@@ -330,7 +365,7 @@ Before #218 the reader won on the 34th tick with 75 left and the non-readers die
 - **Stepping off costs time, not health.** The stepping reader's fight is 15 ticks longer than before #218: on every mark it walks off and waits out the blow, and while the tyrant is rooted only a staff or a bow still reaches it. It ends on full health, because nothing it can step off struck it. The hollow's ridges close two sides, so a reader that only steps straight away from a stomp is cornered against them and struck; the reader takes the nearest open ground instead.
 - **Health still matters.** At 600 the tyrant outlasts every single style. Whichever weapon the non-reader holds, the tyrant answers its edge with the weapon that beats it, and now each mark lands on a non-reader who stands still, so every one dies a few ticks sooner than before. The reader re-counters every answer inside the cooldown and spends almost all of the fight on the right side. It never meets the wind-up, as before: each greatblade it faces is an answer it re-counters with the staff, so the tyrant is drawn off the greatblade before its cleave comes round. The step back is pinned on its own (`test_stepping_back_from_its_wind_up_makes_the_committed_cleave_miss`).
 
-The non-reader's bar here is death, the ticket's wording, and it holds with a meal in the pack: five trout do not carry one style through a 600-health fight. The meal question of [#198](https://github.com/travism26/frostmark/issues/198) does not arise for the tyrant.
+The non-reader's bar here is death, the ticket's wording, and it holds with a meal in the pack: five trout do not carry one style through a 600-health fight, each non-reader taking 290 to 304 before it falls. The reader takes 38, under [#198](https://github.com/travism26/frostmark/issues/198)'s 40, the closest any reader comes to the line.
 
 ## Off the timed route
 
