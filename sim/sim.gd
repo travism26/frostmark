@@ -662,9 +662,9 @@ func _buildable_now(stores: Array) -> Array[String]:
 
 # --- The ring gate ----------------------------------------------------------------------
 
-## Whether a ring gate stands open: the outpost has built the upgrade that works it and, for a
-## gate with a `guardian`, that guardian has fallen at least once. Both stay true for good, so
-## an open gate never closes.
+## Whether a ring gate stands open: the outpost has built the upgrade that works it, if it has
+## one, and, for a gate with a `guardian`, that guardian has fallen at least once. Both stay
+## true for good, so an open gate never closes, and a gate with neither always stands open.
 func ring_gate_open(object_id: String) -> bool:
 	if not world.objects.has(object_id) or world.objects[object_id]["kind"] != WorldDef.KIND_RING_GATE:
 		return false
@@ -672,7 +672,8 @@ func ring_gate_open(object_id: String) -> bool:
 	var guardian: String = gate.get("guardian", "")
 	if guardian != "" and not (state["bosses_defeated"] as Array).has(guardian):
 		return false
-	return (state["upgrades"] as Array).has(gate["upgrade"])
+	var upgrade: String = gate.get("upgrade", "")
+	return upgrade == "" or (state["upgrades"] as Array).has(upgrade)
 
 
 ## Whether `enemy_id` is the guardian of a ring gate that stands open. Such a guardian, once
