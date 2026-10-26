@@ -223,6 +223,7 @@ func _ready() -> void:
 	_ui_settings.apply(get_window())
 	_build_beat.moves_camera = not _ui_settings.reduced_motion
 	_projectiles.reduced_motion = _ui_settings.reduced_motion
+	_cues.reduced_motion = _ui_settings.reduced_motion
 	_click_marker.reduced_motion = _ui_settings.reduced_motion
 	_hud.set_settings(_audio.settings, _ui_settings)
 	_title_screen = TitleScreen.new()
@@ -375,6 +376,7 @@ func _on_ui_settings(settings: UiSettings) -> void:
 	_audio.settings.reduced_motion = settings.reduced_motion  # the director's copy, saved with the sound
 	_build_beat.moves_camera = not settings.reduced_motion
 	_projectiles.reduced_motion = settings.reduced_motion
+	_cues.reduced_motion = settings.reduced_motion
 	_click_marker.reduced_motion = settings.reduced_motion
 	sim.command(SimVocab.SET_AUTO_RETALIATE, {"on": settings.auto_retaliate})
 	settings.save_to()
@@ -688,9 +690,15 @@ func _apply_events(events: Array[Dictionary]) -> void:
 				_show_cue(e)
 			SimVocab.EV_GROUND_MARKED:
 				_show_mark(e)
+			SimVocab.EV_BURNING_STARTED:
+				_cues.burn(e, _enemies[e["enemy_id"]]["root"].global_position.y)
+			SimVocab.EV_BURNING_OUT:
+				_cues.put_out(e["patch_id"])
 			SimVocab.EV_HIT:
 				_last_event = _hit_text(e)
-				if e.get("area", false):
+				if e.get("burning", false):
+					_flinch(e["target"])
+				elif e.get("area", false):
 					_cues.land_mark(e["attacker"])
 					_flinch(e["target"])
 				elif e["attacker"] != SimVocab.PLAYER:
@@ -1667,6 +1675,8 @@ static func _sentence(text: String) -> String:
 
 
 func _hit_text(e: Dictionary) -> String:
+	if e.get("burning", false):
+		return "The burning ground scorches you for %d." % e["amount"]
 	var edge := ""
 	if float(e["multiplier"]) > 1.0:
 		edge = " Your style has the edge." if e["attacker"] == SimVocab.PLAYER else " Its style has the edge: counter it."
