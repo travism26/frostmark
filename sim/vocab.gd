@@ -80,7 +80,7 @@ const EV_SAVE_REJECTED := "save_rejected"        # {reason}
 const EV_ENEMY_NOTICED := "enemy_noticed"        # {enemy_id, cause}  cause: sight, noise, pack, hit, or called (an add coming in)
 const EV_ENEMY_MOVED := "enemy_moved"            # {enemy_id, from, to, path, facing}
 const EV_ENEMY_TELEGRAPHED := "enemy_telegraphed"  # {enemy_id, action, style, damage, heavy, at}
-const EV_HIT := "hit"                            # {attacker, target, amount, style, multiplier, health, area?, burning?}  area: true for an area blow; burning: true for burning ground's damage
+const EV_HIT := "hit"                            # {attacker, target, amount, style, multiplier, health, area?, burning?, warded?}  area: true for an area blow; burning: true for burning ground's damage; warded: the one style the target's ward lets through, on a blow it turned to 0
 const EV_MISSED := "missed"                      # {attacker, target, action, area?}  the target was out of reach, or off the ground mark
 const EV_GROUND_MARKED := "ground_marked"        # {enemy_id, action, style, damage, heavy, mark, at}  an area blow's ground mark, landing on tick `at`
 const EV_BURNING_STARTED := "burning_started"    # {patch_id, enemy_id, mark, damage, until}  an area blow left burning ground; it burns through tick `until`
@@ -94,7 +94,7 @@ const EV_ADD_LEFT := "add_left"                  # {enemy_id, boss_id}  the add'
 const EV_LOOT_DROPPED := "loot_dropped"          # {loot_id, item, count, pos}
 const EV_PICKED_UP := "picked_up"                # {loot_id, item, count}
 const EV_LOOT_GONE := "loot_gone"                # {loot_id}  lay too long; the snow took it
-const EV_ENEMY_STANCE := "enemy_stance"          # {enemy_id, action, style, at}  a weapon change, announced a tick ahead
+const EV_ENEMY_STANCE := "enemy_stance"          # {enemy_id, action, style, at, ward?}  a weapon change, announced a tick ahead; ward: the one style that hurts it, on a warded phase's opening stance
 # Cooking, field fires, the outpost, the ring gates, the dungeon mouths and the death chests
 const EV_COOKED := "cooked"                      # {item, output, burnt, xp}  output is "" when it burnt
 const EV_FIRE_LIT := "fire_lit"                  # {fire_id, pos, expires_tick}

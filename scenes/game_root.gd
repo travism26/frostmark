@@ -635,6 +635,8 @@ func _apply_events(events: Array[Dictionary]) -> void:
 				_hud.banner(_dungeon_reached_text(e["dungeon_id"]))
 			SimVocab.EV_ENEMY_STANCE:
 				_show_cue(e)
+				if e.has("ward"):
+					_last_event = ward_text(_enemy_name(e["enemy_id"]), e["ward"])
 			SimVocab.EV_LEVELLED:
 				_hud.banner("%s level %d!" % [str(e["skill"]).capitalize(), e["level"]])
 			SimVocab.EV_RETURNED:
@@ -701,6 +703,9 @@ func _apply_events(events: Array[Dictionary]) -> void:
 				elif e.get("area", false):
 					_land_mark(e["attacker"])
 					_flinch(e["target"])
+				elif e.has("warded") and _enemies.has(e["target"]):
+					# The arrow or shard flies as usual and glances off the ward when it lands.
+					_projectiles.loose(_character, _enemies[e["target"]]["root"], e["style"], 0.0, -1.0, "", true, _deflect.bind(e["target"]))
 				elif e["attacker"] != SimVocab.PLAYER:
 					_swing(e["attacker"])
 					_projectiles.resolve(e["attacker"], true)
@@ -1650,11 +1655,31 @@ func _show_feint(e: Dictionary) -> void:
 
 
 ## The word over an enemy's head: the name of the blow it telegraphed or the stance it takes,
-## shouted with a "!" when heavy, or "Feint" once a telegraphed blow turns out to be one.
+## shouted with a "!" when heavy, or "Feint" once a telegraphed blow turns out to be one. A
+## warded phase's opening stance also names the one style that hurts the enemy.
 static func cue_text(e: Dictionary) -> String:
 	if e["kind"] == SimVocab.EV_ENEMY_FEINTED:
 		return FEINT_CUE
+	if e.has("ward"):
+		return "%s: ONLY %s" % [CombatTable.action_label(e["action"]).to_upper(), str(e["ward"]).to_upper()]
 	return "%s%s" % [CombatTable.action_label(e["action"]).to_upper(), "!" if e.get("heavy", false) else ""]
+
+
+## A blow on enemy `target` glanced off its ward: it does not recoil, and a pale deflection
+## flares at it toward the character.
+func _deflect(target: String) -> void:
+	if _enemies.has(target):
+		_cues.deflect((_enemies[target]["root"] as Node3D).global_position, _character.global_position)
+
+
+## The status line for a warded phase's opening stance: what the ward lets through.
+static func ward_text(enemy_name: String, ward: String) -> String:
+	return "%s raises a ward: only %s hurts it now." % [_sentence(enemy_name), ward]
+
+
+## The status line for a blow a ward turned aside.
+static func warded_text(enemy_name: String, ward: String) -> String:
+	return "Your blow glances off %s's ward. Only %s gets through." % [enemy_name, ward]
 
 
 ## The one the blow landed on recoils: the character, or an enemy whose rig has a flinch.
@@ -1704,6 +1729,8 @@ func _hit_text(e: Dictionary) -> String:
 		edge = " Your style has the edge." if e["attacker"] == SimVocab.PLAYER else " Its style has the edge: counter it."
 	elif float(e["multiplier"]) < 1.0:
 		edge = " Their style has the edge on it." if e["attacker"] == SimVocab.PLAYER else " Your style blunts it."
+	if e.has("warded"):
+		return warded_text(_enemy_name(e["target"]), e["warded"])
 	if e["attacker"] == SimVocab.PLAYER:
 		return "You hit %s for %d.%s" % [_enemy_name(e["target"]), e["amount"], edge]
 	return "%s hits you for %d.%s" % [_sentence(_enemy_name(e["attacker"])), e["amount"], edge]

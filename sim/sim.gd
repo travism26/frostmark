@@ -1217,7 +1217,8 @@ func _step_player_attack() -> void:
 
 
 ## One blow from `attacker` on `defender` for `base` damage before the style edge and armour,
-## or, for an `area` blow, before armour alone. Applies it, emits `hit` (and `took_damage` when
+## or, for an `area` blow, before armour alone. A blow on an enemy whose phase is warded against
+## the attacker's style lands for 0 and says so. Applies it, emits `hit` (and `took_damage` when
 ## the player is hit), makes fight noise and returns the damage dealt.
 func _strike(attacker: String, defender: String, base: int, area := false) -> int:
 	var a := combatant(attacker)
@@ -1226,6 +1227,12 @@ func _strike(attacker: String, defender: String, base: int, area := false) -> in
 	var multiplier := 1.0 if area else CombatTable.multiplier(a["style"], d["style"], distance)
 	var amount := CombatTable.area_damage(base, int(d["defence"])) if area \
 		else CombatTable.damage(base, a["style"], d["style"], distance, int(d["defence"]))
+	var ward := ""
+	if defender != SimVocab.PLAYER:
+		ward = CombatTable.ward(d["kind"], int(state["enemies"][defender]["phase"]))
+	var warded: bool = ward != "" and ward != a["style"]
+	if warded:
+		amount = 0
 	var health := maxi(0, int(d["health"]) - amount)
 	if defender == SimVocab.PLAYER:
 		state["health"] = health
@@ -1237,6 +1244,8 @@ func _strike(attacker: String, defender: String, base: int, area := false) -> in
 	}
 	if area:
 		hit["area"] = true
+	if warded:
+		hit["warded"] = ward
 	_emit(hit)
 	if defender == SimVocab.PLAYER:
 		_emit({"kind": SimVocab.EV_TOOK_DAMAGE, "amount": amount, "cause": a["kind"], "health": health})
@@ -1561,13 +1570,14 @@ func _kite(id: String) -> void:
 ## name instead, and its cycle carries on from there; a phase starting wins over an answer. An
 ## area blow is told MARK_TICKS ahead instead (one, for a `warn`ed one), with its ground mark
 ## laid where the enemy stands, turned to face the player, or for a drop mark where the player
-## stands, and the enemy is rooted until it lands.
+## stands, and the enemy is rooted until it lands. A warded phase's opening stance names its ward.
 func _enemy_declare(id: String, acted := "") -> void:
 	var e: Dictionary = state["enemies"][id]
 	var me := combatant(id)
 	var action := CombatTable.ACTION_MOVE
 	var style: String = me["style"]
 	var at := int(state["tick"]) + 1
+	var opening := false
 	var answer := -1 if CombatTable.is_windup(acted) else _answer(id, me)
 	if answer >= 0 or (me["pos"] as Vector2).distance_to(player_pos()) <= float(me["reach"]) or CombatTable.is_windup(acted):
 		var phase := CombatTable.phase_at(e["kind"], int(e["health"]), int(e["phase"]))
@@ -1582,6 +1592,7 @@ func _enemy_declare(id: String, acted := "") -> void:
 			index = answer
 			e["answered_tick"] = at
 		action = actions[index]
+		opening = index == 0
 		style = CombatTable.weapon(CombatTable.stance_weapon(e["kind"], index, int(e["phase"])))["style"]
 		e["step"] = (index + 1) % actions.size()
 	e["next"] = {"action": action, "at": at}
@@ -1605,7 +1616,10 @@ func _enemy_declare(id: String, acted := "") -> void:
 			"heavy": CombatTable.is_heavy(shown), "at": at,
 		})
 	elif CombatTable.is_stance(action):
-		_emit({"kind": SimVocab.EV_ENEMY_STANCE, "enemy_id": id, "action": action, "style": style, "at": at})
+		var stance := {"kind": SimVocab.EV_ENEMY_STANCE, "enemy_id": id, "action": action, "style": style, "at": at}
+		if opening and CombatTable.ward(e["kind"], int(e["phase"])) != "":
+			stance["ward"] = CombatTable.ward(e["kind"], int(e["phase"]))
+		_emit(stance)
 
 
 ## The cycle index of the stance enemy `id` (`me`, its combatant) answers the player with on

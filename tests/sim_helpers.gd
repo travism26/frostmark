@@ -120,7 +120,7 @@ static func where(events: Array[Dictionary], kind: String, field: String, value:
 	return out
 
 
-## Stand-in kinds for the feint, fight-phase, answer, area-blow and add rules, which no enemy
+## Stand-in kinds for the feint, fight-phase, answer, area-blow, add and ward rules, which no enemy
 ## uses yet. A feint pretends to be a lunge (or, for the kiting kind, a dart); a smash strikes a
 ## front mark and a stomp a ring mark, each 3 m across the radius; an ice fall drops a mark 2.5 m
 ## across the radius where the player stands, and a quick fall, told one tick ahead, a smaller
@@ -129,6 +129,7 @@ const STAND_IN_ACTIONS := {
 	"feint_lunge": {"label": "Lunge", "damage": 0, "feint": "lunge"},
 	"feint_dart": {"label": "Dart", "damage": 0, "feint": "dart"},
 	"quicken": {"label": "Quickens", "damage": 0, "stance": true},
+	"raise_ward": {"label": "Raises a ward", "damage": 0, "stance": true},
 	"ground_smash": {"label": "Smash", "damage": 20, "heavy": true, "shape": CombatTable.MARK_FRONT, "size": 3.0},
 	"ground_stomp": {"label": "Stomp", "damage": 16, "heavy": true, "shape": CombatTable.MARK_RING, "size": 3.0},
 	"ground_scorch": {"label": "Scorch", "damage": 16, "heavy": true, "shape": CombatTable.MARK_RING, "size": 3.0, "burn_ticks": 3, "burn_damage": 5},
@@ -262,6 +263,17 @@ const STAND_IN_KINDS := {
 				"adds": [{"kind": "wolf", "entry": [5.0, 0.0]}, {"kind": "wolf", "entry": [-5.0, 0.0]}],
 			},
 			{"below": 30, "actions": ["quicken", "bite", CombatTable.ACTION_REST, CombatTable.ACTION_REST]},
+		],
+		"loot": [], "rare_percent": 0, "respawn_ticks": 100,
+	},
+	# Bites and rests. Below half health it raises a ward that only magic gets through, and below
+	# 20 % it quickens and the ward is gone.
+	"stand_in_warder": {
+		"label": "Warder", "health": 500, "weapon": "fangs", "speed": 2.0, "sight": 6.0,
+		"actions": ["bite", CombatTable.ACTION_REST, CombatTable.ACTION_REST],
+		"phases": [
+			{"below": 50, "actions": ["raise_ward", "bite", CombatTable.ACTION_REST], "ward": CombatTable.STYLE_MAGIC},
+			{"below": 20, "actions": ["quicken", "bite", CombatTable.ACTION_REST]},
 		],
 		"loot": [], "rare_percent": 0, "respawn_ticks": 100,
 	},
