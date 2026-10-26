@@ -99,6 +99,7 @@ const EV_RING_GATE_OPENED := "ring_gate_opened"  # {object_id}  its upgrade buil
 const EV_RING_TWO_REACHED := "ring_two_reached"  # {object_id}  first walked into ring two, through that gate; once per character
 const EV_RING_THREE_REACHED := "ring_three_reached"  # {object_id}  first walked into ring three, through that gate; once per character
 const EV_DUNGEON_REACHED := "dungeon_reached"    # {dungeon_id, object_id}  first walked into a dungeon, through its mouth; once per dungeon per character
+const EV_LEFT_DUNGEON := "left_dungeon"          # {dungeon_id, object_id, from, to}  took a dungeon's way out: the player stands at its set-down spot
 # Waystones
 const EV_WAYSTONE_ATTUNED := "waystone_attuned"  # {object_id}  first visit to a waystone; once per waystone
 const EV_TRAVEL_STARTED := "travel_started"      # {object_id, ticks}  channelling began; done in `ticks` ticks unless interrupted
@@ -121,6 +122,7 @@ const ACTION_CRAFT := "craft"
 const ACTION_PICK_UP := "pick_up"
 const ACTION_RING_GATE := "ring_gate"
 const ACTION_WAYSTONE := "waystone"
+const ACTION_WAY_OUT := "way_out"
 
 # --- Upgrade status (the `status` of each `Sim.upgrade_status()` entry) ----------
 
@@ -169,6 +171,7 @@ const REASON_TIER_CAPPED := "tier_capped"
 const REASON_UNKNOWN_UPGRADE := "unknown_upgrade"
 const REASON_ALREADY_BUILT := "already_built"
 const REASON_UPGRADE_LOCKED := "upgrade_locked"
+const REASON_WAY_OUT_SHUT := "way_out_shut"      # a dungeon's way out while its boss stands
 # Waystones
 const REASON_NOT_WAYSTONE := "not_waystone"
 const REASON_NOT_ATTUNED := "not_attuned"

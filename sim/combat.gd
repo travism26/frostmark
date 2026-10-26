@@ -159,7 +159,7 @@ const ACTIONS := {
 ## list of which exactly one always drops. A `boss` has its first death recorded for good. A
 ## boss that is a ring's guardian (the captain) opens that ring's gate with the matching upgrade,
 ## and once that gate stands open it no longer comes back; one that guards no gate (the Frost
-## tyrant) keeps coming back.
+## tyrant, a dungeon's boss) keeps coming back.
 ##
 ## A kind with `phases` fights differently near the end: each phase is {below, actions,
 ## stances?}, in order of falling `below`, a percentage of its health. Once a blow takes it
@@ -209,6 +209,15 @@ const ENEMIES := {
 		"loot": [{"item": "arrows", "count": 20}],
 		"boss_loot": ["iron_sword", "iron_bow", "iron_staff", "iron_helm", "iron_body", "iron_legs"],
 		"rare_percent": 25, "respawn_ticks": 600, "boss": true,
+	},
+	# The ring-one dungeon's boss, a placeholder until its own fight is designed (#203): a wolf
+	# grown past the captain, with his sabre's slash and cleave in its jaws and more health than
+	# anything in ring one. It guards no gate, so it comes back, and the dungeon's way out is shut
+	# while it stands.
+	"great_wolf": {
+		"label": "Great wolf", "health": 300, "weapon": "fangs", "speed": 2.0, "sight": 7.0,
+		"actions": ["slash", ACTION_REST, ACTION_REST, "cleave", ACTION_REST, ACTION_REST],
+		"loot": [{"item": "wolf_pelt", "count": 2}], "rare_percent": 10, "respawn_ticks": 600, "boss": true,
 	},
 	# Ring two. A troll smashes, rests, then winds up a tick before its crush: the longest
 	# warning in the game, for the hardest blow. Slow, so it can be stepped away from.

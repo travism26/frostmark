@@ -303,7 +303,8 @@ func test_the_reserved_spots_are_the_dungeons_open_ground_reached_from_the_mouth
 	# The fire and the nodes are built (#206), so their own footprints block; the ground round
 	# them is the open ground that matters.
 	var built: Array = [r["fire"]] + r["nodes"]
-	for at in spots:
+	# The way out stands on its own spot now (#207), in the boss room's corner.
+	for at in spots.filter(func(at: Array) -> bool: return at != r["way_out"]):
 		var p := _spot(at)
 		assert_eq(w.region_at(p), WorldDef.REGION_RING_ONE_DUNGEON, "%s is in the dungeon" % p)
 		if built.has(at):
@@ -355,7 +356,7 @@ func test_the_fight_lane_runs_from_the_mouth_to_the_boss_with_each_fight_on_its_
 
 func test_the_set_down_spot_is_ring_one_ground_outside_the_outpost() -> void:
 	var w := WorldDefScript.outpost()
-	var p := _spot(WorldDef.DUNGEONS[DUNGEON]["reserved"]["set_down"])
+	var p := _spot(WorldDef.DUNGEONS[DUNGEON]["set_down"])
 	assert_eq(w.region_at(p), WorldDef.REGION_RING_ONE, "in ring one, never inside the outpost")
 	assert_true(w.is_walkable_with_margin(p, 1.0))
 	assert_false(GridPath.find(w, w.cell_of(Vector2(w.spawn[0], w.spawn[1])), w.cell_of(p)).is_empty(), "on the outpost's side")
