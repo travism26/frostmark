@@ -63,9 +63,9 @@ func _phase(sim: Sim) -> int:
 	return int(sim.state["enemies"]["foe"]["phase"])
 
 
-func test_only_the_frostbound_knight_and_the_frost_tyrant_have_a_phase_so_far() -> void:
+func test_only_the_frostbound_knight_the_frost_tyrant_and_the_great_frost_bear_have_a_phase_so_far() -> void:
 	for kind in CombatTable.ENEMIES:
-		assert_eq(CombatTable.phase_count(kind), 1 if kind in ["frostbound_knight", "frost_tyrant"] else 0, "%s's phases" % kind)
+		assert_eq(CombatTable.phase_count(kind), 1 if kind in ["frostbound_knight", "frost_tyrant", "great_frost_bear"] else 0, "%s's phases" % kind)
 		assert_eq(CombatTable.cycle(kind), CombatTable.ENEMIES[kind]["actions"], "%s keeps its own cycle" % kind)
 	H.add_stand_ins()
 	assert_eq(CombatTable.phase_count("stand_in_phaser"), 2)

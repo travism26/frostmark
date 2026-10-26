@@ -149,8 +149,8 @@ const ACTIONS := {
 	"tyrant_roars": {"label": "Roars", "damage": 0, "stance": true},
 	"bear_swipe": {"label": "Swipe", "damage": 9},
 	"bear_maul": {"label": "Maul", "damage": 20, "heavy": true},
-	"bear_smash": {"label": "Smash", "damage": 30, "heavy": true, "shape": MARK_FRONT, "size": 4.0},
-	"bear_stomp": {"label": "Stomp", "damage": 26, "heavy": true, "shape": MARK_RING, "size": 3.5},
+	"bear_smash": {"label": "Smash", "damage": 26, "heavy": true, "shape": MARK_FRONT, "size": 4.0},
+	"bear_stomp": {"label": "Stomp", "damage": 24, "heavy": true, "shape": MARK_RING, "size": 3.5},
 	"bear_rears": {"label": "Rears and roars", "damage": 0, "stance": true},
 }
 
@@ -231,7 +231,7 @@ const ENEMIES := {
 	# calls two wolves in from the room's west and east edges. It guards no gate, so it comes
 	# back, and the dungeon's way out is shut while it stands.
 	"great_frost_bear": {
-		"label": "Great frost bear", "health": 600, "weapon": "bear_claws", "speed": 2.0, "sight": 7.0,
+		"label": "Great frost bear", "health": 700, "weapon": "bear_claws", "speed": 2.0, "sight": 7.0,
 		"actions": [
 			"bear_swipe", ACTION_REST, "bear_smash", ACTION_REST,
 			"bear_maul", ACTION_REST, ACTION_REST, "bear_stomp", ACTION_REST,
