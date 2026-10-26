@@ -202,3 +202,24 @@ func test_the_ring_two_link_an_unknown_ring_and_the_link_alone_load_what_they_di
 	var spot: Array = FieldKit.RING_SPOTS["three"]
 	assert_eq(FieldKit.for_digest(FieldKit.BARE_QUERY_HASH, null, spot), FieldKit.bare_code(), "the build-from-scratch link ignores it")
 	assert_eq(FieldKit.for_digest(FieldKit.GEAR_QUERY_HASH, null, spot), FieldKit.gear_code(), "the all-gear link ignores it")
+
+
+## The test-mode character from the link with `ring=dungeon` beside it.
+func test_the_dungeon_spot_stands_the_same_character_at_the_mouth_with_the_dungeon_not_yet_reached() -> void:
+	var sim := SimScript.new()
+	var result := sim.command(Vocab.IMPORT_SAVE, {"code": FieldKit.for_digest(FieldKit.QUERY_HASH, null, FieldKit.RING_SPOTS["dungeon"])})
+	assert_true(result["ok"], "the dungeon link imports: %s" % result["reason"])
+	assert_eq(sim.state["player"]["region"], WorldDef.REGION_RING_ONE)
+	var spot: Array = FieldKit.RING_SPOTS["dungeon"]
+	var at := Vector2(spot[0], spot[1])
+	assert_true(sim.world.is_walkable(at), "the spot is not in a footprint")
+	assert_true(sim.world.distance_to_object("ring_one_dungeon_mouth", at) <= 5.0, "within 5 m of the mouth")
+	assert_eq(sim.state["dungeons_reached"], [], "the dungeon not yet reached")
+	for id in sim.world.enemies:
+		var home: Array = sim.world.enemies[id]["home"]
+		var sight := float(CombatTable.enemy(sim.world.enemies[id]["kind"])["sight"])
+		assert_true(at.distance_to(Vector2(home[0], home[1])) > sight, "%s's home is out of sight" % id)
+	sim.drain_events()
+	assert_true(sim.command(Vocab.INTERACT, {"object_id": "ring_one_dungeon_mouth"})["ok"])
+	var events := H.run_until_idle(sim, 20)
+	assert_eq(H.of_kind(events, Vocab.EV_DUNGEON_REACHED).size(), 1, "one click walks it in for the first time")

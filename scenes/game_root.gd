@@ -1149,7 +1149,7 @@ func _add_dungeon_floors(world: WorldDef) -> void:
 			var plane := PlaneMesh.new()
 			plane.size = hi - lo
 			var material := StandardMaterial3D.new()
-			material.albedo_color = RingLook.entry(dungeon["region"])["snow_tone"]
+			material.albedo_color = (RingLook.entry(dungeon["region"])["snow_tone"] as Color).lightened(0.3)
 			material.roughness = 1.0
 			plane.material = material
 			floor_mesh.mesh = plane
@@ -1194,11 +1194,11 @@ func _add_cliff_forest(world: WorldDef) -> void:
 	tree.free()
 
 
-## Whether `p` is within a pine's reach of a dungeon mouth's footprint.
+## Whether `p` is on a dungeon mouth's rock: its footprint and the jambs either side of it.
 static func _by_a_mouth(world: WorldDef, p: Vector2) -> bool:
 	for id in WorldDef.DUNGEONS:
 		var mouth: String = WorldDef.DUNGEONS[id]["mouth"]
-		if world.objects.has(mouth) and world.distance_to_object(mouth, p) < 1.5:
+		if world.objects.has(mouth) and world.distance_to_object(mouth, p) < 3.5:
 			return true
 	return false
 

@@ -99,10 +99,10 @@ const LOOKS := {
 	# shows, so there is no aurora and almost no snow or wind; what light there is comes cold
 	# off the rock, and the fog closes in a few strides past the character.
 	WorldDef.REGION_RING_ONE_DUNGEON: {
-		"tint": Color(0.50, 0.52, 0.64), "sky": Color(0.03, 0.03, 0.06),
+		"tint": Color(0.58, 0.60, 0.72), "sky": Color(0.03, 0.03, 0.06),
 		"fog_color": Color(0.08, 0.09, 0.14), "fog_distance": 22.0,
-		"sun_color": Color(0.60, 0.56, 0.62), "sun_energy": 0.3,
-		"ambient_color": Color(0.22, 0.23, 0.36), "ambient_energy": 0.48,
+		"sun_color": Color(0.62, 0.58, 0.66), "sun_energy": 0.45,
+		"ambient_color": Color(0.28, 0.29, 0.44), "ambient_energy": 0.62,
 		"snow_density": 0.04, "wind": 0.08, "wind_direction": Vector2(0.9, 0.44), "aurora": 0.0, "ambience": "cave",
 		"snow_tone": Color(0.50, 0.53, 0.64), "stone": Color(0.30, 0.31, 0.38),
 		"foliage": Color(0.18, 0.22, 0.26), "density": 0.5, "drift": 0.15,
