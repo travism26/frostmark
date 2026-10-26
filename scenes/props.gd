@@ -201,6 +201,56 @@ static func cave_mouth(width: float, depth: float, height: float, at: Vector2, s
 	return root
 
 
+## A dungeon's way out: a stone arch `width` across and `height` tall in `stone`, its front
+## facing -z (turn it so -z is the way out's `outward`). While its boss stands a slab of ice
+## fills it (`Shut`); once the boss falls the slab is gone and a cold light stands in the arch,
+## with a lit path on the ground in front (`Open`).
+static func way_out(width: float, height: float, stone: Color) -> Node3D:
+	var root := Node3D.new()
+	for side in [-1, 1]:
+		var post := MeshInstance3D.new()
+		post.mesh = box(Vector3(0.5, height, 0.7), stone)
+		post.position = Vector3(side * (width * 0.5 - 0.25), height * 0.5, 0)
+		root.add_child(post)
+	var lintel := MeshInstance3D.new()
+	lintel.mesh = box(Vector3(width + 0.3, 0.45, 0.8), stone.darkened(0.15))
+	lintel.position = Vector3(0, height + 0.2, 0)
+	root.add_child(lintel)
+	var inner := width - 1.0
+	var shut := Node3D.new()
+	shut.name = "Shut"
+	root.add_child(shut)
+	var slab := MeshInstance3D.new()
+	slab.mesh = box(Vector3(inner, height, 0.3), COLOR_ICE)
+	# A dull glow of its own, so the sealed arch reads in the dark of a dungeon.
+	slab.material_override = flat(COLOR_ICE.darkened(0.2), 0.35)
+	slab.position = Vector3(0, height * 0.5, 0)
+	shut.add_child(slab)
+	var open := Node3D.new()
+	open.name = "Open"
+	root.add_child(open)
+	var veil := MeshInstance3D.new()
+	veil.mesh = box(Vector3(inner, height, 0.06), Color(COLOR_FROST, 0.7))
+	var veil_material := flat(Color(COLOR_FROST, 0.7), 2.2)
+	veil_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	veil.material_override = veil_material
+	veil.position = Vector3(0, height * 0.5, 0)
+	open.add_child(veil)
+	var path := MeshInstance3D.new()
+	path.mesh = box(Vector3(inner, 0.04, 2.4), COLOR_FROST)
+	path.material_override = flat(COLOR_FROST, 1.4)
+	path.position = Vector3(0, 0.03, -1.6)
+	open.add_child(path)
+	var light := OmniLight3D.new()
+	light.light_color = COLOR_FROST
+	light.light_energy = 2.0
+	light.omni_range = 8.0
+	light.omni_attenuation = 1.3
+	light.position = Vector3(0, height * 0.6, -0.8)
+	open.add_child(light)
+	return root
+
+
 ## A waystone: a carved standing stone `height` tall from the ruin kit, in the stone of the
 ## ring it stands in (older hands than the outpost's), on a ring of fallen blocks, with frost
 ## runes and a cold light (`Glow`) that wake once the outpost has woken it.

@@ -31,6 +31,7 @@ const COLOR_BY_ENEMY := {
 	"ice_troll": Color(0.58, 0.70, 0.78), "ruin_stalker": Color(0.24, 0.26, 0.30),
 	"snowveil_archer": Color(0.82, 0.90, 0.96), "frostbound_knight": Color(0.55, 0.72, 0.92),
 	"aurora_seer": Color(0.52, 0.40, 0.78), "frost_tyrant": Color(0.86, 0.94, 0.98),
+	"great_wolf": Color(0.30, 0.33, 0.42),
 }
 ## Telegraph cues take the style's colour from the icon table, so the ring on the ground, the
 ## name over the enemy and the style badge in the panel always agree.
@@ -84,6 +85,7 @@ const REASON_TEXT := {
 	SimVocab.REASON_UPGRADE_LOCKED: "That isn't open yet.",
 	SimVocab.REASON_NOT_ATTUNED: "Walk up to the waystone first to attune it.",
 	SimVocab.REASON_NOT_AT_WAYSTONE: "Stand by the waystone to travel.",
+	SimVocab.REASON_WAY_OUT_SHUT: "The way out is shut while the dungeon's boss stands. Bring it down first.",
 	SimVocab.REASON_INTERRUPTED: "The blow breaks your travel. Win the fight, or get clear, and try again.",
 	SimVocab.REASON_BAD_CODE: "That is not a Frostmark save code. Check that you copied all of it.",
 	SimVocab.REASON_BAD_CHECKSUM: "That save code has been changed or damaged (its checksum does not match).",
@@ -125,6 +127,7 @@ var _playing := false
 var _node_looks := {}  # node object id -> its prop, whose Full/Spent children show its state
 var _ring_gates := {}  # ring gate object id -> {bars, label}
 var _waystones := {}  # waystone object id -> {glow, label}
+var _way_outs := {}  # way out object id -> {open, shut, label}
 var _fires := {}  # field fire id -> its prop
 var _placed_fires: Array = []  # the props of the fires placed in the world: the outpost's, the brazier
 var _light_anchor := Vector3(INF, INF, INF)  # where the character stood when the fire lights were last sorted
@@ -437,6 +440,7 @@ func _show_sim() -> void:
 		_set_node_look(id, int(sim.state["nodes"][id]["left"]) > 0)
 	_sync_ring_gates()
 	_sync_waystones()
+	_sync_way_outs()
 	_sync_yard()
 	for id in _fires:
 		(_fires[id] as Node).queue_free()
@@ -556,6 +560,9 @@ func _apply_events(events: Array[Dictionary]) -> void:
 							_last_event = "The waystone hums. It can take you home."
 						else:
 							_last_event = "The waystone sleeps. Build Waystones at the outpost to wake it."
+					SimVocab.ACTION_WAY_OUT:
+						if not sim.way_out_open(e["object_id"]):
+							_last_event = _reason_text(SimVocab.REASON_WAY_OUT_SHUT)
 			SimVocab.EV_REGION_CHANGED:
 				_last_event = _entered_text(e)
 			SimVocab.EV_GATHERED:
@@ -599,6 +606,11 @@ func _apply_events(events: Array[Dictionary]) -> void:
 				_place_character(sim.player_pos(), sim.player_facing(), 0.0)
 				_camera_rig.global_position = _character.global_position
 				_hud.banner("The waystone sets you down outside the outpost gate. Walk through it to be home safe.")
+			SimVocab.EV_LEFT_DUNGEON:
+				_segment = []
+				_place_character(sim.player_pos(), sim.player_facing(), 0.0)
+				_camera_rig.global_position = _character.global_position
+				_hud.banner("The way out sets you down in ring one, between the cave and home. Walk through the outpost gate to be home safe.")
 			SimVocab.EV_RING_TWO_REACHED:
 				_hud.banner("Ring two. The snow lies over broken walls older than the outpost, and the tracks in it are not wolves'. An old brazier still burns past the gate.")
 			SimVocab.EV_RING_THREE_REACHED:
@@ -677,6 +689,11 @@ func _apply_events(events: Array[Dictionary]) -> void:
 					_hud.banner("The bandit captain falls. Build the ring-two gate winch at the outpost to open his gate.")
 				elif e["enemy_kind"] == "frost_tyrant" and not _bosses_before.has(e["enemy_id"]):
 					_hud.banner("The Frost tyrant falls. Its rime steel, frost sinew and aurora glass lie in the snow.")
+				elif _way_out_of_boss(e["enemy_id"]) != "":
+					_hud.banner("%s falls. The way out beside it stands open." % _sentence(_enemy_name(e["enemy_id"])))
+				_sync_way_outs()
+			SimVocab.EV_ENEMY_RESPAWNED:
+				_sync_way_outs()
 			SimVocab.EV_LOOT_DROPPED:
 				_add_loot(e["loot_id"])
 			SimVocab.EV_PICKED_UP:
@@ -1080,6 +1097,10 @@ func _build_world(world: WorldDef) -> void:
 			WorldDef.KIND_WAYSTONE:
 				var stone_at := Vector2((o["min"][0] + o["max"][0]) * 0.5, (o["min"][1] + o["max"][1]) * 0.5)
 				prop = Props.waystone(o["height"], stone_at, RingLook.at(world, stone_at)["stone"])
+			WorldDef.KIND_WAY_OUT:
+				var outward := Vector2(o["outward"][0], o["outward"][1])
+				prop = Props.way_out(o["max"][0] - o["min"][0], o["height"], RingLook.at(world, world.object_center(id))["stone"])
+				prop.rotation.y = atan2(-outward.x, -outward.y)
 		if prop == null:
 			# The outpost gate: a timber gateway over the threshold, clickable through a taller volume.
 			var gate := WorldDressing.gateway(o["min"], o["max"])
@@ -1114,6 +1135,8 @@ func _build_world(world: WorldDef) -> void:
 				_ring_gates[id] = {"bars": prop.get_node("Bars"), "label": label}
 			elif kind == WorldDef.KIND_WAYSTONE:
 				_waystones[id] = {"glow": prop.get_node("Glow"), "label": label}
+			elif kind == WorldDef.KIND_WAY_OUT:
+				_way_outs[id] = {"open": prop.get_node("Open"), "shut": prop.get_node("Shut"), "label": label}
 
 
 ## A dungeon's mouth in its ring's cliff, in the stone of that ring, its passage turned along
@@ -1254,6 +1277,32 @@ func _sync_waystones() -> void:
 		(_waystones[id]["glow"] as Node3D).visible = awake
 		var state := "asleep" if not awake else "attuned" if sim.waystone_attuned(id) else "visit to attune"
 		(_waystones[id]["label"] as Label3D).text = "Waystone (%s)" % state
+
+
+## A dungeon's way out shows its light while open and its ice slab while shut; its label says
+## which, and while it is shut, why.
+func _sync_way_outs() -> void:
+	for id in _way_outs:
+		var open := sim.way_out_open(id)
+		(_way_outs[id]["open"] as Node3D).visible = open
+		(_way_outs[id]["shut"] as Node3D).visible = not open
+		var boss: String = WorldDef.DUNGEONS[WorldDef.dungeon_of_way_out(id)]["boss"]
+		(_way_outs[id]["label"] as Label3D).text = way_out_text(open, CombatTable.enemy(sim.world.enemies[boss]["kind"])["label"])
+
+
+## A way out's label: open, or shut while the boss named `boss_label` stands.
+static func way_out_text(open: bool, boss_label: String) -> String:
+	if open:
+		return "Way out (open)"
+	return "Way out (shut while the %s stands)" % boss_label.to_lower()
+
+
+## The way out that `enemy_id`'s fall opens, or "" when it is no dungeon's boss.
+func _way_out_of_boss(enemy_id: String) -> String:
+	for dungeon in WorldDef.DUNGEONS:
+		if WorldDef.DUNGEONS[dungeon]["boss"] == enemy_id:
+			return WorldDef.DUNGEONS[dungeon]["way_out"]
+	return ""
 
 
 ## The yard shows a piece for every built upgrade (YardLook), redrawn when the list changes.

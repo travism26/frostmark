@@ -33,6 +33,7 @@ const KIND_RICH_IRON_ROCK := "rich_iron_rock"
 const KIND_DEEP_HOLE := "deep_hole"
 const KIND_RING_GATE := "ring_gate"
 const KIND_WAYSTONE := "waystone"
+const KIND_WAY_OUT := "way_out"
 
 const REGION_OUTPOST := "outpost"
 const REGION_INNER_RING := "inner_ring"
@@ -68,10 +69,14 @@ const RING_ONE_DUNGEON_MOUTH_Z := -47.0
 ##             of fight spots from the mouth to the boss (each more than a fight's noise and
 ##             every ring-one sight from the next and from the fire), `nodes` two spots that
 ##             are only reached past a fight, `boss_room` [min, max] at the far end with the
-##             `boss` spot in it, `way_out` in the boss room, and `set_down` on ring-one ground
-##             on the outpost side of the dungeon.
-## The fire (gentle only: the id of an ordinary fire object), the death chest, the boss, the way
-## out and the set-down spot join the entry itself as they are built.
+##             `boss` spot in it, and `way_out` in the boss room.
+##   boss      the enemy id of its boss, placed at the `boss` spot
+##   way_out   the object id of its way out, at the `way_out` spot: shut while the boss stands,
+##             open from its fall until it comes back
+##   set_down  where the way out sets the player down, as [x, z]: ring-one ground on the
+##             outpost side of the dungeon, outside the outpost and short of every ring gate
+## The fire (gentle only: the id of an ordinary fire object) and the death chest join the entry
+## itself as they are built.
 ##
 ## The ring-one dungeon runs from the mouth in ring one's east cliff (x 60 to 64) to the cliffs
 ## at x 108, and from z -60 to 60. Three cave walls part it into four legs: east along the
@@ -87,8 +92,8 @@ const DUNGEONS := {
 			"fights": [[96.0, -38.0], [80.0, -26.0], [90.0, 10.0], [92.0, 40.0]],
 			"nodes": [[68.0, -24.0], [104.0, 17.0]],
 			"boss_room": [[64.0, 24.0], [84.0, 60.0]], "boss": [73.0, 44.0], "way_out": [66.5, 57.5],
-			"set_down": [44.5, -44.5],
 		},
+		"boss": "ring_one_dungeon_boss", "way_out": "ring_one_dungeon_way_out", "set_down": [44.5, -44.5],
 	},
 }
 
@@ -540,6 +545,16 @@ static func _ring_one_dungeon(w: WorldDef) -> void:
 				"kind": member[0], "home": [fights[g][0] + member[1], fights[g][1] + member[2]],
 				"pack": "dungeon_fight_%d" % (g + 1),
 			}
+	# The boss and the way out, in the boss room. The way out stands in the room's south-west
+	# corner and faces north, into the room; `outward` only turns its look.
+	var dungeon: Dictionary = DUNGEONS["ring_one_dungeon"]
+	var r: Dictionary = dungeon["reserved"]
+	w.enemies[dungeon["boss"]] = {"kind": "great_wolf", "home": r["boss"], "pack": dungeon["boss"]}
+	var at: Array = r["way_out"]
+	w.objects[dungeon["way_out"]] = {
+		"kind": KIND_WAY_OUT, "label": "Way out", "blocks": true, "height": 3.0,
+		"min": [at[0] - 1.0, at[1] - 1.0], "max": [at[0] + 1.0, at[1] + 1.0], "outward": [0.0, -1.0],
+	}
 
 
 ## The id of the dungeon whose region is `region`, or "" for a ring, the outpost or nowhere.
@@ -554,6 +569,14 @@ static func dungeon_of_region(region: String) -> String:
 static func dungeon_of_mouth(object_id: String) -> String:
 	for id in DUNGEONS:
 		if DUNGEONS[id]["mouth"] == object_id:
+			return id
+	return ""
+
+
+## The id of the dungeon whose way out is the object `object_id`, or "".
+static func dungeon_of_way_out(object_id: String) -> String:
+	for id in DUNGEONS:
+		if DUNGEONS[id]["way_out"] == object_id:
 			return id
 	return ""
 

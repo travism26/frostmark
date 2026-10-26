@@ -292,6 +292,8 @@ func _cmd_interact(args: Dictionary) -> Dictionary:
 		var reason := _gather_blocker(id)
 		if reason != "":
 			return _reject(SimVocab.INTERACT, args, reason)
+	if world.objects[id]["kind"] == WorldDef.KIND_WAY_OUT and not way_out_open(id):
+		return _reject(SimVocab.INTERACT, args, SimVocab.REASON_WAY_OUT_SHUT)
 	return _walk_to_object(SimVocab.INTERACT, id, args)
 
 
@@ -615,6 +617,8 @@ func _step_movement() -> void:
 				_pass_ring_gate(object_id)
 			elif action == SimVocab.ACTION_WAYSTONE:
 				_attune(object_id)
+			elif action == SimVocab.ACTION_WAY_OUT and way_out_open(object_id):
+				_take_way_out(object_id)
 
 
 func _action_for(object_id: String) -> String:
@@ -631,6 +635,8 @@ func _action_for(object_id: String) -> String:
 			return SimVocab.ACTION_CRAFT
 		WorldDef.KIND_WAYSTONE:
 			return SimVocab.ACTION_WAYSTONE
+		WorldDef.KIND_WAY_OUT:
+			return SimVocab.ACTION_WAY_OUT
 	return SimVocab.ACTION_NONE
 
 
@@ -759,6 +765,50 @@ static func _band(region: String) -> int:
 	return int(BANDS.get(region, 0))
 
 
+## Whether a dungeon's way out stands open: its boss lies dead. It opens each time the boss
+## falls and shuts again when the boss comes back, so it always follows the boss's own state.
+func way_out_open(object_id: String) -> bool:
+	var dungeon := WorldDef.dungeon_of_way_out(object_id)
+	if dungeon == "":
+		return false
+	return state["enemies"][WorldDef.DUNGEONS[dungeon]["boss"]]["mode"] == MODE_DEAD
+
+
+## The player reached an open way out: with no channel, they stand at the dungeon's set-down
+## spot in its ring, facing the outpost, with the pack still at risk until the outpost gate.
+## A save point.
+func _take_way_out(object_id: String) -> void:
+	var dungeon := WorldDef.dungeon_of_way_out(object_id)
+	var at: Array = WorldDef.DUNGEONS[dungeon]["set_down"]
+	var spot := Vector2(at[0], at[1])
+	var cell: Variant = world.nearest_walkable_cell(spot, SNAP_RADIUS_CELLS)
+	var to := world.cell_center(cell) if cell != null else spot
+	_set_down(to, -to.normalized(), {"kind": SimVocab.EV_LEFT_DUNGEON, "dungeon_id": dungeon, "object_id": object_id})
+	_save_due = "way_out"
+
+
+## Puts the player down at `to`, facing `facing`, with nothing under way, and emits `event`
+## with the `from` and `to` points. The region follows, and every enemy fighting them loses the
+## trail and heads home. Waystone travel and a dungeon's way out both land this way.
+func _set_down(to: Vector2, facing: Vector2, event: Dictionary) -> void:
+	var player: Dictionary = state["player"]
+	event["from"] = _xz(player_pos())
+	event["to"] = _xz(to)
+	player["activity"] = {}
+	player["pos"] = _xz(to)
+	player["facing"] = _xz(facing)
+	player["path"] = []
+	player["target_object"] = ""
+	_emit(event)
+	var region := world.region_at(to)
+	if region != player["region"]:
+		_emit({"kind": SimVocab.EV_REGION_CHANGED, "from": player["region"], "to": region})
+		player["region"] = region
+	for id in state["enemies"]:
+		if state["enemies"][id]["mode"] == MODE_ENGAGED:
+			_disengage(id)
+
+
 # --- Waystones --------------------------------------------------------------------------
 
 ## Whether a built upgrade has woken this waystone.
@@ -814,27 +864,13 @@ func _step_travel(activity: Dictionary) -> void:
 ## The channel is done: the player stands TRAVEL_GATE_STEP outside the outpost gate, facing it,
 ## with the pack still at risk. Every enemy fighting them loses the trail and heads home. A save point.
 func _travel(object_id: String) -> void:
-	var player: Dictionary = state["player"]
-	var from := player_pos()
 	var gate_id: String = world.objects_of_kind(WorldDef.KIND_GATE)[0]
 	var gate: Dictionary = world.objects[gate_id]
 	var outward := Vector2(gate["outward"][0], gate["outward"][1])
 	var spot := world.object_center(gate_id) + outward * TRAVEL_GATE_STEP
 	var cell: Variant = world.nearest_walkable_cell(spot, SNAP_RADIUS_CELLS)
 	var to := world.cell_center(cell) if cell != null else spot
-	player["activity"] = {}
-	player["pos"] = _xz(to)
-	player["facing"] = _xz(-outward)
-	player["path"] = []
-	player["target_object"] = ""
-	_emit({"kind": SimVocab.EV_TRAVELLED, "object_id": object_id, "from": _xz(from), "to": _xz(to)})
-	var region := world.region_at(to)
-	if region != player["region"]:
-		_emit({"kind": SimVocab.EV_REGION_CHANGED, "from": player["region"], "to": region})
-		player["region"] = region
-	for id in state["enemies"]:
-		if state["enemies"][id]["mode"] == MODE_ENGAGED:
-			_disengage(id)
+	_set_down(to, -outward, {"kind": SimVocab.EV_TRAVELLED, "object_id": object_id})
 	_save_due = "waystone"
 
 
