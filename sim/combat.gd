@@ -187,6 +187,10 @@ const ACTIONS := {
 ## its entry point, fighting; adds never respawn, drop their kind's usual loot, and leave when
 ## the boss gives up the fight (see `add_problems`).
 ##
+## A phase may carry a `ward`, the one style that hurts its boss: from the phase's start to its
+## end, a blow in any other style lands and does no damage. The ward never rotates; the phase's
+## opening stance names it, so the phase announcement covers it (see `ward_problems`).
+##
 ## A kind (or one of its phases) with `answers` answers a counter: {player style: cycle index},
 ## where the action at each index is a stance. When the player's style has the edge on the
 ## enemy's, it declares the stance answering that style instead of its next action, at most
@@ -631,6 +635,32 @@ static func add_problems(def: Dictionary) -> Array[String]:
 			var entry: Variant = add.get("entry") if add is Dictionary else null
 			if not (entry is Array and entry.size() == 2 and (entry[0] is int or entry[0] is float) and (entry[1] is int or entry[1] is float)):
 				out.append("phase %d: the add %s has no entry point" % [i + 1, kind])
+	return out
+
+
+## The one style that hurts an enemy of `kind` in `phase`, or "" when that phase is unwarded.
+static func ward(kind: String, phase: int) -> String:
+	return str(_phase(kind, phase).get("ward", "")) if phase > 0 else ""
+
+
+## What is wrong with the wards of an enemy definition, or [] when nothing is: a ward comes only
+## with a fight phase, names a style, and never guards a kind that answers, since an answer
+## already changes which style works.
+static func ward_problems(def: Dictionary) -> Array[String]:
+	var out: Array[String] = []
+	if def.has("ward"):
+		out.append("the kind: a ward comes only with a fight phase")
+	var phases: Array = def.get("phases", [])
+	var answers: bool = not def.get("answers", {}).is_empty()
+	for phase in phases:
+		answers = answers or not phase.get("answers", {}).is_empty()
+	for i in phases.size():
+		if not phases[i].has("ward"):
+			continue
+		if not STYLE_SKILLS.has(phases[i]["ward"]):
+			out.append("phase %d: the ward %s is not a style" % [i + 1, phases[i]["ward"]])
+		if answers:
+			out.append("phase %d: a ward on a kind that answers" % [i + 1])
 	return out
 
 
