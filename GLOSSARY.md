@@ -40,6 +40,38 @@ _Avoid_: Banking, extraction
 
 ### The world
 
+**Ring**:
+One band of the wilderness around the outpost. Each ring is more dangerous and pays more than the one inside it.
+_Avoid_: Zone, region
+
+**Region**:
+A whole separate land with its own outpost and rings: the frozen frontier is one, and a forest or a coast would be others.
+_Avoid_: Area, map, world
+
+**Dungeon**:
+A pocket off a ring, entered by its mouth, with a boss at its end. It is harder than the ring it opens from, and nothing inside it is safe; you leave it back into that ring.
+_Avoid_: Cave, instance, delve
+
+**Gentle dungeon**:
+A dungeon with a fire and a death chest just inside its mouth: the ring-one and ring-two dungeons.
+_Avoid_: Easy dungeon
+
+**Deep dungeon**:
+A dungeon with neither a fire nor a death chest, where a death costs what it costs anywhere outside: the ring-three dungeon.
+_Avoid_: Hard dungeon
+
+**Mouth**:
+Where you enter a dungeon from its ring. Nothing notices, chases or fights you across it.
+_Avoid_: Entrance, portal, cave mouth
+
+**Death chest**:
+The chest just inside a gentle dungeon's mouth that holds what a death in that dungeon would have lost, until you fetch it or die there again.
+_Avoid_: Gravestone, grave, loot box
+
+**Way out**:
+What opens at a dungeon's end each time its boss falls. It sets you down in the same ring, on the side nearest home.
+_Avoid_: Portal, exit, shortcut
+
 **Node**:
 One thing you gather from: a tree, a rock, a fishing hole. It runs out after a few gathers and regrows.
 _Avoid_: Resource, vein
@@ -81,6 +113,34 @@ The outpost upgrade that raises the smithing cap from bronze to iron. It is opti
 _Avoid_: Smelter, iron forge
 
 ### Combat
+
+**Boss**:
+The one enemy at a dungeon's end. Each time it falls, the dungeon's way out opens. It guards no ring gate.
+_Avoid_: Guardian, raid boss
+
+**Gate guardian**:
+The enemy that stands at a ring gate and has to fall before the gate can open, like the bandit captain.
+_Avoid_: Boss, gatekeeper
+
+**Add**:
+A lesser enemy of the ring's own kind that a boss calls into its fight once, when its health crosses a mark.
+_Avoid_: Minion, summon, spawn
+
+**Area blow**:
+A boss's blow that strikes a marked patch of ground instead of the player. The boss is rooted from the moment it is told until it lands. Only stepping off the patch escapes it; no style or swap does.
+_Avoid_: AOE, area attack, splash
+
+**Ground mark**:
+The red patch an area blow shows on the ground when it is told. It is exactly where the blow will land: in front of the boss, in a ring around it, or where the player stood.
+_Avoid_: Telegraph circle, danger zone, hazard
+
+**Burning ground**:
+A patch some area blows leave behind, which keeps hurting anyone who stands on it for a few ticks.
+_Avoid_: Fire (a fire warms), hazard, pool
+
+**Ward**:
+A boss's guard, from a health mark to the end of that phase, against every style but one: only the unwarded style hurts it.
+_Avoid_: Immunity, shield, resistance
 
 **Feint**:
 A blow an enemy telegraphs exactly like a real one that then lands nothing: no hit, no miss, no damage. Its next blow is telegraphed on the feint tick, so reading through a feint is part of the counter.

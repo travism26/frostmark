@@ -90,6 +90,40 @@ The zones are concentric rings around the outpost, so danger grows with distance
 | Ring two   | Ruins and real monsters                                                                         |
 | Ring three | A glacier under the aurora, behind a gate in ring two's cliffs; enemies that are harder to read |
 
+### Dungeons
+
+Decided in the dungeons grill ([#39](https://github.com/travism26/frostmark/issues/39)). Boss fights are grilled in [#203](https://github.com/travism26/frostmark/issues/203).
+
+- **A dungeon is a pocket off a ring with a boss at its end.** It is darker and harder than its ring, and it adds a risk the rings don't have: little or no fire. There is one dungeon in each of rings one, two and three, and none in the safe inner ring. The ring-one dungeon ships first.
+- **You enter by its mouth, which is open as soon as you can reach the ring.** No outpost upgrade opens it. Nothing notices, chases or fights you across the mouth, just as at a ring gate.
+- **Inside, it is one floor, about ten minutes from the mouth to the boss.** It holds the ring's own enemy kinds, three or four fights in the dark, and one or two richer nodes. The boss is the only new enemy. Each boss drops something no other enemy drops (see Boss fights below).
+- **Warmth drains at the usual pace.** The cold stays the run clock, and worn fur is the dungeon kit.
+- **Gentle dungeons (rings one and two) have a fire and a death chest just inside the mouth.** A death inside one keeps your most valuable items as usual, and everything else, which a death anywhere else destroys, goes into the death chest instead. The chest holds it with no timer until you fetch it. A second death in that dungeon replaces what the chest holds, and a death anywhere else leaves it alone.
+- **The deep dungeon (ring three) has neither.** A death there costs what it costs anywhere outside.
+- **When the boss falls, a way out opens.** It sets you down in the same ring, on the side nearest home. It opens again each time the boss falls, never sets you down past a ring gate or at the outpost, and leaves the return to you, as a waystone does.
+- **Nothing inside a dungeon is safe; only walking back through the outpost gate brings you home safe.**
+
+### Boss fights
+
+Decided in the boss fights grill ([#203](https://github.com/travism26/frostmark/issues/203)); specced in [#209](https://github.com/travism26/frostmark/issues/209).
+
+- **A boss fight asks for a little more thinking than telegraph and counter, without being very hard.** On top of the usual counters, a boss uses area blows, adds and, from ring two, a ward. A safe spot, and things to interact with mid-fight, are parked.
+- **An area blow strikes a marked patch of ground, not the player.** Its ground mark shows red on the tick it is told and brightens on the tick it lands, two ticks later. From the mark to the blow the boss is rooted: it does not turn or follow, so the mark is exactly where the blow lands. A mark is a front arc (a smash), a ring around the boss (a stomp) or a patch where the player stood (falling ice). Only stepping off it escapes the blow: no style or swap does, though armour still cuts the damage. A ground mark always lands; feints stay on aimed blows. The first mark you see brings the guide tip "Step off the red".
+- **Some area blows leave burning ground,** a glowing patch that hurts anyone standing on it for a few ticks, so a fight can shrink the room. Area blows and burning ground hurt only the player.
+- **Adds come once, when the boss crosses a fight-phase mark.** They are the ring's own kinds, enter from fixed points at the room's edge, are announced a tick ahead, don't come back during the fight and drop their usual loot.
+- **A ward guards the boss against every style but one,** from a health mark to the end of that phase. It is announced as a stance and does not rotate.
+- **The toolkit grows ring by ring.** Ring one's boss has one phase, front and ring marks, and two adds. Ring two's adds the dropped mark, burning ground and a ward in its last phase. Ring three's boss keeps its feints, phases and answers, gains all three marks and burning ground, and in its quick phase cuts some small marks to one tick of warning. It has no ward, because its answers already change which style works.
+- **Ring one's boss is a great frost bear.** It smashes its front and stomps a ring, fights in melee so magic has the edge on it, and calls in two wolves at half health. Ring two's boss is designed with its dungeon.
+- **The Frost tyrant becomes the deep dungeon's boss.** Its old hollow becomes the ring-three dungeon's mouth.
+- **A boss never leaves its room,** which has about 12 m of clear floor. If you walk out, it disengages, walks home and heals, its adds leave, its burning ground goes out, and the fight starts over.
+- **A boss drops a guaranteed pile of its ring's best materials, plus a chance at a piece only it drops.** Ring one's pile is iron ore and wolf pelts. The pieces and their odds are the rare loot grill's ([#139](https://github.com/travism26/frostmark/issues/139)). Top sets still come from the workbench.
+- **A boss respawns on a timer like any enemy:** about 600 ticks in ring one, rising by ring, with the tyrant at 900. The way out shuts when it does.
+- **Each dungeon has a test code that sets you outside its boss room with that ring's kit,** and each boss has a scripted fight test for balancing.
+
+### Regions (parked)
+
+- **Another region is a whole separate land, such as a forest, a coast or mountains, with its own outpost and rings.** It would repeat the loop in a new environment. It stays parked because a region doubles the art and content load on a budget of three to five hours a week. How you reach one is open question 7.
+
 ### Gear tiers
 
 - **The launch tiers are wooden, bronze and iron, and they show on the character.** You can see progress at a glance.
@@ -186,3 +220,4 @@ The decision list leaves these open. They are recorded here so nobody settles th
 4. **Waystones and banking.** Does travelling by waystone bank your loot, or does only the outpost gate do that? **Settled in [#24](https://github.com/travism26/frostmark/issues/24):** only the gate banks. A waystone sets you and your pack down just outside the outpost gate, so the last step through it is still yours, and a blow taken while it channels breaks it, so it is a way home and not a way out of a fight. **Revised in [#107](https://github.com/travism26/frostmark/issues/107):** the gate no longer banks; walking through it is the return, which brings you home safe, and the stash is filled with Deposit haul. Travel still stops short of the gate, so the return stays the player's step.
 5. **Web export threading.** Use the single-threaded default, which runs on Pages without headers, or the threaded export plus the service-worker workaround? This should be settled in slice 1. **Settled in slice 1:** Frostmark ships the single-threaded export, which runs on Pages without headers or a service worker.
 6. **Asset licence hygiene.** Poly Pizza CC-BY models need attribution and Mixamo isn't CC0. Should the game keep a credits file, or use only CC0 assets?
+7. **Reaching another region.** Is a region reached on foot from the frontier, or by a travel point such as a waystone? Left open in [#39](https://github.com/travism26/frostmark/issues/39) on purpose: nothing is built against it.
