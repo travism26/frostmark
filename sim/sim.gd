@@ -1407,8 +1407,9 @@ func _kite(id: String) -> void:
 ## wind-up committed) is that phase's first, and its cycle is that phase's from then on. An
 ## enemy the player has just countered answers, in reach or not, with the stance its answers
 ## name instead, and its cycle carries on from there; a phase starting wins over an answer. An
-## area blow is told MARK_TICKS ahead instead, with its ground mark laid where the enemy stands,
-## turned to face the player, and the enemy is rooted until it lands.
+## area blow is told MARK_TICKS ahead instead (one, for a `warn`ed one), with its ground mark
+## laid where the enemy stands, turned to face the player, or for a drop mark where the player
+## stands, and the enemy is rooted until it lands.
 func _enemy_declare(id: String, acted := "") -> void:
 	var e: Dictionary = state["enemies"][id]
 	var me := combatant(id)
@@ -1435,8 +1436,8 @@ func _enemy_declare(id: String, acted := "") -> void:
 		var toward := player_pos() - (me["pos"] as Vector2)
 		if toward != Vector2.ZERO:
 			e["facing"] = _xz(toward.normalized())
-		var mark := CombatTable.area_mark(action, me["pos"], Vector2(e["facing"][0], e["facing"][1]))
-		e["next"] = {"action": action, "at": int(state["tick"]) + CombatTable.MARK_TICKS, "mark": mark}
+		var mark := CombatTable.area_mark(action, me["pos"], Vector2(e["facing"][0], e["facing"][1]), player_pos())
+		e["next"] = {"action": action, "at": int(state["tick"]) + CombatTable.mark_ticks(action), "mark": mark}
 		_emit({
 			"kind": SimVocab.EV_GROUND_MARKED, "enemy_id": id, "action": action, "style": style,
 			"damage": CombatTable.action_damage(action), "heavy": CombatTable.is_heavy(action),

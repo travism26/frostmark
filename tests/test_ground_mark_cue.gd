@@ -16,6 +16,11 @@ const RING := {
 	"damage": 20, "heavy": true, "at": 5,
 	"mark": {"shape": CombatTable.MARK_RING, "centre": [4.0, -2.0], "radius": 2.5},
 }
+const DROP := {
+	"kind": SimVocab.EV_GROUND_MARKED, "enemy_id": "foe", "action": "ice_fall", "style": CombatTable.STYLE_MELEE,
+	"damage": 14, "heavy": true, "at": 5,
+	"mark": {"shape": CombatTable.MARK_DROP, "centre": [7.0, 3.5], "radius": 2.5},
+}
 
 
 func _is_red(c: Color) -> bool:
@@ -23,7 +28,7 @@ func _is_red(c: Color) -> bool:
 
 
 func test_a_ground_mark_draws_red_brightens_on_landing_and_clears_after() -> void:
-	for e: Dictionary in [FRONT, RING]:
+	for e: Dictionary in [FRONT, RING, DROP]:
 		var cues: CombatCues = CombatCuesScript.new()
 		assert_eq(cues.mark_colour("foe").a, 0.0, "nothing before the mark")
 		cues.mark(e)
@@ -53,6 +58,16 @@ func test_the_mark_lies_where_the_blow_lands() -> void:
 	var ahead := (mesh.basis * Vector3(0, 0, 1)).normalized()
 	assert_almost_eq(ahead.x, 1.0)
 	assert_almost_eq(ahead.z, 0.0)
+	cues.free()
+
+
+func test_a_drop_mark_lies_where_the_player_stood() -> void:
+	var cues: CombatCues = CombatCuesScript.new()
+	cues.mark(DROP, 0.5)
+	var mesh := cues.get_child(0) as MeshInstance3D
+	assert_almost_eq(mesh.position.x, 7.0)
+	assert_almost_eq(mesh.position.z, 3.5)
+	assert_almost_eq(mesh.scale.x, 5.0, 0.0001, "as wide as the mark")
 	cues.free()
 
 

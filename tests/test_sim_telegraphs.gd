@@ -1,5 +1,5 @@
 ## The readability floor: whatever the player does, every enemy blow is telegraphed exactly one
-## tick ahead, or for an area blow its ground mark two ticks ahead, every change of an enemy's
+## tick ahead, or for an area blow its ground mark two ticks ahead (one, in a fight phase that says so), every change of an enemy's
 ## style is announced, and a feint deals no damage.
 ## Every kind in CombatTable.ENEMIES, and the stand-in feinting, phased, answering and area kinds,
 ## fights a long seeded fight against a player who swaps style and steps in and out of reach,
@@ -43,6 +43,7 @@ func _fight(kind: String, seed: int) -> void:
 	rng.seed = seed
 	var told := {}  # tick -> the telegraph naming it
 	var marked := {}  # tick -> the tick its ground mark was told on
+	var warned := {}  # tick -> the ticks of warning its ground mark gave
 	var style: String = sim.combatant("foe")["style"]
 	var blows := 0
 	var changes := 0
@@ -68,8 +69,9 @@ func _fight(kind: String, seed: int) -> void:
 					assert_eq(e["at"], tick + 1, "%s: a telegraph is for the next tick" % kind)
 					told[int(e["at"])] = e
 				Vocab.EV_GROUND_MARKED:
-					assert_eq(e["at"], tick + CombatTable.MARK_TICKS, "%s: a ground mark lands two ticks on" % kind)
+					assert_eq(e["at"], tick + CombatTable.mark_ticks(e["action"]), "%s: a ground mark lands as many ticks on as its blow warns" % kind)
 					marked[int(e["at"])] = tick
+					warned[int(e["at"])] = CombatTable.mark_ticks(e["action"])
 				Vocab.EV_ENEMY_STANCE:
 					stanced = true
 				Vocab.EV_ENEMY_RESPAWNED:
@@ -81,7 +83,7 @@ func _fight(kind: String, seed: int) -> void:
 					assert_true(told.has(tick), "%s: the feint on tick %d was telegraphed" % [kind, tick])
 				Vocab.EV_HIT, Vocab.EV_MISSED when e.get("area", false):
 					blows += 1
-					assert_eq(marked.get(tick), tick - CombatTable.MARK_TICKS, "%s: the area blow on tick %d was marked two ticks earlier" % [kind, tick])
+					assert_eq(marked.get(tick), tick - warned.get(tick, 0), "%s: the area blow on tick %d was marked ahead of it" % [kind, tick])
 				Vocab.EV_HIT, Vocab.EV_MISSED:
 					blows += 1
 					assert_true(told.has(tick), "%s: the blow on tick %d was telegraphed a tick earlier" % [kind, tick])
