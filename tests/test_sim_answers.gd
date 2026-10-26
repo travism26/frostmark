@@ -87,7 +87,7 @@ func _player_has_edge(sim: Sim) -> bool:
 func test_only_the_aurora_seer_and_the_frost_tyrant_answer_yet() -> void:
 	var answering := {
 		"aurora_seer": [{"ranged": 5, "magic": 10}],
-		"frost_tyrant": [{"magic": 5, "ranged": 15, "melee": 10}, {"magic": 5, "ranged": 14, "melee": 9}],
+		"frost_tyrant": [{"magic": 6, "ranged": 18, "melee": 12}, {"magic": 6, "ranged": 18, "melee": 11}],
 	}
 	for kind in CombatTable.ENEMIES:
 		for phase in CombatTable.phase_count(kind) + 1:

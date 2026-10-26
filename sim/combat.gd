@@ -152,6 +152,11 @@ const ACTIONS := {
 	"bear_smash": {"label": "Smash", "damage": 26, "heavy": true, "shape": MARK_FRONT, "size": 4.0},
 	"bear_stomp": {"label": "Stomp", "damage": 24, "heavy": true, "shape": MARK_RING, "size": 3.5},
 	"bear_rears": {"label": "Rears and roars", "damage": 0, "stance": true},
+	"greatblade_smash": {"label": "Greatblade smash", "damage": 30, "heavy": true, "shape": MARK_FRONT, "size": 3.5},
+	"tyrant_stomp": {"label": "Stomp", "damage": 26, "heavy": true, "shape": MARK_RING, "size": 3.0},
+	"arrow_rain": {"label": "Arrow rain", "damage": 20, "shape": MARK_DROP, "size": 2.5},
+	"falling_ice": {"label": "Falling ice", "damage": 26, "heavy": true, "shape": MARK_DROP, "size": 2.5, "burn_ticks": 5, "burn_damage": 8},
+	"ice_shards": {"label": "Ice shards", "damage": 16, "shape": MARK_DROP, "size": 1.5, "warn": 1},
 }
 
 ## Enemy kinds. `weapon` sets the style and reach. `speed` is metres per tick (the player walks
@@ -306,38 +311,40 @@ const ENEMIES := {
 	},
 	# Ring three's boss, and everything the ring has taught at once: the captain's three weapons,
 	# a wound-up cleave, feinted heavies, answers to a counter-swap, and below half health a
-	# quicker cycle with no wind-up, fewer rests and quicker answers. It guards no gate, so it
-	# comes back.
+	# quicker cycle with no wind-up, fewer rests and quicker answers. On top of those it strikes
+	# the ground: a stomp ring and a front smash with the greatblade, arrow rain dropped on the
+	# player with the bow, and falling ice with the staff that leaves the ground burning; in the
+	# quick phase, ice shards told one tick out. It guards no gate, so it comes back.
 	"frost_tyrant": {
 		"label": "Frost tyrant", "health": 600, "weapon": "tyrant_greatblade", "speed": 2.0, "sight": 8.0,
 		"actions": [
-			"tyrant_slash", ACTION_REST, "raise_greatblade", "tyrant_cleave", ACTION_REST,
-			"draw_warbow", "tyrant_loose", "feint_volley", "tyrant_volley", ACTION_REST,
-			"raise_tyrant_staff", "tyrant_bolt", ACTION_REST, "tyrant_storm", ACTION_REST,
-			"draw_greatblade",
+			"tyrant_slash", "tyrant_stomp", ACTION_REST, "raise_greatblade", "tyrant_cleave", ACTION_REST,
+			"draw_warbow", "arrow_rain", "tyrant_loose", "feint_volley", "tyrant_volley", ACTION_REST,
+			"raise_tyrant_staff", "falling_ice", "tyrant_bolt", ACTION_REST, "tyrant_storm", ACTION_REST,
+			"draw_greatblade", "greatblade_smash",
 		],
 		"stances": [
-			"tyrant_greatblade", "tyrant_greatblade", "tyrant_greatblade", "tyrant_greatblade", "tyrant_greatblade",
-			"tyrant_bow", "tyrant_bow", "tyrant_bow", "tyrant_bow", "tyrant_bow",
-			"tyrant_staff", "tyrant_staff", "tyrant_staff", "tyrant_staff", "tyrant_staff",
-			"tyrant_greatblade",
+			"tyrant_greatblade", "tyrant_greatblade", "tyrant_greatblade", "tyrant_greatblade", "tyrant_greatblade", "tyrant_greatblade",
+			"tyrant_bow", "tyrant_bow", "tyrant_bow", "tyrant_bow", "tyrant_bow", "tyrant_bow",
+			"tyrant_staff", "tyrant_staff", "tyrant_staff", "tyrant_staff", "tyrant_staff", "tyrant_staff",
+			"tyrant_greatblade", "tyrant_greatblade",
 		],
-		"answers": {STYLE_MAGIC: 5, STYLE_RANGED: 15, STYLE_MELEE: 10}, "answer_ticks": 10,
+		"answers": {STYLE_MAGIC: 6, STYLE_RANGED: 18, STYLE_MELEE: 12}, "answer_ticks": 10,
 		"phases": [{
 			"below": 50,
 			"actions": [
-				"tyrant_roars", "tyrant_slash", "feint_tyrant_cleave", "tyrant_cleave", ACTION_REST,
-				"draw_warbow", "tyrant_loose", "tyrant_volley", ACTION_REST,
-				"raise_tyrant_staff", "tyrant_bolt", "feint_storm", "tyrant_storm", ACTION_REST,
-				"draw_greatblade",
+				"tyrant_roars", "tyrant_slash", "tyrant_stomp", "feint_tyrant_cleave", "tyrant_cleave", ACTION_REST,
+				"draw_warbow", "ice_shards", "tyrant_loose", "tyrant_volley", ACTION_REST,
+				"raise_tyrant_staff", "falling_ice", "tyrant_bolt", "feint_storm", "tyrant_storm", "ice_shards", ACTION_REST,
+				"draw_greatblade", "greatblade_smash",
 			],
 			"stances": [
-				"tyrant_greatblade", "tyrant_greatblade", "tyrant_greatblade", "tyrant_greatblade", "tyrant_greatblade",
-				"tyrant_bow", "tyrant_bow", "tyrant_bow", "tyrant_bow",
-				"tyrant_staff", "tyrant_staff", "tyrant_staff", "tyrant_staff", "tyrant_staff",
-				"tyrant_greatblade",
+				"tyrant_greatblade", "tyrant_greatblade", "tyrant_greatblade", "tyrant_greatblade", "tyrant_greatblade", "tyrant_greatblade",
+				"tyrant_bow", "tyrant_bow", "tyrant_bow", "tyrant_bow", "tyrant_bow",
+				"tyrant_staff", "tyrant_staff", "tyrant_staff", "tyrant_staff", "tyrant_staff", "tyrant_staff", "tyrant_staff",
+				"tyrant_greatblade", "tyrant_greatblade",
 			],
-			"answers": {STYLE_MAGIC: 5, STYLE_RANGED: 14, STYLE_MELEE: 9}, "answer_ticks": 6,
+			"answers": {STYLE_MAGIC: 6, STYLE_RANGED: 18, STYLE_MELEE: 11}, "answer_ticks": 6,
 		}],
 		"loot": [{"item": "rime_steel", "count": 1}, {"item": "frost_sinew", "count": 1}, {"item": "aurora_glass", "count": 1}],
 		"rare_percent": 0, "respawn_ticks": 900, "boss": true,

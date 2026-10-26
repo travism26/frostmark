@@ -97,7 +97,9 @@ func _fight(kind: String, seed: int) -> void:
 					if e["kind"] == Vocab.EV_HIT and told.has(tick):
 						assert_eq(e["style"], told[tick]["style"], "%s: it lands in the style it was told in" % kind)
 		if feinted:
-			assert_eq(H.where(events, Vocab.EV_TOOK_DAMAGE, "cause", kind).size(), 0, "%s: no damage on the feint tick %d" % [kind, tick])
+			# Burning ground left by an earlier blow may still burn on it; nothing else lands.
+			var burns := H.where(mine, Vocab.EV_HIT, "burning", true).size()
+			assert_eq(H.where(events, Vocab.EV_TOOK_DAMAGE, "cause", kind).size(), burns, "%s: no damage on the feint tick %d" % [kind, tick])
 		var now: String = sim.combatant("foe")["style"]
 		if now != style:
 			changes += 1

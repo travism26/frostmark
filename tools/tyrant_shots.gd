@@ -9,7 +9,10 @@
 ## tyrant_feint.png (the bluffed hail volley told as the real one), tyrant_roars.png (taken below
 ## half health: "Roars") and tyrant_staff.png (its staff raised), a `_close` shot of the first two
 ## from a nearer camera, and clip_NNN.png, every third frame of the whole run. Join those with
-## ffmpeg for the clip.
+## ffmpeg for the clip. Its ground marks (#218) follow: tyrant_falling_ice.png (the drop marked on
+## the player), tyrant_burning.png (the burning ground the ice left), tyrant_ice_shards.png (the
+## quick phase's one-tick drop), tyrant_smash.png (the greatblade's front arc) and
+## tyrant_stomp.png (its ring).
 extends SceneTree
 
 const H := preload("res://tests/sim_helpers.gd")
@@ -57,6 +60,13 @@ func _run() -> void:
 	H.patch_enemy(main.sim, TYRANT, {"health": 299})
 	await _until(main, "tyrant_roars", "tyrant_roars")
 	await _until(main, "raise_tyrant_staff", "tyrant_staff")
+	await _until_marked(main, "falling_ice", "tyrant_falling_ice")
+	await _until_burning(main, "tyrant_burning")
+	await _until_marked(main, "ice_shards", "tyrant_ice_shards")
+	# A staff held on the greatblade would be answered before the smash comes round.
+	_swap_to(main, "steel_sword")
+	await _until_marked(main, "greatblade_smash", "tyrant_smash")
+	await _until_marked(main, "tyrant_stomp", "tyrant_stomp")
 	if _had_save:
 		var f := FileAccess.open("user://frostmark.save", FileAccess.WRITE)
 		f.store_buffer(_saved_game)
@@ -107,6 +117,33 @@ func _until(main: Node, action: String, name: String, close_up := false) -> void
 				rig.distance = far
 			return
 	printerr("never saw %s in %d frames" % [action, WAIT_FRAMES])
+	_failed = true
+
+
+## Runs frames until the tyrant has told area blow `action`'s ground mark, then takes the shot
+## `name` once the mark has been down a few frames.
+func _until_marked(main: Node, action: String, name: String) -> void:
+	for i in WAIT_FRAMES:
+		await _tick(main)
+		if str(main.sim.state["enemies"][TYRANT].get("next", {}).get("action", "")) == action:
+			for j in SETTLE_FRAMES:
+				await _tick(main)
+			await _shot(name)
+			return
+	printerr("never saw %s marked in %d frames" % [action, WAIT_FRAMES])
+	_failed = true
+
+
+## Runs frames until burning ground is down, then takes the shot `name`.
+func _until_burning(main: Node, name: String) -> void:
+	for i in WAIT_FRAMES:
+		await _tick(main)
+		if not (main.sim.state["burning"] as Dictionary).is_empty():
+			for j in SETTLE_FRAMES:
+				await _tick(main)
+			await _shot(name)
+			return
+	printerr("never saw burning ground in %d frames" % WAIT_FRAMES)
 	_failed = true
 
 

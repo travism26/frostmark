@@ -931,10 +931,10 @@ func _seer_run(sim: Sim, ticks: int) -> Array[Dictionary]:
 	return events
 
 
-## The seer's declarations (stances and attacks) among `events`, as "tick:action".
+## The seer's declarations (stances, attacks and ground marks) among `events`, as "tick:action".
 func _declared_by_the_seer(events: Array[Dictionary]) -> Array:
 	return events.filter(func(e: Dictionary) -> bool:
-		return e.get("enemy_id") == "foe" and e["kind"] in [Vocab.EV_ENEMY_STANCE, Vocab.EV_ENEMY_TELEGRAPHED]
+		return e.get("enemy_id") == "foe" and e["kind"] in [Vocab.EV_ENEMY_STANCE, Vocab.EV_ENEMY_TELEGRAPHED, Vocab.EV_GROUND_MARKED]
 	).map(func(e: Dictionary) -> String: return "%d:%s" % [e["tick"], e["action"]])
 
 
@@ -1229,13 +1229,21 @@ const TYRANT_PACK := [
 ]
 ## Its first phase and its second as declared, a feint by the blow it is told as.
 const TYRANT_FIRST := [
-	"tyrant_slash", "raise_greatblade", "tyrant_cleave", "draw_warbow", "tyrant_loose", "tyrant_volley",
-	"tyrant_volley", "raise_tyrant_staff", "tyrant_bolt", "tyrant_storm", "draw_greatblade",
+	"tyrant_slash", "tyrant_stomp", "raise_greatblade", "tyrant_cleave", "draw_warbow", "arrow_rain", "tyrant_loose",
+	"tyrant_volley", "tyrant_volley", "raise_tyrant_staff", "falling_ice", "tyrant_bolt", "tyrant_storm",
+	"draw_greatblade", "greatblade_smash",
 ]
 const TYRANT_SECOND := [
-	"tyrant_roars", "tyrant_slash", "tyrant_cleave", "tyrant_cleave", "draw_warbow", "tyrant_loose",
-	"tyrant_volley", "raise_tyrant_staff", "tyrant_bolt", "tyrant_storm", "tyrant_storm", "draw_greatblade",
+	"tyrant_roars", "tyrant_slash", "tyrant_stomp", "tyrant_cleave", "tyrant_cleave", "draw_warbow", "ice_shards",
+	"tyrant_loose", "tyrant_volley", "raise_tyrant_staff", "falling_ice", "tyrant_bolt", "tyrant_storm",
+	"tyrant_storm", "ice_shards", "draw_greatblade", "greatblade_smash",
 ]
+## Its area blows: {action: [shape, size, damage, burns]}.
+const TYRANT_AREA_BLOWS := {
+	"greatblade_smash": [CombatTable.MARK_FRONT, 3.5, 30, false], "tyrant_stomp": [CombatTable.MARK_RING, 3.0, 26, false],
+	"arrow_rain": [CombatTable.MARK_DROP, 2.5, 20, false], "falling_ice": [CombatTable.MARK_DROP, 2.5, 26, true],
+	"ice_shards": [CombatTable.MARK_DROP, 1.5, 16, false],
+}
 
 
 ## The tyrant at its home, with a player at `at` holding `weapon`, not fighting back.
@@ -1283,24 +1291,37 @@ func test_the_frost_tyrant_is_a_three_weapon_boss_with_a_second_phase_and_answer
 	assert_eq([def["rare_percent"], def["respawn_ticks"], def["boss"]], [0, 900, true])
 	assert_false(def.has("boss_loot"), "no iron")
 	assert_eq(def["actions"], [
-		"tyrant_slash", "rest", "raise_greatblade", "tyrant_cleave", "rest",
-		"draw_warbow", "tyrant_loose", "feint_volley", "tyrant_volley", "rest",
-		"raise_tyrant_staff", "tyrant_bolt", "rest", "tyrant_storm", "rest", "draw_greatblade",
+		"tyrant_slash", "tyrant_stomp", "rest", "raise_greatblade", "tyrant_cleave", "rest",
+		"draw_warbow", "arrow_rain", "tyrant_loose", "feint_volley", "tyrant_volley", "rest",
+		"raise_tyrant_staff", "falling_ice", "tyrant_bolt", "rest", "tyrant_storm", "rest",
+		"draw_greatblade", "greatblade_smash",
 	])
 	var blade := "tyrant_greatblade"
-	assert_eq(def["stances"], [blade, blade, blade, blade, blade, "tyrant_bow", "tyrant_bow", "tyrant_bow", "tyrant_bow", "tyrant_bow", "tyrant_staff", "tyrant_staff", "tyrant_staff", "tyrant_staff", "tyrant_staff", blade])
-	assert_eq([CombatTable.answers("frost_tyrant"), CombatTable.answer_ticks("frost_tyrant")], [{"magic": 5, "ranged": 15, "melee": 10}, 10])
+	var bow := "tyrant_bow"
+	var staff := "tyrant_staff"
+	assert_eq(def["stances"], [blade, blade, blade, blade, blade, blade, bow, bow, bow, bow, bow, bow, staff, staff, staff, staff, staff, staff, blade, blade])
+	assert_eq([CombatTable.answers("frost_tyrant"), CombatTable.answer_ticks("frost_tyrant")], [{"magic": 6, "ranged": 18, "melee": 12}, 10])
 	assert_eq(CombatTable.phase_count("frost_tyrant"), 1)
 	assert_eq(def["phases"][0]["below"], 50)
 	assert_eq(CombatTable.cycle("frost_tyrant", 1), [
-		"tyrant_roars", "tyrant_slash", "feint_tyrant_cleave", "tyrant_cleave", "rest",
-		"draw_warbow", "tyrant_loose", "tyrant_volley", "rest",
-		"raise_tyrant_staff", "tyrant_bolt", "feint_storm", "tyrant_storm", "rest", "draw_greatblade",
+		"tyrant_roars", "tyrant_slash", "tyrant_stomp", "feint_tyrant_cleave", "tyrant_cleave", "rest",
+		"draw_warbow", "ice_shards", "tyrant_loose", "tyrant_volley", "rest",
+		"raise_tyrant_staff", "falling_ice", "tyrant_bolt", "feint_storm", "tyrant_storm", "ice_shards", "rest",
+		"draw_greatblade", "greatblade_smash",
 	])
-	assert_eq(def["phases"][0]["stances"], [blade, blade, blade, blade, blade, "tyrant_bow", "tyrant_bow", "tyrant_bow", "tyrant_bow", "tyrant_staff", "tyrant_staff", "tyrant_staff", "tyrant_staff", "tyrant_staff", blade])
-	assert_eq([CombatTable.answers("frost_tyrant", 1), CombatTable.answer_ticks("frost_tyrant", 1)], [{"magic": 5, "ranged": 14, "melee": 9}, 6])
+	assert_eq(def["phases"][0]["stances"], [blade, blade, blade, blade, blade, blade, bow, bow, bow, bow, bow, staff, staff, staff, staff, staff, staff, staff, blade, blade])
+	assert_eq([CombatTable.answers("frost_tyrant", 1), CombatTable.answer_ticks("frost_tyrant", 1)], [{"magic": 6, "ranged": 18, "melee": 11}, 6])
 	assert_eq(CombatTable.phase_problems(def), [] as Array[String])
 	assert_eq(CombatTable.answer_problems(def), [] as Array[String])
+	assert_eq(CombatTable.area_problems(def), [] as Array[String])
+	assert_false(def.has("ward") or def["phases"][0].has("ward"), "no ward: its answers already change which style works")
+	for action in TYRANT_AREA_BLOWS:
+		var blow: Array = TYRANT_AREA_BLOWS[action]
+		var entry: Dictionary = CombatTable.ACTIONS[action]
+		assert_eq([entry["shape"], entry["size"], CombatTable.action_damage(action), CombatTable.burns(action)], blow, action)
+		assert_eq(CombatTable.mark_ticks(action), 1 if action == "ice_shards" else 2, "%s's warning" % action)
+	assert_eq([CombatTable.burn_ticks("falling_ice"), CombatTable.burn_damage("falling_ice")], [5, 8], "falling ice leaves the ground burning")
+	assert_false(def["actions"].has("ice_shards"), "ice shards come only in the quick phase")
 	for a in [["tyrant_slash", 12, false], ["tyrant_cleave", 32, true], ["tyrant_loose", 10, false], ["tyrant_volley", 28, true], ["tyrant_bolt", 10, false], ["tyrant_storm", 28, true]]:
 		assert_eq([CombatTable.action_damage(a[0]), CombatTable.is_heavy(a[0])], [a[1], a[2]], a[0])
 	for stance in ["raise_greatblade", "draw_warbow", "raise_tyrant_staff", "draw_greatblade", "tyrant_roars"]:
@@ -1314,13 +1335,13 @@ func test_the_frost_tyrant_is_a_three_weapon_boss_with_a_second_phase_and_answer
 
 func test_left_alone_the_tyrant_plays_its_first_phase_in_order_and_its_style_follows_its_stance() -> void:
 	var sim := _tyrant()
-	var events := _leave_alone(sim, 44)
-	assert_eq(_seer_actions(events).slice(0, 22), TYRANT_FIRST + TYRANT_FIRST, "%s" % [_seer_actions(events)])
+	var events := _leave_alone(sim, 52)
+	assert_eq(_seer_actions(events).slice(0, 30), TYRANT_FIRST + TYRANT_FIRST, "%s" % [_seer_actions(events)])
 	var held := {"tyrant_greatblade": CombatTable.STYLE_MELEE, "tyrant_bow": CombatTable.STYLE_RANGED, "tyrant_staff": CombatTable.STYLE_MAGIC}
-	var bow := ["draw_warbow", "tyrant_loose", "tyrant_volley"]
-	var staff := ["raise_tyrant_staff", "tyrant_bolt", "tyrant_storm"]
+	var bow := ["draw_warbow", "arrow_rain", "tyrant_loose", "tyrant_volley"]
+	var staff := ["raise_tyrant_staff", "falling_ice", "tyrant_bolt", "tyrant_storm"]
 	for e in events:
-		if e.get("enemy_id") == "foe" and e["kind"] in [Vocab.EV_ENEMY_STANCE, Vocab.EV_ENEMY_TELEGRAPHED]:
+		if e.get("enemy_id") == "foe" and e["kind"] in [Vocab.EV_ENEMY_STANCE, Vocab.EV_ENEMY_TELEGRAPHED, Vocab.EV_GROUND_MARKED]:
 			var style := CombatTable.STYLE_RANGED if e["action"] in bow else CombatTable.STYLE_MAGIC if e["action"] in staff else CombatTable.STYLE_MELEE
 			assert_eq(e["style"], style, "%s on tick %d is told in its weapon's style" % [e["action"], e["tick"]])
 	assert_eq(held[_held(sim)], sim.combatant("foe")["style"])
@@ -1343,14 +1364,15 @@ func test_a_staff_turned_on_the_greatblade_is_answered_by_the_bow() -> void:
 
 func test_a_bow_turned_on_the_staff_is_answered_by_the_greatblade_and_it_closes_in() -> void:
 	var sim := _tyrant()
-	_leave_alone(sim, 20, "raise_tyrant_staff")
-	_seer_run(sim, 1)
-	assert_eq(_held(sim), "tyrant_staff", "it raised its staff on its own")
+	_leave_alone(sim, 30, "raise_tyrant_staff")
+	assert_eq(_seer_actions(_seer_run(sim, 1)), ["falling_ice"], "it raised its staff on its own, and drops falling ice")
+	assert_eq(_held(sim), "tyrant_staff")
 	assert_eq(int(sim.state["enemies"]["foe"]["answered_tick"]), -1)
 	var before := (sim.combatant("foe")["pos"] as Vector2).distance_to(sim.player_pos())
 	_seer_swap_to(sim, CombatTable.STYLE_RANGED)
+	assert_eq(_seer_actions(_seer_run(sim, 1)), [], "rooted, it answers nothing before the ice lands")
 	var events := _seer_run(sim, 1)
-	assert_eq(_seer_actions(events), ["draw_greatblade"], "the greatblade answers the bow")
+	assert_eq(_seer_actions(events), ["draw_greatblade"], "the greatblade answers the bow as the ice lands")
 	assert_eq(H.of_kind(events, Vocab.EV_ENEMY_STANCE)[0]["style"], CombatTable.STYLE_MELEE)
 	_seer_run(sim, 3)
 	assert_eq(_held(sim), "tyrant_greatblade")
@@ -1396,7 +1418,7 @@ func test_no_second_answer_comes_inside_10_ticks_whatever_the_player_swaps_to() 
 		events.append_array(_seer_run(sim, 1))
 		assert_eq(int(sim.state["enemies"]["foe"]["answered_tick"]), 3, "no answer on tick %d" % (3 + i))
 	assert_eq(_declared_by_the_seer(events), [
-		"3:tyrant_loose", "4:tyrant_volley", "5:tyrant_volley", "7:raise_tyrant_staff", "8:tyrant_bolt", "10:tyrant_storm",
+		"3:arrow_rain", "5:tyrant_loose", "6:tyrant_volley", "7:tyrant_volley", "9:raise_tyrant_staff", "10:falling_ice",
 	], "its cycle runs on through the bow and the staff, a bow turned on the staff or not")
 
 
@@ -1432,7 +1454,7 @@ func test_stepping_back_from_its_wind_up_makes_the_committed_cleave_miss() -> vo
 	var away: Vector2 = sim.player_pos() + (sim.player_pos() - sim.combatant("foe")["pos"]).normalized() * 2.0
 	assert_true(sim.command(Vocab.MOVE_TO, {"pos": [away.x, away.y]})["ok"])
 	var events := H.run_stamped(sim, 2)
-	assert_eq(_beats(events), ["4:told tyrant_cleave", "5:miss"], "the cleave it committed to finds nobody")
+	assert_eq(_beats(events), ["6:told tyrant_cleave", "7:miss"], "the cleave it committed to finds nobody")
 
 
 ## Takes it below its mark: 299 of its 600.
@@ -1444,11 +1466,11 @@ func test_below_300_health_the_tyrant_roars_and_plays_its_second_phase_in_order(
 	var sim := _tyrant()
 	_seer_run(sim, 1)  # noticed; its slash is told
 	_enrage(sim)
-	var events := _leave_alone(sim, 40)
+	var events := _leave_alone(sim, 50)
 	var stance := H.of_kind(events, Vocab.EV_ENEMY_STANCE)[0]
 	assert_eq([stance["action"], stance["tick"], stance["style"]], ["tyrant_roars", 2, CombatTable.STYLE_MELEE], "the first declaration after the mark")
 	assert_eq(int(sim.state["enemies"]["foe"]["phase"]), 1)
-	assert_eq(_seer_actions(events).slice(0, 24), TYRANT_SECOND + TYRANT_SECOND, "%s" % [_seer_actions(events)])
+	assert_eq(_seer_actions(events).slice(0, 34), TYRANT_SECOND + TYRANT_SECOND, "%s" % [_seer_actions(events)])
 	assert_eq(H.where(events, Vocab.EV_ENEMY_STANCE, "action", "raise_greatblade").size(), 0, "no wind-ups left")
 	for told in H.where(events, Vocab.EV_ENEMY_TELEGRAPHED, "action", "tyrant_cleave"):
 		assert_eq(int(told["at"]), int(told["tick"]) + 1, "each cleave is told one tick out")
@@ -1460,7 +1482,7 @@ func test_a_cleave_already_wound_up_lands_before_the_tyrant_roars() -> void:
 	_leave_alone(sim, 6, "raise_greatblade")
 	_enrage(sim)
 	var beats := _beats(H.run_stamped(sim, 3))
-	assert_eq(beats.slice(0, 3), ["4:told tyrant_cleave", "5:hit 28", "5:told tyrant_roars"], "the wound-up cleave lands, then it roars: %s" % [beats])
+	assert_eq(beats.slice(0, 3), ["6:told tyrant_cleave", "7:hit 28", "7:told tyrant_roars"], "the wound-up cleave lands, then it roars: %s" % [beats])
 
 
 func test_every_feint_is_told_as_its_blow_and_lands_nothing() -> void:
@@ -1476,10 +1498,72 @@ func test_every_feint_is_told_as_its_blow_and_lands_nothing() -> void:
 			var told := H.where(H.where(events, Vocab.EV_ENEMY_TELEGRAPHED, "at", f["at"]), Vocab.EV_ENEMY_TELEGRAPHED, "action", f["action"])
 			assert_eq(told.size(), 1, "%s was told a tick before" % f["action"])
 			assert_eq([told[0]["heavy"], told[0]["damage"]], [true, CombatTable.action_damage(f["action"])], "as heavy as the real one")
-			assert_eq(H.where(events, Vocab.EV_HIT, "tick", f["tick"]).filter(func(e: Dictionary) -> bool: return e["attacker"] == "foe").size(), 0, "nothing lands on the feint tick")
-			assert_eq(H.where(events, Vocab.EV_MISSED, "tick", f["tick"]).size(), 0)
+			var aimed := func(e: Dictionary) -> bool: return e["attacker"] == "foe" and not e.get("area", false)
+			assert_eq(H.where(events, Vocab.EV_HIT, "tick", f["tick"]).filter(aimed).size(), 0, "no aimed blow lands on the feint tick")
+			assert_eq(H.where(events, Vocab.EV_MISSED, "tick", f["tick"]).filter(aimed).size(), 0)
 		var expected := {"tyrant_cleave": true, "tyrant_storm": true} if enraged else {"tyrant_volley": true}
 		assert_eq(feinted, expected, "the feints of phase %d" % (1 if enraged else 0))
+
+
+## The tyrant left alone until it tells `action`'s ground mark; returns that event.
+func _until_marked(sim: Sim, action: String) -> Dictionary:
+	for i in 60:
+		for e in _leave_alone(sim, 1):
+			if e["kind"] == Vocab.EV_GROUND_MARKED and e["action"] == action:
+				return e
+	assert_true(false, "%s is marked" % action)
+	return {}
+
+
+func test_each_weapon_strikes_the_ground_and_a_player_who_stays_put_is_hit_through_armour_alone() -> void:
+	var sim := _tyrant("", TYRANT_IN_REACH, true)
+	var shapes := {}
+	for action in ["tyrant_stomp", "arrow_rain", "falling_ice", "greatblade_smash"]:
+		var marked := _until_marked(sim, action)
+		shapes[action] = [marked["mark"]["shape"], marked["style"], int(marked["at"]) - int(marked["tick"])]
+		var landed := H.of_kind(_seer_run(sim, 2), Vocab.EV_HIT).filter(func(e: Dictionary) -> bool: return e.get("area", false) and not e.get("burning", false))
+		assert_eq(landed.size(), 1, "%s lands on a player who stays put" % action)
+		assert_eq(int(landed[0]["amount"]), CombatTable.area_damage(CombatTable.action_damage(action), 4), "%s: its damage less steel armour, no edge" % action)
+	assert_eq(shapes, {
+		"tyrant_stomp": [CombatTable.MARK_RING, CombatTable.STYLE_MELEE, 2], "arrow_rain": [CombatTable.MARK_DROP, CombatTable.STYLE_RANGED, 2],
+		"falling_ice": [CombatTable.MARK_DROP, CombatTable.STYLE_MAGIC, 2], "greatblade_smash": [CombatTable.MARK_FRONT, CombatTable.STYLE_MELEE, 2],
+	})
+
+
+func test_falling_ice_leaves_burning_ground_for_5_ticks_and_stepping_off_the_mark_escapes_both() -> void:
+	var sim := _tyrant("", TYRANT_IN_REACH, true)
+	var marked := _until_marked(sim, "falling_ice")
+	var events := _seer_run(sim, 2)
+	var started := H.of_kind(events, Vocab.EV_BURNING_STARTED)
+	assert_eq(started.size(), 1, "the ice leaves the ground burning")
+	assert_eq([started[0]["mark"], int(started[0]["until"])], [marked["mark"], int(marked["at"]) + 5])
+	var burned := H.where(_seer_run(sim, 6), Vocab.EV_HIT, "burning", true)
+	assert_eq(burned.size(), 5, "a player who stays put burns on each of its 5 ticks")
+	sim = _tyrant("", TYRANT_IN_REACH, true)
+	marked = _until_marked(sim, "falling_ice")
+	var centre := Vector2(marked["mark"]["centre"][0], marked["mark"]["centre"][1])
+	var side: Vector2 = (sim.combatant("foe")["pos"] - centre).normalized().orthogonal()
+	var to := centre + side * 3.0
+	assert_true(sim.command(Vocab.MOVE_TO, {"pos": [to.x, to.y]})["ok"])
+	events = _seer_run(sim, 8)
+	assert_eq(H.where(events, Vocab.EV_MISSED, "action", "falling_ice").size(), 1, "stepped off, the ice misses")
+	assert_eq(H.where(events, Vocab.EV_HIT, "burning", true).size(), 0, "and the burning ground is left behind")
+
+
+func test_in_its_quick_phase_ice_shards_are_told_one_tick_out_and_a_step_escapes_them() -> void:
+	for steps in [false, true]:
+		var sim := _tyrant("", TYRANT_IN_REACH, true)
+		_seer_run(sim, 1)
+		_enrage(sim)
+		var marked := _until_marked(sim, "ice_shards")
+		assert_eq(int(marked["at"]), int(marked["tick"]) + 1, "told one tick before it lands")
+		assert_eq([marked["mark"]["shape"], marked["mark"]["radius"]], [CombatTable.MARK_DROP, 1.5])
+		if steps:
+			var centre := Vector2(marked["mark"]["centre"][0], marked["mark"]["centre"][1])
+			var to: Vector2 = centre + (centre - sim.combatant("foe")["pos"]).normalized() * CombatTable.WALK_PER_TICK
+			assert_true(sim.command(Vocab.MOVE_TO, {"pos": [to.x, to.y]})["ok"])
+		var landed := H.where(_seer_run(sim, 1), Vocab.EV_HIT, "area", true)
+		assert_eq(landed.size(), 0 if steps else 1, "a step of one tick's walk clears it" if steps else "standing still, it lands")
 
 
 ## Kills the tyrant with a sword beside it and returns the tick it fell on.
@@ -1582,17 +1666,23 @@ func _trout(sim: Sim) -> int:
 ## with the staff from beside it. On every stance it swaps to that stance's counter (so each
 ## answer the tyrant makes to a counter is met at once with the answer's counter, inside the
 ## cooldown: a bait); on the wind-up it steps 2 m straight back instead; it does nothing on a
-## feint; and it eats only when a rest is declared and it is below 70. `baited` counts the swaps
-## made inside an answer's cooldown, `stepped` the wind-ups stepped back from.
-func _read_the_tyrant() -> Dictionary:
+## feint; and it eats only when a rest is declared and it is below 70. When it `heeds_marks`, it
+## steps off each ground mark as it is told and holds its swing until the blow has landed, and
+## steps off any burning ground it finds itself on. `baited` counts the swaps made inside an
+## answer's cooldown, `stepped` the wind-ups stepped back from, `dodged` the marks stepped off,
+## and `struck` the area blows and burns that hit it.
+func _read_the_tyrant(heeds_marks := true) -> Dictionary:
 	var sim := _tyrant("steel_staff", TYRANT_IN_REACH, true)
 	sim.command(Vocab.ATTACK, {"enemy_id": "foe"})
 	var ticks := 0
 	var lowest := int(sim.state["health"])
 	var baited := 0
 	var stepped := 0
+	var dodged := 0
+	var struck := 0
 	var answers := 0
 	var answered := -1
+	var lands := -1
 	var died := false
 	while ticks < 200 and sim.state["enemies"]["foe"]["mode"] != Sim.MODE_DEAD and not died:
 		H.patch(sim, {"warmth": Sim.WARMTH_MAX})
@@ -1607,6 +1697,13 @@ func _read_the_tyrant() -> Dictionary:
 			answers += 1
 		for e in sim.drain_events():
 			died = died or e["kind"] == Vocab.EV_DIED
+			if e["kind"] == Vocab.EV_HIT and e["target"] == Vocab.PLAYER and e.get("area", false):
+				struck += 1
+			if e["kind"] == Vocab.EV_GROUND_MARKED and heeds_marks:
+				lands = int(e["at"])
+				if _step_off(sim, e["mark"]):
+					dodged += 1
+				continue
 			if e["kind"] != Vocab.EV_ENEMY_STANCE:
 				continue
 			if e["action"] == "raise_greatblade":
@@ -1620,14 +1717,39 @@ func _read_the_tyrant() -> Dictionary:
 				_seer_swap_to(sim, counter)
 				if answered >= 0 and int(e["at"]) < answered + CombatTable.answer_ticks("frost_tyrant", int(foe["phase"])):
 					baited += 1
-		if not sim.is_attacking() and not sim.is_moving():
+		if heeds_marks and not sim.is_moving():
+			for patch in sim.state["burning"].values():
+				if CombatTable.in_mark(patch["mark"], sim.player_pos()):
+					_step_off(sim, patch["mark"])
+		var waiting := int(sim.state["tick"]) < lands
+		if not waiting and not sim.is_attacking() and not sim.is_moving():
 			sim.command(Vocab.ATTACK, {"enemy_id": "foe"})
 		lowest = mini(lowest, int(sim.state["health"]))
 	return {
 		"health": int(sim.state["health"]), "lowest": lowest, "ticks": ticks, "died": died,
 		"dead": sim.state["enemies"]["foe"]["mode"] == Sim.MODE_DEAD, "baited": baited, "stepped": stepped,
-		"answers": answers, "trout": H.pack_count(sim, "cooked_trout"),
+		"dodged": dodged, "struck": struck, "answers": answers, "trout": H.pack_count(sim, "cooked_trout"),
+		"tyrant": int(sim.state["enemies"]["foe"]["health"]),
 	}
+
+
+## Walks the player to the nearest open ground half a metre past the edge of `mark`, or off a
+## drop mark centred on them to the side, keeping their distance from the tyrant. Returns
+## whether a way off was found.
+func _step_off(sim: Sim, mark: Dictionary) -> bool:
+	var centre := Vector2(mark["centre"][0], mark["centre"][1])
+	var here := sim.player_pos()
+	var foe: Vector2 = sim.combatant("foe")["pos"]
+	var ways: Array[Vector2] = []
+	for i in 16:
+		ways.append(centre + Vector2.from_angle(TAU * i / 16.0) * (float(mark["radius"]) + 0.5))
+	var cost := func(to: Vector2) -> float:
+		return absf(to.distance_to(foe) - here.distance_to(foe)) if here.distance_to(centre) < 0.01 else to.distance_to(here)
+	ways.sort_custom(func(a: Vector2, b: Vector2) -> bool: return cost.call(a) < cost.call(b))
+	for to in ways:
+		if sim.world.is_walkable(to) and sim.command(Vocab.MOVE_TO, {"pos": [to.x, to.y]})["ok"]:
+			return true
+	return false
 
 
 ## The non-reader is the same character holding one weapon throughout, attacking every tick it
@@ -1656,6 +1778,14 @@ func test_the_reader_reads_every_stance_and_beats_the_tyrant() -> void:
 	assert_true(fight["dead"] and not fight["died"], "the tyrant falls and the reader stands")
 	assert_true(fight["health"] > 50, "with %d health left" % fight["health"])
 	assert_true(fight["answers"] >= 3 and fight["baited"] >= 3, "it baited %d of %d answers" % [fight["baited"], fight["answers"]])
+	assert_true(fight["dodged"] >= 4, "it stepped off %d marks" % fight["dodged"])
+
+
+func test_the_reader_standing_on_its_marks_dies() -> void:
+	var fight := _read_the_tyrant(false)
+	print("  tyrant, the reader standing on its marks: %s" % fight)
+	assert_true(fight["died"], "reading every stance is not enough (the tyrant left on %s)" % fight)
+	assert_true(fight["struck"] >= 4, "its marks and burning ground struck %d times" % fight["struck"])
 
 
 func test_the_non_reader_holding_one_style_dies() -> void:
