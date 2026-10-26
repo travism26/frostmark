@@ -1204,24 +1204,28 @@ func _step_player_attack() -> void:
 		_engage(target, CombatTable.NOTICE_HIT)
 
 
-## One blow from `attacker` on `defender` for `base` damage before the style edge and armour.
-## Applies it, emits `hit` (and `took_damage` when the player is hit), makes fight noise and
-## returns the damage dealt.
-func _strike(attacker: String, defender: String, base: int) -> int:
+## One blow from `attacker` on `defender` for `base` damage before the style edge and armour,
+## or, for an `area` blow, before armour alone. Applies it, emits `hit` (and `took_damage` when
+## the player is hit), makes fight noise and returns the damage dealt.
+func _strike(attacker: String, defender: String, base: int, area := false) -> int:
 	var a := combatant(attacker)
 	var d := combatant(defender)
 	var distance := (a["pos"] as Vector2).distance_to(d["pos"])
-	var amount := CombatTable.damage(base, a["style"], d["style"], distance, int(d["defence"]))
+	var multiplier := 1.0 if area else CombatTable.multiplier(a["style"], d["style"], distance)
+	var amount := CombatTable.area_damage(base, int(d["defence"])) if area \
+		else CombatTable.damage(base, a["style"], d["style"], distance, int(d["defence"]))
 	var health := maxi(0, int(d["health"]) - amount)
 	if defender == SimVocab.PLAYER:
 		state["health"] = health
 	else:
 		state["enemies"][defender]["health"] = health
-	_emit({
+	var hit := {
 		"kind": SimVocab.EV_HIT, "attacker": attacker, "target": defender, "amount": amount,
-		"style": a["style"], "multiplier": CombatTable.multiplier(a["style"], d["style"], distance),
-		"health": health,
-	})
+		"style": a["style"], "multiplier": multiplier, "health": health,
+	}
+	if area:
+		hit["area"] = true
+	_emit(hit)
 	if defender == SimVocab.PLAYER:
 		_emit({"kind": SimVocab.EV_TOOK_DAMAGE, "amount": amount, "cause": a["kind"], "health": health})
 		_retaliate(attacker)
@@ -1266,7 +1270,8 @@ func _step_enemy(id: String) -> void:
 			if in_outpost() or not _same_side(id):
 				_disengage(id)
 				return
-			# A pack mate that noticed earlier this tick has already declared its next action.
+			# A pack mate that noticed earlier this tick has already declared its next action, and
+			# an enemy that has told a ground mark stands rooted until its blow lands.
 			if int(e["next"].get("at", 0)) > tick:
 				return
 			var acted := _enemy_act(id)
@@ -1320,9 +1325,11 @@ func _disengage(id: String) -> void:
 	_emit({"kind": SimVocab.EV_ENEMY_DISENGAGED, "enemy_id": id})
 
 
-## Carries out what the enemy declared last tick: closes in, rests, feints or strikes. A strike
-## whose target has stepped out of reach since it was telegraphed is a miss. A feint turns on
-## the player and strikes nothing: no hit, no miss, no noise. Returns the action.
+## Carries out what the enemy declared for this tick: closes in, rests, feints or strikes. A
+## strike whose target has stepped out of reach since it was telegraphed is a miss. A feint
+## turns on the player and strikes nothing: no hit, no miss, no noise. An area blow strikes its
+## ground mark without turning: it hits a player inside the mark and misses one who is not.
+## Returns the action.
 func _enemy_act(id: String) -> String:
 	var e: Dictionary = state["enemies"][id]
 	var next: Dictionary = e["next"]
@@ -1335,6 +1342,9 @@ func _enemy_act(id: String) -> String:
 		return action
 	var feint := CombatTable.is_feint(action)
 	if not CombatTable.is_attack(action) and not feint:
+		return action
+	if CombatTable.is_area_blow(action):
+		_land_area_blow(id, action, next["mark"])
 		return action
 	var me := combatant(id)
 	var toward := player_pos() - (me["pos"] as Vector2)
@@ -1353,6 +1363,17 @@ func _enemy_act(id: String) -> String:
 	if int(state["health"]) <= 0:
 		_dead_cause = e["kind"]
 	return action
+
+
+## An area blow lands on its ground mark: a hit, through the area-blow arithmetic, on a player
+## standing inside it, else a miss. Both are marked `area`.
+func _land_area_blow(id: String, action: String, mark: Dictionary) -> void:
+	if not CombatTable.in_mark(mark, player_pos()):
+		_emit({"kind": SimVocab.EV_MISSED, "attacker": id, "target": SimVocab.PLAYER, "action": action, "area": true})
+		return
+	_strike(id, SimVocab.PLAYER, CombatTable.action_damage(action), true)
+	if int(state["health"]) <= 0:
+		_dead_cause = state["enemies"][id]["kind"]
 
 
 ## An enemy of a kind that kites backs one step straight away from a player who has come within
@@ -1380,7 +1401,9 @@ func _kite(id: String) -> void:
 ## is below a phase's mark, the next action it takes from the cycle (but never the blow a
 ## wind-up committed) is that phase's first, and its cycle is that phase's from then on. An
 ## enemy the player has just countered answers, in reach or not, with the stance its answers
-## name instead, and its cycle carries on from there; a phase starting wins over an answer.
+## name instead, and its cycle carries on from there; a phase starting wins over an answer. An
+## area blow is told MARK_TICKS ahead instead, with its ground mark laid where the enemy stands,
+## turned to face the player, and the enemy is rooted until it lands.
 func _enemy_declare(id: String, acted := "") -> void:
 	var e: Dictionary = state["enemies"][id]
 	var me := combatant(id)
@@ -1403,6 +1426,17 @@ func _enemy_declare(id: String, acted := "") -> void:
 		style = CombatTable.weapon(CombatTable.stance_weapon(e["kind"], index, int(e["phase"])))["style"]
 		e["step"] = (index + 1) % actions.size()
 	e["next"] = {"action": action, "at": at}
+	if CombatTable.is_area_blow(action):
+		var toward := player_pos() - (me["pos"] as Vector2)
+		if toward != Vector2.ZERO:
+			e["facing"] = _xz(toward.normalized())
+		var mark := CombatTable.area_mark(action, me["pos"], Vector2(e["facing"][0], e["facing"][1]))
+		e["next"] = {"action": action, "at": int(state["tick"]) + CombatTable.MARK_TICKS, "mark": mark}
+		_emit({
+			"kind": SimVocab.EV_GROUND_MARKED, "enemy_id": id, "action": action, "style": style,
+			"mark": mark.duplicate(true), "at": e["next"]["at"],
+		})
+		return
 	var shown := CombatTable.shown_action(action)
 	if CombatTable.is_attack(shown):
 		_emit({
@@ -2172,13 +2206,13 @@ func _step_guide() -> void:
 					_fire_tip(id)
 
 
-## Emits a tip unless it fired within its cooldown.
+## Emits a tip unless it fired within its cooldown, or ever, for a tip that fires once.
 func _fire_tip(id: String) -> void:
 	var tips: Dictionary = state["guide"]["tips"]
 	var tick := int(state["tick"])
-	if tick < int(tips.get(id, 0)):
+	if tick < int(tips.get(id, 0)) or (GuideTable.TIPS[id].get("once", false) and tips.has(id)):
 		return
-	tips[id] = tick + int(GuideTable.TIPS[id]["cooldown"])
+	tips[id] = tick + int(GuideTable.TIPS[id].get("cooldown", 0))
 	_emit({"kind": SimVocab.EV_TIP, "tip": id})
 
 
@@ -2411,6 +2445,9 @@ func _restored_enemies(saved: Variant) -> Dictionary:
 		e["mode"] = mode
 		if next is Dictionary and CombatTable.has_action(str(next.get("action", ""))) and _is_number(next.get("at")):
 			e["next"] = {"action": str(next["action"]), "at": int(next["at"])}
+			if CombatTable.is_area_blow(e["next"]["action"]):
+				var mark := _restored_mark(next.get("mark"))
+				e["next"] = {} if mark.is_empty() else {"action": e["next"]["action"], "at": e["next"]["at"], "mark": mark}
 		var phase := int(entry["phase"]) if _is_number(entry.get("phase")) else 0
 		e["phase"] = phase if phase >= 0 and phase <= CombatTable.phase_count(e["kind"]) else 0
 		var cycle := CombatTable.cycle(e["kind"], int(e["phase"])).size()
@@ -2419,6 +2456,25 @@ func _restored_enemies(saved: Variant) -> Dictionary:
 		e["answered_tick"] = answered if answered >= 0 else -1
 		e["respawn_tick"] = int(entry["respawn_tick"]) if _is_number(entry.get("respawn_tick")) else 0
 	return out
+
+
+## A told ground mark from saved data, or {} when it is unreadable: a known shape, a centre, a
+## radius above 0, and for a front mark where it faces and its arc.
+static func _restored_mark(saved: Variant) -> Dictionary:
+	if not (saved is Dictionary) or not CombatTable.MARK_SHAPES.has(saved.get("shape")):
+		return {}
+	if not _is_xz(saved.get("centre")) or not _is_number(saved.get("radius")) or float(saved["radius"]) <= 0.0:
+		return {}
+	var mark := {
+		"shape": str(saved["shape"]), "centre": _xz(Vector2(saved["centre"][0], saved["centre"][1])),
+		"radius": float(saved["radius"]),
+	}
+	if mark["shape"] == CombatTable.MARK_FRONT:
+		if not _is_xz(saved.get("facing")) or not _is_number(saved.get("arc")):
+			return {}
+		mark["facing"] = _xz(Vector2(saved["facing"][0], saved["facing"][1]))
+		mark["arc"] = float(saved["arc"])
+	return mark
 
 
 ## Loot piles from saved data: known items, counts within a stack, readable positions.
