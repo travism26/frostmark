@@ -318,17 +318,23 @@ const ENEMIES := {
 	},
 }
 ## Area blows. An attack whose action names a `shape` strikes a ground mark, not the player:
-## `front`, an arc of FRONT_ARC degrees in the direction the enemy faces, or `ring`, a circle
-## centred on it, in either case `size` metres in radius. The mark is told MARK_TICKS ticks
-## before the blow lands, and from then until it lands the enemy is rooted, so the mark is the
-## ground that gets hit. The blow hits a player standing inside the mark on the landing tick
-## and misses one who is not; the style edge never applies to it, armour does, and it is never
-## feinted (see `area_problems`).
+## `front`, an arc of FRONT_ARC degrees in the direction the enemy faces, `ring`, a circle
+## centred on it, or `drop`, a circle centred where the player stands on the tick it is told,
+## in each case `size` metres in radius. The mark is told MARK_TICKS ticks before the blow
+## lands, and from then until it lands the enemy is rooted, so the mark is the ground that gets
+## hit. An action with `warn: 1` is told one tick ahead instead, but only in a fight phase and
+## only if its mark can be stepped off in that tick (see `area_problems`). The blow hits a
+## player standing inside the mark on the landing tick and misses one who is not; the style
+## edge never applies to it, armour does, and it is never feinted (see `area_problems`).
 const MARK_FRONT := "front"
 const MARK_RING := "ring"
-const MARK_SHAPES: Array[String] = [MARK_FRONT, MARK_RING]
+const MARK_DROP := "drop"
+const MARK_SHAPES: Array[String] = [MARK_FRONT, MARK_RING, MARK_DROP]
 const FRONT_ARC := 120.0
 const MARK_TICKS := 2
+## The shortest warning a mark can carry, and the metres a player walks in a tick.
+const QUICK_MARK_TICKS := 1
+const WALK_PER_TICK := 2.0
 
 ## The rare drop in both rings: one piece of iron gear, ahead of smithing it at the Bloomery.
 const RARE_LOOT: Array[String] = [
@@ -397,12 +403,19 @@ static func is_area_blow(action: String) -> bool:
 	return _action(action).has("shape")
 
 
+## Ticks between area blow `action` being told and landing: MARK_TICKS unless it is `warn`ed.
+static func mark_ticks(action: String) -> int:
+	return int(_action(action).get("warn", MARK_TICKS))
+
+
 ## The ground mark of area blow `action`, told by an enemy standing at `pos` and facing
 ## `facing`, in world space: {shape, centre, radius}, and for a front mark its `facing` and
-## its whole `arc` in degrees. Points are [x, z] like every position in the state.
-static func area_mark(action: String, pos: Vector2, facing: Vector2) -> Dictionary:
+## its whole `arc` in degrees. A drop mark is centred on `target`, where the player stands,
+## not on the enemy. Points are [x, z] like every position in the state.
+static func area_mark(action: String, pos: Vector2, facing: Vector2, target := Vector2.ZERO) -> Dictionary:
 	var def := _action(action)
-	var mark := {"shape": str(def["shape"]), "centre": [pos.x, pos.y], "radius": float(def["size"])}
+	var centre := target if def["shape"] == MARK_DROP else pos
+	var mark := {"shape": str(def["shape"]), "centre": [centre.x, centre.y], "radius": float(def["size"])}
 	if mark["shape"] == MARK_FRONT:
 		var ahead := facing.normalized() if facing != Vector2.ZERO else Vector2(0, 1)
 		mark["facing"] = [ahead.x, ahead.y]
@@ -429,9 +442,20 @@ static func area_damage(base: int, defence := 0) -> int:
 	return maxi(1, base - defence) if base > 0 else 0
 
 
+## The farthest any point of an area blow's mark lies from its edge, in metres: the radius of a
+## ring or drop, and for a front arc the largest circle that fits in the sector.
+static func mark_depth(shape: String, size: float) -> float:
+	if shape != MARK_FRONT:
+		return size
+	var half := sin(deg_to_rad(FRONT_ARC / 2.0))
+	return size * half / (1.0 + half)
+
+
 ## What is wrong with the area blows in the cycles of an enemy definition and of each of its
-## phases, or [] when nothing is: each names a known shape and a size above 0, and no feint
-## pretends to be one, since a ground mark always lands.
+## phases, or [] when nothing is: each names a known shape and a size above 0, no feint
+## pretends to be one, since a ground mark always lands, and a `warn`ed one is told 1 or 2
+## ticks ahead, only in a phase, and with a mark every point of which is within one tick's
+## walk of its edge.
 static func area_problems(def: Dictionary) -> Array[String]:
 	var out: Array[String] = []
 	var cycles: Array = [def] + def.get("phases", [])
@@ -448,6 +472,16 @@ static func area_problems(def: Dictionary) -> Array[String]:
 			var size: Variant = entry.get("size")
 			if not (size is float or size is int) or size <= 0:
 				out.append("%s: %s's mark has no size" % [where, action])
+			if not entry.has("warn") or mark_ticks(str(action)) == MARK_TICKS:
+				continue
+			if mark_ticks(str(action)) != QUICK_MARK_TICKS:
+				out.append("%s: %s is told %s ticks ahead, not %d or %d" % [where, action, entry["warn"], QUICK_MARK_TICKS, MARK_TICKS])
+			elif i == 0:
+				out.append("%s: %s is told one tick ahead, which only a fight phase may do" % [where, action])
+			elif size is float or size is int:
+				if MARK_SHAPES.has(entry["shape"]) and mark_depth(str(entry["shape"]), float(size)) > WALK_PER_TICK:
+					out.append("%s: %s's mark is too big to step off in one tick (%.1f m from its edge, %.1f m walked)" % [
+						where, action, mark_depth(str(entry["shape"]), float(size)), WALK_PER_TICK])
 	return out
 
 

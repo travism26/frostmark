@@ -122,7 +122,9 @@ static func where(events: Array[Dictionary], kind: String, field: String, value:
 
 ## Stand-in kinds for the feint, fight-phase, answer and area-blow rules, which no enemy uses
 ## yet. A feint pretends to be a lunge (or, for the kiting kind, a dart); a smash strikes a
-## front mark and a stomp a ring mark, each 3 m across the radius. `add_stand_ins()` puts them
+## front mark and a stomp a ring mark, each 3 m across the radius; an ice fall drops a mark 2.5 m
+## across the radius where the player stands, and a quick fall, told one tick ahead, a smaller
+## one. `add_stand_ins()` puts them
 ## in CombatTable for a test.
 const STAND_IN_ACTIONS := {
 	"feint_lunge": {"label": "Lunge", "damage": 0, "feint": "lunge"},
@@ -130,6 +132,9 @@ const STAND_IN_ACTIONS := {
 	"quicken": {"label": "Quickens", "damage": 0, "stance": true},
 	"ground_smash": {"label": "Smash", "damage": 20, "heavy": true, "shape": CombatTable.MARK_FRONT, "size": 3.0},
 	"ground_stomp": {"label": "Stomp", "damage": 16, "heavy": true, "shape": CombatTable.MARK_RING, "size": 3.0},
+	"ice_fall": {"label": "Ice fall", "damage": 14, "heavy": true, "shape": CombatTable.MARK_DROP, "size": 2.5},
+	"quick_fall": {"label": "Quick fall", "damage": 12, "shape": CombatTable.MARK_DROP, "size": 1.5, "warn": 1},
+	"quick_smash": {"label": "Quick smash", "damage": 12, "shape": CombatTable.MARK_FRONT, "size": 4.0, "warn": 1},
 }
 const STAND_IN_KINDS := {
 	# Feints a lunge, then lunges for real, rests, winds up into another feint, and rests.
@@ -217,6 +222,20 @@ const STAND_IN_KINDS := {
 		"label": "Area phaser", "health": 100, "weapon": "fangs", "speed": 2.0, "sight": 6.0,
 		"actions": ["ground_smash", CombatTable.ACTION_REST, CombatTable.ACTION_REST],
 		"phases": [{"below": 50, "actions": ["quicken", "bite", CombatTable.ACTION_REST]}],
+		"loot": [], "rare_percent": 0, "respawn_ticks": 100,
+	},
+	# Drops ice on the player's spot, rests, bites, rests.
+	"stand_in_dropper": {
+		"label": "Dropper", "health": 500, "weapon": "fangs", "speed": 2.0, "sight": 6.0,
+		"actions": ["ice_fall", CombatTable.ACTION_REST, "bite", CombatTable.ACTION_REST],
+		"loot": [], "rare_percent": 0, "respawn_ticks": 100,
+	},
+	# Bites and rests until below half health, where it quickens and drops ice told one tick
+	# ahead, then smashes in front of it the same way.
+	"stand_in_quick_phaser": {
+		"label": "Quick phaser", "health": 100, "weapon": "fangs", "speed": 2.0, "sight": 6.0,
+		"actions": ["bite", CombatTable.ACTION_REST, CombatTable.ACTION_REST],
+		"phases": [{"below": 50, "actions": ["quicken", "quick_fall", CombatTable.ACTION_REST, "quick_smash", CombatTable.ACTION_REST]}],
 		"loot": [], "rare_percent": 0, "respawn_ticks": 100,
 	},
 	# Smashes with its sabre, then draws its bow for a shot and back; answers a staff with its bow.
