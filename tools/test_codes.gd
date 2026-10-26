@@ -38,6 +38,10 @@ func _init() -> void:
 			"title": "Test mode at the ring-three gate", "query": "test_mode_query", "query_tail": "&ring=three",
 			"code": FieldKit.code(null, FieldKit.RING_SPOTS["three"]),
 		},
+		{
+			"title": "Test mode at the dungeon mouth", "query": "test_mode_query", "query_tail": "&ring=dungeon",
+			"code": FieldKit.code(null, FieldKit.RING_SPOTS["dungeon"]),
+		},
 		{"title": "Build from scratch", "short": "bare_short", "query": "bare_query", "code": FieldKit.bare_code()},
 		{"title": "All gear", "short": "gear_short", "query": "gear_query", "code": FieldKit.gear_code()},
 	]

@@ -11,8 +11,9 @@ What stands on the ground in each ring, and why. Decided in the graphics grill (
 | Ring one | Grey-blue snow, deeper drifts, dead trees across the ring and tall pines from 38 m out, wolf dens and bandit camps | Tighter and darker: wolf and bandit country |
 | Ring two | Blue-black snow, rubble and ice shards, a few dead trees, a frozen lake under the deep holes, the ruins | The most dangerous place there is |
 | Ring three | Blue-white glacier ice under a violet sky and the full aurora, thinner snow, ice shards, a few stones, pressure ridges of ice slabs shoved up on end | A place apart from the ruins at a glance; still colder and darker than ring two |
+| Ring-one dungeon | A dark floor of old snow under no sky, fallen rock, ice grown down the walls, a few drifts blown in; its mouth a black cleft between rock jambs in ring one's east cliff, icicles hanging from the arches | Darker and closer than ring one, with no aurora and almost no snow: you have gone somewhere more dangerous |
 
-The snowfield is painted by ring: the ring look's `snow_tone` holds out to each ring's edge and steps to the next across a 2.5 m band, so the ground itself says where one ring ends. The look that follows the character (sun, fog, grade) still blends over 8 m, and only across an edge two rings share: ring three lies beside ring two rather than around it, so ring two's other edges keep ring two's look.
+The snowfield is painted by ring: the ring look's `snow_tone` holds out to each ring's edge and steps to the next across a 2.5 m band, so the ground itself says where one ring ends. The look that follows the character (sun, fog, grade) still blends over 8 m, and only across an edge two rings share: ring three lies beside ring two rather than around it, so ring two's other edges keep ring two's look. A dungeon is not a ring: its look blends with its ring's only across its mouth, and its floor is drawn over the snowfield in its own darker snow.
 
 ## Boundaries and landmarks
 
