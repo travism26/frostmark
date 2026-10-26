@@ -333,6 +333,7 @@ const ENEMIES := {
 ## only if its mark can be stepped off in that tick (see `area_problems`). The blow hits a
 ## player standing inside the mark on the landing tick and misses one who is not; the style
 ## edge never applies to it, armour does, and it is never feinted (see `area_problems`).
+## An area blow may also leave burning ground: `burn_ticks` and `burn_damage` on its action.
 const MARK_FRONT := "front"
 const MARK_RING := "ring"
 const MARK_DROP := "drop"
@@ -410,6 +411,21 @@ static func is_area_blow(action: String) -> bool:
 	return _action(action).has("shape")
 
 
+## Whether area blow `action` leaves burning ground where it lands: it names `burn_ticks`, how
+## long the patch burns, and `burn_damage`, what it does the player on each tick they stand on it.
+static func burns(action: String) -> bool:
+	var def := _action(action)
+	return def.has("burn_ticks") or def.has("burn_damage")
+
+
+static func burn_ticks(action: String) -> int:
+	return int(_action(action).get("burn_ticks", 0))
+
+
+static func burn_damage(action: String) -> int:
+	return int(_action(action).get("burn_damage", 0))
+
+
 ## Ticks between area blow `action` being told and landing: MARK_TICKS unless it is `warn`ed.
 static func mark_ticks(action: String) -> int:
 	return int(_action(action).get("warn", MARK_TICKS))
@@ -462,7 +478,7 @@ static func mark_depth(shape: String, size: float) -> float:
 ## phases, or [] when nothing is: each names a known shape and a size above 0, no feint
 ## pretends to be one, since a ground mark always lands, and a `warn`ed one is told 1 or 2
 ## ticks ahead, only in a phase, and with a mark every point of which is within one tick's
-## walk of its edge.
+## walk of its edge. One that burns names a whole `burn_ticks` and `burn_damage` above 0.
 static func area_problems(def: Dictionary) -> Array[String]:
 	var out: Array[String] = []
 	var cycles: Array = [def] + def.get("phases", [])
@@ -479,6 +495,11 @@ static func area_problems(def: Dictionary) -> Array[String]:
 			var size: Variant = entry.get("size")
 			if not (size is float or size is int) or size <= 0:
 				out.append("%s: %s's mark has no size" % [where, action])
+			if burns(str(action)):
+				for key in ["burn_ticks", "burn_damage"]:
+					var v: Variant = entry.get(key)
+					if not (v is int) or v <= 0:
+						out.append("%s: %s's burning ground has no %s" % [where, action, key.trim_prefix("burn_")])
 			if not entry.has("warn") or mark_ticks(str(action)) == MARK_TICKS:
 				continue
 			if mark_ticks(str(action)) != QUICK_MARK_TICKS:

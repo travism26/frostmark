@@ -2,10 +2,12 @@
 ## declared for the next tick, and a brief swing arc toward the player when the blow lands.
 ## An area blow's ground mark is drawn red from its telegraph until it lands, brighter on the
 ## landing tick, and cleared after. An add a boss has called shows where it will enter, a pale
-## ring on the snow at its entry point, until it comes in or leaves. Driven only by the
-## `enemy_telegraphed`, `enemy_stance`, `ground_marked`, `add_called`, `hit` and `missed` events
-## the simulation already emits, on the tick they arrive; it keeps no state of its own beyond
-## what is on screen. Rings and marks sit on the
+## ring on the snow at its entry point, until it comes in or leaves. Burning ground an area blow
+## leaves is a glowing orange patch with flames, drawn from its `burning_started` event to its
+## `burning_out`. Driven only by the `enemy_telegraphed`, `enemy_stance`, `ground_marked`,
+## `add_called`, `hit`, `missed`, `burning_started` and `burning_out` events the simulation
+## already emits, on the tick they arrive; it keeps no state of its own beyond what is on
+## screen. Rings and marks sit on the
 ## snow with no depth test, so they read in a crowd.
 class_name CombatCues
 extends Node3D
@@ -20,16 +22,29 @@ const MARK_TOLD_ALPHA := 0.45
 const MARK_LANDING_ALPHA := 0.95
 const CALL_COLOUR := Color(0.78, 0.88, 1.0, 0.9)
 const CALL_RADIUS := 1.2
+const BURN_COLOUR := Color(1.0, 0.45, 0.08)
+const BURN_ALPHA := 0.55
+const FLAME_COLOUR := Color(1.0, 0.7, 0.2)
+const FLAME_HEIGHT := 0.9
+const FLAME_WIDTH := 0.5
+const FLAME_SPACING := 1.2  # metres of patch per flame, about
+const FLICKER_RATE := 7.0
 
 static var _ring_texture: Texture2D
 static var _arc_texture: Texture2D
 static var _front_texture: Texture2D
 static var _disc_texture: Texture2D
+static var _flame_texture: Texture2D
+
+## Whether burning ground holds still instead of flickering.
+var reduced_motion := false
 
 var _rings := {}  # enemy id -> MeshInstance3D
 var _arcs: Array[Dictionary] = []  # {mesh, left}
 var _marks := {}  # enemy id -> {mesh, at}
 var _calls := {}  # add id -> MeshInstance3D
+var _patches := {}  # patch id -> {root, ground, flames, phase}
+var _clock := 0.0
 
 
 ## Lays the ring under `anchor` (the enemy's root) in `colour`, bigger for a heavy blow.
@@ -66,6 +81,8 @@ func arc(anchor: Node3D, toward: Vector3, colour: Color) -> void:
 
 
 func _process(delta: float) -> void:
+	_clock += delta
+	_flicker()
 	var i := _arcs.size() - 1
 	while i >= 0:
 		var a: Dictionary = _arcs[i]
@@ -119,6 +136,120 @@ func clear_mark(enemy_id: String) -> void:
 	if _marks.has(enemy_id):
 		(_marks[enemy_id]["mesh"] as MeshInstance3D).queue_free()
 		_marks.erase(enemy_id)
+
+
+## Lays burning ground from its `burning_started` event: a glowing orange patch on the mark's
+## ground with flames standing on it, until `put_out`.
+func burn(e: Dictionary, ground_y := 0.0) -> void:
+	put_out(e["patch_id"])
+	var m: Dictionary = e["mark"]
+	var front: bool = m["shape"] == CombatTable.MARK_FRONT
+	var root := Node3D.new()
+	var ground := _flat_quad(_front_tex() if front else _disc_tex())
+	var r := float(m["radius"])
+	ground.scale = Vector3(r * 2.0, 1.0, r * 2.0)
+	(ground.material_override as StandardMaterial3D).albedo_color = Color(BURN_COLOUR, BURN_ALPHA)
+	ground.position = Vector3(float(m["centre"][0]), ground_y + LIFT, float(m["centre"][1]))
+	if front:
+		ground.rotation.y = atan2(float(m["facing"][0]), float(m["facing"][1]))
+	root.add_child(ground)
+	var flames: Array[MeshInstance3D] = []
+	for p in _flame_spots(m):
+		var flame := _flame_quad()
+		flame.position = Vector3(p.x, ground_y + LIFT * 2.0, p.y)
+		root.add_child(flame)
+		flames.append(flame)
+	add_child(root)
+	_patches[e["patch_id"]] = {"root": root, "ground": ground, "flames": flames}
+	_flicker()
+
+
+## The patch has gone out: its glow and flames go with it.
+func put_out(patch_id: String) -> void:
+	if _patches.has(patch_id):
+		(_patches[patch_id]["root"] as Node3D).queue_free()
+		_patches.erase(patch_id)
+
+
+func has_patch(patch_id: String) -> bool:
+	return _patches.has(patch_id)
+
+
+func flame_count(patch_id: String) -> int:
+	return (_patches[patch_id]["flames"] as Array).size() if _patches.has(patch_id) else 0
+
+
+## The colour a burning patch is drawn in, or transparent black when there is none.
+func patch_colour(patch_id: String) -> Color:
+	if not _patches.has(patch_id):
+		return Color(0, 0, 0, 0)
+	return ((_patches[patch_id]["ground"] as MeshInstance3D).material_override as StandardMaterial3D).albedo_color
+
+
+## Where flames stand on a mark, [x, z] points inside it, spread evenly by the golden angle.
+static func _flame_spots(m: Dictionary) -> Array[Vector2]:
+	var out: Array[Vector2] = []
+	var r := float(m["radius"])
+	var area := PI * r * r * (CombatTable.FRONT_ARC / 360.0 if m["shape"] == CombatTable.MARK_FRONT else 1.0)
+	var want := maxi(3, int(area / (FLAME_SPACING * FLAME_SPACING)))
+	var centre := Vector2(float(m["centre"][0]), float(m["centre"][1]))
+	var tries := 0
+	while out.size() < want and tries < want * 8:
+		tries += 1
+		var d := sqrt((tries - 0.5) / (want * 8.0)) * r * 0.9
+		var p := centre + Vector2(d, 0).rotated(tries * 2.399963)
+		if CombatTable.in_mark(m, p) and (tries % 8 == 1 or out.size() * 8 < tries):
+			out.append(p)
+	return out
+
+
+func _flicker() -> void:
+	for id in _patches:
+		var patch: Dictionary = _patches[id]
+		var wave := 0.0 if reduced_motion else sin(_clock * FLICKER_RATE + hash(id) % 7) * 0.5
+		((patch["ground"] as MeshInstance3D).material_override as StandardMaterial3D).albedo_color.a = BURN_ALPHA + wave * 0.15
+		var flames: Array = patch["flames"]
+		for i in flames.size():
+			var lick := 1.0 + (0.0 if reduced_motion else sin(_clock * FLICKER_RATE * 1.3 + i * 1.7) * 0.25)
+			(flames[i] as MeshInstance3D).scale = Vector3(FLAME_WIDTH, FLAME_HEIGHT * lick, 1.0)
+			(flames[i] as MeshInstance3D).position.y = LIFT * 2.0 + FLAME_HEIGHT * lick * 0.5
+
+
+## An upright flame that always faces the camera.
+static func _flame_quad() -> MeshInstance3D:
+	var quad := QuadMesh.new()
+	quad.size = Vector2(1, 1)
+	var mesh := MeshInstance3D.new()
+	mesh.mesh = quad
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.albedo_texture = _flame_tex()
+	mat.albedo_color = FLAME_COLOUR
+	mat.billboard_mode = BaseMaterial3D.BILLBOARD_FIXED_Y
+	mat.no_depth_test = true
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat.render_priority = 3
+	mesh.material_override = mat
+	mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return mesh
+
+
+## A teardrop flame, brightest at its heart.
+static func _flame_tex() -> Texture2D:
+	if _flame_texture == null:
+		var n := 32
+		var img := Image.create(n, n, false, Image.FORMAT_RGBA8)
+		for y in n:
+			for x in n:
+				var u := (x + 0.5) / n * 2.0 - 1.0
+				var up := 1.0 - (y + 0.5) / n  # 0 at the foot, 1 at the tip
+				var half := (1.0 - up) * sin(minf(up * 3.0, 1.0) * PI * 0.5) * 0.9
+				var a := 1.0 - clampf((absf(u) - half) / 0.12, 0.0, 1.0)
+				a *= clampf(up * 6.0, 0.0, 1.0) * (1.0 - clampf((up - 0.9) / 0.1, 0.0, 1.0))
+				img.set_pixel(x, y, Color(1, 1.0 - up * 0.4, 1.0 - up * 0.8, a))
+		_flame_texture = ImageTexture.create_from_image(img)
+	return _flame_texture
 
 
 ## The colour an enemy's ground mark is drawn in, or transparent black when it has none.
