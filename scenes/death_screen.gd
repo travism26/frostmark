@@ -1,5 +1,5 @@
-## The death screen: what killed the player, exactly what they kept and what they lost, and
-## one button to wake by the fire. It only shows the `died` event and emits `dismissed`;
+## The death screen: what killed the player, exactly what they kept and what they lost, where
+## the lost things went when a death chest took them, and one button to wake by the fire. It only shows the `died` event and emits `dismissed`;
 ## GameRoot holds the simulation still until then.
 ##
 ## The shared theme in its cold red key: a danger-framed panel over a dark red backdrop.
@@ -14,7 +14,9 @@ const COLOR_LOST := Color(1.0, 0.60, 0.55)
 
 var _cause: Label
 var _kept: Label
+var _lost_heading: Label
 var _lost: Label
+var _chest: Label
 var _spare: Label
 
 
@@ -59,10 +61,13 @@ func _ready() -> void:
 	kept_box.add_child(_kept)
 	ledger.add_child(VSeparator.new())
 	var lost_box := _column(ledger)
-	lost_box.add_child(_heading("Lost for good", 15, COLOR_LOST))
+	_lost_heading = _heading("", 15, COLOR_LOST)
+	lost_box.add_child(_lost_heading)
 	_lost = _label("", 14, COLOR_LOST)
 	lost_box.add_child(_lost)
 
+	_chest = _label("", 14, COLOR_KEPT)
+	column.add_child(_chest)
 	_spare = _label("", 14, UiTheme.TEXT)
 	column.add_child(_spare)
 	column.add_child(_rule())
@@ -87,10 +92,26 @@ func show_death(e: Dictionary) -> void:
 		_cause.text = "The cold took you."
 	_kept.text = _list(e["kept"])
 	_lost.text = _list(e["lost"])
+	_lost_heading.text = _lost_heading_text(e)
+	_chest.text = _chest_text(e)
+	_chest.visible = _chest.text != ""
 	var spare: String = e.get("spare", "")
 	_spare.text = "A spare %s waits by the fire." % ItemTable.label(spare).to_lower() if spare != "" else ""
 	_spare.visible = spare != ""
 	visible = true
+
+
+## Over what was not kept: gone for good, or waiting in a death chest.
+static func _lost_heading_text(e: Dictionary) -> String:
+	return "In the death chest" if str(e.get("chest", "")) != "" else "Lost for good"
+
+
+## Where a death chest's things wait, or "" when the lost things were destroyed.
+static func _chest_text(e: Dictionary) -> String:
+	var dungeon := WorldDef.dungeon_of_chest(str(e.get("chest", "")))
+	if dungeon == "":
+		return ""
+	return "What you did not keep waits in the death chest just inside the mouth of %s, until you come back for it." % str(WorldDef.DUNGEONS[dungeon]["label"]).to_lower()
 
 
 static func _list(entries: Array) -> String:

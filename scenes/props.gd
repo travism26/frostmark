@@ -4,7 +4,7 @@
 ## Presentation only. Every builder returns a Node3D standing on the ground at its origin;
 ## GameRoot places it where the WorldDef says the object is. Props that change with the state
 ## carry named children GameRoot toggles: a node's `Full` and `Spent` looks, a fire's `Flame`,
-## the ring gate's `Bars`, a waystone's `Glow`.
+## the ring gate's `Bars`, a waystone's `Glow`, a death chest's `Full`.
 class_name Props
 extends RefCounted
 
@@ -19,6 +19,8 @@ const COLOR_ICE := Color(0.72, 0.86, 0.95)
 const COLOR_FROST := Color(0.55, 0.85, 1.0)
 const COLOR_WATER := Color(0.10, 0.20, 0.30)
 const COLOR_STONE := Color(0.50, 0.53, 0.58)
+## The warm light by a death chest that holds something.
+const COLOR_LANTERN := Color(1.0, 0.70, 0.35)
 ## Ore glints, by the rock kind they sit in.
 const ORE_COLORS := {
 	WorldDef.KIND_COPPER_ROCK: Color(0.85, 0.45, 0.20),
@@ -155,6 +157,41 @@ static func campfire(size: float, light := true) -> Node3D:
 
 static func chest(height: float) -> Node3D:
 	return model(SURVIVAL + "chest.glb", height)
+
+
+## A dungeon's death chest: the stash's chest, darkened by the cave. `Full` shows while it
+## holds something: bundles heaped on the lid and a lantern burning beside it, so from the
+## default camera a lit chest is one worth the walk back.
+static func death_chest(height: float) -> Node3D:
+	var root := model(SURVIVAL + "chest.glb", height, 0.55, Color(0.62, 0.58, 0.55))
+	var full := Node3D.new()
+	full.name = "Full"
+	root.add_child(full)
+	var bundles := [
+		[Vector3(0.55, 0.30, 0.40), Vector3(-0.18, height + 0.15, 0.0), COLOR_WOOD.lightened(0.25)],
+		[Vector3(0.40, 0.26, 0.34), Vector3(0.24, height + 0.13, 0.06), Color(0.55, 0.42, 0.30)],
+		[Vector3(0.34, 0.22, 0.30), Vector3(0.02, height + 0.38, -0.02), Color(0.66, 0.52, 0.36)],
+	]
+	for b in bundles:
+		var bundle := MeshInstance3D.new()
+		bundle.mesh = box(b[0], b[2])
+		bundle.position = b[1]
+		bundle.rotation.y = b[1].x * 0.8
+		full.add_child(bundle)
+	var lantern := MeshInstance3D.new()
+	lantern.mesh = BoxMesh.new()
+	(lantern.mesh as BoxMesh).size = Vector3(0.22, 0.32, 0.22)
+	(lantern.mesh as BoxMesh).material = flat(COLOR_LANTERN, 3.0)
+	lantern.position = Vector3(0.75, 0.16, 0.45)
+	full.add_child(lantern)
+	var light := OmniLight3D.new()
+	light.light_color = COLOR_LANTERN
+	light.light_energy = 1.6
+	light.omni_range = 5.0
+	light.omni_attenuation = 1.4
+	light.position = Vector3(0.75, 0.9, 0.45)
+	full.add_child(light)
+	return root
 
 
 static func anvil(height: float) -> Node3D:
