@@ -70,7 +70,8 @@ const RING_ONE_DUNGEON_MOUTH_Z := -47.0
 ##             of fight spots from the mouth to the boss (each more than a fight's noise and
 ##             every ring-one sight from the next and from the fire), `nodes` two spots that
 ##             are only reached past a fight, `boss_room` [min, max] at the far end with the
-##             `boss` spot in it, and `way_out` in the boss room.
+##             `boss` spot in it, and `way_out` in the boss room. `boss_room` is also the boss's
+##             room: it never steps out of it, and it breaks off when the player is outside it.
 ##   boss      the enemy id of its boss, placed at the `boss` spot
 ##   way_out   the object id of its way out, at the `way_out` spot: shut while the boss stands,
 ##             open from its fall until it comes back
@@ -563,6 +564,22 @@ static func _ring_one_dungeon(w: WorldDef) -> void:
 		"kind": KIND_WAY_OUT, "label": "Way out", "blocks": true, "height": 3.0,
 		"min": [at[0] - 1.0, at[1] - 1.0], "max": [at[0] + 1.0, at[1] + 1.0], "outward": [0.0, -1.0],
 	}
+
+
+## The room of the boss `enemy_id` as [min, max] corners, or [] for an enemy with no room.
+static func boss_room_of(enemy_id: String) -> Array:
+	for id in DUNGEONS:
+		if DUNGEONS[id]["boss"] == enemy_id:
+			return DUNGEONS[id]["reserved"]["boss_room"]
+	return []
+
+
+## Whether `at` lies in the room of the boss `enemy_id`; true for an enemy with no room.
+static func in_boss_room(enemy_id: String, at: Vector2) -> bool:
+	var room := boss_room_of(enemy_id)
+	if room.is_empty():
+		return true
+	return at.x >= room[0][0] and at.x <= room[1][0] and at.y >= room[0][1] and at.y <= room[1][1]
 
 
 ## The id of the dungeon whose region is `region`, or "" for a ring, the outpost or nowhere.

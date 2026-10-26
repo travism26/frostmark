@@ -1200,7 +1200,7 @@ func _step_player_attack() -> void:
 	var e: Dictionary = state["enemies"][target]
 	if int(e["health"]) <= 0:
 		_kill_enemy(target)
-	elif e["mode"] != MODE_ENGAGED:
+	elif e["mode"] != MODE_ENGAGED and not (e["mode"] == MODE_RETURNING and _player_outside_room(target)):
 		_engage(target, CombatTable.NOTICE_HIT)
 
 
@@ -1267,7 +1267,7 @@ func _step_enemy(id: String) -> void:
 		MODE_ENGAGED:
 			if _dead_cause != "":
 				return
-			if in_outpost() or not _same_side(id):
+			if in_outpost() or not _same_side(id) or _player_outside_room(id):
 				_disengage(id)
 				return
 			# A pack mate that noticed earlier this tick has already declared its next action, and
@@ -1292,7 +1292,7 @@ func _step_enemy(id: String) -> void:
 ## Why an idle enemy notices the player this tick ("sight" or "noise"), or "" when it does not.
 ## Nothing outside notices a player inside the outpost, or on the other side of a ring gate.
 func _notice_cause(id: String) -> String:
-	if in_outpost() or _dead_cause != "" or not _same_side(id):
+	if in_outpost() or _dead_cause != "" or not _same_side(id) or _player_outside_room(id):
 		return ""
 	var e: Dictionary = state["enemies"][id]
 	var d := _pos(e).distance_to(player_pos())
@@ -1316,6 +1316,11 @@ func _engage_one(id: String, cause: String) -> void:
 	state["enemies"][id]["mode"] = MODE_ENGAGED
 	_emit({"kind": SimVocab.EV_ENEMY_NOTICED, "enemy_id": id, "cause": cause})
 	_enemy_declare(id)
+
+
+## Whether the enemy has a room (a boss) and the player stands outside it.
+func _player_outside_room(id: String) -> bool:
+	return not WorldDef.in_boss_room(id, player_pos())
 
 
 func _disengage(id: String) -> void:
@@ -1484,6 +1489,12 @@ func _chase(id: String) -> void:
 	_walk_enemy(id, target + away * float(me["reach"]) * CombatTable.APPROACH_FRACTION)
 
 
+## The point of the enemy's room nearest `to`, where a boss stops instead of stepping out.
+func _clamp_to_room(id: String, to: Vector2) -> Vector2:
+	var room := WorldDef.boss_room_of(id)
+	return Vector2(clampf(to.x, room[0][0], room[1][0]), clampf(to.y, room[0][1], room[1][1]))
+
+
 ## Walks an enemy up to its speed toward `goal`: straight when the ground between is open,
 ## else along a grid route. It never steps into the outpost. Emits `enemy_moved` if it moved.
 func _walk_enemy(id: String, goal: Vector2) -> void:
@@ -1508,6 +1519,11 @@ func _walk_enemy(id: String, goal: Vector2) -> void:
 		var to := pos.move_toward(Vector2(p[0], p[1]), budget)
 		if world.region_at(to) == WorldDef.REGION_OUTPOST:
 			break
+		if not WorldDef.in_boss_room(id, to):
+			to = _clamp_to_room(id, to)
+			if to == pos or not world.is_walkable(to):
+				break
+			budget = 0.0
 		budget -= pos.distance_to(to)
 		pos = to
 		via.append(_xz(pos))
