@@ -77,7 +77,7 @@ const EV_DIED := "died"                          # {cause, kept, lost, spare, po
 const EV_SAVED := "saved"                        # {reason, tick}  a save point: persist sim.export_code()
 const EV_SAVE_REJECTED := "save_rejected"        # {reason}
 # Combat
-const EV_ENEMY_NOTICED := "enemy_noticed"        # {enemy_id, cause}  cause: sight, noise, pack or hit
+const EV_ENEMY_NOTICED := "enemy_noticed"        # {enemy_id, cause}  cause: sight, noise, pack, hit, or called (an add coming in)
 const EV_ENEMY_MOVED := "enemy_moved"            # {enemy_id, from, to, path, facing}
 const EV_ENEMY_TELEGRAPHED := "enemy_telegraphed"  # {enemy_id, action, style, damage, heavy, at}
 const EV_HIT := "hit"                            # {attacker, target, amount, style, multiplier, health, area?}  area: true for an area blow
@@ -87,6 +87,8 @@ const EV_ENEMY_FEINTED := "enemy_feinted"        # {enemy_id, action, style, at}
 const EV_ENEMY_DIED := "enemy_died"              # {enemy_id, enemy_kind, pos}
 const EV_ENEMY_DISENGAGED := "enemy_disengaged"  # {enemy_id}  heading home; the player is in the outpost
 const EV_ENEMY_RESPAWNED := "enemy_respawned"    # {enemy_id, pos}
+const EV_ADD_CALLED := "add_called"              # {enemy_id, enemy_kind, boss_id, pos, at}  a boss called an add in; it comes in at `pos` on tick `at`
+const EV_ADD_LEFT := "add_left"                  # {enemy_id, boss_id}  the add's boss gave up the fight, so it left
 const EV_LOOT_DROPPED := "loot_dropped"          # {loot_id, item, count, pos}
 const EV_PICKED_UP := "picked_up"                # {loot_id, item, count}
 const EV_LOOT_GONE := "loot_gone"                # {loot_id}  lay too long; the snow took it

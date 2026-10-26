@@ -120,12 +120,11 @@ static func where(events: Array[Dictionary], kind: String, field: String, value:
 	return out
 
 
-## Stand-in kinds for the feint, fight-phase, answer and area-blow rules, which no enemy uses
-## yet. A feint pretends to be a lunge (or, for the kiting kind, a dart); a smash strikes a
+## Stand-in kinds for the feint, fight-phase, answer, area-blow and add rules, which no enemy
+## uses yet. A feint pretends to be a lunge (or, for the kiting kind, a dart); a smash strikes a
 ## front mark and a stomp a ring mark, each 3 m across the radius; an ice fall drops a mark 2.5 m
 ## across the radius where the player stands, and a quick fall, told one tick ahead, a smaller
-## one. `add_stand_ins()` puts them
-## in CombatTable for a test.
+## one. `add_stand_ins()` puts them in CombatTable for a test.
 const STAND_IN_ACTIONS := {
 	"feint_lunge": {"label": "Lunge", "damage": 0, "feint": "lunge"},
 	"feint_dart": {"label": "Dart", "damage": 0, "feint": "dart"},
@@ -236,6 +235,20 @@ const STAND_IN_KINDS := {
 		"label": "Quick phaser", "health": 100, "weapon": "fangs", "speed": 2.0, "sight": 6.0,
 		"actions": ["bite", CombatTable.ACTION_REST, CombatTable.ACTION_REST],
 		"phases": [{"below": 50, "actions": ["quicken", "quick_fall", CombatTable.ACTION_REST, "quick_smash", CombatTable.ACTION_REST]}],
+		"loot": [], "rare_percent": 0, "respawn_ticks": 100,
+	},
+	# Bites and rests. Below half health it quickens and calls in two wolves, from 5 m either side
+	# of its home; below 30 % it quickens again and calls nobody.
+	"stand_in_caller": {
+		"label": "Caller", "health": 100, "weapon": "fangs", "speed": 2.0, "sight": 6.0,
+		"actions": ["bite", CombatTable.ACTION_REST, CombatTable.ACTION_REST],
+		"phases": [
+			{
+				"below": 50, "actions": ["quicken", "bite", CombatTable.ACTION_REST],
+				"adds": [{"kind": "wolf", "entry": [5.0, 0.0]}, {"kind": "wolf", "entry": [-5.0, 0.0]}],
+			},
+			{"below": 30, "actions": ["quicken", "bite", CombatTable.ACTION_REST, CombatTable.ACTION_REST]},
+		],
 		"loot": [], "rare_percent": 0, "respawn_ticks": 100,
 	},
 	# Smashes with its sabre, then draws its bow for a shot and back; answers a staff with its bow.

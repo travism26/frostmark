@@ -105,12 +105,16 @@ const DEATH_KEEPS := 7
 const LOOT_TICKS := 600
 
 ## Enemy modes. Idle at home until it notices the player, engaged while fighting, returning
-## home (deaf to the player) after the player reaches the outpost, dead until it respawns.
+## home (deaf to the player) after the player reaches the outpost, dead until it respawns. An
+## add a boss has called in is called, announced but not yet there, until it comes in at its
+## entry point on its `respawn_tick`, and it never idles or walks home: it leaves instead.
 const MODE_IDLE := "idle"
 const MODE_ENGAGED := "engaged"
 const MODE_RETURNING := "returning"
 const MODE_DEAD := "dead"
-const ENEMY_MODES: Array[String] = [MODE_IDLE, MODE_ENGAGED, MODE_RETURNING, MODE_DEAD]
+const MODE_CALLED := "called"
+const ENEMY_MODES: Array[String] = [MODE_IDLE, MODE_ENGAGED, MODE_RETURNING, MODE_DEAD, MODE_CALLED]
+const ADD_MODES: Array[String] = [MODE_CALLED, MODE_ENGAGED, MODE_DEAD]
 
 ## Commands that change the inventory are queued and applied at the start of the next tick.
 ## That is what makes a weapon swap land on the next tick, and eating cost it.
@@ -384,6 +388,8 @@ func _cmd_attack(args: Dictionary) -> Dictionary:
 	var id: String = str(args.get("enemy_id", ""))
 	var enemies: Dictionary = state["enemies"]
 	if not enemies.has(id):
+		return _reject(SimVocab.ATTACK, args, SimVocab.REASON_UNKNOWN_ENEMY)
+	if enemies[id]["mode"] == MODE_CALLED:
 		return _reject(SimVocab.ATTACK, args, SimVocab.REASON_UNKNOWN_ENEMY)
 	if enemies[id]["mode"] == MODE_DEAD:
 		return _reject(SimVocab.ATTACK, args, SimVocab.REASON_TARGET_DEAD)
@@ -818,8 +824,8 @@ func _set_down(to: Vector2, facing: Vector2, event: Dictionary) -> void:
 	if region != player["region"]:
 		_emit({"kind": SimVocab.EV_REGION_CHANGED, "from": player["region"], "to": region})
 		player["region"] = region
-	for id in state["enemies"]:
-		if state["enemies"][id]["mode"] == MODE_ENGAGED:
+	for id in state["enemies"].keys():
+		if state["enemies"].has(id) and state["enemies"][id]["mode"] == MODE_ENGAGED:
 			_disengage(id)
 
 
@@ -1161,11 +1167,13 @@ func _step_pursuit() -> void:
 
 
 ## The player's swing, then every enemy's turn. A player killed by a blow dies once, at the
-## end, so the enemies' turns in between see the fight as over.
+## end, so the enemies' turns in between see the fight as over. An add called this tick takes
+## its first turn next tick, and one that left takes no more.
 func _step_combat() -> void:
 	_step_player_attack()
-	for id in state["enemies"]:
-		_step_enemy(id)
+	for id in state["enemies"].keys():
+		if state["enemies"].has(id):
+			_step_enemy(id)
 	if _dead_cause != "":
 		_die(_dead_cause)
 
@@ -1257,13 +1265,23 @@ func _step_enemy(id: String) -> void:
 	var tick := int(state["tick"])
 	match e["mode"]:
 		MODE_DEAD:
+			if e.has("called_by"):
+				return  # an add never comes back during its boss's fight
 			if tick >= int(e["respawn_tick"]) and not _guards_an_open_gate(id):
+				_dismiss_adds(id)
 				state["enemies"][id] = _fresh_enemy(id)
 				_emit({"kind": SimVocab.EV_ENEMY_RESPAWNED, "enemy_id": id, "pos": _xz(_home(id))})
 		MODE_IDLE:
 			var cause := _notice_cause(id)
 			if cause != "":
 				_engage(id, cause)
+		MODE_CALLED:
+			if tick < int(e["respawn_tick"]):
+				return
+			if in_outpost() or not _same_side(id):
+				_leave(id)
+			else:
+				_engage_one(id, CombatTable.NOTICE_CALLED)
 		MODE_ENGAGED:
 			if _dead_cause != "":
 				return
@@ -1306,8 +1324,10 @@ func _notice_cause(id: String) -> String:
 ## An enemy notices the player and joins the fight, and the rest of its pack with it.
 func _engage(id: String, cause: String) -> void:
 	_engage_one(id, cause)
+	if not world.enemies.has(id):
+		return  # an add has no pack
 	var pack: String = world.enemies[id]["pack"]
-	for other in state["enemies"]:
+	for other in world.enemies:
 		if other != id and world.enemies[other]["pack"] == pack and state["enemies"][other]["mode"] == MODE_IDLE:
 			_engage_one(other, CombatTable.NOTICE_PACK)
 
@@ -1323,11 +1343,75 @@ func _player_outside_room(id: String) -> bool:
 	return not WorldDef.in_boss_room(id, player_pos())
 
 
+## An enemy gives up the fight and heads home, and the adds it called leave. An add that
+## gives up leaves too.
 func _disengage(id: String) -> void:
 	var e: Dictionary = state["enemies"][id]
+	if e.has("called_by"):
+		_leave(id)
+		return
 	e["mode"] = MODE_RETURNING
 	e["next"] = {}
 	_emit({"kind": SimVocab.EV_ENEMY_DISENGAGED, "enemy_id": id})
+	_dismiss_adds(id)
+
+
+## Boss `boss` calls in the adds of every phase it passes through on its way from phase `from`
+## to `to`, so a blow that crosses two marks calls both phases' adds. Each waits, called and
+## announced with `add_called`, at its entry point, and comes in fighting on the next tick. An
+## add's id is its boss's with `_add_<n>`, n counting the kind's adds through its phases.
+func _call_adds(boss: String, from: int, to: int) -> void:
+	var kind: String = state["enemies"][boss]["kind"]
+	var at := int(state["tick"]) + 1
+	var n := 0
+	for phase in range(1, to + 1):
+		for add in CombatTable.adds(kind, phase):
+			n += 1
+			if phase <= from:
+				continue
+			var id := "%s_add_%d" % [boss, n]
+			var entry := _home(boss) + Vector2(add["entry"][0], add["entry"][1])
+			state["enemies"][id] = _called_add(boss, str(add["kind"]), entry, at)
+			_emit({
+				"kind": SimVocab.EV_ADD_CALLED, "enemy_id": id, "enemy_kind": add["kind"], "boss_id": boss,
+				"pos": _xz(entry), "at": at,
+			})
+
+
+## An add of `kind` called in by `boss`, waiting at `entry` to come in on tick `at`, unhurt and
+## facing the boss's home.
+func _called_add(boss: String, kind: String, entry: Vector2, at: int) -> Dictionary:
+	var toward := _home(boss) - entry
+	return {
+		"kind": kind,
+		"pos": _xz(entry),
+		"facing": _xz(toward.normalized()) if toward != Vector2.ZERO else [0.0, -1.0],
+		"health": int(CombatTable.enemy(kind)["health"]),
+		"mode": MODE_CALLED,
+		"next": {},
+		"step": 0,
+		"phase": 0,
+		"answered_tick": -1,
+		"respawn_tick": at,
+		"called_by": boss,
+		"entry": _xz(entry),
+	}
+
+
+## Every add boss `boss` called in leaves, alive, dead or still to come.
+func _dismiss_adds(boss: String) -> void:
+	for id in state["enemies"].keys():
+		if state["enemies"][id].get("called_by", "") == boss:
+			_leave(id)
+
+
+## Add `id` leaves the world, and the player stops attacking it.
+func _leave(id: String) -> void:
+	var boss: String = state["enemies"][id]["called_by"]
+	state["enemies"].erase(id)
+	if _attack_target() == id:
+		_stop_activity(SimVocab.REASON_UNKNOWN_ENEMY)
+	_emit({"kind": SimVocab.EV_ADD_LEFT, "enemy_id": id, "boss_id": boss})
 
 
 ## Carries out what the enemy declared for this tick: closes in, rests, feints or strikes. A
@@ -1420,6 +1504,7 @@ func _enemy_declare(id: String, acted := "") -> void:
 	if answer >= 0 or (me["pos"] as Vector2).distance_to(player_pos()) <= float(me["reach"]) or CombatTable.is_windup(acted):
 		var phase := CombatTable.phase_at(e["kind"], int(e["health"]), int(e["phase"]))
 		if phase != int(e["phase"]) and not CombatTable.is_windup(acted):
+			_call_adds(id, int(e["phase"]), phase)
 			e["phase"] = phase
 			e["step"] = 0
 			answer = -1
@@ -1486,7 +1571,7 @@ func _chase(id: String) -> void:
 	var away := (here - target).normalized()
 	if away == Vector2.ZERO:
 		away = Vector2(0, 1)
-	away = away.rotated(float(world.enemies.keys().find(id) % 3 - 1) * 0.5)
+	away = away.rotated(float(state["enemies"].keys().find(id) % 3 - 1) * 0.5)
 	_walk_enemy(id, target + away * float(me["reach"]) * CombatTable.APPROACH_FRACTION)
 
 
@@ -1565,8 +1650,10 @@ func _kill_enemy(id: String) -> void:
 		_announce_ring_gates(before)
 
 
+## Where enemy `id` lives: its placed home, or for an add its entry point.
 func _home(id: String) -> Vector2:
-	var home: Array = world.enemies[id]["home"]
+	var e: Dictionary = state["enemies"].get(id, {})
+	var home: Array = e["entry"] if e.has("called_by") else world.enemies[id]["home"]
 	return Vector2(home[0], home[1])
 
 
@@ -1835,8 +1922,8 @@ func _die(cause: String) -> void:
 	if region != player["region"]:
 		_emit({"kind": SimVocab.EV_REGION_CHANGED, "from": player["region"], "to": region})
 		player["region"] = region
-	for id in state["enemies"]:
-		if state["enemies"][id]["mode"] == MODE_ENGAGED:
+	for id in state["enemies"].keys():
+		if state["enemies"].has(id) and state["enemies"][id]["mode"] == MODE_ENGAGED:
 			_disengage(id)
 	_save_due = "death"
 
@@ -2444,36 +2531,54 @@ func _restored_activity(saved: Variant, enemies: Dictionary) -> Dictionary:
 
 
 ## Every placed enemy, from saved data where it is readable and at home, unhurt and idle
-## where it is not (which is also how a save from before combat loads).
+## where it is not (which is also how a save from before combat loads), then every readable add
+## a placed enemy called in: a known kind with an entry point, called, fighting or dead.
 func _restored_enemies(saved: Variant) -> Dictionary:
 	var out := _fresh_enemies()
 	for id in out:
-		var entry: Variant = saved.get(id) if saved is Dictionary else null
-		if not (entry is Dictionary) or not _is_xz(entry.get("pos")) or not _is_number(entry.get("health")):
+		_restore_enemy(out[id], saved.get(id) if saved is Dictionary else null)
+	if not (saved is Dictionary):
+		return out
+	for id in saved:
+		var entry: Variant = saved[id]
+		if out.has(str(id)) or not (entry is Dictionary) or not world.enemies.has(str(entry.get("called_by", ""))):
 			continue
-		var mode := str(entry.get("mode", ""))
-		if not ENEMY_MODES.has(mode):
+		var kind := str(entry.get("kind", ""))
+		if not CombatTable.is_enemy_kind(kind) or not _is_xz(entry.get("entry")):
 			continue
-		var e: Dictionary = out[id]
-		var facing: Variant = entry.get("facing")
-		var next: Variant = entry.get("next")
-		e["pos"] = _xz(Vector2(entry["pos"][0], entry["pos"][1]))
-		e["facing"] = _xz(Vector2(facing[0], facing[1])) if _is_xz(facing) else e["facing"]
-		e["health"] = clampi(int(entry["health"]), 0, int(CombatTable.enemy(e["kind"])["health"]))
-		e["mode"] = mode
-		if next is Dictionary and CombatTable.has_action(str(next.get("action", ""))) and _is_number(next.get("at")):
-			e["next"] = {"action": str(next["action"]), "at": int(next["at"])}
-			if CombatTable.is_area_blow(e["next"]["action"]):
-				var mark := _restored_mark(next.get("mark"))
-				e["next"] = {} if mark.is_empty() else {"action": e["next"]["action"], "at": e["next"]["at"], "mark": mark}
-		var phase := int(entry["phase"]) if _is_number(entry.get("phase")) else 0
-		e["phase"] = phase if phase >= 0 and phase <= CombatTable.phase_count(e["kind"]) else 0
-		var cycle := CombatTable.cycle(e["kind"], int(e["phase"])).size()
-		e["step"] = posmod(int(entry["step"]), cycle) if _is_number(entry.get("step")) else 0
-		var answered := int(entry["answered_tick"]) if _is_number(entry.get("answered_tick")) else -1
-		e["answered_tick"] = answered if answered >= 0 else -1
-		e["respawn_tick"] = int(entry["respawn_tick"]) if _is_number(entry.get("respawn_tick")) else 0
+		var add := _called_add(str(entry["called_by"]), kind, Vector2(entry["entry"][0], entry["entry"][1]), 0)
+		if _restore_enemy(add, entry) and ADD_MODES.has(add["mode"]):
+			out[str(id)] = add
 	return out
+
+
+## Overlays enemy `e` with what is readable of its saved `entry`. Returns false, leaving `e` as
+## it was, when the entry has no readable position, health and mode.
+func _restore_enemy(e: Dictionary, entry: Variant) -> bool:
+	if not (entry is Dictionary) or not _is_xz(entry.get("pos")) or not _is_number(entry.get("health")):
+		return false
+	var mode := str(entry.get("mode", ""))
+	if not ENEMY_MODES.has(mode):
+		return false
+	var facing: Variant = entry.get("facing")
+	var next: Variant = entry.get("next")
+	e["pos"] = _xz(Vector2(entry["pos"][0], entry["pos"][1]))
+	e["facing"] = _xz(Vector2(facing[0], facing[1])) if _is_xz(facing) else e["facing"]
+	e["health"] = clampi(int(entry["health"]), 0, int(CombatTable.enemy(e["kind"])["health"]))
+	e["mode"] = mode
+	if next is Dictionary and CombatTable.has_action(str(next.get("action", ""))) and _is_number(next.get("at")):
+		e["next"] = {"action": str(next["action"]), "at": int(next["at"])}
+		if CombatTable.is_area_blow(e["next"]["action"]):
+			var mark := _restored_mark(next.get("mark"))
+			e["next"] = {} if mark.is_empty() else {"action": e["next"]["action"], "at": e["next"]["at"], "mark": mark}
+	var phase := int(entry["phase"]) if _is_number(entry.get("phase")) else 0
+	e["phase"] = phase if phase >= 0 and phase <= CombatTable.phase_count(e["kind"]) else 0
+	var cycle := CombatTable.cycle(e["kind"], int(e["phase"])).size()
+	e["step"] = posmod(int(entry["step"]), cycle) if _is_number(entry.get("step")) else 0
+	var answered := int(entry["answered_tick"]) if _is_number(entry.get("answered_tick")) else -1
+	e["answered_tick"] = answered if answered >= 0 else -1
+	e["respawn_tick"] = int(entry["respawn_tick"]) if _is_number(entry.get("respawn_tick")) else 0
+	return true
 
 
 ## A told ground mark from saved data, or {} when it is unreadable: a known shape, a centre, a
