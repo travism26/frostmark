@@ -48,7 +48,7 @@ func _run(sim: Sim, ticks: int) -> Array[Dictionary]:
 
 
 func _adds_in(sim: Sim) -> Array:
-	return sim.state["enemies"].keys().filter(func(id: String) -> bool: return id != "foe")
+	return sim.state["enemies"].keys().filter(func(id: String) -> bool: return sim.state["enemies"][id].has("called_by"))
 
 
 func test_a_boss_below_its_mark_announces_each_add_a_tick_ahead_at_its_entry_point() -> void:
@@ -146,6 +146,23 @@ func test_the_adds_leave_when_the_boss_disengages_and_come_again_in_its_next_fig
 	H.patch_enemy(sim, "foe", {"health": 49})
 	again = _run(sim, 6)
 	assert_eq(H.of_kind(again, Vocab.EV_ADD_CALLED).size(), 2, "and at the mark calls them again")
+
+
+func test_the_adds_leave_when_the_player_walks_out_of_the_boss_s_room() -> void:
+	H.add_stand_ins()
+	var boss := "ring_one_dungeon_boss"
+	var sim := H.arena({boss: {"kind": "stand_in_caller", "home": [73.0, 44.0]}})
+	sim.command(Vocab.SET_AUTO_RETALIATE, {"on": false})
+	H.place(sim, [74.2, 44.0])
+	H.patch_enemy(sim, boss, {"health": 49})
+	sim.drain_events()
+	_run(sim, 3)
+	assert_eq(_adds_in(sim).size(), 2, "the adds are in")
+	H.place(sim, [88.0, 56.0])
+	var events := _run(sim, 1)
+	assert_eq(H.of_kind(events, Vocab.EV_ADD_LEFT).size(), 2, "and leave with the boss")
+	assert_eq(sim.state["enemies"][boss]["mode"], Sim.MODE_RETURNING)
+	assert_eq(_adds_in(sim), [])
 
 
 func test_adds_still_to_come_leave_with_their_boss() -> void:
