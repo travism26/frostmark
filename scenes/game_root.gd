@@ -668,9 +668,14 @@ func _apply_events(events: Array[Dictionary]) -> void:
 				_enemies[e["enemy_id"]]["length"] = _polyline_length(walked)
 			SimVocab.EV_ENEMY_TELEGRAPHED:
 				_show_cue(e)
+			SimVocab.EV_GROUND_MARKED:
+				_show_mark(e)
 			SimVocab.EV_HIT:
 				_last_event = _hit_text(e)
-				if e["attacker"] != SimVocab.PLAYER:
+				if e.get("area", false):
+					_cues.land_mark(e["attacker"])
+					_flinch(e["target"])
+				elif e["attacker"] != SimVocab.PLAYER:
 					_swing(e["attacker"])
 					_projectiles.resolve(e["attacker"], true)
 					_flinch(e["target"])
@@ -689,10 +694,15 @@ func _apply_events(events: Array[Dictionary]) -> void:
 				_last_event = "%s's %s misses. You stepped clear." % [
 					_sentence(_enemy_name(e["attacker"])), CombatTable.action_label(e["action"]).to_lower(),
 				]
-				if e["attacker"] != SimVocab.PLAYER:
+				if e.get("area", false):
+					_cues.land_mark(e["attacker"])
+				elif e["attacker"] != SimVocab.PLAYER:
 					_swing(e["attacker"])
 					_projectiles.resolve(e["attacker"], false)
+			SimVocab.EV_ENEMY_DISENGAGED:
+				_cues.clear_mark(e["enemy_id"])
 			SimVocab.EV_ENEMY_DIED:
+				_cues.clear_mark(e["enemy_id"])
 				_last_event = "%s falls." % _sentence(_enemy_name(e["enemy_id"]))
 				if e["enemy_kind"] == "bandit_captain" and not sim.ring_gate_open("ring_two_gate"):
 					_hud.banner("The bandit captain falls. Build the ring-two gate winch at the outpost to open his gate.")
@@ -1537,6 +1547,21 @@ func _show_cue(e: Dictionary) -> void:
 		figure.wind_up(e["style"])
 
 
+## An area blow's ground mark: red on the ground where it will land, and the blow's name over
+## the enemy's head, until the landing tick. The enemy winds up, rooted, rather than striking.
+func _show_mark(e: Dictionary) -> void:
+	var drawn: Dictionary = _enemies[e["enemy_id"]]
+	var root: Node3D = drawn["root"]
+	_cues.mark(e, root.global_position.y)
+	var cue: Label3D = drawn["cue"]
+	cue.text = cue_text(e)
+	cue.font_size = CUE_FONT_HEAVY if e.get("heavy", false) else CUE_FONT
+	cue.modulate = CombatCues.MARK_COLOUR
+	cue.visible = true
+	drawn["cue_at"] = int(e["at"])
+	(root.get_node("Figure") as FigureBody).wind_up(e["style"])
+
+
 ## The telegraphed blow was a feint: the ring under the enemy breaks off and the word over its
 ## head reads "Feint" until the tick ends, unless the same tick telegraphs its next blow.
 func _show_feint(e: Dictionary) -> void:
@@ -1579,6 +1604,7 @@ func _swing(enemy_id: String) -> void:
 
 func _expire_cues() -> void:
 	var tick := int(sim.state["tick"])
+	_cues.expire_marks(tick)
 	for id in _enemies:
 		if int(_enemies[id]["cue_at"]) <= tick:
 			(_enemies[id]["cue"] as Label3D).visible = false

@@ -27,7 +27,7 @@ func test_guide_table_shape() -> void:
 	for id in GuideTable.TIPS:
 		var tip: Dictionary = GuideTable.TIPS[id]
 		assert_true(str(tip["text"]) != "", "%s has text" % id)
-		assert_true(int(tip["cooldown"]) > 0, "%s has a cooldown" % id)
+		assert_true(tip.get("once", false) or int(tip["cooldown"]) > 0, "%s has a cooldown or fires once" % id)
 		assert_true(tip.has("triggers") or tip.has("condition"), "%s has a trigger" % id)
 
 

@@ -141,10 +141,10 @@ static func event_cues(e: Dictionary) -> Array[String]:
 			out.append(BUILT_BY_MATERIAL.get(YardLook.material(e.get("upgrade", "")), BUILT))
 			out.append(STING_LEVEL)
 		SimVocab.EV_HIT:
-			if e.get("style", "") == CombatTable.STYLE_RANGED:
+			if e.get("style", "") == CombatTable.STYLE_RANGED and not e.get("area", false):
 				out.append(BOW)
 			out.append(HIT_TAKEN if e.get("target", "") == SimVocab.PLAYER else HIT)
-		SimVocab.EV_ENEMY_TELEGRAPHED, SimVocab.EV_ENEMY_STANCE, SimVocab.EV_ENEMY_FEINTED:
+		SimVocab.EV_ENEMY_TELEGRAPHED, SimVocab.EV_ENEMY_STANCE, SimVocab.EV_ENEMY_FEINTED, SimVocab.EV_GROUND_MARKED:
 			if CUE_BY_STYLE.has(e.get("style", "")):
 				out.append(CUE_BY_STYLE[e["style"]])
 		SimVocab.EV_ENEMY_DIED:

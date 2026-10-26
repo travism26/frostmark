@@ -120,13 +120,16 @@ static func where(events: Array[Dictionary], kind: String, field: String, value:
 	return out
 
 
-## Stand-in kinds for the feint, fight-phase and answer rules, which no enemy uses yet. A feint
-## pretends to be a lunge (or, for the kiting kind, a dart); `add_stand_ins()` puts them in
-## CombatTable for a test.
+## Stand-in kinds for the feint, fight-phase, answer and area-blow rules, which no enemy uses
+## yet. A feint pretends to be a lunge (or, for the kiting kind, a dart); a smash strikes a
+## front mark and a stomp a ring mark, each 3 m across the radius. `add_stand_ins()` puts them
+## in CombatTable for a test.
 const STAND_IN_ACTIONS := {
 	"feint_lunge": {"label": "Lunge", "damage": 0, "feint": "lunge"},
 	"feint_dart": {"label": "Dart", "damage": 0, "feint": "dart"},
 	"quicken": {"label": "Quickens", "damage": 0, "stance": true},
+	"ground_smash": {"label": "Smash", "damage": 20, "heavy": true, "shape": CombatTable.MARK_FRONT, "size": 3.0},
+	"ground_stomp": {"label": "Stomp", "damage": 16, "heavy": true, "shape": CombatTable.MARK_RING, "size": 3.0},
 }
 const STAND_IN_KINDS := {
 	# Feints a lunge, then lunges for real, rests, winds up into another feint, and rests.
@@ -195,6 +198,33 @@ const STAND_IN_KINDS := {
 				"answer_ticks": 8,
 			},
 		],
+		"loot": [], "rare_percent": 0, "respawn_ticks": 100,
+	},
+	# Smashes the ground in front of it, rests, bites, rests.
+	"stand_in_smasher": {
+		"label": "Smasher", "health": 500, "weapon": "fangs", "speed": 2.0, "sight": 6.0,
+		"actions": ["ground_smash", CombatTable.ACTION_REST, "bite", CombatTable.ACTION_REST],
+		"loot": [], "rare_percent": 0, "respawn_ticks": 100,
+	},
+	# Stomps a ring round itself, rests, bites, rests.
+	"stand_in_stomper": {
+		"label": "Stomper", "health": 500, "weapon": "fangs", "speed": 2.0, "sight": 6.0,
+		"actions": ["ground_stomp", CombatTable.ACTION_REST, "bite", CombatTable.ACTION_REST],
+		"loot": [], "rare_percent": 0, "respawn_ticks": 100,
+	},
+	# Smashes and rests until below half health, where it quickens and bites instead.
+	"stand_in_area_phaser": {
+		"label": "Area phaser", "health": 100, "weapon": "fangs", "speed": 2.0, "sight": 6.0,
+		"actions": ["ground_smash", CombatTable.ACTION_REST, CombatTable.ACTION_REST],
+		"phases": [{"below": 50, "actions": ["quicken", "bite", CombatTable.ACTION_REST]}],
+		"loot": [], "rare_percent": 0, "respawn_ticks": 100,
+	},
+	# Smashes with its sabre, then draws its bow for a shot and back; answers a staff with its bow.
+	"stand_in_area_answerer": {
+		"label": "Area answerer", "health": 500, "weapon": "captain_sabre", "speed": 2.0, "sight": 7.0,
+		"actions": ["ground_smash", CombatTable.ACTION_REST, "draw_bow", "loose", CombatTable.ACTION_REST, "draw_sabre"],
+		"stances": ["captain_sabre", "captain_sabre", "captain_bow", "captain_bow", "captain_bow", "captain_sabre"],
+		"answers": {CombatTable.STYLE_MAGIC: 2}, "answer_ticks": 8,
 		"loot": [], "rare_percent": 0, "respawn_ticks": 100,
 	},
 }

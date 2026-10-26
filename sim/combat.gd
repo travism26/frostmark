@@ -90,6 +90,8 @@ const NOTICE_HIT := "hit"
 ## if the player has stepped out of reach, and a blow that finds nobody misses. A `feint` names
 ## the attack it pretends to be: it is declared and telegraphed exactly as that attack, then
 ## lands nothing (the Snowveil archer's piercing shot is the first; ring three's others will).
+## An attack with a `shape` is an area blow (see MARK_SHAPES): it strikes a ground mark of
+## that shape and `size` rather than the player.
 const ACTION_MOVE := "move"
 const ACTION_REST := "rest"
 const ACTIONS := {
@@ -315,6 +317,19 @@ const ENEMIES := {
 		"rare_percent": 0, "respawn_ticks": 900, "boss": true,
 	},
 }
+## Area blows. An attack whose action names a `shape` strikes a ground mark, not the player:
+## `front`, an arc of FRONT_ARC degrees in the direction the enemy faces, or `ring`, a circle
+## centred on it, in either case `size` metres in radius. The mark is told MARK_TICKS ticks
+## before the blow lands, and from then until it lands the enemy is rooted, so the mark is the
+## ground that gets hit. The blow hits a player standing inside the mark on the landing tick
+## and misses one who is not; the style edge never applies to it, armour does, and it is never
+## feinted (see `area_problems`).
+const MARK_FRONT := "front"
+const MARK_RING := "ring"
+const MARK_SHAPES: Array[String] = [MARK_FRONT, MARK_RING]
+const FRONT_ARC := 120.0
+const MARK_TICKS := 2
+
 ## The rare drop in both rings: one piece of iron gear, ahead of smithing it at the Bloomery.
 const RARE_LOOT: Array[String] = [
 	"iron_sword", "iron_helm", "iron_body", "iron_legs", "iron_bow", "iron_axe", "iron_pickaxe", "iron_staff",
@@ -376,6 +391,64 @@ static func is_windup(action: String) -> bool:
 
 static func is_feint(action: String) -> bool:
 	return _action(action).has("feint")
+
+
+static func is_area_blow(action: String) -> bool:
+	return _action(action).has("shape")
+
+
+## The ground mark of area blow `action`, told by an enemy standing at `pos` and facing
+## `facing`, in world space: {shape, centre, radius}, and for a front mark its `facing` and
+## its whole `arc` in degrees. Points are [x, z] like every position in the state.
+static func area_mark(action: String, pos: Vector2, facing: Vector2) -> Dictionary:
+	var def := _action(action)
+	var mark := {"shape": str(def["shape"]), "centre": [pos.x, pos.y], "radius": float(def["size"])}
+	if mark["shape"] == MARK_FRONT:
+		var ahead := facing.normalized() if facing != Vector2.ZERO else Vector2(0, 1)
+		mark["facing"] = [ahead.x, ahead.y]
+		mark["arc"] = FRONT_ARC
+	return mark
+
+
+## Whether `pos` lies inside `mark` (an `area_mark`): within its radius of the centre and, for
+## a front mark, within half its arc either side of where it faces.
+static func in_mark(mark: Dictionary, pos: Vector2) -> bool:
+	var centre := Vector2(mark["centre"][0], mark["centre"][1])
+	var offset := pos - centre
+	if offset.length() > float(mark["radius"]):
+		return false
+	if mark["shape"] != MARK_FRONT or offset == Vector2.ZERO:
+		return true
+	var ahead := Vector2(mark["facing"][0], mark["facing"][1])
+	return absf(rad_to_deg(ahead.angle_to(offset))) <= float(mark["arc"]) / 2.0
+
+
+## Damage of an area blow: `base` less the defender's armour `defence`, never below 1. The
+## style edge never applies, so no swap changes it.
+static func area_damage(base: int, defence := 0) -> int:
+	return maxi(1, base - defence) if base > 0 else 0
+
+
+## What is wrong with the area blows in the cycles of an enemy definition and of each of its
+## phases, or [] when nothing is: each names a known shape and a size above 0, and no feint
+## pretends to be one, since a ground mark always lands.
+static func area_problems(def: Dictionary) -> Array[String]:
+	var out: Array[String] = []
+	var cycles: Array = [def] + def.get("phases", [])
+	for i in cycles.size():
+		var where := "the kind" if i == 0 else "phase %d" % i
+		for action in cycles[i].get("actions", []):
+			var entry := _action(str(action))
+			if entry.has("feint") and is_area_blow(str(entry["feint"])):
+				out.append("%s: %s feints an area blow, %s" % [where, action, entry["feint"]])
+			if not entry.has("shape"):
+				continue
+			if not MARK_SHAPES.has(entry["shape"]):
+				out.append("%s: %s's shape %s is not one of %s" % [where, action, entry["shape"], MARK_SHAPES])
+			var size: Variant = entry.get("size")
+			if not (size is float or size is int) or size <= 0:
+				out.append("%s: %s's mark has no size" % [where, action])
+	return out
 
 
 ## What an action shows the player: the attack a feint pretends to be, else the action itself.

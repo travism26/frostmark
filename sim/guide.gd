@@ -4,7 +4,7 @@
 ##
 ## A hint step is done by its `trigger`: the first event of that kind whose fields match.
 ## A tip fires on any one of its `triggers`, or on its named `condition` checked at the end
-## of every tick, then stays quiet for `cooldown` ticks. Sim runs the guide only while it
+## of every tick, then stays quiet for `cooldown` ticks, or for good when it fires `once`. Sim runs the guide only while it
 ## is on; a player turns it off, and every character after the first starts with it off.
 ## No quests and no dialogue, per the brief: the guide only ever says what to try next.
 class_name GuideTable
@@ -61,6 +61,11 @@ const TIPS := {
 		"text": "The word over an enemy's head is its next blow, one beat early. A blade up close beats a bow; a bow at range beats a blade.",
 		"triggers": [{"event": SimVocab.EV_ENEMY_TELEGRAPHED}],
 		"cooldown": 600,
+	},
+	"ground_mark": {
+		"text": "Step off the red.",
+		"triggers": [{"event": SimVocab.EV_GROUND_MARKED}],
+		"once": true,
 	},
 }
 
