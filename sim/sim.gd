@@ -1434,6 +1434,7 @@ func _enemy_declare(id: String, acted := "") -> void:
 		e["next"] = {"action": action, "at": int(state["tick"]) + CombatTable.MARK_TICKS, "mark": mark}
 		_emit({
 			"kind": SimVocab.EV_GROUND_MARKED, "enemy_id": id, "action": action, "style": style,
+			"damage": CombatTable.action_damage(action), "heavy": CombatTable.is_heavy(action),
 			"mark": mark.duplicate(true), "at": e["next"]["at"],
 		})
 		return
