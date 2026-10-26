@@ -72,10 +72,11 @@ static func apply_tint(tint: Color) -> void:
 ## the snow itself says where one ring ends and the next begins.
 static func paint_rings(material: ShaderMaterial, world: WorldDef) -> void:
 	var names := RingLook.rings(world)
+	var regions := RingLook.ring_regions(world)
 	var edges := Vector4.ZERO
 	for i in mini(4, names.size()):
 		var reach := 0.0
-		for p in world.regions[i]["polygon"]:
+		for p in regions[i]["polygon"]:
 			reach = maxf(reach, maxf(absf(p[0]), absf(p[1])))
 		edges[i] = reach
 	material.set_shader_parameter("ring_tones", true)
@@ -341,7 +342,7 @@ static func dressing(world: WorldDef) -> Node3D:
 	var root := Node3D.new()
 	root.name = "Dressing"
 	var placer := Placer.new(world, 41)
-	for ring in RingDressing.rings():
+	for ring in RingDressing.scattered():
 		var node := Node3D.new()
 		node.name = ring
 		_scatter_ring(node, placer, ring, RingLook.entry(ring))

@@ -371,6 +371,9 @@ func test_everything_placed_can_be_reached_from_its_side_of_the_gate() -> void:
 	var outpost := w.cell_of(Vector2(w.spawn[0], w.spawn[1]))
 	for id in w.objects:
 		var from: Vector2i = start_of.get(w.region_at(w.object_center(id)), outpost)
+		# A dungeon's mouth stands in its ring's cliff, which is ring two's region.
+		if WorldDef.dungeon_of_mouth(id) != "":
+			from = outpost
 		var reachable := false
 		for cell in w.approach_cells(id):
 			if not GridPath.find(w, from, cell).is_empty():

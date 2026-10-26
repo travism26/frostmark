@@ -7,7 +7,9 @@
 ## band at every boundary, so nothing jumps as the player walks out. Each ring out is
 ## colder and darker than the one inside it: the look is the danger signal. Out to ring two
 ## the snow, the wind and the fog thicken too; ring three's glacier breaks that, a clear night
-## under the full aurora, so it reads as a place apart and not as more blizzard.
+## under the full aurora, so it reads as a place apart and not as more blizzard. A dungeon
+## has a look of its own, darker and closer than the ring it opens from, which blends with
+## that ring's only across its mouth.
 ##
 ## The world definition names the rings "regions"; new code says ring.
 class_name RingLook
@@ -93,15 +95,33 @@ const LOOKS := {
 		"snow_tone": Color(0.70, 0.84, 0.98), "stone": Color(0.40, 0.48, 0.62),
 		"foliage": Color(0.20, 0.30, 0.34), "density": 0.6, "drift": 0.5,
 	},
+	# The ring-one dungeon: a cave under the cliffs, darker and closer than ring one. No sky
+	# shows, so there is no aurora and almost no snow or wind; what light there is comes cold
+	# off the rock, and the fog closes in a few strides past the character.
+	WorldDef.REGION_RING_ONE_DUNGEON: {
+		"tint": Color(0.58, 0.60, 0.72), "sky": Color(0.03, 0.03, 0.06),
+		"fog_color": Color(0.08, 0.09, 0.14), "fog_distance": 22.0,
+		"sun_color": Color(0.62, 0.58, 0.66), "sun_energy": 0.45,
+		"ambient_color": Color(0.28, 0.29, 0.44), "ambient_energy": 0.62,
+		"snow_density": 0.04, "wind": 0.08, "wind_direction": Vector2(0.9, 0.44), "aurora": 0.0, "ambience": "cave",
+		"snow_tone": Color(0.50, 0.53, 0.64), "stone": Color(0.30, 0.31, 0.38),
+		"foliage": Color(0.18, 0.22, 0.26), "density": 0.5, "drift": 0.15,
+	},
 }
 
 
 ## The rings in the world definition's order, innermost first (the outpost, then outward).
+## Dungeons are not rings: they sit beside their ring rather than around it.
 static func rings(world: WorldDef) -> Array[String]:
 	var out: Array[String] = []
-	for r in world.regions:
+	for r in ring_regions(world):
 		out.append(r["name"])
 	return out
+
+
+## The world definition's regions without the dungeons', in its order.
+static func ring_regions(world: WorldDef) -> Array:
+	return world.regions.filter(func(r: Dictionary) -> bool: return WorldDef.dungeon_of_region(r["name"]) == "")
 
 
 ## The table's look for `ring`, as a fresh copy.
@@ -111,17 +131,52 @@ static func entry(ring: String) -> Dictionary:
 
 
 ## The look at `pos`: the ring's entry, blended with the neighbouring ring's across the
-## band at a boundary. Past the last ring's edge the last look holds.
+## band at a boundary, or a dungeon's entry, blended with its ring's across its mouth. Past
+## the last ring's edge the last look holds.
+static func at(world: WorldDef, pos: Vector2) -> Dictionary:
+	for id in WorldDef.DUNGEONS:
+		var dungeon: Dictionary = WorldDef.DUNGEONS[id]
+		if world.objects.has(dungeon["mouth"]):
+			var t := _mouth_blend(world, dungeon, pos)
+			if t > 0.0:
+				return blend(_ring_at(world, _ring_side(world, dungeon["mouth"], pos)), entry(dungeon["region"]), t)
+	return _ring_at(world, pos)
+
+
+## How far into a dungeon's look `pos` is, 0 (none of it) to 1 (all of it). Its walls part it
+## from the rings everywhere but the mouth, so the band is centred on the mouth: half a mouth
+## (t = 0.5) on the mouth itself, all the ring's half a band out from it and all the
+## dungeon's half a band in.
+static func _mouth_blend(world: WorldDef, dungeon: Dictionary, pos: Vector2) -> float:
+	var half := BLEND_METRES * 0.5
+	var off := world.distance_to_object(dungeon["mouth"], pos)
+	if world.region_at(pos) == dungeon["region"]:
+		return 1.0 if off >= half else 0.5 + 0.5 * off / half
+	return 0.0 if off >= half else 0.5 - 0.5 * off / half
+
+
+## Where to read the ring's half of a blend across a mouth: `pos` itself on the ring's side of
+## the mouth's middle, its mirror through the middle on the dungeon's (a mouth's `outward`
+## points into its dungeon), so the ring's half never reads the dungeon's ground.
+static func _ring_side(world: WorldDef, mouth: String, pos: Vector2) -> Vector2:
+	var o: Dictionary = world.objects[mouth]
+	var outward := Vector2(o["outward"][0], o["outward"][1])
+	var past := (pos - world.object_center(mouth)).dot(outward)
+	return pos - outward * 2.0 * past if past > 0.0 else pos
+
+
+## The ring look at `pos`, as if there were no dungeons.
 ##
 ## A ring's polygon holds the rings inside it, so the next ring out starts at this ring's
 ## edge; ring three's lies beside ring two's instead, so it starts at its own. The gap to the
 ## next ring is whichever of the two is farther.
-static func at(world: WorldDef, pos: Vector2) -> Dictionary:
+static func _ring_at(world: WorldDef, pos: Vector2) -> Dictionary:
+	var regions := ring_regions(world)
 	var names := rings(world)
 	var depth: Array[float] = []  # signed distance to each ring's polygon: negative inside
 	var index := -1
 	for i in names.size():
-		depth.append(_signed_distance(_polygon(world.regions[i]), pos))
+		depth.append(_signed_distance(_polygon(regions[i]), pos))
 		if index < 0 and depth[i] <= 0.0:
 			index = i
 	if index < 0:

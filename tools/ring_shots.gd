@@ -16,6 +16,10 @@ const SPOTS := {
 	WorldDef.REGION_RING_ONE: [-11.5, 36.5],
 	WorldDef.REGION_RING_TWO: [2.5, 71.5],
 	WorldDef.REGION_RING_THREE: [-33.5, 136.5],
+	# Both sides of the ring-one dungeon's mouth: ring one's, looking at the cave in its cliff,
+	# and the dungeon's, just inside.
+	"dungeon_mouth": [57.5, -47.0],
+	WorldDef.REGION_RING_ONE_DUNGEON: [69.5, -47.5],
 }
 const CAMERA_DISTANCE := 26.0
 const SETTLE_FRAMES := 90

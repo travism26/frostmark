@@ -600,6 +600,43 @@ static func mine_face(half: Vector2, height: float, centre: Vector2, stone: Colo
 	return MeshKit.finish(st)
 
 
+## A dungeon's mouth through a cliff: a passage `depth` metres long along +x and `width`
+## across, between dark rock jambs a little above the cliff, under a rock arch at each end with
+## icicles hanging from it. The passage is open to the sky between the arches and dark all the
+## way down (ADIT), so from above it reads as a black cleft in the ice, and anyone walking
+## through goes into the shadow of the rock. Nothing stands past the ground it covers but the
+## fallen rock at its ends.
+static func cave_mouth(width: float, depth: float, height: float, centre: Vector2, stone: Color) -> ArrayMesh:
+	var rng := MeshKit.rng(centre)
+	var st := MeshKit.begin()
+	var rock := stone.darkened(0.35)
+	var jamb_top := height * 0.95
+	MeshKit.box(st, Vector3(0, jamb_top * 0.5, 0), Vector3(depth + 0.2, jamb_top, width), ADIT, ADIT)
+	for side in [-1.0, 1.0]:
+		for k in 3:
+			var x := -depth * 0.5 + (k + 0.5) * depth / 3.0
+			var tall := jamb_top * rng.randf_range(0.95, 1.2)
+			var shade := rock * rng.randf_range(0.85, 1.1)
+			shade.a = 1.0
+			MeshKit.block(st, Vector3(x, tall * 0.5, side * (width * 0.5 + 0.8)), Vector3(depth / 3.0 + 0.3, tall, 1.6), rng.randf_range(-0.08, 0.08), 0.0, shade, shade.lightened(0.15))
+	# An arch at each end: a slab of rock over the way through, a boulder on it, snow on top.
+	for end in [-1.0, 1.0]:
+		var x: float = end * (depth * 0.5 - 0.1)
+		MeshKit.block(st, Vector3(x, jamb_top + 0.35, 0), Vector3(1.1, 0.9, width + 2.8), rng.randf_range(-0.05, 0.05), 0.0, rock, SNOW)
+		var r := rng.randf_range(0.7, 0.95)
+		MeshKit.block(st, Vector3(x, jamb_top + 0.8 + r * 0.4, rng.randf_range(-0.6, 0.6)), Vector3(r * 1.3, r, r * 1.6), rng.randf() * TAU, rng.randf_range(-0.2, 0.2), rock * 1.1, SNOW)
+		for i in 6:
+			var z := -width * 0.5 + (i + 0.5) * width / 6.0 + rng.randf_range(-0.15, 0.15)
+			var long := rng.randf_range(0.5, 1.1)
+			MeshKit.prism(st, Vector3(x + end * 0.45, 0, z), 4, 0.1, 0.01, jamb_top - 0.1, jamb_top - 0.1 - long, rng.randf() * TAU, ICE, ICE_PALE, ICE_PALE)
+	# Fallen rock at the foot of both ends, to either side of the way through.
+	for i in 8:
+		var end := 1.0 if i % 2 == 0 else -1.0
+		var z := rng.randf_range(width * 0.5 - 0.2, width * 0.5 + 1.4) * (1.0 if i % 4 < 2 else -1.0)
+		MeshKit.block(st, Vector3(end * (depth * 0.5 + rng.randf_range(0.3, 1.0)), 0.2, z), Vector3(0.6, 0.4, 0.5), rng.randf() * TAU, rng.randf_range(-0.3, 0.3), rock, SNOW)
+	return MeshKit.finish(st)
+
+
 # --- Helpers -----------------------------------------------------------------------------
 
 ## A box of `size` in the frame `basis`, centred at `at`; its top takes `top` if it faces up.

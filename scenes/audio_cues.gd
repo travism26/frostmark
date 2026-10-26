@@ -82,6 +82,8 @@ const BEDS := {
 	WorldDef.REGION_RING_ONE: {"wind": -6.0, "pitch": 0.85, "snow": -15.0},
 	# The glacier under a clear aurora: the wind thin and high over the ice, little snow.
 	WorldDef.REGION_RING_THREE: {"wind": -10.0, "pitch": 1.2, "snow": -28.0},
+	# The ring-one dungeon: out of the wind, only a low draught through the rock and no snow.
+	WorldDef.REGION_RING_ONE_DUNGEON: {"wind": -24.0, "pitch": 0.6, "snow": SILENT_DB},
 }
 ## The strike a gathering skill makes while it works, and the sound of its success.
 const GATHER_STRIKE := {SkillTable.WOODCUTTING: CHOP, SkillTable.MINING: MINE}

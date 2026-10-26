@@ -29,8 +29,10 @@ const GEAR_QUERY_HASH := "3124d5a39569a062831c017b1cc7ce0688b4e0bb8e5611b614a761
 ## Where `ring=<name>` beside the test-mode query pair stands the character: ring two just
 ## inside its gate, within reach of the brazier so the character starts warming; or ring two's
 ## side of the ring-three gate, a few metres in front of it and out of sight of every ring-two
-## home, so one click walks it into ring three for the first time.
-const RING_SPOTS := {"two": [3.5, 70.5], "three": [-39.5, 123.5]}
+## home, so one click walks it into ring three for the first time; or ring one's side of the
+## ring-one dungeon's mouth, out of sight of every ring-one home, so one click walks it into
+## the dungeon for the first time.
+const RING_SPOTS := {"two": [3.5, 70.5], "three": [-39.5, 123.5], "dungeon": [57.5, -47.0]}
 
 const EQUIPMENT := {
 	"weapon": "steel_sword", "helm": "steel_helm", "body": "steel_body", "legs": "steel_legs", "tool": "steel_pickaxe",

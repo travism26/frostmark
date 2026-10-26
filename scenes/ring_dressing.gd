@@ -85,6 +85,14 @@ const SCATTER := {
 		{"what": "ice_shard", "count": 60, "spacing": 2.0, "scale": [0.8, 1.8]},
 		{"what": "stone", "count": 12, "spacing": 2.0, "scale": [0.8, 1.4]},
 	],
+	# The ring-one dungeon: rock fallen from the roof, ice grown down the walls, little snow
+	# blown in and nothing growing.
+	WorldDef.REGION_RING_ONE_DUNGEON: [
+		{"what": "rubble", "count": 60, "spacing": 2.0, "scale": [0.8, 1.5]},
+		{"what": "rock", "count": 40, "spacing": 1.8, "scale": [0.8, 1.6]},
+		{"what": "ice_shard", "count": 30, "spacing": 2.4, "scale": [0.6, 1.3]},
+		{"what": "drift", "count": 12, "spacing": 2.5},
+	],
 }
 
 ## Ring edges carry markers so a player knows they have crossed without a label. The safe
@@ -128,6 +136,15 @@ const CAMP_KINDS := {"wolf": "wolf_den", "bandit_archer": "bandit_camp"}
 ## The rings that get dressing, innermost first (the outpost is dressed by hand).
 static func rings() -> Array[String]:
 	return [WorldDef.REGION_INNER_RING, WorldDef.REGION_RING_ONE, WorldDef.REGION_RING_TWO, WorldDef.REGION_RING_THREE]
+
+
+## Every region that gets scattered with dressing: the rings, then each dungeon. A dungeon has
+## no landmarks: its walls are the way.
+static func scattered() -> Array[String]:
+	var out := rings()
+	for id in WorldDef.DUNGEONS:
+		out.append(WorldDef.DUNGEONS[id]["region"])
+	return out
 
 
 ## The landmark at `ring`/`direction`.

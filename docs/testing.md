@@ -66,7 +66,7 @@ Each is an ordinary save code of the current save version, not a cheat: the rule
 godot --headless -s tools/test_codes.gd
 ```
 
-The map has an entry for each test character: test mode, test mode in ring two, test mode at the ring-three gate, build from scratch, all gear, and each ring code from `tools/ring_codes.gd`. An entry gives the short code and link where the character has them, a summary of what it loads, read back from the save itself (for the all-gear character, how many gear items and from which sets or tiers), and the full save code to paste into **Import code**.
+The map has an entry for each test character: test mode, test mode in ring two, test mode at the ring-three gate, test mode at the dungeon mouth, build from scratch, all gear, and each ring code from `tools/ring_codes.gd`. An entry gives the short code and link where the character has them, a summary of what it loads, read back from the save itself (for the all-gear character, how many gear items and from which sets or tiers), and the full save code to paste into **Import code**.
 
 The plaintext short codes and links come from a seed, `tools/test_codes.local.cfg`, with one `name = code` line each: `test_mode_short`, `test_mode_query`, `bare_short`, `bare_query`, `gear_short` and `gear_query` (a query line holds the whole `name=value` pair). The tool checks every seed line against its hash in `scenes/field_kit.gd`. A line that does not match, or names no test code, is refused by name and no map is written. A code missing from the seed is written as "not known on this machine" beside its hash. The seed reaches a maintainer outside GitHub.
 
@@ -89,7 +89,7 @@ It loads a character in the outpost with:
 - both waystones attuned and awake, so `travel` home works from either
 - full warmth and health, and the hints off
 
-To start in ring two instead of the outpost, add `ring=two` to its link (the map gives the whole link). It is the same character standing just inside the ring-two gate, within reach of the brazier so it starts warming. To start at the ring-three gate, add `ring=three` instead: the same character stands on ring two's side of the ring-three gate, a few metres in front of it and out of sight of every ring-two enemy, with the gate open and ring three not yet reached, so one click on the gate walks it into ring three for the first time. Without `ring=`, or with any other value, the link loads in the outpost as before. The parameter does nothing on its own or beside another character's link.
+To start in ring two instead of the outpost, add `ring=two` to its link (the map gives the whole link). It is the same character standing just inside the ring-two gate, within reach of the brazier so it starts warming. To start at the ring-three gate, add `ring=three` instead: the same character stands on ring two's side of the ring-three gate, a few metres in front of it and out of sight of every ring-two enemy, with the gate open and ring three not yet reached, so one click on the gate walks it into ring three for the first time. To start at the ring-one dungeon's mouth, add `ring=dungeon`: the same character stands on ring one's side of the mouth, out of sight of every ring-one enemy, with the dungeon not yet reached, so one click on the mouth walks it in for the first time. Without `ring=`, or with any other value, the link loads in the outpost as before. The parameter does nothing on its own or beside another character's link.
 
 `scenes/field_kit.gd` builds it from a new character through `restore()`, so the short code and the link always give a save of the current version. `tests/test_test_mode.gd` builds the code the same way, imports it and checks every point above, that both stored hashes load the same character, that typed text is matched without its case or surrounding spaces, that the ring-two spot stands it beside the brazier, and that the ring-three spot stands it out of sight in front of the open ring-three gate, one click from ring three.
 
@@ -118,4 +118,4 @@ The list is read from the item table each time the code is built, so gear added 
 
 ## Other codes
 
-`tools/ring_codes.gd` prints a new character standing in each ring (and one in ring one with the warmth run low), for screenshots. Its output is in `tools/ring_codes.txt`, and the code map lists the same codes.
+`tools/ring_codes.gd` prints a new character standing in each ring (and one in ring one with the warmth run low, one on ring one's side of the ring-one dungeon's mouth and one just inside it), for screenshots. Its output is in `tools/ring_codes.txt`, and the code map lists the same codes.

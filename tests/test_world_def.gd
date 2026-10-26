@@ -34,7 +34,7 @@ func test_walls_block_and_the_gate_does_not() -> void:
 	assert_true(w.is_walkable(Vector2(-1.5, 9.5)), "gate opening, west edge")
 	assert_false(w.is_walkable(Vector2(0.5, 0.5)), "fire blocks")
 	assert_true(w.is_walkable(Vector2(0.5, 20.5)), "ground outside")
-	assert_false(w.is_walkable(Vector2(70.0, 0.0)), "off the grid")
+	assert_false(w.is_walkable(Vector2(120.0, 0.0)), "off the grid")
 	assert_true(w.is_walkable(Vector2(w.spawn[0], w.spawn[1])), "spawn is walkable")
 
 
@@ -43,7 +43,7 @@ func test_cells_round_trip() -> void:
 	var c := w.cell_of(Vector2(3.2, -4.7))
 	assert_eq(w.cell_of(w.cell_center(c)), c)
 	assert_eq(w.cell_of(Vector2(-64.0, -64.0)), Vector2i(0, 0))
-	assert_false(w.in_bounds(w.cell_of(Vector2(64.0, 0.0))))
+	assert_false(w.in_bounds(w.cell_of(Vector2(112.0, 0.0))))
 
 
 func test_approach_cells_ring_blocking_objects() -> void:

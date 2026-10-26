@@ -78,7 +78,7 @@ const REASON_TEXT := {
 	SimVocab.REASON_NOT_COOKABLE: "That can't be cooked.",
 	SimVocab.REASON_NOTHING_LEFT: "Nothing left to cook.",
 	SimVocab.REASON_TIER_CAPPED: "Smithing doesn't reach that metal yet: the Bloomery lifts it to iron, the blast furnace to steel.",
-	SimVocab.REASON_UNREACHABLE: "You can't get there from here. Rings two and three are only reached through their gates.",
+	SimVocab.REASON_UNREACHABLE: "You can't get there from here. Rings two and three are only reached through their gates, and a dungeon through its mouth.",
 	SimVocab.REASON_UPGRADE_MISSING: "Build the upgrade that unlocks it first.",
 	SimVocab.REASON_ALREADY_BUILT: "Already built.",
 	SimVocab.REASON_UPGRADE_LOCKED: "That isn't open yet.",
@@ -545,7 +545,9 @@ func _apply_events(events: Array[Dictionary]) -> void:
 					SimVocab.ACTION_GATHER:
 						_last_event = _gather_verb(e["object_id"])
 					SimVocab.ACTION_RING_GATE:
-						if sim.ring_gate_open(e["object_id"]):
+						if WorldDef.dungeon_of_mouth(e["object_id"]) != "":
+							_last_event = "You go through the mouth."
+						elif sim.ring_gate_open(e["object_id"]):
 							_last_event = "You pass through the gate."
 						else:
 							_last_event = _ring_gate_text(e["object_id"])
@@ -601,6 +603,8 @@ func _apply_events(events: Array[Dictionary]) -> void:
 				_hud.banner("Ring two. The snow lies over broken walls older than the outpost, and the tracks in it are not wolves'. An old brazier still burns past the gate.")
 			SimVocab.EV_RING_THREE_REACHED:
 				_hud.banner("Ring three. A glacier under the aurora, split by pressure ridges, and nothing here is as slow to read as a troll. Someone left a fire burning past the gate.")
+			SimVocab.EV_DUNGEON_REACHED:
+				_hud.banner(_dungeon_reached_text(e["dungeon_id"]))
 			SimVocab.EV_ENEMY_STANCE:
 				_show_cue(e)
 			SimVocab.EV_LEVELLED:
@@ -739,11 +743,19 @@ static func _item_list(entries: Array) -> String:
 	return ", ".join(parts)
 
 
+## The banner for a first walk into a dungeon.
+static func _dungeon_reached_text(dungeon: String) -> String:
+	return "%s. The cliff opens on a cave the wind can't follow, and the dark runs a long way in. Nothing out in the ring will follow you through the mouth, and nothing in here is safe." % WorldDef.DUNGEONS[dungeon]["label"]
+
+
 ## The status line for a `region_changed` event: the ring entered, then the cold on leaving
 ## the outpost or what hunts in a numbered ring. The numbered rings are named bare ("ring
-## one"), the others with "the" ("the inner ring").
+## one"), the others with "the" ("the inner ring"), and a dungeon by its label.
 static func _entered_text(e: Dictionary) -> String:
 	var to: String = e["to"]
+	var dungeon := WorldDef.dungeon_of_region(to)
+	if dungeon != "":
+		return "Entered %s. Nothing out in the ring follows you in." % str(WorldDef.DUNGEONS[dungeon]["label"]).to_lower()
 	var name := to.replace("_", " ")
 	var text := "Entered %s." % (name if to.begins_with("ring_") else "the " + name)
 	if e["from"] == WorldDef.REGION_OUTPOST:
@@ -1016,6 +1028,7 @@ func _build_world(world: WorldDef) -> void:
 	for r in world.regions:
 		if r["name"] == WorldDef.REGION_OUTPOST:
 			_add_floor(r["polygon"], COLOR_OUTPOST_FLOOR)
+	_add_dungeon_floors(world)
 	_world.add_child(WorldDressing.boundaries(world))
 
 	for s in world.solids:
@@ -1060,7 +1073,10 @@ func _build_world(world: WorldDef) -> void:
 			WorldDef.KIND_WORKBENCH:
 				prop = Props.anvil(1.1)
 			WorldDef.KIND_RING_GATE:
-				prop = Props.ring_gate(o["max"][0] - o["min"][0], o["height"])
+				if WorldDef.dungeon_of_mouth(id) != "":
+					prop = _cave_mouth(world, id)
+				else:
+					prop = Props.ring_gate(o["max"][0] - o["min"][0], o["height"])
 			WorldDef.KIND_WAYSTONE:
 				var stone_at := Vector2((o["min"][0] + o["max"][0]) * 0.5, (o["min"][1] + o["max"][1]) * 0.5)
 				prop = Props.waystone(o["height"], stone_at, RingLook.at(world, stone_at)["stone"])
@@ -1094,10 +1110,51 @@ func _build_world(world: WorldDef) -> void:
 			label.visible = false
 			prop.add_child(label)
 			body.set_meta("hover_label", label)
-			if kind == WorldDef.KIND_RING_GATE:
+			if kind == WorldDef.KIND_RING_GATE and WorldDef.dungeon_of_mouth(id) == "":
 				_ring_gates[id] = {"bars": prop.get_node("Bars"), "label": label}
 			elif kind == WorldDef.KIND_WAYSTONE:
 				_waystones[id] = {"glow": prop.get_node("Glow"), "label": label}
+
+
+## A dungeon's mouth in its ring's cliff, in the stone of that ring, its passage turned along
+## the mouth's `outward`. It is always open, so it has no bars to sync.
+func _cave_mouth(world: WorldDef, id: String) -> Node3D:
+	var o: Dictionary = world.objects[id]
+	var outward := Vector2(o["outward"][0], o["outward"][1])
+	var size := Vector2(o["max"][0] - o["min"][0], o["max"][1] - o["min"][1])
+	var along_x := absf(outward.x) > absf(outward.y)
+	var depth := size.x if along_x else size.y
+	var width := size.y if along_x else size.x
+	var ring: String = WorldDef.DUNGEONS[WorldDef.dungeon_of_mouth(id)]["ring"]
+	var mouth := Props.cave_mouth(width, depth, o["height"], world.object_center(id), RingLook.entry(ring)["stone"])
+	mouth.rotation.y = atan2(-outward.y, outward.x)
+	return mouth
+
+
+## A dark floor over each dungeon's ground, in its look's snow, so the pocket reads as rock
+## and old snow under a roof rather than the open snowfield the rings lie on.
+func _add_dungeon_floors(world: WorldDef) -> void:
+	for id in WorldDef.DUNGEONS:
+		var dungeon: Dictionary = WorldDef.DUNGEONS[id]
+		for r in world.regions:
+			if r["name"] != dungeon["region"]:
+				continue
+			var lo := Vector2(INF, INF)
+			var hi := Vector2(-INF, -INF)
+			for p in r["polygon"]:
+				lo = lo.min(Vector2(p[0], p[1]))
+				hi = hi.max(Vector2(p[0], p[1]))
+			var floor_mesh := MeshInstance3D.new()
+			floor_mesh.name = "DungeonFloor_%s" % id
+			var plane := PlaneMesh.new()
+			plane.size = hi - lo
+			var material := StandardMaterial3D.new()
+			material.albedo_color = (RingLook.entry(dungeon["region"])["snow_tone"] as Color).lightened(0.3)
+			material.roughness = 1.0
+			plane.material = material
+			floor_mesh.mesh = plane
+			floor_mesh.position = Vector3((lo.x + hi.x) * 0.5, 0.01, (lo.y + hi.y) * 0.5)
+			_world.add_child(floor_mesh)
 
 
 ## Stands a prop on the centre of a footprint.
@@ -1121,6 +1178,8 @@ func _add_cliff_forest(world: WorldDef) -> void:
 			continue  # the camera looks over this stretch at the captain's gate: keep it clear
 		if _on_a_mine(p):
 			continue  # a mine's rock face rises here
+		if _by_a_mouth(world, p):
+			continue  # a dungeon's mouth opens here
 		if not world.is_walkable(p):
 			points.append(Vector3(p.x, 2.6, p.y))
 	var tree := Props.model(Props.NATURE + "tree_pineDefaultA.glb", 3.6)
@@ -1133,6 +1192,15 @@ func _add_cliff_forest(world: WorldDef) -> void:
 		var scale_offset := Transform3D(inner.basis, inner.position) * Props._relative_transform(inner, source)
 		_world.add_child(_multimesh(mesh, points, Vector3.ZERO, scale_offset))
 	tree.free()
+
+
+## Whether `p` is on a dungeon mouth's rock: its footprint and the jambs either side of it.
+static func _by_a_mouth(world: WorldDef, p: Vector2) -> bool:
+	for id in WorldDef.DUNGEONS:
+		var mouth: String = WorldDef.DUNGEONS[id]["mouth"]
+		if world.objects.has(mouth) and world.distance_to_object(mouth, p) < 3.5:
+			return true
+	return false
 
 
 ## Whether `p` is on or within a pine's reach of a mine piece's ground.

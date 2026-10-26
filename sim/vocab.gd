@@ -90,7 +90,7 @@ const EV_LOOT_DROPPED := "loot_dropped"          # {loot_id, item, count, pos}
 const EV_PICKED_UP := "picked_up"                # {loot_id, item, count}
 const EV_LOOT_GONE := "loot_gone"                # {loot_id}  lay too long; the snow took it
 const EV_ENEMY_STANCE := "enemy_stance"          # {enemy_id, action, style, at}  a weapon change, announced a tick ahead
-# Cooking, field fires, the outpost and the ring gate
+# Cooking, field fires, the outpost, the ring gates and the dungeon mouths
 const EV_COOKED := "cooked"                      # {item, output, burnt, xp}  output is "" when it burnt
 const EV_FIRE_LIT := "fire_lit"                  # {fire_id, pos, expires_tick}
 const EV_FIRE_OUT := "fire_out"                  # {fire_id}
@@ -98,6 +98,7 @@ const EV_BUILT := "built"                        # {upgrade, effects}
 const EV_RING_GATE_OPENED := "ring_gate_opened"  # {object_id}  its upgrade built and its guardian, if it has one, dead
 const EV_RING_TWO_REACHED := "ring_two_reached"  # {object_id}  first walked into ring two, through that gate; once per character
 const EV_RING_THREE_REACHED := "ring_three_reached"  # {object_id}  first walked into ring three, through that gate; once per character
+const EV_DUNGEON_REACHED := "dungeon_reached"    # {dungeon_id, object_id}  first walked into a dungeon, through its mouth; once per dungeon per character
 # Waystones
 const EV_WAYSTONE_ATTUNED := "waystone_attuned"  # {object_id}  first visit to a waystone; once per waystone
 const EV_TRAVEL_STARTED := "travel_started"      # {object_id, ticks}  channelling began; done in `ticks` ticks unless interrupted
