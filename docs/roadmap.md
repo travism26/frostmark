@@ -44,3 +44,11 @@ All seven skills are in, with smithing capped at the first metal tier, and the w
 This slice completes the first playable.
 
 **Playable at the link:** At the Pages URL a new character can reach and fight the bandit captain in about thirty minutes, using all seven skills along the way.
+
+## Ring-one dungeon
+
+Decided in the dungeons grill ([#39](https://github.com/travism26/frostmark/issues/39)); the design is in the brief's [Dungeons](game-brief.md#dungeons). Specced in [#204](https://github.com/travism26/frostmark/issues/204). Its boss is the great frost bear from the boss fights grill ([#203](https://github.com/travism26/frostmark/issues/203)); the design is in the brief's [Boss fights](game-brief.md#boss-fights).
+
+**Scope:** Add the first gentle dungeon, a pocket off ring one. Its mouth is open from the start and nothing crosses it, and a fire and a death chest stand just inside. Inside is one floor of ring-one enemies in the dark, plus one or two richer nodes, and a boss at the end. Beating the boss opens a way out that sets you down in ring one on the side nearest home. The dungeon is fenced off within the one world grid ([ADR 0001](adr/0001-dungeons-share-the-world-grid.md)) and gets a look of its own in the ring-look table.
+
+**Playable at the link:** At the Pages URL you can walk into the ring-one dungeon, warm up at its fire, fight through to the boss and beat it, then take the way out into ring one. If you die inside, what you lost is waiting in the death chest.
