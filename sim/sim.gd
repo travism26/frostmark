@@ -1735,13 +1735,13 @@ func _kill_enemy(id: String) -> void:
 
 
 ## A kill's rare roll: one draw of the hundred that lands in at most one of `rare_roll`'s bands,
-## rarest first, then one draw from that band's pool. "" when it lands in none, or in a band
-## whose pool is empty.
+## rarest first, each at its chance under the drop-rate scale (CombatTable.band_chance), then one
+## draw from that band's pool. "" when it lands in none, or in a band whose pool is empty.
 func _rare_roll(rare_roll: Dictionary) -> String:
-	var roll := _rand(100)
+	var roll := float(_rand(100))
 	for id in CombatTable.roll_order(rare_roll):
-		roll -= int(rare_roll[id])
-		if roll < 0:
+		roll -= CombatTable.band_chance(rare_roll, id)
+		if roll < 0.0:
 			var pool: Array = CombatTable.rarity_band(id)["pool"]
 			return "" if pool.is_empty() else pool[_rand(pool.size())]
 	return ""
@@ -1762,7 +1762,10 @@ func _drop_loot(item: String, count: int, at: Vector2) -> void:
 	state["loot"][id] = {
 		"item": item, "count": count, "pos": _xz(at), "expires_tick": int(state["tick"]) + LOOT_TICKS,
 	}
-	_emit({"kind": SimVocab.EV_LOOT_DROPPED, "loot_id": id, "item": item, "count": count, "pos": _xz(at)})
+	_emit({
+		"kind": SimVocab.EV_LOOT_DROPPED, "loot_id": id, "item": item, "count": count, "pos": _xz(at),
+		"rarity": ItemTable.rarity(item),
+	})
 
 
 ## Picks up as much of a loot pile as the pack has room for; the rest stays on the ground.

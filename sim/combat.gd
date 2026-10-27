@@ -396,6 +396,10 @@ static var _stand_in_actions := {}
 ## of the rare roll uses these rather than the game's real odds. Empty in the game.
 static var _stand_in_loot_tables := {}
 static var _stand_in_bands := {}
+## The drop-rate scale: every band rarer than uncommon has its chance multiplied by it, so a test
+## or a balance run sees a rare drop on demand. 1 in the game. It lives here, not in the state,
+## so no save code carries it and none restores it.
+static var _drop_rate_scale := 1.0
 
 
 ## Adds stand-in `kinds` and `actions`, shaped like ENEMIES and ACTIONS entries, for a test.
@@ -404,19 +408,32 @@ static func add_stand_ins(kinds: Dictionary, actions: Dictionary) -> void:
 	_stand_in_actions.merge(actions, true)
 
 
-## Adds stand-in loot `tables`, keyed by enemy kind and shaped like `loot_table`'s answer, and
-## stand-in `bands`, shaped like RARITY_BANDS entries, for a test. A stand-in table replaces its
-## kind's own.
-static func add_stand_in_loot(tables: Dictionary, bands: Dictionary) -> void:
+## Adds stand-in loot `tables`, keyed by enemy kind and shaped like `loot_table`'s answer,
+## stand-in `bands`, shaped like RARITY_BANDS entries, and stand-in `items` for their pools (see
+## ItemTable.add_stand_ins), for a test. A stand-in table replaces its kind's own.
+static func add_stand_in_loot(tables: Dictionary, bands: Dictionary, items := {}) -> void:
 	_stand_in_loot_tables.merge(tables, true)
 	_stand_in_bands.merge(bands, true)
+	ItemTable.add_stand_ins(items)
 
 
+## Sets the drop-rate scale (see `_drop_rate_scale`) until the stand-ins are cleared.
+static func set_drop_rate_scale(scale: float) -> void:
+	_drop_rate_scale = scale
+
+
+static func drop_rate_scale() -> float:
+	return _drop_rate_scale
+
+
+## Clears the stand-ins, stand-in items included, and puts the drop-rate scale back to 1.
 static func clear_stand_ins() -> void:
 	_stand_in_kinds.clear()
 	_stand_in_actions.clear()
 	_stand_in_loot_tables.clear()
 	_stand_in_bands.clear()
+	ItemTable.clear_stand_ins()
+	_drop_rate_scale = 1.0
 
 
 ## A kind's loot table (GLOSSARY.md): {loot, boss_loot, rare_roll}. `loot` always drops, one of
@@ -432,6 +449,13 @@ static func loot_table(kind: String) -> Dictionary:
 
 static func rarity_band(id: String) -> Dictionary:
 	return _stand_in_bands[id] if _stand_in_bands.has(id) else RARITY_BANDS.get(id, {})
+
+
+## Band `id`'s chance in `rare_roll`, in percent, times the drop-rate scale if the band is rarer
+## than uncommon.
+static func band_chance(rare_roll: Dictionary, id: String) -> float:
+	var chance := float(rare_roll[id])
+	return chance if rarity_band(id).get("rarity", "") == ItemTable.RARITY_UNCOMMON else chance * _drop_rate_scale
 
 
 ## The bands a rare roll names, rarest first; bands of one rarity in the order of their ids.

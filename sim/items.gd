@@ -783,43 +783,61 @@ const ITEMS := {
 }
 
 
+## Stand-in items, on top of ITEMS: a test of the rare roll gives items of rarities no real item
+## has yet. Empty in the game; added and cleared with CombatTable's stand-in loot.
+static var _stand_in_items := {}
+
+
+## Adds stand-in `items`, shaped like ITEMS entries, for a test.
+static func add_stand_ins(items: Dictionary) -> void:
+	_stand_in_items.merge(items, true)
+
+
+static func clear_stand_ins() -> void:
+	_stand_in_items.clear()
+
+
+static func _item(kind: String) -> Dictionary:
+	return ITEMS[kind] if ITEMS.has(kind) else _stand_in_items[kind]
+
+
 static func has(kind: String) -> bool:
-	return ITEMS.has(kind)
+	return ITEMS.has(kind) or _stand_in_items.has(kind)
 
 
 static func label(kind: String) -> String:
-	return ITEMS[kind]["label"] if ITEMS.has(kind) else kind
+	return _item(kind)["label"] if has(kind) else kind
 
 
 static func stack_size(kind: String) -> int:
-	return int(ITEMS[kind]["stack"])
+	return int(_item(kind)["stack"])
 
 
 static func weight(kind: String) -> int:
-	return int(ITEMS[kind]["weight"])
+	return int(_item(kind)["weight"])
 
 
 static func value(kind: String) -> int:
-	return int(ITEMS[kind]["value"])
+	return int(_item(kind)["value"])
 
 
 static func slot(kind: String) -> String:
-	return ITEMS[kind]["slot"]
+	return _item(kind)["slot"]
 
 
 static func tool(kind: String) -> String:
-	return ITEMS[kind].get("tool", "")
+	return _item(kind).get("tool", "")
 
 
 ## The item's gear tier ("wooden", "bronze", "iron", "steel"), or "" for materials, food, fur
 ## and set items.
 static func tier(kind: String) -> String:
-	return ITEMS[kind].get("tier", "") if ITEMS.has(kind) else ""
+	return _item(kind).get("tier", "") if has(kind) else ""
 
 
 ## The key of the set the item belongs to, or "" for an item in no set.
 static func set_of(kind: String) -> String:
-	return ITEMS[kind].get("set", "") if ITEMS.has(kind) else ""
+	return _item(kind).get("set", "") if has(kind) else ""
 
 
 ## A set's level ("mid", "mid-high", "high" or "top"), or "" for anything not a set key.
@@ -846,7 +864,7 @@ static func set_style(set_key: String) -> String:
 
 ## The item's rarity band ("uncommon", "rare", "super_rare", "ultra_rare"), or "" for none.
 static func rarity(kind: String) -> String:
-	return ITEMS[kind].get("rarity", "") if ITEMS.has(kind) else ""
+	return _item(kind).get("rarity", "") if has(kind) else ""
 
 
 ## A tier's rank: wooden 0, bronze 1, iron 2, steel 3, and -1 for "" or anything unknown.
@@ -856,14 +874,14 @@ static func tier_rank(tier_name: String) -> int:
 
 ## How much health the item restores when eaten, or 0 when it is not food.
 static func heal(kind: String) -> int:
-	return int(ITEMS[kind].get("heal", 0))
+	return int(_item(kind).get("heal", 0))
 
 
 ## Whether the item is kit, carried to use rather than to put away: gear (anything with an
 ## equipment slot), the ammo of any weapon, or cooked food (what a cooking recipe makes).
 ## Everything else, raw food included, is haul.
 static func is_kit(kind: String) -> bool:
-	if not ITEMS.has(kind):
+	if not has(kind):
 		return false
 	if slot(kind) != "":
 		return true
@@ -878,12 +896,12 @@ static func is_kit(kind: String) -> bool:
 
 ## Health taken off every hit while the item is worn, or 0.
 static func defence(kind: String) -> int:
-	return int(ITEMS[kind].get("defence", 0)) if ITEMS.has(kind) else 0
+	return int(_item(kind).get("defence", 0)) if has(kind) else 0
 
 
 ## Points of cold the item keeps out while worn, or 0.
 static func warmth(kind: String) -> int:
-	return int(ITEMS[kind].get("warmth", 0)) if ITEMS.has(kind) else 0
+	return int(_item(kind).get("warmth", 0)) if has(kind) else 0
 
 
 ## Health taken off every hit by everything worn: the armour pieces' defence added up.
