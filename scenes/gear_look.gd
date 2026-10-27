@@ -33,9 +33,11 @@
 ## KIT_SAMPLES holds one look of each for the shader warm-up and the kit shots.
 ##
 ## Glow is emission only (#250): a top set's palette sets `trim_glow`, so its trims shine, and
-## its entries may light a shape's highlight with `glow`. Tiers and the mid to high sets keep
-## plain materials. Nothing on the character carries a light or particles, so the web build
-## stays smooth. Each piece glows on its own, so a top-set piece shines beside any other.
+## its entries may light a shape's highlight with `glow`. A unique piece (an item of a rarity
+## band rarer than uncommon) shines in its accent instead, in its band's colour from RarityLook
+## (#251), laid over its palette by `palette`. Tiers and the mid to high sets keep plain
+## materials. Nothing on the character carries a light or particles, so the web build stays
+## smooth. Each piece glows on its own, so a top-set or unique piece shines beside any other.
 class_name GearLook
 extends RefCounted
 
@@ -162,43 +164,50 @@ const STAFF_HEADS := [HEAD_LASHED, HEAD_FORKED, HEAD_RING, HEAD_SHARD, HEAD_BRAZ
 ##   trim_glow    float  how bright every part drawn in the trim shines, in the trim colour; 0
 ##                       keeps the trim plain. Only the top sets' palettes set it (#250), so
 ##                       the hardest gear to make glows on the character, piece by piece
-const PALETTE_FIELDS := ["base", "dark", "trim", "accent", "glow", "glow_energy", "trim_glow"]
+##   accent_glow  float  how bright every part drawn in the accent shines, in the accent
+##                       colour; 0 keeps the accent plain. Every palette here keeps 0: a unique
+##                       piece's is set by `palette` from its rarity band (#251)
+const PALETTE_FIELDS := ["base", "dark", "trim", "accent", "glow", "glow_energy", "trim_glow", "accent_glow"]
+## The palette fields that shine, each with the palette field saying how brightly.
+const TONE_GLOWS := {"trim": "trim_glow", "accent": "accent_glow"}
+## How bright a unique piece's accent shines, in its band's colour: the top sets' brightest trim.
+const UNIQUE_ACCENT_GLOW := 0.8
 
 const WOOD := {
 	"base": Color(0.55, 0.38, 0.22), "dark": Color(0.495, 0.342, 0.198),
 	"trim": Color(0.44, 0.304, 0.176), "accent": Color(0.595, 0.442, 0.298),
-	"glow": Color(0.55, 0.85, 1.0), "glow_energy": 0.0, "trim_glow": 0.0,
+	"glow": Color(0.55, 0.85, 1.0), "glow_energy": 0.0, "trim_glow": 0.0, "accent_glow": 0.0,
 }
 const BRONZE := {
 	"base": Color(0.82, 0.52, 0.22), "dark": Color(0.738, 0.468, 0.198),
 	"trim": Color(0.656, 0.416, 0.176), "accent": Color(0.838, 0.568, 0.298),
-	"glow": Color(0.55, 0.85, 1.0), "glow_energy": 0.0, "trim_glow": 0.0,
+	"glow": Color(0.55, 0.85, 1.0), "glow_energy": 0.0, "trim_glow": 0.0, "accent_glow": 0.0,
 }
 const IRON := {
 	"base": Color(0.58, 0.62, 0.68), "dark": Color(0.522, 0.558, 0.612),
 	"trim": Color(0.464, 0.496, 0.544), "accent": Color(0.622, 0.658, 0.712),
-	"glow": Color(0.55, 0.85, 1.0), "glow_energy": 0.0, "trim_glow": 0.0,
+	"glow": Color(0.55, 0.85, 1.0), "glow_energy": 0.0, "trim_glow": 0.0, "accent_glow": 0.0,
 }
 const STEEL := {
 	"base": Color(0.42, 0.50, 0.62), "dark": Color(0.378, 0.45, 0.558),
 	"trim": Color(0.336, 0.40, 0.496), "accent": Color(0.478, 0.55, 0.658),
-	"glow": Color(0.55, 0.85, 1.0), "glow_energy": 0.0, "trim_glow": 0.0,
+	"glow": Color(0.55, 0.85, 1.0), "glow_energy": 0.0, "trim_glow": 0.0, "accent_glow": 0.0,
 }
 ## A pelt grey-brown with a pale trim.
 const FUR := {
 	"base": Color(0.56, 0.48, 0.40), "dark": Color(0.504, 0.432, 0.36),
 	"trim": Color(0.80, 0.74, 0.64), "accent": Color(0.714, 0.662, 0.61),
-	"glow": Color.BLACK, "glow_energy": 0.0, "trim_glow": 0.0,
+	"glow": Color.BLACK, "glow_energy": 0.0, "trim_glow": 0.0, "accent_glow": 0.0,
 }
 ## The kit samples' colours: dusk violet under bone, lit aurora green.
 const KIT := {
 	"base": Color(0.24, 0.18, 0.42), "dark": Color(0.16, 0.12, 0.30),
 	"trim": Color(0.91, 0.89, 0.82), "accent": Color(0.55, 0.48, 0.35),
-	"glow": Color(0.50, 0.94, 0.77), "glow_energy": 1.5, "trim_glow": 0.0,
+	"glow": Color(0.50, 0.94, 0.77), "glow_energy": 1.5, "trim_glow": 0.0, "accent_glow": 0.0,
 }
 const MISSING := {
 	"base": Color.MAGENTA, "dark": Color.MAGENTA, "trim": Color.MAGENTA, "accent": Color.MAGENTA,
-	"glow": Color.MAGENTA, "glow_energy": 0.0, "trim_glow": 0.0,
+	"glow": Color.MAGENTA, "glow_energy": 0.0, "trim_glow": 0.0, "accent_glow": 0.0,
 }
 ## The melee sets' palettes (#162, the approved board on #157). None has a staff, so
 ## glow_energy is 0; Ruinwarden's glow is the colour its chest rune and fuller shine in.
@@ -206,20 +215,20 @@ const MISSING := {
 const HEARTHGUARD := {
 	"base": Color("#7d8aa3"), "dark": Color("#5c6880"),
 	"trim": Color("#d9a64a"), "accent": Color("#8a5a2b"),
-	"glow": Color.BLACK, "glow_energy": 0.0, "trim_glow": 0.0,
+	"glow": Color.BLACK, "glow_energy": 0.0, "trim_glow": 0.0, "accent_glow": 0.0,
 }
 ## Wolfmark: dark iron and its shade, pale fur trim, the grey pelt; the blood sash and brass
 ## cap are the pieces' own colours.
 const WOLFMARK := {
 	"base": Color("#4e5668"), "dark": Color("#363c4c"),
 	"trim": Color("#d8ccb8"), "accent": Color("#8c8070"),
-	"glow": Color.BLACK, "glow_energy": 0.0, "trim_glow": 0.0,
+	"glow": Color.BLACK, "glow_energy": 0.0, "trim_glow": 0.0, "accent_glow": 0.0,
 }
 ## Ruinwarden: old gold over its dark, verdigris trim, the crimson plume, the rune's glow.
 const RUINWARDEN := {
 	"base": Color("#b08a3c"), "dark": Color("#4a3a1e"),
 	"trim": Color("#5f8a7a"), "accent": Color("#a8302a"),
-	"glow": Color("#6fe3c8"), "glow_energy": 0.0, "trim_glow": 0.0,
+	"glow": Color("#6fe3c8"), "glow_energy": 0.0, "trim_glow": 0.0, "accent_glow": 0.0,
 }
 ## The lit rim tints the sets' plates catch (the third tint of a material, beside its base and
 ## its recessed shade), and the sets' extra materials.
@@ -239,25 +248,25 @@ const RUINWARDEN_PLUME_LIT := Color("#d8514a")
 const EMBERHEART := {
 	"base": Color("#2e2a33"), "dark": Color("#1c1921"),
 	"trim": Color("#8a3a1a"), "accent": Color("#3a3340"),
-	"glow": Color("#ff7a1f"), "glow_energy": 0.0, "trim_glow": 0.8,
+	"glow": Color("#ff7a1f"), "glow_energy": 0.0, "trim_glow": 0.8, "accent_glow": 0.0,
 }
 ## Hoarfrost: ice over the dark-blue harness, white fur, ice shade.
 const HOARFROST := {
 	"base": Color("#cfe3f2"), "dark": Color("#3a4a6a"),
 	"trim": Color("#f1ece2"), "accent": Color("#a9d4ef"),
-	"glow": Color("#7fd4ff"), "glow_energy": 0.0, "trim_glow": 0.4,
+	"glow": Color("#7fd4ff"), "glow_energy": 0.0, "trim_glow": 0.4, "accent_glow": 0.0,
 }
 ## Auroral: dusk violet and its shade, lilac trim, pale antler.
 const AURORAL := {
 	"base": Color("#3f3670"), "dark": Color("#2a2350"),
 	"trim": Color("#b08cff"), "accent": Color("#e8dcc0"),
-	"glow": Color("#6ff0b0"), "glow_energy": 0.0, "trim_glow": 0.6,
+	"glow": Color("#6ff0b0"), "glow_energy": 0.0, "trim_glow": 0.6, "accent_glow": 0.0,
 }
 ## Trollbone: hide, dark, bone, blood.
 const TROLLBONE := {
 	"base": Color("#4a3a2e"), "dark": Color("#2a2238"),
 	"trim": Color("#e8dcc0"), "accent": Color("#a3302a"),
-	"glow": Color.BLACK, "glow_energy": 0.0, "trim_glow": 0.4,
+	"glow": Color.BLACK, "glow_energy": 0.0, "trim_glow": 0.4, "accent_glow": 0.0,
 }
 ## The top sets' lit rim tints and extra materials.
 const EMBERHEART_LIT := Color("#46404e")
@@ -278,19 +287,19 @@ const TROLLBONE_BLOOD_DARK := Color("#731f1b")
 const SHARDWEAVER := {
 	"base": Color("#5e6d8a"), "dark": Color("#45526b"),
 	"trim": Color("#d9d2c2"), "accent": Color("#b59a6a"),
-	"glow": Color("#9ecbff"), "glow_energy": 0.0, "trim_glow": 0.0,
+	"glow": Color("#9ecbff"), "glow_energy": 0.0, "trim_glow": 0.0, "accent_glow": 0.0,
 }
 ## Rimecaller: indigo and its shade, frost white, dark ash; frost glow.
 const RIMECALLER := {
 	"base": Color("#3b4a8c"), "dark": Color("#2b3668"),
 	"trim": Color("#cfe2ff"), "accent": Color("#5c4a3a"),
-	"glow": Color("#9ecbff"), "glow_energy": 0.0, "trim_glow": 0.0,
+	"glow": Color("#9ecbff"), "glow_energy": 0.0, "trim_glow": 0.0, "accent_glow": 0.0,
 }
 ## Glacier Warden: teal and its shade, silver, iron; ice glow.
 const GLACIER_WARDEN := {
 	"base": Color("#1f6e7a"), "dark": Color("#154e58"),
 	"trim": Color("#c9d7de"), "accent": Color("#39404a"),
-	"glow": Color("#8fe6f0"), "glow_energy": 0.0, "trim_glow": 0.0,
+	"glow": Color("#8fe6f0"), "glow_energy": 0.0, "trim_glow": 0.0, "accent_glow": 0.0,
 }
 ## The magic sets' extra materials and lit rim tints.
 const SHARDWEAVER_PINE := Color("#7a5234")
@@ -307,25 +316,25 @@ const GLACIER_WARDEN_IRON_LIT := Color("#4f5866")
 const HOARFROST_SOVEREIGN := {
 	"base": Color("#dbe8fa"), "dark": Color("#9fb6d6"),
 	"trim": Color("#5f7fb0"), "accent": Color("#c4dcf5"),
-	"glow": Color("#a7e4ff"), "glow_energy": 0.0, "trim_glow": 0.8,
+	"glow": Color("#a7e4ff"), "glow_energy": 0.0, "trim_glow": 0.8, "accent_glow": 0.0,
 }
 ## Hearthfire Magus: charcoal over soot, brass, flame; ember glow.
 const HEARTHFIRE_MAGUS := {
 	"base": Color("#2b2522"), "dark": Color("#1b1614"),
 	"trim": Color("#c88a3c"), "accent": Color("#ffc46b"),
-	"glow": Color("#ff9e38"), "glow_energy": 0.0, "trim_glow": 0.6,
+	"glow": Color("#ff9e38"), "glow_energy": 0.0, "trim_glow": 0.6, "accent_glow": 0.0,
 }
 ## Aurora Shaman: violet over its shade, bone, antler; aurora glow.
 const AURORA_SHAMAN := {
 	"base": Color("#3e2f6b"), "dark": Color("#2a1f4d"),
 	"trim": Color("#e9e4d2"), "accent": Color("#8b7a5a"),
-	"glow": Color("#7ff0c4"), "glow_energy": 0.0, "trim_glow": 0.4,
+	"glow": Color("#7ff0c4"), "glow_energy": 0.0, "trim_glow": 0.4, "accent_glow": 0.0,
 }
 ## Ruinwarden (the magic line's): dusk cloth over deep cloth, ruin stone, pillar; rune glow.
 const RUINWARDEN_MAGE := {
 	"base": Color("#2a2a3e"), "dark": Color("#1b1b2a"),
 	"trim": Color("#6c6f86"), "accent": Color("#4a4a5c"),
-	"glow": Color("#b784ff"), "glow_energy": 0.0, "trim_glow": 0.8,
+	"glow": Color("#b784ff"), "glow_energy": 0.0, "trim_glow": 0.8, "accent_glow": 0.0,
 }
 ## The magic top sets' lit rim tints and shaded tones.
 const HOARFROST_SOVEREIGN_LIT := Color("#f2f7fd")
@@ -345,19 +354,19 @@ const RUINWARDEN_MAGE_STONE_DARK := Color("#525468")
 const TRAPPER := {
 	"base": Color("#a8784a"), "dark": Color("#4a3324"),
 	"trim": Color("#d8c9a8"), "accent": Color("#8a6a46"),
-	"glow": Color.BLACK, "glow_energy": 0.0, "trim_glow": 0.0,
+	"glow": Color.BLACK, "glow_energy": 0.0, "trim_glow": 0.0, "accent_glow": 0.0,
 }
 ## Wolfstalker: the grey wolf pelt over dark leather, bone trim, the yew stave.
 const WOLFSTALKER := {
 	"base": Color("#9c9ca8"), "dark": Color("#3b2f2a"),
 	"trim": Color("#dcd6c0"), "accent": Color("#4f3a2c"),
-	"glow": Color.BLACK, "glow_energy": 0.0, "trim_glow": 0.0,
+	"glow": Color.BLACK, "glow_energy": 0.0, "trim_glow": 0.0, "accent_glow": 0.0,
 }
 ## Steelpoint Ranger: smithed steel, dark straps, the amber feather, pine-green leather.
 const STEELPOINT := {
 	"base": Color("#6b80a0"), "dark": Color("#1f2a24"),
 	"trim": Color("#e8a040"), "accent": Color("#2f4a3a"),
-	"glow": Color.BLACK, "glow_energy": 0.0, "trim_glow": 0.0,
+	"glow": Color.BLACK, "glow_energy": 0.0, "trim_glow": 0.0, "accent_glow": 0.0,
 }
 ## The ranged sets' lit and shaded tints, and the pale bowstring every bow shares.
 const TRAPPER_HIDE_LIT := Color("#c4945e")
@@ -374,25 +383,25 @@ const BOWSTRING := Color("#e6e0cc")
 const EMBER_HAWK := {
 	"base": Color("#2b2422"), "dark": Color("#1a1512"),
 	"trim": Color("#c9922e"), "accent": Color("#f3d7a6"),
-	"glow": Color("#ffa033"), "glow_energy": 0.0, "trim_glow": 0.6,
+	"glow": Color("#ffa033"), "glow_energy": 0.0, "trim_glow": 0.6, "accent_glow": 0.0,
 }
 ## Auroral Warden: snow hide over violet lining, silver, a shaded hide, aurora glow.
 const AURORAL_WARDEN := {
 	"base": Color("#ece9f5"), "dark": Color("#3d2d6b"),
 	"trim": Color("#b9c3d6"), "accent": Color("#d4d0e3"),
-	"glow": Color("#5ff0c8"), "glow_energy": 0.0, "trim_glow": 0.4,
+	"glow": Color("#5ff0c8"), "glow_energy": 0.0, "trim_glow": 0.4, "accent_glow": 0.0,
 }
 ## Ruin Stalker's Shroud: ink and its pitch, bone, ash grey, violet glow.
 const RUIN_STALKER := {
 	"base": Color("#15141c"), "dark": Color("#0b0a10"),
 	"trim": Color("#dcd4bc"), "accent": Color("#6a6878"),
-	"glow": Color("#9a6cff"), "glow_energy": 0.0, "trim_glow": 0.4,
+	"glow": Color("#9a6cff"), "glow_energy": 0.0, "trim_glow": 0.4, "accent_glow": 0.0,
 }
 ## Glacier Sovereign: ice hide over deep sea, the crystal face, a shaded ice, frost glow.
 const GLACIER_SOVEREIGN := {
 	"base": Color("#b7d4ea"), "dark": Color("#1e3a5a"),
 	"trim": Color("#d9f0ff"), "accent": Color("#8fb6d6"),
-	"glow": Color("#8cd9ff"), "glow_energy": 0.0, "trim_glow": 0.4,
+	"glow": Color("#8cd9ff"), "glow_energy": 0.0, "trim_glow": 0.4, "accent_glow": 0.0,
 }
 ## The ranged top sets' lit rim tints and shaded tones.
 const EMBER_HAWK_LIT := Color("#3d3431")
@@ -1743,20 +1752,48 @@ const LOOKS := {
 }
 
 
+## Stand-in looks, on top of LOOKS: a test of a unique piece's accent draws stand-in items no
+## real look exists for yet. Empty in the game.
+static var _stand_in_looks := {}
+
+
+## Adds stand-in `looks`, shaped like LOOKS entries, for a test.
+static func add_stand_ins(looks: Dictionary) -> void:
+	_stand_in_looks.merge(looks, true)
+
+
+static func clear_stand_ins() -> void:
+	_stand_in_looks.clear()
+
+
 static func has(item: String) -> bool:
-	return LOOKS.has(item)
+	return LOOKS.has(item) or _stand_in_looks.has(item)
 
 
-## The colours `item` is drawn in, or all magenta when it has no entry.
+static func _entry(item: String) -> Dictionary:
+	return LOOKS[item] if LOOKS.has(item) else _stand_in_looks.get(item, {})
+
+
+## The colours `item` is drawn in, or all magenta when it has no entry. A unique piece's
+## accent is its rarity band's colour, shining at UNIQUE_ACCENT_GLOW.
 static func palette(item: String) -> Dictionary:
-	return LOOKS[item]["palette"] if LOOKS.has(item) else MISSING
+	if not has(item):
+		return MISSING
+	var colours: Dictionary = _entry(item)["palette"]
+	var band: Variant = RarityLook.of_item(item)
+	if band == null:
+		return colours
+	colours = colours.duplicate()
+	colours["accent"] = band
+	colours["accent_glow"] = UNIQUE_ACCENT_GLOW
+	return colours
 
 
 ## What `item` draws on `part`: its shape's numbers with the entry's own laid over them, or {}
 ## for nothing there. An item with no entry, or an entry without the part, draws its slot's
 ## plain shape.
 static func piece(item: String, part: String) -> Dictionary:
-	var own: Dictionary = LOOKS.get(item, {}).get(part, _plain(item, part))
+	var own: Dictionary = _entry(item).get(part, _plain(item, part))
 	if own.is_empty():
 		return {}
 	return numbers(own)

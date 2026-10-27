@@ -358,8 +358,8 @@ func test_steel_draws_exactly_what_it_drew_before() -> void:
 	assert_eq(GearLookScript.STEEL, {
 		"base": Color(0.42, 0.50, 0.62), "dark": Color(0.378, 0.45, 0.558),
 		"trim": Color(0.336, 0.40, 0.496), "accent": Color(0.478, 0.55, 0.658),
-		"glow": Color(0.55, 0.85, 1.0), "glow_energy": 0.0, "trim_glow": 0.0,
-	}, "the steel palette is unchanged but for its plain staff crystal (#250)")
+		"glow": Color(0.55, 0.85, 1.0), "glow_energy": 0.0, "trim_glow": 0.0, "accent_glow": 0.0,
+	}, "the steel palette is unchanged but for its plain staff crystal (#250) and its plain accent glow (#251)")
 	for item in ["wooden_staff", "bronze_staff", "iron_staff", "steel_staff"]:
 		assert_eq(GearLookScript.piece(item, GearLookScript.PART_WEAPON)["shape"], GearLookScript.SHAPE_STAFF, "%s is still the staff model" % item)
 		assert_true(CharacterGearScript.weapon_piece(item) == null, "%s is not a kit weapon" % item)
