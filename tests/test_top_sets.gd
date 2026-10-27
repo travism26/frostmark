@@ -1,8 +1,8 @@
 ## The melee top sets (#163): Emberheart, Hoarfrost, Auroral and Trollbone are set items under
 ## the set-item rule with a look and an icon each; every worn piece draws its own layered shape
 ## beside steel as it draws alone and swaps with steel both ways; the four weapons are four
-## builders; the glow line holds (at most one light per set, and only on Emberheart's hammer;
-## every emitter a sparse CPUParticles3D; Trollbone with no glow at all); the all-gear stash
+## builders; the glow line holds (emission only, every piece's trims shining (#250), no light
+## and no particles; Trollbone's only glow its bone trim); the all-gear stash
 ## holds every piece; the builders know no set's numbers; the warm-up samples and the shot tool
 ## cover every piece, on every ring. How the sets read on screen is judged from
 ## tools/gear_shots.gd.
@@ -47,12 +47,8 @@ const WEAPON_SHAPES := {
 	"auroral_glaive": GearLookScript.SHAPE_GLAIVE,
 	"trollbone_cleaver": GearLookScript.SHAPE_CLEAVER,
 }
-## The one piece across the four sets that carries a light.
-const LIT := "emberheart_hammer"
-## The set with no glow, light or particles at all.
+## The set whose only glow is its trim.
 const DARK := ItemTable.SET_TROLLBONE
-## The most motes an emitter on these sets may keep alive at once.
-const MOTES_MAX := 16
 
 
 static func _materials(piece: Node) -> Array:
@@ -204,66 +200,36 @@ func test_every_set_piece_draws_its_layers_beside_steel_and_swaps_with_steel_bot
 	root.free()
 
 
-func test_at_most_one_light_per_set_and_only_on_the_hammer_and_trollbone_is_dark() -> void:
+func test_no_piece_carries_a_light_or_particles_and_every_glow_is_emission() -> void:
 	for set_key in SETS:
-		var lights := 0
+		var colours: Dictionary = PALETTES[set_key]
+		assert_true(float(colours["trim_glow"]) > 0.0, "%s's trims shine" % set_key)
 		for slot in SETS[set_key]:
 			var item: String = SETS[set_key][slot]
+			var trims := 0
 			for piece in _pieces(item):
-				var own: Array = piece.find_children("*", "OmniLight3D", true, false)
-				lights += own.size()
-				assert_eq(own.size(), 1 if item == LIT else 0, "%s carries %s" % [item, "the one light" if item == LIT else "no light"])
-				for light in own:
-					assert_eq((light as OmniLight3D).light_color, PALETTES[set_key]["glow"], "the light is %s's glow colour" % set_key)
-					assert_eq(String(light.name), CharacterGearScript.GLOW_LIGHT, "the light is named for a test to find")
+				assert_eq(piece.find_children("*", "Light3D", true, false).size(), 0, "%s carries no light" % item)
+				assert_eq(piece.find_children("*", "CPUParticles3D", true, false).size(), 0, "%s carries no motes" % item)
+				assert_eq(piece.find_children("*", "GPUParticles3D", true, false).size(), 0, "%s has no GPU particles" % item)
 				for m in _glowing(piece):
-					assert_eq(m.emission, PALETTES[set_key]["glow"], "%s shines only in %s's glow colour" % [item, set_key])
+					assert_true(m.emission == colours["glow"] or m.emission == colours["trim"], "%s shines only in %s's glow or trim colour" % [item, set_key])
+					if m.emission == colours["trim"]:
+						trims += 1
 				if set_key == DARK:
-					assert_eq(_glowing(piece).size(), 0, "%s has no emission" % item)
-					assert_eq(piece.find_children("*", "CPUParticles3D", true, false).size(), 0, "%s has no motes" % item)
+					for m in _glowing(piece):
+						assert_eq(m.emission, colours["trim"], "%s's only glow is its trim" % item)
 				piece.free()
-		assert_true(lights <= 1, "%s carries at most one light" % set_key)
+			assert_true(trims > 0, "%s's trims shine" % item)
 	assert_eq(PALETTES[DARK]["glow"], Color.BLACK, "%s has no glow colour" % DARK)
-	var hammer := CharacterGearScript.weapon_piece(LIT)
-	var light := hammer.find_children("*", "OmniLight3D", true, false)[0] as OmniLight3D
-	var look := GearLookScript.piece(LIT, GearLookScript.PART_WEAPON)
-	assert_true(look["light"], "the hammer's look asks for its light")
-	assert_almost_eq(light.light_energy, float(look["light_energy"]), 0.0001, "the light is as bright as the look says")
-	assert_almost_eq(light.omni_range, float(look["light_range"]), 0.0001, "the light reaches as far as the look says")
+	var hammer := CharacterGearScript.weapon_piece("emberheart_hammer")
 	assert_true(_glowing(hammer).size() >= 1, "the hammer's cracks shine")
 	hammer.free()
 	for item in GearLookScript.LOOKS:
 		if not SETS.has(ItemTable.set_of(item)):
 			continue
 		for own in _owns(item):
-			if own.get("light", false):
-				assert_eq(item, LIT, "only %s asks for a light, not %s" % [LIT, item])
-			if own.get("light", false) or own.get("motes", false):
-				assert_true(GearLookScript.GLOW_FX_SHAPES.has(own["shape"]), "%s's %s is a shape that can carry a light or motes" % [item, own["shape"]])
-
-
-func test_every_emitter_is_a_sparse_cpu_particles_node() -> void:
-	var emitters := 0
-	for set_key in SETS:
-		for slot in SETS[set_key]:
-			var item: String = SETS[set_key][slot]
-			for piece in _pieces(item):
-				assert_eq(piece.find_children("*", "GPUParticles3D", true, false).size(), 0, "%s has no GPU particles" % item)
-				for motes in piece.find_children("*", "CPUParticles3D", true, false):
-					emitters += 1
-					var p := motes as CPUParticles3D
-					assert_true(p.amount <= MOTES_MAX, "%s keeps a handful of motes alive at once (%d)" % [item, p.amount])
-					assert_true(p.mesh != null and (p.mesh.surface_get_material(0) as StandardMaterial3D).emission_enabled, "%s's motes glow" % item)
-					assert_eq((p.mesh.surface_get_material(0) as StandardMaterial3D).emission, PALETTES[set_key]["glow"], "%s's motes are its glow colour" % item)
-				piece.free()
-	assert_eq(emitters, 3, "one emitter each on Emberheart, Hoarfrost and Auroral")
-	for set_key in [ItemTable.SET_EMBERHEART, ItemTable.SET_HOARFROST, ItemTable.SET_AURORAL]:
-		var own := 0
-		for slot in SETS[set_key]:
-			for piece in _pieces(SETS[set_key][slot]):
-				own += piece.find_children("*", "CPUParticles3D", true, false).size()
-				piece.free()
-		assert_eq(own, 1, "%s has one emitter" % set_key)
+			assert_false(own.has("light"), "%s's %s asks for no light" % [item, own["shape"]])
+			assert_false(own.has("motes"), "%s's %s asks for no motes" % [item, own["shape"]])
 
 
 func test_the_all_gear_stash_holds_every_piece() -> void:
@@ -300,11 +266,7 @@ func test_the_samples_and_the_shot_tool_cover_every_piece_on_every_ring() -> voi
 		names.append(String(child.name))
 	for item in WEAPON_SHAPES:
 		assert_true(names.has(WEAPON_SHAPES[item]), "the warm-up samples a %s" % WEAPON_SHAPES[item])
-	var lit := 0
-	for light in all.find_children("*", "OmniLight3D", true, false):
-		if (light as OmniLight3D).light_color == GearLookScript.EMBERHEART["glow"]:
-			lit += 1
-	assert_eq(lit, 1, "the warm-up compiles the hammer's light")
+	assert_eq(all.find_children("*", "Light3D", true, false).size(), 0, "the warm-up compiles no light")
 	all.free()
 	var script := load("res://tools/gear_shots.gd") as Script
 	var consts := script.get_script_constant_map()

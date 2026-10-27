@@ -32,9 +32,10 @@
 ## numbers in SHAPES like any other shape and a builder of the same name in CharacterGear;
 ## KIT_SAMPLES holds one look of each for the shader warm-up and the kit shots.
 ##
-## A top set's light and particles are look numbers too: a crystal, a shard crown, a forge
-## hammer or a mage staff carries one small light (`light`) or a few motes (`motes`) only when
-## its entry asks, so a set's glow is tuned here and a piece worn alone keeps its own.
+## Glow is emission only (#250): a top set's palette sets `trim_glow`, so its trims shine, and
+## its entries may light a shape's highlight with `glow`. Tiers and the mid to high sets keep
+## plain materials. Nothing on the character carries a light or particles, so the web build
+## stays smooth. Each piece glows on its own, so a top-set piece shines beside any other.
 class_name GearLook
 extends RefCounted
 
@@ -113,8 +114,6 @@ const WEAPON_SHAPES := [
 	SHAPE_LONGBOW, SHAPE_MAGE_STAFF,
 ]
 const BOW_SHAPES := [SHAPE_LONGBOW]
-## The kit shapes that may carry the one small light and the few motes a top set is allowed.
-const GLOW_FX_SHAPES := [SHAPE_CRYSTAL, SHAPE_SHARD_CROWN, SHAPE_FORGE_HAMMER, SHAPE_MAGE_STAFF]
 ## The key a piece's extra layers sit under.
 const LAYERS := "layers"
 ## A cloak's outline: one straight hem, two halves parting in a V, a ragged hem, a long
@@ -158,44 +157,48 @@ const STAFF_HEADS := [HEAD_LASHED, HEAD_FORKED, HEAD_RING, HEAD_SHARD, HEAD_BRAZ
 ##   accent       Color  raised pieces: pauldrons, the pale hoop framing a fur hood's face
 ##   glow         Color  what a glowing part shines in: a staff's crystal, and a kit shape's
 ##                       highlight whenever its look's `glow` is above 0
-##   glow_energy  float  how bright the staff's glow is; 0 draws it unlit
-const PALETTE_FIELDS := ["base", "dark", "trim", "accent", "glow", "glow_energy"]
+##   glow_energy  float  how bright the staff's glow is; 0 draws it unlit (every tier's is 0:
+##                       tiers keep plain materials)
+##   trim_glow    float  how bright every part drawn in the trim shines, in the trim colour; 0
+##                       keeps the trim plain. Only the top sets' palettes set it (#250), so
+##                       the hardest gear to make glows on the character, piece by piece
+const PALETTE_FIELDS := ["base", "dark", "trim", "accent", "glow", "glow_energy", "trim_glow"]
 
 const WOOD := {
 	"base": Color(0.55, 0.38, 0.22), "dark": Color(0.495, 0.342, 0.198),
 	"trim": Color(0.44, 0.304, 0.176), "accent": Color(0.595, 0.442, 0.298),
-	"glow": Color(0.55, 0.85, 1.0), "glow_energy": 1.5,
+	"glow": Color(0.55, 0.85, 1.0), "glow_energy": 0.0, "trim_glow": 0.0,
 }
 const BRONZE := {
 	"base": Color(0.82, 0.52, 0.22), "dark": Color(0.738, 0.468, 0.198),
 	"trim": Color(0.656, 0.416, 0.176), "accent": Color(0.838, 0.568, 0.298),
-	"glow": Color(0.55, 0.85, 1.0), "glow_energy": 1.5,
+	"glow": Color(0.55, 0.85, 1.0), "glow_energy": 0.0, "trim_glow": 0.0,
 }
 const IRON := {
 	"base": Color(0.58, 0.62, 0.68), "dark": Color(0.522, 0.558, 0.612),
 	"trim": Color(0.464, 0.496, 0.544), "accent": Color(0.622, 0.658, 0.712),
-	"glow": Color(0.55, 0.85, 1.0), "glow_energy": 1.5,
+	"glow": Color(0.55, 0.85, 1.0), "glow_energy": 0.0, "trim_glow": 0.0,
 }
 const STEEL := {
 	"base": Color(0.42, 0.50, 0.62), "dark": Color(0.378, 0.45, 0.558),
 	"trim": Color(0.336, 0.40, 0.496), "accent": Color(0.478, 0.55, 0.658),
-	"glow": Color(0.55, 0.85, 1.0), "glow_energy": 1.5,
+	"glow": Color(0.55, 0.85, 1.0), "glow_energy": 0.0, "trim_glow": 0.0,
 }
 ## A pelt grey-brown with a pale trim.
 const FUR := {
 	"base": Color(0.56, 0.48, 0.40), "dark": Color(0.504, 0.432, 0.36),
 	"trim": Color(0.80, 0.74, 0.64), "accent": Color(0.714, 0.662, 0.61),
-	"glow": Color.BLACK, "glow_energy": 0.0,
+	"glow": Color.BLACK, "glow_energy": 0.0, "trim_glow": 0.0,
 }
 ## The kit samples' colours: dusk violet under bone, lit aurora green.
 const KIT := {
 	"base": Color(0.24, 0.18, 0.42), "dark": Color(0.16, 0.12, 0.30),
 	"trim": Color(0.91, 0.89, 0.82), "accent": Color(0.55, 0.48, 0.35),
-	"glow": Color(0.50, 0.94, 0.77), "glow_energy": 1.5,
+	"glow": Color(0.50, 0.94, 0.77), "glow_energy": 1.5, "trim_glow": 0.0,
 }
 const MISSING := {
 	"base": Color.MAGENTA, "dark": Color.MAGENTA, "trim": Color.MAGENTA, "accent": Color.MAGENTA,
-	"glow": Color.MAGENTA, "glow_energy": 0.0,
+	"glow": Color.MAGENTA, "glow_energy": 0.0, "trim_glow": 0.0,
 }
 ## The melee sets' palettes (#162, the approved board on #157). None has a staff, so
 ## glow_energy is 0; Ruinwarden's glow is the colour its chest rune and fuller shine in.
@@ -203,20 +206,20 @@ const MISSING := {
 const HEARTHGUARD := {
 	"base": Color("#7d8aa3"), "dark": Color("#5c6880"),
 	"trim": Color("#d9a64a"), "accent": Color("#8a5a2b"),
-	"glow": Color.BLACK, "glow_energy": 0.0,
+	"glow": Color.BLACK, "glow_energy": 0.0, "trim_glow": 0.0,
 }
 ## Wolfmark: dark iron and its shade, pale fur trim, the grey pelt; the blood sash and brass
 ## cap are the pieces' own colours.
 const WOLFMARK := {
 	"base": Color("#4e5668"), "dark": Color("#363c4c"),
 	"trim": Color("#d8ccb8"), "accent": Color("#8c8070"),
-	"glow": Color.BLACK, "glow_energy": 0.0,
+	"glow": Color.BLACK, "glow_energy": 0.0, "trim_glow": 0.0,
 }
 ## Ruinwarden: old gold over its dark, verdigris trim, the crimson plume, the rune's glow.
 const RUINWARDEN := {
 	"base": Color("#b08a3c"), "dark": Color("#4a3a1e"),
 	"trim": Color("#5f8a7a"), "accent": Color("#a8302a"),
-	"glow": Color("#6fe3c8"), "glow_energy": 0.0,
+	"glow": Color("#6fe3c8"), "glow_energy": 0.0, "trim_glow": 0.0,
 }
 ## The lit rim tints the sets' plates catch (the third tint of a material, beside its base and
 ## its recessed shade), and the sets' extra materials.
@@ -230,31 +233,31 @@ const RUINWARDEN_VERDIGRIS_LIT := Color("#7fae9c")
 const RUINWARDEN_PLUME_DARK := Color("#731f1b")
 const RUINWARDEN_PLUME_LIT := Color("#d8514a")
 ## The melee top sets' palettes (#163, the approved board on #157). The glow is the colour a
-## set's seams, shard tips, trim or cracks shine in (the only melee sets allowed a light or
-## particles); Trollbone has none, on purpose. None has a staff, so glow_energy is 0.
+## set's seams, shard tips, trim or cracks shine in, and every set's trims shine (`trim_glow`,
+## #250); Trollbone's glow is only its bone trim. None has a staff, so glow_energy is 0.
 ## Emberheart: forge black and its recessed shade, dark bronze bands and straps, horn.
 const EMBERHEART := {
 	"base": Color("#2e2a33"), "dark": Color("#1c1921"),
 	"trim": Color("#8a3a1a"), "accent": Color("#3a3340"),
-	"glow": Color("#ff7a1f"), "glow_energy": 0.0,
+	"glow": Color("#ff7a1f"), "glow_energy": 0.0, "trim_glow": 0.8,
 }
 ## Hoarfrost: ice over the dark-blue harness, white fur, ice shade.
 const HOARFROST := {
 	"base": Color("#cfe3f2"), "dark": Color("#3a4a6a"),
 	"trim": Color("#f1ece2"), "accent": Color("#a9d4ef"),
-	"glow": Color("#7fd4ff"), "glow_energy": 0.0,
+	"glow": Color("#7fd4ff"), "glow_energy": 0.0, "trim_glow": 0.4,
 }
 ## Auroral: dusk violet and its shade, lilac trim, pale antler.
 const AURORAL := {
 	"base": Color("#3f3670"), "dark": Color("#2a2350"),
 	"trim": Color("#b08cff"), "accent": Color("#e8dcc0"),
-	"glow": Color("#6ff0b0"), "glow_energy": 0.0,
+	"glow": Color("#6ff0b0"), "glow_energy": 0.0, "trim_glow": 0.6,
 }
 ## Trollbone: hide, dark, bone, blood.
 const TROLLBONE := {
 	"base": Color("#4a3a2e"), "dark": Color("#2a2238"),
 	"trim": Color("#e8dcc0"), "accent": Color("#a3302a"),
-	"glow": Color.BLACK, "glow_energy": 0.0,
+	"glow": Color.BLACK, "glow_energy": 0.0, "trim_glow": 0.4,
 }
 ## The top sets' lit rim tints and extra materials.
 const EMBERHEART_LIT := Color("#46404e")
@@ -269,25 +272,25 @@ const TROLLBONE_HIDE_LIT := Color("#62503f")
 const TROLLBONE_BLOOD_DARK := Color("#731f1b")
 ## The magic sets' palettes (#166, the approved round-2 board on #157). Each has a staff, but
 ## its glow is per part (the shard, the brow prism, the glyph band), so glow_energy is 0 and
-## `Figures.staff` is never drawn for a set: the glow colour is what those parts shine in. No
-## magic set carries a light or motes.
+## `Figures.staff` is never drawn for a set: the glow colour is what those parts would shine
+## in, but a mid to high set keeps plain materials (#250), so none of them is lit.
 ## Shardweaver: undyed wool and its shade, cream trim, rope; the frost of a raw shard.
 const SHARDWEAVER := {
 	"base": Color("#5e6d8a"), "dark": Color("#45526b"),
 	"trim": Color("#d9d2c2"), "accent": Color("#b59a6a"),
-	"glow": Color("#9ecbff"), "glow_energy": 0.0,
+	"glow": Color("#9ecbff"), "glow_energy": 0.0, "trim_glow": 0.0,
 }
 ## Rimecaller: indigo and its shade, frost white, dark ash; frost glow.
 const RIMECALLER := {
 	"base": Color("#3b4a8c"), "dark": Color("#2b3668"),
 	"trim": Color("#cfe2ff"), "accent": Color("#5c4a3a"),
-	"glow": Color("#9ecbff"), "glow_energy": 0.0,
+	"glow": Color("#9ecbff"), "glow_energy": 0.0, "trim_glow": 0.0,
 }
 ## Glacier Warden: teal and its shade, silver, iron; ice glow.
 const GLACIER_WARDEN := {
 	"base": Color("#1f6e7a"), "dark": Color("#154e58"),
 	"trim": Color("#c9d7de"), "accent": Color("#39404a"),
-	"glow": Color("#8fe6f0"), "glow_energy": 0.0,
+	"glow": Color("#8fe6f0"), "glow_energy": 0.0, "trim_glow": 0.0,
 }
 ## The magic sets' extra materials and lit rim tints.
 const SHARDWEAVER_PINE := Color("#7a5234")
@@ -297,32 +300,32 @@ const RIMECALLER_ASH_LIT := Color("#7a6450")
 const GLACIER_WARDEN_LIT := Color("#e3ebef")
 const GLACIER_WARDEN_IRON_LIT := Color("#4f5866")
 ## The magic top sets' palettes (#167, the approved round-2 board on #157): the magic sets above
-## steel, each with exactly one light, at its staff head, a few motes there, and emission in
-## its glow colour on the parts the issue names. Each has a staff, but its glow is per part, so
-## glow_energy is 0 and `Figures.staff` is never drawn for a set.
+## steel, each with emission in its glow colour on the parts the issue names and its trims
+## shining (`trim_glow`, #250), with no light and no motes. Each has a staff, but its glow is
+## per part, so glow_energy is 0 and `Figures.staff` is never drawn for a set.
 ## Hoarfrost Sovereign: glacier white over ice shade, steel blue, pale ice; frost glow.
 const HOARFROST_SOVEREIGN := {
 	"base": Color("#dbe8fa"), "dark": Color("#9fb6d6"),
 	"trim": Color("#5f7fb0"), "accent": Color("#c4dcf5"),
-	"glow": Color("#a7e4ff"), "glow_energy": 0.0,
+	"glow": Color("#a7e4ff"), "glow_energy": 0.0, "trim_glow": 0.8,
 }
 ## Hearthfire Magus: charcoal over soot, brass, flame; ember glow.
 const HEARTHFIRE_MAGUS := {
 	"base": Color("#2b2522"), "dark": Color("#1b1614"),
 	"trim": Color("#c88a3c"), "accent": Color("#ffc46b"),
-	"glow": Color("#ff9e38"), "glow_energy": 0.0,
+	"glow": Color("#ff9e38"), "glow_energy": 0.0, "trim_glow": 0.6,
 }
 ## Aurora Shaman: violet over its shade, bone, antler; aurora glow.
 const AURORA_SHAMAN := {
 	"base": Color("#3e2f6b"), "dark": Color("#2a1f4d"),
 	"trim": Color("#e9e4d2"), "accent": Color("#8b7a5a"),
-	"glow": Color("#7ff0c4"), "glow_energy": 0.0,
+	"glow": Color("#7ff0c4"), "glow_energy": 0.0, "trim_glow": 0.4,
 }
 ## Ruinwarden (the magic line's): dusk cloth over deep cloth, ruin stone, pillar; rune glow.
 const RUINWARDEN_MAGE := {
 	"base": Color("#2a2a3e"), "dark": Color("#1b1b2a"),
 	"trim": Color("#6c6f86"), "accent": Color("#4a4a5c"),
-	"glow": Color("#b784ff"), "glow_energy": 0.0,
+	"glow": Color("#b784ff"), "glow_energy": 0.0, "trim_glow": 0.8,
 }
 ## The magic top sets' lit rim tints and shaded tones.
 const HOARFROST_SOVEREIGN_LIT := Color("#f2f7fd")
@@ -342,19 +345,19 @@ const RUINWARDEN_MAGE_STONE_DARK := Color("#525468")
 const TRAPPER := {
 	"base": Color("#a8784a"), "dark": Color("#4a3324"),
 	"trim": Color("#d8c9a8"), "accent": Color("#8a6a46"),
-	"glow": Color.BLACK, "glow_energy": 0.0,
+	"glow": Color.BLACK, "glow_energy": 0.0, "trim_glow": 0.0,
 }
 ## Wolfstalker: the grey wolf pelt over dark leather, bone trim, the yew stave.
 const WOLFSTALKER := {
 	"base": Color("#9c9ca8"), "dark": Color("#3b2f2a"),
 	"trim": Color("#dcd6c0"), "accent": Color("#4f3a2c"),
-	"glow": Color.BLACK, "glow_energy": 0.0,
+	"glow": Color.BLACK, "glow_energy": 0.0, "trim_glow": 0.0,
 }
 ## Steelpoint Ranger: smithed steel, dark straps, the amber feather, pine-green leather.
 const STEELPOINT := {
 	"base": Color("#6b80a0"), "dark": Color("#1f2a24"),
 	"trim": Color("#e8a040"), "accent": Color("#2f4a3a"),
-	"glow": Color.BLACK, "glow_energy": 0.0,
+	"glow": Color.BLACK, "glow_energy": 0.0, "trim_glow": 0.0,
 }
 ## The ranged sets' lit and shaded tints, and the pale bowstring every bow shares.
 const TRAPPER_HIDE_LIT := Color("#c4945e")
@@ -365,31 +368,31 @@ const STEELPOINT_AMBER_DARK := Color("#b87a28")
 const BOWSTRING := Color("#e6e0cc")
 
 ## The ranged top sets' palettes (#165, the approved board on #157). Each has one accent glow,
-## the colour its tips, hems, eyes, strings or nocks shine in: emissive only, no light and no
-## motes. None has a staff, so glow_energy is 0.
+## the colour its tips, hems, eyes, strings or nocks shine in, and its trims shine (`trim_glow`,
+## #250): emissive only, no light and no motes. None has a staff, so glow_energy is 0.
 ## Ember Hawk: charcoal and its char, gold trim, the warm string, ember glow.
 const EMBER_HAWK := {
 	"base": Color("#2b2422"), "dark": Color("#1a1512"),
 	"trim": Color("#c9922e"), "accent": Color("#f3d7a6"),
-	"glow": Color("#ffa033"), "glow_energy": 0.0,
+	"glow": Color("#ffa033"), "glow_energy": 0.0, "trim_glow": 0.6,
 }
 ## Auroral Warden: snow hide over violet lining, silver, a shaded hide, aurora glow.
 const AURORAL_WARDEN := {
 	"base": Color("#ece9f5"), "dark": Color("#3d2d6b"),
 	"trim": Color("#b9c3d6"), "accent": Color("#d4d0e3"),
-	"glow": Color("#5ff0c8"), "glow_energy": 0.0,
+	"glow": Color("#5ff0c8"), "glow_energy": 0.0, "trim_glow": 0.4,
 }
 ## Ruin Stalker's Shroud: ink and its pitch, bone, ash grey, violet glow.
 const RUIN_STALKER := {
 	"base": Color("#15141c"), "dark": Color("#0b0a10"),
 	"trim": Color("#dcd4bc"), "accent": Color("#6a6878"),
-	"glow": Color("#9a6cff"), "glow_energy": 0.0,
+	"glow": Color("#9a6cff"), "glow_energy": 0.0, "trim_glow": 0.4,
 }
 ## Glacier Sovereign: ice hide over deep sea, the crystal face, a shaded ice, frost glow.
 const GLACIER_SOVEREIGN := {
 	"base": Color("#b7d4ea"), "dark": Color("#1e3a5a"),
 	"trim": Color("#d9f0ff"), "accent": Color("#8fb6d6"),
-	"glow": Color("#8cd9ff"), "glow_energy": 0.0,
+	"glow": Color("#8cd9ff"), "glow_energy": 0.0, "trim_glow": 0.4,
 }
 ## The ranged top sets' lit rim tints and shaded tones.
 const EMBER_HAWK_LIT := Color("#3d3431")
@@ -522,12 +525,10 @@ const SHAPES := {
 		"round": false, "tone": "base", "under_tone": "dark", "trim_tone": "trim", "glow": 0.0,
 	},
 	# A prism with `facets` sides, its tip in the glow colour over a dark root, tilted by
-	# `tilt`; `light` adds one small light at the tip and `motes` a few glowing motes.
+	# `tilt`; the tip shines only when `glow` is above 0.
 	SHAPE_CRYSTAL: {
 		"facets": 4, "length": 0.3, "radius": 0.06, "root": 0.3, "offset": Vector3.ZERO, "tilt": Vector3.ZERO,
-		"glow": 1.0, "light": false, "light_energy": 1.0, "light_range": 3.0,
-		"motes": false, "motes_count": 4, "motes_radius": 0.25, "motes_size": 0.03, "motes_rise": 0.3,
-		"root_tone": "dark",
+		"glow": 0.0, "root_tone": "dark",
 	},
 	# A thin flat plate standing up from its root, `size` wide, long and thick, with a lit
 	# edge along its tip, or `teeth` points there when `jagged`.
@@ -637,14 +638,11 @@ const SHAPES := {
 	# (a full turn for a crown, less for a cluster centred on the front), each leaning out
 	# `lean` and every other one `short` as long as its neighbours: a `facets`-sided shard
 	# `shard` across and `length` long in `tone`, the top `tip` of it in the highlight
-	# (`tip_tone`: the glow colour, lit, when glow is above 0). `light` and `motes` as a
-	# crystal takes them.
+	# (`tip_tone`: the glow colour, lit, when glow is above 0).
 	SHAPE_SHARD_CROWN: {
 		"count": 7, "radius": 0.36, "arc": TAU, "length": 0.3, "short": 0.65, "shard": 0.05, "facets": 4,
 		"lean": 0.35, "tip": 0.45, "offset": Vector3(0, 0.55, 0), "tilt": Vector3.ZERO,
 		"tone": "base", "tip_tone": "accent", "glow": 0.0,
-		"light": false, "light_energy": 1.0, "light_range": 3.0,
-		"motes": false, "motes_count": 5, "motes_radius": 0.3, "motes_size": 0.03, "motes_rise": 0.25,
 	},
 	# Two antlers (`Left` and `Right`) `x` either side of `offset`, each a thin `facets`-sided
 	# beam its own length leaning out `spread` and back `sweep`, with its own count of tines
@@ -662,13 +660,10 @@ const SHAPES := {
 	# across (x along the hand, y tall, z deep) in `tone`, a band `band` wide round it `band_x`
 	# of its half-width out each side in `band_tone`, and `cracks` strips `crack` wide across
 	# its faces in the highlight (`crack_tone`: the glow colour, lit, when glow is above 0).
-	# `light` and `motes` as a crystal takes them, at the head.
 	SHAPE_FORGE_HAMMER: {
 		"haft_length": 0.9, "haft_radius": 0.035, "rise": 0.1, "head_size": Vector3(0.46, 0.2, 0.2),
 		"band": 0.04, "band_x": 0.3, "cracks": 3, "crack": 0.022, "tilt": Vector3(0, 0, PI * 0.25),
 		"tone": "base", "haft_tone": "accent", "band_tone": "trim", "crack_tone": "trim", "glow": 0.0,
-		"light": false, "light_energy": 1.0, "light_range": 3.0,
-		"motes": false, "motes_count": 5, "motes_radius": 0.2, "motes_size": 0.03, "motes_rise": 0.3,
 	},
 	# A glaive: a long haft `haft_length` long in `haft_tone` with a cap at its foot and a
 	# `ferrule` tall ferrule under the blade in `ferrule_tone`; the blade `blade_length` long
@@ -757,7 +752,7 @@ const SHAPES := {
 	# right tine's root and `beads` beads `bead` across in `bead_tone` strung from the left's;
 	# pillar, `teeth` jagged points `tooth` tall round the shaft's broken top with the prism
 	# rising from the break. Every prism is the glow colour over a `root_tone` root, lit at
-	# `glow`. `light` and `motes` as a crystal takes them, at the head.
+	# `glow`.
 	SHAPE_MAGE_STAFF: {
 		"head": HEAD_LASHED, "length": 1.5, "foot": 0.35, "radius": 0.04, "segments": 6, "tilt": Vector3.ZERO,
 		"collar": 0.05, "collar_radius": 0.065, "grip": 0.12, "grip_y": 0.08, "lash": 0.03,
@@ -768,12 +763,10 @@ const SHAPES := {
 		"cup": 0.18, "cup_radius": 0.15, "feather": 0.24, "beads": 3, "bead": 0.02, "teeth": 5, "tooth": 0.12,
 		"tone": "accent", "collar_tone": "trim", "grip_tone": "dark", "lash_tone": "trim", "fork_tone": "accent",
 		"ring_tone": "trim", "cup_tone": "trim", "feather_tone": "trim", "bead_tone": "trim", "root_tone": "dark", "glow": 0.0,
-		"light": false, "light_energy": 1.0, "light_range": 3.0,
-		"motes": false, "motes_count": 4, "motes_radius": 0.2, "motes_size": 0.03, "motes_rise": 0.3,
 	},
 }
 
-## One look of each kit shape, for the shader warm-up (a light and motes included) and the kit
+## One look of each kit shape, for the shader warm-up and the kit
 ## shots: unequal sides where a shape has them, a jagged edge, a lit highlight.
 const KIT_SAMPLES := [
 	{"shape": SHAPE_PEAKED_HOOD, "glow": 0.6},
@@ -781,7 +774,7 @@ const KIT_SAMPLES := [
 	{"shape": SHAPE_CLOAK, "outline": OUTLINE_FORKED, "length_left": 0.95, "length_right": 0.8, "glow": 0.8},
 	{"shape": SHAPE_COLLAR, "kind": COLLAR_JAGGED, "glow": 1.2},
 	{"shape": SHAPE_STACKED_PLATES, "plates_left": 3, "plates_right": 2, "size_left": Vector3(0.32, 0.08, 0.36), "glow": 0.8},
-	{"shape": SHAPE_CRYSTAL, "length": 0.45, "radius": 0.1, "glow": 1.6, "light": true, "light_energy": 1.5, "motes": true, "offset": Vector3(0, 0.7, 0)},
+	{"shape": SHAPE_CRYSTAL, "length": 0.45, "radius": 0.1, "glow": 1.6, "offset": Vector3(0, 0.7, 0)},
 	{"shape": SHAPE_FIN, "size": Vector3(0.2, 0.45, 0.04), "jagged": true, "offset": Vector3(0, 0.72, 0.05), "tilt": Vector3(0.4, 0, 0), "glow": 1.0},
 	{"shape": SHAPE_PRISM_STACK, "offset": Vector3(0.32, 0.55, 0), "tilt": Vector3(0, 0, -0.7), "glow": 1.2},
 	{"shape": SHAPE_STUDS, "glow": 1.0},
@@ -920,8 +913,8 @@ const LOOKS := {
 	}},
 	"wolfmark_axe": {"palette": WOLFMARK, PART_WEAPON: {"shape": SHAPE_BEARDED_AXE, "haft_tone": WOLFMARK_ASH, "cap_tone": WOLFMARK_BRASS}},
 	# Ruinwarden (high): old gold dug from the ring-two ruins, verdigris plate, a tall crest, a
-	# crimson plume, and one rune that still glows faintly. Glow: the chest rune and the
-	# greatsword's fuller only, emissive with no light and no motes.
+	# crimson plume, and one rune in its old teal. No glow: a high set keeps plain materials
+	# (#250).
 	"ruinwarden_helm": {"palette": RUINWARDEN, PART_HEAD: {
 		# a gold dome under a verdigris band with lit-gold rivets, a tall crest running front
 		# to back with a verdigris edge, a crimson plume curling back from its top and a cheek
@@ -936,14 +929,14 @@ const LOOKS := {
 		],
 	}},
 	"ruinwarden_body": {"palette": RUINWARDEN, PART_BODY: {
-		# layered gold plate: a chest plate with a lit-gold rim round the glowing rune, a gold
+		# layered gold plate: a chest plate with a lit-gold rim round the teal rune, a gold
 		# hem rim, a verdigris gorget and a high collar behind the neck, and big angular
 		# pauldrons, three plates on the left and two on the right, alternating gold and
 		# verdigris
 		"shape": SHAPE_VEST,
 		LAYERS: [
 			{"shape": SHAPE_EDGE_TRIM, "size": Vector3(0.34, 0.03, 0.26), "offset": Vector3(0, 0.0, -0.31), "tilt": Vector3(-1.42, 0, 0), "tone": RUINWARDEN_LIT},
-			{"shape": SHAPE_CRYSTAL, "facets": 4, "length": 0.17, "radius": 0.085, "root": 0.3, "offset": Vector3(0, 0.05, -0.33), "tilt": Vector3(-1.1, 0, 0), "glow": 0.8, "root_tone": "trim"},
+			{"shape": SHAPE_CRYSTAL, "facets": 4, "length": 0.17, "radius": 0.085, "root": 0.3, "offset": Vector3(0, 0.05, -0.33), "tilt": Vector3(-1.1, 0, 0), "root_tone": "trim"},
 			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.36, "size": Vector3(0, 0.04, 0), "lip": 0.02, "offset": Vector3(0, -0.29, 0), "tone": RUINWARDEN_LIT},
 			{"shape": SHAPE_RUFF, "inner": 0.2, "outer": 0.4, "y": 0.2, "trim": 0.03, "tone": "trim", "trim_tone": RUINWARDEN_VERDIGRIS_LIT},
 			{"shape": SHAPE_COLLAR, "kind": COLLAR_HIGH, "width": 0.5, "height": 0.28, "offset": Vector3(0, 0.22, 0.3), "tone": "trim", "edge_tone": RUINWARDEN_VERDIGRIS_LIT},
@@ -958,14 +951,13 @@ const LOOKS := {
 		# a gold greave with a verdigris band at its top
 		"shape": SHAPE_FUR_BAND, "band_radius": 0.175, "band_height": 0.05, "band_y": -0.02,
 	}},
-	"ruinwarden_greatsword": {"palette": RUINWARDEN, PART_WEAPON: {"shape": SHAPE_GREATSWORD, "glow": 0.7}},
-	# The melee top sets (#163): the only melee sets allowed a light or particles. At most one
-	# light per set, and only Emberheart's hammer carries one; a few motes per set (one emitter
-	# each, a handful alive at once); Trollbone has no glow at all, on purpose. Every colour,
-	# size, offset and glow is here, to be tuned live after playtesting with a re-shoot.
+	"ruinwarden_greatsword": {"palette": RUINWARDEN, PART_WEAPON: {"shape": SHAPE_GREATSWORD, "fuller_tone": RUINWARDEN["glow"]}},
+	# The melee top sets (#163). Glow is emission only (#250): each palette's trims shine, and
+	# Trollbone's bone trim is its only glow. Every colour, size, offset and glow is here, to be
+	# tuned live after playtesting with a re-shoot.
 	# Emberheart (top): forge-black plate that carries the outpost fire out into the cold, ember
-	# light bleeding through every seam. Glow: emissive seams and cracks, one warm light and a few
-	# embers rising off the hammer, embers off the burning core.
+	# light bleeding through every seam. Glow: emissive seams, cracks, the burning core and the
+	# bronze trims.
 	"emberheart_helm": {"palette": EMBERHEART, PART_HEAD: {
 		# a tall black dome under a dark bronze band with a lit rim above it, an ember eye slit
 		# across the face, and two black horns curving out then up, the left the longer, each
@@ -982,8 +974,8 @@ const LOOKS := {
 	}},
 	"emberheart_body": {"palette": EMBERHEART, PART_BODY: {
 		# black plate with a lit rim at the collar and a bronze rim at the hem, three ember cracks
-		# down the chest round a burning core (a six-sided crystal faced forward and up, embers
-		# rising off it), and big angular pauldrons, three plates on the left and two on the
+		# down the chest round a burning core (a six-sided crystal faced forward and up), and big
+		# angular pauldrons, three plates on the left and two on the
 		# right, their edges lit ember
 		"shape": SHAPE_VEST,
 		LAYERS: [
@@ -992,7 +984,7 @@ const LOOKS := {
 			{"shape": SHAPE_SEAM, "size": Vector3(0.03, 0.26, 0.03), "offset": Vector3(-0.12, -0.02, -0.355), "tilt": Vector3(-0.1, 0, 0.35), "glow": 1.3},
 			{"shape": SHAPE_SEAM, "size": Vector3(0.03, 0.26, 0.03), "offset": Vector3(0.12, -0.02, -0.355), "tilt": Vector3(-0.1, 0, -0.35), "glow": 1.3},
 			{"shape": SHAPE_SEAM, "size": Vector3(0.03, 0.2, 0.03), "offset": Vector3(0, -0.2, -0.37), "glow": 1.3},
-			{"shape": SHAPE_CRYSTAL, "facets": 6, "length": 0.14, "radius": 0.08, "root": 0.35, "offset": Vector3(0, 0.03, -0.34), "tilt": Vector3(-1.2, 0, 0), "glow": 1.6, "root_tone": "trim", "motes": true, "motes_count": 6, "motes_radius": 0.2, "motes_size": 0.025, "motes_rise": 0.4},
+			{"shape": SHAPE_CRYSTAL, "facets": 6, "length": 0.14, "radius": 0.08, "root": 0.35, "offset": Vector3(0, 0.03, -0.34), "tilt": Vector3(-1.2, 0, 0), "glow": 1.6, "root_tone": "trim"},
 			{"shape": SHAPE_STACKED_PLATES, "plates_left": 3, "plates_right": 2, "size_left": Vector3(0.36, 0.1, 0.4), "size_right": Vector3(0.32, 0.1, 0.36), "x": 0.44, "y": 0.2, "tilt": 0.3, "step": Vector3(0.05, -0.08, 0), "under_tone": "accent", "glow": 1.0},
 		],
 	}},
@@ -1005,19 +997,18 @@ const LOOKS := {
 		"shape": SHAPE_FUR_BAND, "band_radius": 0.175, "band_height": 0.04, "band_y": -0.02,
 		LAYERS: [{"shape": SHAPE_SEAM, "size": Vector3(0.025, 0.16, 0.025), "offset": Vector3(0, -0.12, -0.165), "glow": 1.2}],
 	}},
-	# the forge hammer: a black head cracked with ember, banded in dark bronze on a horn haft,
-	# carrying the one small warm light the four sets are allowed
-	"emberheart_hammer": {"palette": EMBERHEART, PART_WEAPON: {"shape": SHAPE_FORGE_HAMMER, "glow": 1.5, "light": true, "light_energy": 1.2, "light_range": 2.5}},
+	# the forge hammer: a black head cracked with ember, banded in dark bronze on a horn haft
+	"emberheart_hammer": {"palette": EMBERHEART, PART_WEAPON: {"shape": SHAPE_FORGE_HAMMER, "glow": 1.5}},
 	# Hoarfrost (top): ice plate grown over white fur, a crown of frost shards, crystal shoulders
-	# and a blade that is one long icicle. Glow: emissive shard tips and the blade's core, a few
-	# frost motes off the crown. The dark-blue harness holds the silhouette on pale snow.
+	# and a blade that is one long icicle. Glow: emissive shard tips, the blade's core and the
+	# white fur trims. The dark-blue harness holds the silhouette on pale snow.
 	"hoarfrost_helm": {"palette": HOARFROST, PART_HEAD: {
-		# a pale ice cap over a dark harness band with a lit rim, under a tilted crown of seven
-		# frost shards glowing faintly blue at the tips, frost motes drifting up through it
+		# a pale ice cap over a dark harness band with a white fur rim, under a tilted crown of seven
+		# frost shards glowing faintly blue at the tips
 		"shape": SHAPE_HELM, "band": true, "band_tone": "dark", "band_height": 0.07, "band_y": 0.4,
 		LAYERS: [
-			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.47, "size": Vector3(0, 0.03, 0), "lip": 0.0, "offset": Vector3(0, 0.46, 0), "tone": HOARFROST_LIT},
-			{"shape": SHAPE_SHARD_CROWN, "count": 7, "tone": "accent", "glow": 0.8, "offset": Vector3(0, 0.52, 0), "tilt": Vector3(0.12, 0, -0.1), "motes": true, "motes_count": 5},
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.47, "size": Vector3(0, 0.03, 0), "lip": 0.0, "offset": Vector3(0, 0.46, 0), "tone": "trim"},
+			{"shape": SHAPE_SHARD_CROWN, "count": 7, "tone": "accent", "glow": 0.8, "offset": Vector3(0, 0.52, 0), "tilt": Vector3(0.12, 0, -0.1)},
 		],
 	}},
 	"hoarfrost_body": {"palette": HOARFROST, PART_BODY: {
@@ -1047,7 +1038,7 @@ const LOOKS := {
 	"hoarfrost_greatsword": {"palette": HOARFROST, PART_WEAPON: {"shape": SHAPE_GREATSWORD, "ridge_tone": "accent", "guard_tone": "dark", "grip_tone": "dark", "fuller_length": 1.0, "glow": 1.4}},
 	# Auroral (top): dusk-violet plate under the northern lights, antlers of the great stag,
 	# swept wing pauldrons and aurora-green trim. Glow: emissive green seams, rims and the blade
-	# edge, a faint aurora shimmer of motes off the star.
+	# edge, and the lilac trims.
 	"auroral_helm": {"palette": AURORAL, PART_HEAD: {
 		# a deep violet dome under a lilac band with a lit rim, pale antlers branching up and out,
 		# the left the longer with one more tine
@@ -1059,8 +1050,7 @@ const LOOKS := {
 	}},
 	"auroral_body": {"palette": AURORAL, PART_BODY: {
 		# violet plate with lilac rims at the collar and hem, two aurora-green seams either side
-		# of a five-pointed star (a crystal faced forward and up, an aurora shimmer of motes round
-		# it), a shoulder plate each side and a swept wing rising out and up from each, the left
+		# of a five-pointed star (a crystal faced forward and up), a shoulder plate each side and a swept wing rising out and up from each, the left
 		# the longer, edged in green
 		"shape": SHAPE_VEST,
 		LAYERS: [
@@ -1068,7 +1058,7 @@ const LOOKS := {
 			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.36, "size": Vector3(0, 0.04, 0), "lip": 0.02, "offset": Vector3(0, -0.29, 0)},
 			{"shape": SHAPE_SEAM, "size": Vector3(0.03, 0.3, 0.03), "offset": Vector3(-0.15, -0.04, -0.35), "tilt": Vector3(-0.1, 0, 0), "glow": 1.2},
 			{"shape": SHAPE_SEAM, "size": Vector3(0.03, 0.3, 0.03), "offset": Vector3(0.15, -0.04, -0.35), "tilt": Vector3(-0.1, 0, 0), "glow": 1.2},
-			{"shape": SHAPE_CRYSTAL, "facets": 5, "length": 0.14, "radius": 0.09, "root": 0.3, "offset": Vector3(0, 0.0, -0.34), "tilt": Vector3(-1.2, 0, 0), "glow": 1.5, "root_tone": "trim", "motes": true, "motes_count": 6, "motes_radius": 0.35, "motes_size": 0.025, "motes_rise": 0.2},
+			{"shape": SHAPE_CRYSTAL, "facets": 5, "length": 0.14, "radius": 0.09, "root": 0.3, "offset": Vector3(0, 0.0, -0.34), "tilt": Vector3(-1.2, 0, 0), "glow": 1.5, "root_tone": "trim"},
 			{"shape": SHAPE_STACKED_PLATES, "plates_left": 1, "plates_right": 1, "size_left": Vector3(0.3, 0.08, 0.34), "size_right": Vector3(0.3, 0.08, 0.34), "trim_tone": AURORAL_LIT},
 			{"shape": SHAPE_FIN, "size": Vector3(0.3, 0.46, 0.04), "offset": Vector3(-0.42, 0.24, 0.02), "tilt": Vector3(-(PI * 0.5 - 0.5), PI * 0.5, 0), "edge": 0.03, "glow": 1.0},
 			{"shape": SHAPE_FIN, "size": Vector3(0.3, 0.38, 0.04), "offset": Vector3(0.42, 0.24, 0.02), "tilt": Vector3(-(PI * 0.5 - 0.5), -PI * 0.5, 0), "edge": 0.03, "glow": 1.0},
@@ -1086,8 +1076,8 @@ const LOOKS := {
 	# green along its edge
 	"auroral_glaive": {"palette": AURORAL, PART_WEAPON: {"shape": SHAPE_GLAIVE, "tone": AURORAL_LIT, "haft_tone": "base", "glow": 1.4}},
 	# Trollbone (top): trophies of the ice troll, a tusked skull helm, tusk pauldrons, bone
-	# plates lashed over dark hide and a cleaver cut from one tusk. No glow, light or motes, on
-	# purpose: the silhouette alone says top.
+	# plates lashed over dark hide and a cleaver cut from one tusk. Its only glow is the bone
+	# trim (#250); the silhouette says the rest.
 	"trollbone_helm": {"palette": TROLLBONE, PART_HEAD: {
 		# an ivory skull over a hide band: two dark eye sockets, a toothed jaw guard hanging over
 		# the chin, and two tusks curving out then up from the cheeks, the left the longer
@@ -1293,8 +1283,8 @@ const LOOKS := {
 	# the ember bow: a black stave with a gold grip and gold limb caps, a warm string and
 	# glowing limb tips
 	"ember_hawk_bow": {"palette": EMBER_HAWK, PART_WEAPON: {"shape": SHAPE_LONGBOW, "tip_bend": 0.2, "cap_length": 0.1, "grip_tone": "trim", "cap_tone": "trim", "string_tone": "accent", "glow": 1.3}},
-	# a charcoal quiver with a gold cap band, dark shafts and ember fletching
-	"ember_hawk_quiver": {"palette": EMBER_HAWK, PART_QUIVER: {"shape": SHAPE_QUIVER, "foot_tone": "dark", "band_tone": "trim", "shaft_tone": "dark", "fletch_tone": "trim", "glow": 1.2}},
+	# a charcoal quiver with a gold foot and cap band, dark shafts and ember fletching
+	"ember_hawk_quiver": {"palette": EMBER_HAWK, PART_QUIVER: {"shape": SHAPE_QUIVER, "foot_tone": "trim", "band_tone": "trim", "shaft_tone": "dark", "fletch_tone": "trim", "glow": 1.2}},
 	# Auroral Warden (top): a bow blessed under the outer rings' aurora, the magic-hunter in
 	# snow-white hide, silver and a banner of green light. Glow: the banner, the kilt's and the
 	# mantle's hems, the bowstring and nocks, the quiver's fletching.
@@ -1334,11 +1324,11 @@ const LOOKS := {
 	# the silver bow strung with light: a silver stave with a violet grip, its string and nocks
 	# glowing aurora green
 	"auroral_warden_bow": {"palette": AURORAL_WARDEN, PART_WEAPON: {"shape": SHAPE_LONGBOW, "tip_bend": 0.3, "tone": "trim", "grip_tone": "dark", "lit_string": true, "glow": 1.3}},
-	# a white quiver with a silver cap band and violet foot, dark shafts and glowing fletching
-	"auroral_warden_quiver": {"palette": AURORAL_WARDEN, PART_QUIVER: {"shape": SHAPE_QUIVER, "foot_tone": "dark", "band_tone": "trim", "shaft_tone": "dark", "fletch_tone": "trim", "glow": 1.2}},
-	# the long white mantle hung behind the body, lined violet along its edges, its hem lit
+	# a white quiver with a silver cap band and silver foot, dark shafts and glowing fletching
+	"auroral_warden_quiver": {"palette": AURORAL_WARDEN, PART_QUIVER: {"shape": SHAPE_QUIVER, "foot_tone": "trim", "band_tone": "trim", "shaft_tone": "dark", "fletch_tone": "trim", "glow": 1.2}},
+	# the long white mantle hung behind the body, lined silver along its edges, its hem lit
 	# aurora green, the left half the longer
-	"auroral_warden_cape": {"palette": AURORAL_WARDEN, PART_CAPE: {"shape": SHAPE_CLOAK, "width": 0.64, "length_left": 1.0, "length_right": 0.92, "hem": 0.06, "lining": 0.03, "glow": 1.2}},
+	"auroral_warden_cape": {"palette": AURORAL_WARDEN, PART_CAPE: {"shape": SHAPE_CLOAK, "width": 0.64, "length_left": 1.0, "length_right": 0.92, "hem": 0.06, "lining": 0.03, "lining_tone": "trim", "glow": 1.2}},
 	# Ruin Stalker's Shroud (top): the ruin stalker's own hide and bone turned back on it, ink
 	# leathers, a bone mask, a tattered shroud. Glow: the mask's eyes and the bow's nocks only.
 	"ruin_stalker_helm": {"palette": RUIN_STALKER, PART_HEAD: {
@@ -1388,7 +1378,7 @@ const LOOKS := {
 	"ruin_stalker_quiver": {"palette": RUIN_STALKER, PART_QUIVER: {"shape": SHAPE_QUIVER, "foot_tone": "accent", "band_tone": "trim", "shaft_tone": "accent", "fletch_tone": "trim", "tip_tone": "trim"}},
 	# the long tattered shroud trailing behind, ink with bone-pale teeth at its ragged hem, the
 	# right half the longer
-	"ruin_stalker_cape": {"palette": RUIN_STALKER, PART_CAPE: {"shape": SHAPE_CLOAK, "outline": OUTLINE_TORN, "width": 0.62, "length_left": 0.95, "length_right": 1.05, "tilt": 0.3, "teeth": 4, "tooth": 0.14, "tooth_tone": RUIN_STALKER_BONE_DARK, "lining": 0.02, "lining_tone": RUIN_STALKER_INK_LIT}},
+	"ruin_stalker_cape": {"palette": RUIN_STALKER, PART_CAPE: {"shape": SHAPE_CLOAK, "outline": OUTLINE_TORN, "width": 0.62, "length_left": 0.95, "length_right": 1.05, "tilt": 0.3, "teeth": 4, "tooth": 0.14, "tooth_tone": "trim", "lining": 0.02, "lining_tone": RUIN_STALKER_INK_LIT}},
 	# Glacier Sovereign (top): ring two's ice crystals grown into a crown, deep-sea hide under
 	# ice plates, crystal spurs on the shoulders and frost shards for arrows. Glow: the crown's
 	# spikes, the pauldron spurs, the chest gem, the knee spurs, the bow's limb edges and tips,
@@ -1432,10 +1422,11 @@ const LOOKS := {
 	# the crystal bow: crystal limbs edged in frost glow with a deep-sea grip, a light string,
 	# and a frost shard standing off each glowing tip
 	"glacier_sovereign_bow": {"palette": GLACIER_SOVEREIGN, PART_WEAPON: {"shape": SHAPE_LONGBOW, "tip_bend": 0.2, "edge": 0.018, "shard": 0.09, "tone": "trim", "grip_tone": "dark", "string_tone": BOWSTRING, "glow": 1.2}},
-	# a deep-sea quiver with an ice foot and cap band, bristling with glowing frost shards
-	"glacier_sovereign_quiver": {"palette": GLACIER_SOVEREIGN, PART_QUIVER: {"shape": SHAPE_QUIVER, "tone": "dark", "foot_tone": "base", "band_tone": "base", "tips": TIPS_SHARDS, "tip_count": 4, "tip_tone": "trim", "glow": 1.2}},
-	# The magic sets (#166, the approved round-2 board on #157). No light, no motes: each glow is
-	# emission on the part the issue names, in the set's glow colour.
+	# a deep-sea quiver with a pale crystal foot and an ice cap band, bristling with glowing
+	# frost shards
+	"glacier_sovereign_quiver": {"palette": GLACIER_SOVEREIGN, PART_QUIVER: {"shape": SHAPE_QUIVER, "tone": "dark", "foot_tone": "trim", "band_tone": "base", "tips": TIPS_SHARDS, "tip_count": 4, "tip_tone": "trim", "glow": 1.2}},
+	# The magic sets (#166, the approved round-2 board on #157). No light, no motes and no
+	# emission (#250): the parts the issue names are drawn in the set's glow colour, unlit.
 	"shardweaver_helm": {"palette": SHARDWEAVER, PART_HEAD: {
 		# a wool cowl: the rounded hood with a cream hoop at the face, a rope band round the
 		# brow, a short drape hanging behind the neck, a cream scarf round the throat with one
@@ -1450,21 +1441,21 @@ const LOOKS := {
 	}},
 	"rimecaller_helm": {"palette": RIMECALLER, PART_HEAD: {
 		# a peaked indigo hood: a longer swept-back peak, a frost hoop at the face and one small
-		# four-facet prism at the brow, leaning out over the face, shining faintly
+		# four-facet prism at the brow, leaning out over the face
 		"shape": SHAPE_PEAKED_HOOD, "hoop_tone": "trim", "peak_length": 0.55,
 		LAYERS: [
-			{"shape": SHAPE_CRYSTAL, "facets": 4, "length": 0.16, "radius": 0.045, "root": 0.3, "offset": Vector3(0, 0.5, -0.44), "tilt": Vector3(-0.9, 0, 0), "glow": 0.8, "root_tone": "trim"},
+			{"shape": SHAPE_CRYSTAL, "facets": 4, "length": 0.16, "radius": 0.045, "root": 0.3, "offset": Vector3(0, 0.5, -0.44), "tilt": Vector3(-0.9, 0, 0), "root_tone": "trim"},
 		],
 	}},
 	"glacier_warden_helm": {"palette": GLACIER_WARDEN, PART_HEAD: {
 		# a peaked teal hood with a silver hoop at the face and a silver band round the brow,
 		# under a crest of three prisms fanned up from the crown, the centre tallest and the outer
-		# two leaning apart, all shining ice
+		# two leaning apart, all ice
 		"shape": SHAPE_PEAKED_HOOD, "hoop_tone": "trim", "peak_width": 0.4,
 		LAYERS: [
-			{"shape": SHAPE_CRYSTAL, "facets": 4, "length": 0.42, "radius": 0.07, "root": 0.25, "offset": Vector3(0, 0.78, -0.05), "tilt": Vector3(-0.15, 0, 0), "glow": 1.2, "root_tone": "trim"},
-			{"shape": SHAPE_CRYSTAL, "facets": 4, "length": 0.34, "radius": 0.06, "root": 0.25, "offset": Vector3(-0.17, 0.74, -0.04), "tilt": Vector3(-0.15, 0, 0.55), "glow": 1.2, "root_tone": "trim"},
-			{"shape": SHAPE_CRYSTAL, "facets": 4, "length": 0.28, "radius": 0.06, "root": 0.25, "offset": Vector3(0.17, 0.74, -0.04), "tilt": Vector3(-0.15, 0, -0.55), "glow": 1.2, "root_tone": "trim"},
+			{"shape": SHAPE_CRYSTAL, "facets": 4, "length": 0.42, "radius": 0.07, "root": 0.25, "offset": Vector3(0, 0.78, -0.05), "tilt": Vector3(-0.15, 0, 0), "root_tone": "trim"},
+			{"shape": SHAPE_CRYSTAL, "facets": 4, "length": 0.34, "radius": 0.06, "root": 0.25, "offset": Vector3(-0.17, 0.74, -0.04), "tilt": Vector3(-0.15, 0, 0.55), "root_tone": "trim"},
+			{"shape": SHAPE_CRYSTAL, "facets": 4, "length": 0.28, "radius": 0.06, "root": 0.25, "offset": Vector3(0.17, 0.74, -0.04), "tilt": Vector3(-0.15, 0, -0.55), "root_tone": "trim"},
 			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.5, "size": Vector3(0, 0.04, 0), "lip": 0.0, "offset": Vector3(0, 0.42, 0), "tone": "trim"},
 		],
 	}},
@@ -1490,21 +1481,21 @@ const LOOKS := {
 			{"shape": SHAPE_STACKED_PLATES, "plates_left": 2, "plates_right": 2, "size_left": Vector3(0.3, 0.07, 0.34), "size_right": Vector3(0.26, 0.07, 0.3), "x": 0.4, "y": 0.17, "tone": "trim", "under_tone": "dark", "trim_tone": RIMECALLER_FROST_LIT},
 			{"shape": SHAPE_COLLAR, "kind": COLLAR_HIGH, "width": 0.5, "height": 0.3, "offset": Vector3(0, 0.22, 0.3), "tone": "trim", "back_tone": "dark", "edge_tone": RIMECALLER_FROST_LIT},
 			{"shape": SHAPE_POUCH, "size": Vector3(0.16, 0.2, 0.07), "offset": Vector3(-0.4, -0.32, -0.06), "tilt": Vector3(0, -0.35, 0), "tone": "accent", "flap_tone": "trim"},
-			{"shape": SHAPE_CRYSTAL, "facets": 4, "length": 0.14, "radius": 0.035, "root": 0.35, "offset": Vector3(0.38, -0.24, -0.16), "tilt": Vector3(PI, 0, 0), "glow": 0.0, "root_tone": RIMECALLER_ASH_LIT},
+			{"shape": SHAPE_CRYSTAL, "facets": 4, "length": 0.14, "radius": 0.035, "root": 0.35, "offset": Vector3(0.38, -0.24, -0.16), "tilt": Vector3(PI, 0, 0), "root_tone": RIMECALLER_ASH_LIT},
 			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.4, "size": Vector3(0, 0.04, 0), "lip": 0.0, "offset": Vector3(0, -0.22, 0.05), "tone": "trim"},
 		],
 	}},
 	"glacier_warden_body": {"palette": GLACIER_WARDEN, PART_BODY: {
-		# a teal under-robe with a silver hem and a glowing glyph band under an open teal coat
-		# edged in silver, a silver chest plate with a lit glyph, silver upper plates stepped
+		# a teal under-robe with a silver hem and an ice glyph band under an open teal coat
+		# edged in silver, a silver chest plate with an ice glyph, silver upper plates stepped
 		# over dark-teal lower plates with a third plate on the left, a tall silver collar and a
 		# scroll case slung at the right hip
 		"shape": SHAPE_UNDER_ROBE, "bands": 1, "band_from": -0.85, "band_height": 0.06, "panel_left": 0.58, "panel_right": 0.44, "panel_edge": 0.03,
 		LAYERS: [
-			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.52, "size": Vector3(0, 0.035, 0), "lip": 0.0, "offset": Vector3(0, -0.62, 0), "glow": 1.0},
+			{"shape": SHAPE_EDGE_TRIM, "round": true, "radius": 0.52, "size": Vector3(0, 0.035, 0), "lip": 0.0, "offset": Vector3(0, -0.62, 0), "tone": GLACIER_WARDEN["glow"]},
 			{"shape": SHAPE_FIN, "size": Vector3(0.3, 0.24, 0.03), "offset": Vector3(0, -0.26, -0.465), "tilt": Vector3(0.19, 0, 0), "edge": 0.02, "tone": "trim", "edge_tone": GLACIER_WARDEN_LIT},
-			{"shape": SHAPE_SEAM, "size": Vector3(0.03, 0.16, 0.02), "offset": Vector3(0, -0.137, -0.472), "tilt": Vector3(0.19, 0, 0), "glow": 1.0},
-			{"shape": SHAPE_SEAM, "size": Vector3(0.12, 0.025, 0.02), "offset": Vector3(0, -0.087, -0.462), "tilt": Vector3(0.19, 0, 0), "glow": 1.0},
+			{"shape": SHAPE_SEAM, "size": Vector3(0.03, 0.16, 0.02), "offset": Vector3(0, -0.137, -0.472), "tilt": Vector3(0.19, 0, 0), "tone": GLACIER_WARDEN["glow"]},
+			{"shape": SHAPE_SEAM, "size": Vector3(0.12, 0.025, 0.02), "offset": Vector3(0, -0.087, -0.462), "tilt": Vector3(0.19, 0, 0), "tone": GLACIER_WARDEN["glow"]},
 			{"shape": SHAPE_STACKED_PLATES, "plates_left": 3, "plates_right": 2, "size_left": Vector3(0.32, 0.08, 0.36), "size_right": Vector3(0.28, 0.08, 0.32), "x": 0.42, "y": 0.18, "tilt": 0.3, "step": Vector3(0.05, -0.08, 0), "tone": "trim", "under_tone": "dark", "trim_tone": GLACIER_WARDEN_LIT},
 			{"shape": SHAPE_COLLAR, "kind": COLLAR_HIGH, "width": 0.56, "height": 0.42, "offset": Vector3(0, 0.22, 0.3), "tone": "trim", "back_tone": "dark", "edge_tone": GLACIER_WARDEN_LIT},
 			{"shape": SHAPE_POUCH, "round": true, "size": Vector3(0.09, 0.3, 0.09), "offset": Vector3(0.42, -0.36, -0.02), "tilt": Vector3(1.3, 0, 0), "tone": "accent", "flap_tone": "trim"},
@@ -1548,13 +1539,13 @@ const LOOKS := {
 	}},
 	# a pine haft with a rope grip band and one raw four-facet shard lashed on with rope, no
 	# collar, the shard glowing faintly
-	"shardweaver_staff": {"palette": SHARDWEAVER, PART_WEAPON: {"shape": SHAPE_MAGE_STAFF, "head": HEAD_LASHED, "collar": 0.0, "tone": SHARDWEAVER_PINE, "grip_tone": "accent", "lash_tone": "accent", "root_tone": SHARDWEAVER_ROPE_DARK, "glow": 0.5}},
+	"shardweaver_staff": {"palette": SHARDWEAVER, PART_WEAPON: {"shape": SHAPE_MAGE_STAFF, "head": HEAD_LASHED, "collar": 0.0, "tone": SHARDWEAVER_PINE, "grip_tone": "accent", "lash_tone": "accent", "root_tone": SHARDWEAVER_ROPE_DARK}},
 	# an ash shaft with a frost collar under two fork arms leaning apart, a prism floating in
 	# the gap
-	"rimecaller_staff": {"palette": RIMECALLER, PART_WEAPON: {"shape": SHAPE_MAGE_STAFF, "head": HEAD_FORKED, "tone": "accent", "fork_tone": "accent", "collar_tone": "trim", "grip_tone": "dark", "root_tone": "trim", "glow": 1.0}},
+	"rimecaller_staff": {"palette": RIMECALLER, PART_WEAPON: {"shape": SHAPE_MAGE_STAFF, "head": HEAD_FORKED, "tone": "accent", "fork_tone": "accent", "collar_tone": "trim", "grip_tone": "dark", "root_tone": "trim"}},
 	# an iron shaft with a silver collar and a silver hoop on top holding a large prism, a small
 	# one floating above the hoop, both shining ice
-	"glacier_warden_staff": {"palette": GLACIER_WARDEN, PART_WEAPON: {"shape": SHAPE_MAGE_STAFF, "head": HEAD_RING, "tone": "accent", "ring_tone": "trim", "collar_tone": "trim", "grip_tone": GLACIER_WARDEN_IRON_LIT, "root_tone": "trim", "glow": 1.4}},
+	"glacier_warden_staff": {"palette": GLACIER_WARDEN, PART_WEAPON: {"shape": SHAPE_MAGE_STAFF, "head": HEAD_RING, "tone": "accent", "ring_tone": "trim", "collar_tone": "trim", "grip_tone": GLACIER_WARDEN_IRON_LIT, "root_tone": "trim"}},
 	# a short indigo cloak with a frost hem, the left half the longer
 	"rimecaller_cape": {"palette": RIMECALLER, PART_CAPE: {"shape": SHAPE_CLOAK, "width": 0.56, "length_left": 0.5, "length_right": 0.44, "hem": 0.05, "tone": "base", "hem_tone": "trim"}},
 	# a long teal cloak with a silver hem, the left half the longer
@@ -1727,32 +1718,28 @@ const LOOKS := {
 		],
 	}},
 	# a short steel-blue shaft with a pale ice collar and a dark grip under one great frost shard
-	# on its top with two small shards leaning out from the shard's root, the set's light at
-	# the shard and frost motes drifting up round it
-	"hoarfrost_sovereign_staff": {"palette": HOARFROST_SOVEREIGN, PART_WEAPON: {"shape": SHAPE_MAGE_STAFF, "head": HEAD_SHARD, "length": 0.95, "foot": 0.35, "tone": "trim", "collar_tone": "accent", "grip_tone": "dark", "prism_length": 0.8, "prism_radius": 0.09, "small_length": 0.22, "small_radius": 0.045, "side_spread": 0.5, "root_tone": "trim", "glow": 1.8, "light": true, "light_energy": 1.2, "light_range": 3.0, "motes": true, "motes_count": 4, "motes_radius": 0.25, "motes_rise": 0.3}},
+	# on its top with two small shards leaning out from the shard's root
+	"hoarfrost_sovereign_staff": {"palette": HOARFROST_SOVEREIGN, PART_WEAPON: {"shape": SHAPE_MAGE_STAFF, "head": HEAD_SHARD, "length": 0.95, "foot": 0.35, "tone": "trim", "collar_tone": "accent", "grip_tone": "dark", "prism_length": 0.8, "prism_radius": 0.09, "small_length": 0.22, "small_radius": 0.045, "side_spread": 0.5, "root_tone": "trim", "glow": 1.8}},
 	# a soot shaft with a brass collar and grip under a brass brazier cup, a flame prism
-	# standing in it between two small flames leaning apart, the set's light in the cup and
-	# embers rising from it
-	"hearthfire_magus_staff": {"palette": HEARTHFIRE_MAGUS, PART_WEAPON: {"shape": SHAPE_MAGE_STAFF, "head": HEAD_BRAZIER, "tone": "dark", "collar_tone": "trim", "grip_tone": "trim", "cup": 0.18, "cup_radius": 0.16, "cup_tone": "trim", "prism_length": 0.3, "prism_radius": 0.08, "small_length": 0.18, "small_radius": 0.05, "side_spread": 0.45, "root_tone": "trim", "glow": 2.0, "light": true, "light_energy": 1.3, "light_range": 3.5, "motes": true, "motes_count": 5, "motes_radius": 0.15, "motes_rise": 0.5}},
+	# standing in it between two small flames leaning apart
+	"hearthfire_magus_staff": {"palette": HEARTHFIRE_MAGUS, PART_WEAPON: {"shape": SHAPE_MAGE_STAFF, "head": HEAD_BRAZIER, "tone": "dark", "collar_tone": "trim", "grip_tone": "trim", "cup": 0.18, "cup_radius": 0.16, "cup_tone": "trim", "prism_length": 0.3, "prism_radius": 0.08, "small_length": 0.18, "small_radius": 0.05, "side_spread": 0.45, "root_tone": "trim", "glow": 2.0}},
 	# a bone shaft with an antler grip and no collar under two bone tines curving in over an
 	# aurora prism floating between them, a bone feather hanging from the right tine's root and
-	# three bone beads strung from the left's, the set's light at the prism and aurora motes
-	# drifting up round it
-	"aurora_shaman_staff": {"palette": AURORA_SHAMAN, PART_WEAPON: {"shape": SHAPE_MAGE_STAFF, "head": HEAD_ANTLER, "tone": "trim", "collar": 0.0, "grip_tone": "accent", "fork_length": 0.36, "fork_spread": 0.5, "fork_radius": 0.024, "tine_bend": 0.8, "fork_tone": "trim", "rise": 0.1, "prism_length": 0.28, "prism_radius": 0.07, "feather": 0.24, "feather_tone": "trim", "beads": 3, "bead": 0.02, "bead_tone": "trim", "root_tone": "accent", "glow": 1.6, "light": true, "light_energy": 1.0, "light_range": 3.0, "motes": true, "motes_count": 3, "motes_radius": 0.25, "motes_rise": 0.3}},
+	# three bone beads strung from the left's
+	"aurora_shaman_staff": {"palette": AURORA_SHAMAN, PART_WEAPON: {"shape": SHAPE_MAGE_STAFF, "head": HEAD_ANTLER, "tone": "trim", "collar": 0.0, "grip_tone": "accent", "fork_length": 0.36, "fork_spread": 0.5, "fork_radius": 0.024, "tine_bend": 0.8, "fork_tone": "trim", "rise": 0.1, "prism_length": 0.28, "prism_radius": 0.07, "feather": 0.24, "feather_tone": "trim", "beads": 3, "bead": 0.02, "bead_tone": "trim", "root_tone": "accent", "glow": 1.6}},
 	# a square pillar-stone shaft with a carved stone band and no collar, its top broken into
-	# five jagged points with a rune prism rising from the break, the set's light at the prism
-	# and rune motes drifting up round it
-	"ruinwarden_mage_staff": {"palette": RUINWARDEN_MAGE, PART_WEAPON: {"shape": SHAPE_MAGE_STAFF, "head": HEAD_PILLAR, "segments": 4, "radius": 0.05, "tone": "accent", "collar": 0.0, "grip": 0.08, "grip_y": 0.5, "grip_tone": "trim", "teeth": 5, "tooth": 0.12, "prism_length": 0.26, "prism_radius": 0.07, "root_tone": "trim", "glow": 1.6, "light": true, "light_energy": 1.0, "light_range": 3.0, "motes": true, "motes_count": 3, "motes_radius": 0.2, "motes_rise": 0.25}},
+	# five jagged points with a rune prism rising from the break
+	"ruinwarden_mage_staff": {"palette": RUINWARDEN_MAGE, PART_WEAPON: {"shape": SHAPE_MAGE_STAFF, "head": HEAD_PILLAR, "segments": 4, "radius": 0.05, "tone": "accent", "collar": 0.0, "grip": 0.08, "grip_y": 0.5, "grip_tone": "trim", "teeth": 5, "tooth": 0.12, "prism_length": 0.26, "prism_radius": 0.07, "root_tone": "trim", "glow": 1.6}},
 	# a long white forked cloak with a steel-blue hem, the left half the longer
 	"hoarfrost_sovereign_cape": {"palette": HOARFROST_SOVEREIGN, PART_CAPE: {"shape": SHAPE_CLOAK, "outline": OUTLINE_FORKED, "width": 0.62, "length_left": 1.0, "length_right": 0.92, "hem": 0.06, "tone": "base", "hem_tone": "trim"}},
-	# a soot cloak with a glowing ember hem, the left half the longer
-	"hearthfire_magus_cape": {"palette": HEARTHFIRE_MAGUS, PART_CAPE: {"shape": SHAPE_CLOAK, "width": 0.6, "length_left": 0.92, "length_right": 0.86, "hem": 0.06, "tone": "dark", "glow": 1.0}},
+	# a soot cloak edged in brass with a glowing ember hem, the left half the longer
+	"hearthfire_magus_cape": {"palette": HEARTHFIRE_MAGUS, PART_CAPE: {"shape": SHAPE_CLOAK, "width": 0.6, "length_left": 0.92, "length_right": 0.86, "hem": 0.06, "tone": "dark", "lining": 0.02, "lining_tone": "trim", "glow": 1.0}},
 	# a long violet cloak with a bone hem and an unlit aurora-green lining showing round its
 	# edges, the left half the longer
 	"aurora_shaman_cape": {"palette": AURORA_SHAMAN, PART_CAPE: {"shape": SHAPE_CLOAK, "width": 0.6, "length_left": 1.05, "length_right": 0.98, "hem": 0.05, "tone": "base", "hem_tone": "trim", "lining": 0.03, "lining_tone": AURORA_SHAMAN["glow"]}},
-	# a narrow deep-dusk banner torn into three dusk teeth at its hem, edged in ruin stone, the
-	# left half the longer
-	"ruinwarden_mage_cape": {"palette": RUINWARDEN_MAGE, PART_CAPE: {"shape": SHAPE_CLOAK, "outline": OUTLINE_TORN, "width": 0.44, "length_left": 1.0, "length_right": 0.9, "teeth": 3, "tooth": 0.14, "hem": 0.05, "tone": "dark", "tooth_tone": "base", "hem_tone": "trim"}},
+	# a narrow deep-dusk banner torn into three ruin-stone teeth at its hem, the left half the
+	# longer
+	"ruinwarden_mage_cape": {"palette": RUINWARDEN_MAGE, PART_CAPE: {"shape": SHAPE_CLOAK, "outline": OUTLINE_TORN, "width": 0.44, "length_left": 1.0, "length_right": 0.9, "teeth": 3, "tooth": 0.14, "hem": 0.05, "tone": "dark", "tooth_tone": "trim", "hem_tone": "trim"}},
 }
 
 

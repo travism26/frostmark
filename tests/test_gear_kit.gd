@@ -1,7 +1,7 @@
 ## The kit builders (#160): each is a static builder that takes a look and a palette, names its
 ## root after its shape, draws at least two tones, sizes its left and right sides on their own
-## where it has sides, shines only when its look's glow is above 0, carries a light or motes only
-## when asked and never more than one light, and has a sample in CharacterGear.samples() for
+## where it has sides, shines only when its look's glow is above 0, never carries a light or
+## motes (#250), and has a sample in CharacterGear.samples() for
 ## the warm-up. How the shapes read on screen is judged from tools/kit_shots.gd.
 extends "res://tests/run.gd".TestCase
 
@@ -134,55 +134,20 @@ func test_glow_above_zero_turns_emission_on_and_zero_leaves_it_off() -> void:
 		lit.free()
 
 
-func test_a_light_or_motes_come_only_when_asked_and_never_two_lights() -> void:
-	var plain := _build({"shape": GearLookScript.SHAPE_CRYSTAL})
-	assert_eq(plain.find_children("*", "OmniLight3D", true, false).size(), 0, "no light unless asked")
-	assert_eq(plain.find_children("*", "CPUParticles3D", true, false).size(), 0, "no motes unless asked")
-	plain.free()
-	var lit := _build({"shape": GearLookScript.SHAPE_CRYSTAL, "light": true, "light_energy": 1.5, "light_range": 2.5})
-	var lights := lit.find_children("*", "OmniLight3D", true, false)
-	assert_eq(lights.size(), 1, "one light when asked")
-	if lights.size() == 1:
-		var light := lights[0] as OmniLight3D
-		assert_eq(light.light_color, GearLookScript.KIT["glow"], "the light is the glow colour")
-		assert_almost_eq(light.light_energy, 1.5)
-		assert_almost_eq(light.omni_range, 2.5)
-	assert_eq(lit.find_children("*", "CPUParticles3D", true, false).size(), 0, "a light alone brings no motes")
-	lit.free()
-	var moted := _build({"shape": GearLookScript.SHAPE_CRYSTAL, "motes": true, "motes_count": 5})
-	var motes := moted.find_children("*", "CPUParticles3D", true, false)
-	assert_eq(motes.size(), 1, "motes when asked")
-	if motes.size() == 1:
-		var p := motes[0] as CPUParticles3D
-		assert_eq(p.amount, 5, "a handful of motes alive at once")
-		assert_true(p.mesh != null and (p.mesh.surface_get_material(0) as StandardMaterial3D).emission_enabled, "the motes glow")
-	assert_eq(moted.find_children("*", "OmniLight3D", true, false).size(), 0, "motes alone bring no light")
-	moted.free()
+func test_no_kit_shape_carries_a_light_or_motes() -> void:
+	# Glow is emission only (#250): nothing on the character lights the snow or drifts motes.
 	for own in GearLookScript.KIT_SAMPLES:
 		var piece := _build(own)
-		assert_true(piece.find_children("*", "OmniLight3D", true, false).size() <= 1, "%s's sample carries at most one light" % own["shape"])
+		assert_eq(piece.find_children("*", "Light3D", true, false).size(), 0, "%s's sample carries no light" % own["shape"])
+		assert_eq(piece.find_children("*", "CPUParticles3D", true, false).size(), 0, "%s's sample carries no motes" % own["shape"])
+		assert_eq(piece.find_children("*", "GPUParticles3D", true, false).size(), 0, "%s's sample carries no particles" % own["shape"])
 		piece.free()
+	for shape in GearLookScript.SHAPES:
+		for key in ["light", "motes"]:
+			assert_false((GearLookScript.SHAPES[shape] as Dictionary).has(key), "a %s has no %s number" % [shape, key])
 
 
-## How many pieces the kit samples and every look's parts and layers ask `key` of (a light or
-## motes), each of which samples() builds once.
-static func _asked(key: String) -> int:
-	var n := 0
-	for own in GearLookScript.KIT_SAMPLES:
-		if own.get(key, false):
-			n += 1
-	for item in GearLookScript.LOOKS:
-		var look: Dictionary = GearLookScript.LOOKS[item]
-		for part in look:
-			if part == "palette" or (look[part] as Dictionary).is_empty():
-				continue
-			for own in [look[part]] + (look[part] as Dictionary).get(GearLookScript.LAYERS, []):
-				if own.get(key, false):
-					n += 1
-	return n
-
-
-func test_the_samples_hold_one_of_each_kit_shape_with_a_light_and_motes() -> void:
+func test_the_samples_hold_one_of_each_kit_shape_and_no_light_or_motes() -> void:
 	var shapes: Array = []
 	for own in GearLookScript.KIT_SAMPLES:
 		shapes.append(own["shape"])
@@ -196,9 +161,9 @@ func test_the_samples_hold_one_of_each_kit_shape_with_a_light_and_motes() -> voi
 		names.append(String(child.name))
 	for shape in GearLookScript.KIT_SHAPES:
 		assert_true(names.has(shape), "a %s is sampled for the warm-up" % shape)
-	assert_eq(all.find_children("*", "OmniLight3D", true, false).size(), _asked("light"), "the samples carry the kit light and every set light")
-	assert_eq(all.find_children("*", "CPUParticles3D", true, false).size(), _asked("motes"), "the samples carry the kit motes and every set's motes")
-	assert_true(_asked("light") >= 1 and _asked("motes") >= 1, "the kit sample asks for a light and motes")
+	assert_eq(all.find_children("*", "Light3D", true, false).size(), 0, "the samples carry no light")
+	assert_eq(all.find_children("*", "CPUParticles3D", true, false).size(), 0, "the samples carry no motes")
+	assert_eq(all.find_children("*", "GPUParticles3D", true, false).size(), 0, "the samples carry no particles")
 	var left: Node3D = all.find_child(GearLookScript.SHAPE_CLOAK, false, false).find_child(CharacterGearScript.SIDE_LEFT, true, false)
 	var right: Node3D = all.find_child(GearLookScript.SHAPE_CLOAK, false, false).find_child(CharacterGearScript.SIDE_RIGHT, true, false)
 	assert_ne(_bounds(left).size.y, _bounds(right).size.y, "the cloak sample has unequal sides")
