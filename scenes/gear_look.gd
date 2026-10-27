@@ -248,25 +248,25 @@ const RUINWARDEN_PLUME_LIT := Color("#d8514a")
 const EMBERHEART := {
 	"base": Color("#2e2a33"), "dark": Color("#1c1921"),
 	"trim": Color("#8a3a1a"), "accent": Color("#3a3340"),
-	"glow": Color("#ff7a1f"), "glow_energy": 0.0, "trim_glow": 0.8, "accent_glow": 0.0,
+	"glow": Color("#ff7a1f"), "glow_energy": 0.0, "trim_glow": 1.2, "accent_glow": 0.0,
 }
 ## Hoarfrost: ice over the dark-blue harness, white fur, ice shade.
 const HOARFROST := {
 	"base": Color("#cfe3f2"), "dark": Color("#3a4a6a"),
 	"trim": Color("#f1ece2"), "accent": Color("#a9d4ef"),
-	"glow": Color("#7fd4ff"), "glow_energy": 0.0, "trim_glow": 0.4, "accent_glow": 0.0,
+	"glow": Color("#7fd4ff"), "glow_energy": 0.0, "trim_glow": 0.6, "accent_glow": 0.0,
 }
 ## Auroral: dusk violet and its shade, lilac trim, pale antler.
 const AURORAL := {
 	"base": Color("#3f3670"), "dark": Color("#2a2350"),
 	"trim": Color("#b08cff"), "accent": Color("#e8dcc0"),
-	"glow": Color("#6ff0b0"), "glow_energy": 0.0, "trim_glow": 0.6, "accent_glow": 0.0,
+	"glow": Color("#6ff0b0"), "glow_energy": 0.0, "trim_glow": 0.9, "accent_glow": 0.0,
 }
 ## Trollbone: hide, dark, bone, blood.
 const TROLLBONE := {
 	"base": Color("#4a3a2e"), "dark": Color("#2a2238"),
 	"trim": Color("#e8dcc0"), "accent": Color("#a3302a"),
-	"glow": Color.BLACK, "glow_energy": 0.0, "trim_glow": 0.4, "accent_glow": 0.0,
+	"glow": Color.BLACK, "glow_energy": 0.0, "trim_glow": 0.6, "accent_glow": 0.0,
 }
 ## The top sets' lit rim tints and extra materials.
 const EMBERHEART_LIT := Color("#46404e")
@@ -316,25 +316,25 @@ const GLACIER_WARDEN_IRON_LIT := Color("#4f5866")
 const HOARFROST_SOVEREIGN := {
 	"base": Color("#dbe8fa"), "dark": Color("#9fb6d6"),
 	"trim": Color("#5f7fb0"), "accent": Color("#c4dcf5"),
-	"glow": Color("#a7e4ff"), "glow_energy": 0.0, "trim_glow": 0.8, "accent_glow": 0.0,
+	"glow": Color("#a7e4ff"), "glow_energy": 0.0, "trim_glow": 1.2, "accent_glow": 0.0,
 }
 ## Hearthfire Magus: charcoal over soot, brass, flame; ember glow.
 const HEARTHFIRE_MAGUS := {
 	"base": Color("#2b2522"), "dark": Color("#1b1614"),
 	"trim": Color("#c88a3c"), "accent": Color("#ffc46b"),
-	"glow": Color("#ff9e38"), "glow_energy": 0.0, "trim_glow": 0.6, "accent_glow": 0.0,
+	"glow": Color("#ff9e38"), "glow_energy": 0.0, "trim_glow": 0.9, "accent_glow": 0.0,
 }
 ## Aurora Shaman: violet over its shade, bone, antler; aurora glow.
 const AURORA_SHAMAN := {
 	"base": Color("#3e2f6b"), "dark": Color("#2a1f4d"),
 	"trim": Color("#e9e4d2"), "accent": Color("#8b7a5a"),
-	"glow": Color("#7ff0c4"), "glow_energy": 0.0, "trim_glow": 0.4, "accent_glow": 0.0,
+	"glow": Color("#7ff0c4"), "glow_energy": 0.0, "trim_glow": 0.6, "accent_glow": 0.0,
 }
 ## Ruinwarden (the magic line's): dusk cloth over deep cloth, ruin stone, pillar; rune glow.
 const RUINWARDEN_MAGE := {
 	"base": Color("#2a2a3e"), "dark": Color("#1b1b2a"),
 	"trim": Color("#6c6f86"), "accent": Color("#4a4a5c"),
-	"glow": Color("#b784ff"), "glow_energy": 0.0, "trim_glow": 0.8, "accent_glow": 0.0,
+	"glow": Color("#b784ff"), "glow_energy": 0.0, "trim_glow": 1.2, "accent_glow": 0.0,
 }
 ## The magic top sets' lit rim tints and shaded tones.
 const HOARFROST_SOVEREIGN_LIT := Color("#f2f7fd")
@@ -383,25 +383,25 @@ const BOWSTRING := Color("#e6e0cc")
 const EMBER_HAWK := {
 	"base": Color("#2b2422"), "dark": Color("#1a1512"),
 	"trim": Color("#c9922e"), "accent": Color("#f3d7a6"),
-	"glow": Color("#ffa033"), "glow_energy": 0.0, "trim_glow": 0.6, "accent_glow": 0.0,
+	"glow": Color("#ffa033"), "glow_energy": 0.0, "trim_glow": 0.9, "accent_glow": 0.0,
 }
 ## Auroral Warden: snow hide over violet lining, silver, a shaded hide, aurora glow.
 const AURORAL_WARDEN := {
 	"base": Color("#ece9f5"), "dark": Color("#3d2d6b"),
 	"trim": Color("#b9c3d6"), "accent": Color("#d4d0e3"),
-	"glow": Color("#5ff0c8"), "glow_energy": 0.0, "trim_glow": 0.4, "accent_glow": 0.0,
+	"glow": Color("#5ff0c8"), "glow_energy": 0.0, "trim_glow": 0.6, "accent_glow": 0.0,
 }
 ## Ruin Stalker's Shroud: ink and its pitch, bone, ash grey, violet glow.
 const RUIN_STALKER := {
 	"base": Color("#15141c"), "dark": Color("#0b0a10"),
 	"trim": Color("#dcd4bc"), "accent": Color("#6a6878"),
-	"glow": Color("#9a6cff"), "glow_energy": 0.0, "trim_glow": 0.4, "accent_glow": 0.0,
+	"glow": Color("#9a6cff"), "glow_energy": 0.0, "trim_glow": 0.6, "accent_glow": 0.0,
 }
 ## Glacier Sovereign: ice hide over deep sea, the crystal face, a shaded ice, frost glow.
 const GLACIER_SOVEREIGN := {
 	"base": Color("#b7d4ea"), "dark": Color("#1e3a5a"),
 	"trim": Color("#d9f0ff"), "accent": Color("#8fb6d6"),
-	"glow": Color("#8cd9ff"), "glow_energy": 0.0, "trim_glow": 0.4, "accent_glow": 0.0,
+	"glow": Color("#8cd9ff"), "glow_energy": 0.0, "trim_glow": 0.6, "accent_glow": 0.0,
 }
 ## The ranged top sets' lit rim tints and shaded tones.
 const EMBER_HAWK_LIT := Color("#3d3431")
