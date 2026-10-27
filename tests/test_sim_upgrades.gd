@@ -557,15 +557,15 @@ func _steel_of(kind: String) -> String:
 	return ""
 
 
-func test_a_set_item_has_no_tier_takes_the_steel_stats_and_is_not_dropped_and_only_a_top_set_is_made() -> void:
+func test_a_set_item_has_no_tier_takes_the_steel_stats_and_is_either_dropped_or_made() -> void:
 	var dropped := {}
 	for enemy in CombatTable.ENEMIES.values():
 		for loot in enemy.get("loot", []):
 			dropped[loot["item"]] = true
 		for kind in enemy.get("boss_loot", []):
 			dropped[kind] = true
-	for band in CombatTable.RARITY_BANDS.values():
-		for kind in band["pool"]:
+	for id in CombatTable.RARITY_BANDS:
+		for kind in CombatTable.rarity_band(id)["pool"]:
 			dropped[kind] = true
 	for kind in ItemTable.ITEMS:
 		if ItemTable.set_of(kind) == "":
@@ -584,7 +584,7 @@ func test_a_set_item_has_no_tier_takes_the_steel_stats_and_is_not_dropped_and_on
 			for stat in ["value", "defence", "power", "speed", "reach", "ammo"]:  # weight is its rung's (test_set_levels.gd)
 				assert_eq(ItemTable.ITEMS[kind].get(stat), ItemTable.ITEMS.get(steel, {}).get(stat), "%s's %s is %s's" % [kind, stat, steel])
 		assert_eq(RecipeTable.has(kind), TOP_SETS.has(ItemTable.set_of(kind)), "%s has a recipe only if it is a top-set piece (#184)" % kind)
-		assert_false(dropped.has(kind), "%s drops from nothing" % kind)
+		assert_eq(dropped.has(kind), not TOP_SETS.has(ItemTable.set_of(kind)), "%s drops only if it is a found set's piece (#249)" % kind)
 	assert_eq(ItemTable.set_of("steel_body"), "", "an item in no set has no set key")
 	assert_eq(ItemTable.set_of("fur_coat"), "", "fur is in no set")
 
@@ -730,7 +730,7 @@ func test_iron_is_made_at_the_bloomery_and_still_drops() -> void:
 		var r := RecipeTable.get_recipe(id)
 		made[r["output"]["item"]] = r["upgrade"]
 	var found := {}
-	for kind in CombatTable.rarity_band("rings_one_two_uncommon")["pool"]:
+	for kind in CombatTable.rarity_band("ring_one_uncommon")["pool"]:
 		found[kind] = true
 	for kind in CombatTable.ENEMIES["bandit_captain"]["boss_loot"]:
 		found[kind] = true
