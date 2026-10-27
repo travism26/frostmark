@@ -15,7 +15,9 @@
 ## carries `heal`, the health it restores spread over `heal_ticks` ticks.
 ##
 ## An item a rare roll gives carries its `rarity`: the rarity band (GLOSSARY.md) it belongs to,
-## wherever it came from. The iron pieces are uncommon; every other item has none.
+## wherever it came from. The iron pieces are uncommon, and so is every piece of a mid to high
+## set, read from its set's level (`FOUND_LEVELS`) rather than written on each piece; every
+## other item, a top-set piece included, has none.
 ##
 ## A gear piece of a set carries `"set": "<set key>"` and no `tier`, so the smithing cap never
 ## refuses it. Its set's level (`SET_INFO`, #247) puts it on the ladder: a mid set sits beside
@@ -109,6 +111,9 @@ const LEVEL_MID_HIGH := "mid-high"
 const LEVEL_HIGH := "high"
 const LEVEL_TOP := "top"
 const SET_LEVELS: Array[String] = [LEVEL_MID, LEVEL_MID_HIGH, LEVEL_HIGH, LEVEL_TOP]
+## The levels of the found sets (#249): their pieces have no recipe, drop from their ring's
+## uncommon band and are uncommon themselves. A top set is crafted (#184) and has no band.
+const FOUND_LEVELS: Array[String] = [LEVEL_MID, LEVEL_MID_HIGH, LEVEL_HIGH]
 
 ## What a set bonus step can give (#248): `power` adds to every blow the wearer strikes with a
 ## weapon of the set's style, and `defence` comes off every hit taken, like armour.
@@ -884,9 +889,23 @@ static func set_style(set_key: String) -> String:
 	return SET_INFO[set_key]["style"] if SET_INFO.has(set_key) else ""
 
 
-## The item's rarity band ("uncommon", "rare", "super_rare", "ultra_rare"), or "" for none.
+## Every piece of every set of `level`, in the item table's order: [] for a level with none.
+static func set_pieces(level: String) -> Array[String]:
+	var out: Array[String] = []
+	for kind in ITEMS:
+		if set_level(set_of(kind)) == level and level != "":
+			out.append(kind)
+	return out
+
+
+## The item's rarity band ("uncommon", "rare", "super_rare", "ultra_rare"), or "" for none. A
+## piece of a found set is uncommon by its set's level.
 static func rarity(kind: String) -> String:
-	return _item(kind).get("rarity", "") if has(kind) else ""
+	if not has(kind):
+		return ""
+	if FOUND_LEVELS.has(set_level(set_of(kind))):
+		return RARITY_UNCOMMON
+	return _item(kind).get("rarity", "")
 
 
 ## Stand-in bonus steps by set key, on top of SET_INFO: a test of the steps gives a real set

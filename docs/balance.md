@@ -384,3 +384,9 @@ So the measured run and `tests/test_pacing.gd` don't change: 12:58 of sim time a
 ### Fur pieces
 
 [#142](https://github.com/travism26/frostmark/issues/142) lets worn fur slow the warmth drain: a full fur set makes a full gauge last 540 ticks instead of 360. Fur is optional and stays off the timed route. The run doesn't make it: its trips already turn home on the cold tip with warmth to spare, fur takes nothing off a hit, and the pelts it would cost are the Armoury's, the Pack frame's and the winch's. So the measured run and `tests/test_pacing.gd` don't change.
+
+### Set pieces in the uncommon bands
+
+[#249](https://github.com/travism26/frostmark/issues/249) puts each ring's found set pieces into its uncommon band beside the iron pieces: 12 mid pieces in ring one's (20 in all), 14 mid-high pieces in ring two's (22 in all), and 14 high pieces in ring three's, which ring three's Snowveil archers, Frostbound knights and Aurora seers now roll against at 10 % each. Every kind keeps its chance of landing in its band, and every piece in a band is drawn evenly until #243 sets the odds, so a ring-one kill that lands gives an iron piece 8 times in 20 rather than every time, and a ring-two kill 8 times in 22. No reference character wears a set piece, and the timed route wears smithed tiers.
+
+The balance run (`tests/test_balance.gd`) doesn't change: 13:13 of sim time and a 28:20 estimate, the same as before. The play bot picks up what drops near it, and the planner's seeded run in `tests/test_pacing.gd` lands the captain's rare roll on a Hearthguard helm (1 kg) where it drew a second iron sword (4 kg). Its captain still falls at tick 1656 (13.8 minutes); its ring-two half, carrying 3 kg less, takes 1726 ticks, down from 1740, inside its window.

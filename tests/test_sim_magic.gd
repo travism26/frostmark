@@ -264,7 +264,7 @@ func test_the_workbench_refines_crystals_into_shards_and_makes_staffs() -> void:
 
 
 func test_the_iron_staff_is_smithed_at_the_bloomery_and_still_drops() -> void:
-	assert_true(CombatTable.rarity_band("rings_one_two_uncommon")["pool"].has("iron_staff"), "a rare drop in ring one")
+	assert_true(CombatTable.rarity_band("ring_one_uncommon")["pool"].has("iron_staff"), "a rare drop in ring one")
 	assert_true((CombatTable.ENEMIES["bandit_captain"]["boss_loot"] as Array).has("iron_staff"), "the captain may carry one")
 	var recipe := RecipeTable.get_recipe("iron_staff")
 	assert_eq(recipe["upgrade"], "bloomery", "the Bloomery makes it")
