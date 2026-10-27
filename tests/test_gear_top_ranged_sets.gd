@@ -279,7 +279,7 @@ func test_the_plumes_fan_a_crest_and_wings() -> void:
 	var wings_look: Array = (GearLookScript.LOOKS["ember_hawk_body"][GearLookScript.PART_BODY][GearLookScript.LAYERS] as Array).filter(func(own: Dictionary) -> bool: return own["shape"] == GearLookScript.SHAPE_PLUMES)
 	assert_eq(wings_look.size(), 2, "a wing on each shoulder")
 	# each wing is three feathers of a plate, a quill and a tip: both wings are drawn
-	assert_eq(_materials(body).filter(func(m: StandardMaterial3D) -> bool: return m.emission_enabled).size(), 4 + 6, "four chevron strips and six ember tips shine")
+	assert_eq(_materials(body).filter(func(m: StandardMaterial3D) -> bool: return m.emission_enabled and m.emission == GearLookScript.EMBER_HAWK["glow"]).size(), 4 + 6, "four chevron strips and six ember tips shine in the ember glow")
 	body.free()
 	assert_ne(wings_look[0]["length"], wings_look[1]["length"], "the wings are unequal")
 
@@ -370,27 +370,34 @@ func test_each_sets_glow_is_emissive_only_in_its_own_colour_with_no_light_and_no
 		var shining := 0
 		for slot in SETS[set_key]:
 			var item: String = SETS[set_key][slot]
+			var trims := 0
 			for piece in _pieces(item):
-				assert_eq(piece.find_children("*", "OmniLight3D", true, false).size(), 0, "%s has no light" % item)
+				assert_eq(piece.find_children("*", "Light3D", true, false).size(), 0, "%s has no light" % item)
 				assert_eq(piece.find_children("*", "CPUParticles3D", true, false).size(), 0, "%s has no motes" % item)
 				assert_eq(piece.find_children("*", "GPUParticles3D", true, false).size(), 0, "%s has no particles" % item)
 				for m in _glowing(piece):
+					if m.emission == PALETTES[set_key]["trim"]:
+						trims += 1
+						continue
 					shining += 1
-					assert_eq(m.emission, PALETTES[set_key]["glow"], "%s shines only in %s's glow colour" % [item, set_key])
+					assert_eq(m.emission, PALETTES[set_key]["glow"], "%s shines only in %s's glow colour, or its trims in the trim colour" % [item, set_key])
 				piece.free()
+			assert_true(trims > 0, "%s's trims shine (#250)" % item)
 			for own in _owns(item):
 				assert_false(own.get("light", false), "%s's %s asks for no light" % [item, own["shape"]])
 				assert_false(own.get("motes", false), "%s's %s asks for no motes" % [item, own["shape"]])
 		assert_true(shining >= 2, "%s has an accent glow" % set_key)
 		assert_eq(PALETTES[set_key]["glow_energy"], 0.0, "%s has no staff glow" % set_key)
 		assert_ne(PALETTES[set_key]["glow"], Color.BLACK, "%s has a glow colour" % set_key)
-	# the lightest glow budget: only the mask's eyes and the bow's nocks on Ruin Stalker
+	# the lightest glow budget: beside its bone trims, only the mask's eyes and the bow's nocks
+	# shine on Ruin Stalker
+	var violet := func(m: StandardMaterial3D) -> bool: return m.emission == GearLookScript.RUIN_STALKER["glow"]
 	for item in ["ruin_stalker_body", "ruin_stalker_legs", "ruin_stalker_quiver", "ruin_stalker_cape"]:
 		for piece in _pieces(item):
-			assert_eq(_glowing(piece).size(), 0, "%s has no emission" % item)
+			assert_eq(_glowing(piece).filter(violet).size(), 0, "%s has no violet glow" % item)
 			piece.free()
 	var mask := CharacterGearScript.head_piece("ruin_stalker_helm")
-	assert_eq(_glowing(mask).size(), 2, "the mask's two eyes shine")
+	assert_eq(_glowing(mask).filter(violet).size(), 2, "the mask's two eyes shine")
 	mask.free()
 
 

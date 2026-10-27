@@ -28,9 +28,9 @@
 ## tones (a base plus a darker underside or a lighter trim) so it reads lit from above. Which
 ## palette field a part takes is the look's tone number (`tone`, `edge_tone`...), or a Color
 ## of the look's own. A look's `glow` above 0 draws the builder's highlight in the palette's
-## glow colour, shining that bright, through `Props.flat`. A crystal, a shard crown, a forge
-## hammer or a mage staff carries the one small light and the few motes a top set is allowed
-## (`_glow_fx`), and only when its look asks for them.
+## glow colour, shining that bright, through `Props.flat`, and a palette's `trim_glow` above 0
+## (a top set's) makes every part drawn in its trim shine in the trim colour (#250). Glow is
+## emission only: no piece carries a light or particles, so the web build stays smooth.
 ##
 ## A piece's `layers` are built the same way and added under its root, so a set helm is a
 ## helm with studs, cheek guards and a crest layered on from its one entry; no builder knows
@@ -89,10 +89,6 @@ const SHAPE_MAGE_STAFF := GearLook.SHAPE_MAGE_STAFF
 ## The names of a two-sided builder's side nodes, so a test can measure each side.
 const SIDE_LEFT := "Left"
 const SIDE_RIGHT := "Right"
-## The names of the glow nodes a crystal, a shard crown or a forge hammer carries when its look
-## asks for them.
-const GLOW_LIGHT := "Light"
-const GLOW_MOTES := "Motes"
 
 var _shown := {}  # place -> what is drawn there (`_draw_key`)
 var _pieces := {}  # place -> the nodes drawn for it, to free when it changes
@@ -758,8 +754,7 @@ static func stacked_plates(look: Dictionary, colours: Dictionary) -> Node3D:
 
 
 ## A prism with `facets` sides: its tip in the glow colour shining at `glow` over a dark root,
-## at `offset` turned by `tilt`. `light` adds the one small light a piece may carry, at the
-## tip, and `motes` a few glowing motes drifting up round it.
+## at `offset` turned by `tilt`.
 static func crystal(look: Dictionary, colours: Dictionary) -> Node3D:
 	var root := Node3D.new()
 	root.name = SHAPE_CRYSTAL
@@ -770,48 +765,9 @@ static func crystal(look: Dictionary, colours: Dictionary) -> Node3D:
 	var length: float = look["length"]
 	var join: float = length * look["root"]
 	var facets := int(look["facets"])
-	var colour: Color = colours["glow"]
-	var glow: float = look["glow"]
-	Figures.part(stand, _cone(look["radius"], length - join, facets, Props.flat(colour, glow)), Vector3(0, join + (length - join) * 0.5, 0))
+	Figures.part(stand, _cone(look["radius"], length - join, facets, Props.flat(colours["glow"], look["glow"])), Vector3(0, join + (length - join) * 0.5, 0))
 	Figures.part(stand, _cylinder(look["radius"], look["radius"] * 0.5, join, facets, _tone(look, colours, "root_tone")), Vector3(0, join * 0.5, 0))
-	_glow_fx(stand, look, colour, glow, join)
 	return root
-
-
-## The one small light and the few motes a top set's piece may carry, each only when `look`
-## asks (`light`, `motes`), hung under `stand` at `y` in `colour` (the palette's glow): a warm
-## point that lights the snow round the wearer, and `motes_count` glowing specks drifting up
-## from a sphere of `motes_radius` round the piece, as bright as `glow` or brighter.
-static func _glow_fx(stand: Node3D, look: Dictionary, colour: Color, glow: float, y: float) -> void:
-	if look["light"]:
-		var light := OmniLight3D.new()
-		light.name = GLOW_LIGHT
-		light.light_color = colour
-		light.light_energy = look["light_energy"]
-		light.omni_range = look["light_range"]
-		light.omni_attenuation = 1.3
-		light.position.y = y
-		stand.add_child(light)
-	if look["motes"]:
-		var motes := CPUParticles3D.new()
-		motes.name = GLOW_MOTES
-		motes.amount = int(look["motes_count"])
-		motes.lifetime = 2.0
-		motes.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
-		motes.emission_sphere_radius = look["motes_radius"]
-		motes.direction = Vector3.UP
-		motes.spread = 30.0
-		motes.gravity = Vector3.ZERO
-		motes.initial_velocity_min = look["motes_rise"] * 0.5
-		motes.initial_velocity_max = look["motes_rise"]
-		motes.scale_amount_min = 0.4
-		motes.scale_amount_max = 1.0
-		var mote := BoxMesh.new()
-		mote.size = Vector3.ONE * look["motes_size"]
-		mote.material = Props.flat(colour, maxf(glow, 1.0))
-		motes.mesh = mote
-		motes.position.y = y
-		stand.add_child(motes)
 
 
 ## A thin flat plate standing up from its root at `offset`, turned by `tilt`: `size` wide,
@@ -1166,8 +1122,7 @@ static func seam(look: Dictionary, colours: Dictionary) -> Node3D:
 ## `arc` (a full turn for a crown, less for a cluster centred on the front), each leaning out
 ## `lean` and every other one `short` as long as its neighbours: a `facets`-sided shard in
 ## `tone` with the top `tip` of its length in the highlight (`tip_tone`: the glow colour,
-## lit, when `glow` is above 0). A frost crown, a crystal cluster. `light` and `motes` as a
-## crystal takes them, at the ring's centre.
+## lit, when `glow` is above 0). A frost crown, a crystal cluster.
 static func shard_crown(look: Dictionary, colours: Dictionary) -> Node3D:
 	var root := Node3D.new()
 	root.name = SHAPE_SHARD_CROWN
@@ -1196,7 +1151,6 @@ static func shard_crown(look: Dictionary, colours: Dictionary) -> Node3D:
 		var body: float = long * (1.0 - tip)
 		Figures.part(spike, _cylinder(shard * 0.6, shard, body, facets, tone), Vector3(0, body * 0.5, 0))
 		Figures.part(spike, _cone(shard * 0.6, long - body, facets, point), Vector3(0, body + (long - body) * 0.5, 0))
-	_glow_fx(stand, look, colours["glow"], look["glow"], 0.0)
 	return root
 
 
@@ -1247,8 +1201,7 @@ static func antlers(look: Dictionary, colours: Dictionary) -> Node3D:
 ## (x along the hand, y tall, z deep) in `tone` sitting on the haft's top, a band `band` wide
 ## round the head `band_x` of its half-width out each side in `band_tone`, and `cracks`
 ## strips `crack` wide leaning across its faces in the highlight (`crack_tone`: the glow
-## colour, lit, when `glow` is above 0). `light` and `motes` as a crystal takes them, at the
-## head.
+## colour, lit, when `glow` is above 0).
 static func forge_hammer(look: Dictionary, colours: Dictionary) -> Node3D:
 	var root := Node3D.new()
 	root.name = SHAPE_FORGE_HAMMER
@@ -1273,7 +1226,6 @@ static func forge_hammer(look: Dictionary, colours: Dictionary) -> Node3D:
 		var x := head.x * 0.25 * ((i + 0.5) / cracks * 2.0 - 1.0)
 		var strip := Figures.part(hilt, _box(Vector3(look["crack"], head.y * 0.75, head.z + 0.014), crack), Vector3(x, top + head.y * 0.5, 0))
 		strip.rotation.z = 0.35 * (1 if i % 2 == 0 else -1)  # the cracks lean, no two the same way
-	_glow_fx(hilt, look, colours["glow"], look["glow"], top + head.y * 0.5)
 	return root
 
 
@@ -1497,7 +1449,7 @@ static func mage_staff(look: Dictionary, colours: Dictionary) -> Node3D:
 	hilt.add_child(head)
 	var prism_length: float = look["prism_length"]
 	var prism_radius: float = look["prism_radius"]
-	var prism_y := 0.0  # where the main prism's root stands, so the light and motes sit at its join
+	var prism_y := 0.0  # where the main prism's root stands
 	match look["head"]:
 		GearLook.HEAD_LASHED:
 			_prism(head, look, colours, prism_length, prism_radius, 0.0)
@@ -1576,7 +1528,6 @@ static func mage_staff(look: Dictionary, colours: Dictionary) -> Node3D:
 				Figures.part(head, _cone(tooth * 0.35, height, 4, stone), Vector3(cos(a) * radius * 0.7, height * 0.5 - 0.02, sin(a) * radius * 0.7))
 			prism_y = -0.02
 			_prism(head, look, colours, prism_length, prism_radius, prism_y)
-	_glow_fx(head, look, colours["glow"], look["glow"], prism_y + prism_length * look["root"])
 	return root
 
 
@@ -1590,10 +1541,12 @@ static func _prism(holder: Node3D, look: Dictionary, colours: Dictionary, length
 
 
 ## The material a look's `key` tone names: the palette field it names, or the Color it
-## carries.
+## carries. The palette's trim shines at its `trim_glow` (0 keeps it plain).
 static func _tone(look: Dictionary, colours: Dictionary, key: String) -> StandardMaterial3D:
 	var tone: Variant = look[key]
-	return Props.flat(tone if tone is Color else colours[tone])
+	if tone is Color:
+		return Props.flat(tone)
+	return Props.flat(colours[tone], colours["trim_glow"] if tone == "trim" else 0.0)
 
 
 ## The tone a builder's highlight is drawn in: the palette's glow colour shining at the look's
@@ -1640,8 +1593,7 @@ static func _cone(radius: float, height: float, facets: int, look: Variant) -> C
 
 ## One of every armour look (every helm, body, legs, quiver and cape in the item table, metal
 ## and fur, with whatever each puts on the shin), every weapon built from a kit shape, and one
-## of each kit shape, a quiver and a cloak, a light and motes included, for the warm-up to
-## compile before play.
+## of each kit shape, a quiver and a cloak, for the warm-up to compile before play.
 static func samples() -> Node3D:
 	var all := Node3D.new()
 	for sample in kit_samples():

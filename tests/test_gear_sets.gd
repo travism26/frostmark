@@ -1,10 +1,11 @@
 ## The melee sets (#162): Hearthguard, Wolfmark and Ruinwarden are set items under the
 ## set-item rule with a look and an icon each; every worn piece draws its own layered shape
 ## and swaps with steel both ways; steel draws what it drew before; the three weapons are
-## three builders; nothing in the sets carries a light or motes and only the Ruinwarden rune
-## and fuller shine; the all-gear stash holds every piece; the builders know no set's numbers;
-## the warm-up samples and the shot tool cover every piece. How the sets read on screen is
-## judged from tools/gear_shots.gd.
+## three builders; nothing in the sets carries a light, motes or emission (a mid to high set
+## keeps plain materials, #250), the Ruinwarden rune and fuller drawn in its glow colour,
+## unlit; the all-gear stash holds every piece; the builders know no set's numbers; the warm-up
+## samples and the shot tool cover every piece. How the sets read on screen is judged from
+## tools/gear_shots.gd.
 extends "res://tests/run.gd".TestCase
 
 const GearLookScript := preload("res://scenes/gear_look.gd")
@@ -36,8 +37,8 @@ const WEAPON_SHAPES := {
 	"wolfmark_axe": GearLookScript.SHAPE_BEARDED_AXE,
 	"ruinwarden_greatsword": GearLookScript.SHAPE_GREATSWORD,
 }
-## The only set parts with emission: the Ruinwarden chest rune and the greatsword's fuller.
-const GLOWING := {"ruinwarden_body": GearLookScript.PART_BODY, "ruinwarden_greatsword": GearLookScript.PART_WEAPON}
+## The set piece whose rune is drawn in its glow colour, unlit (#250); the fuller is too.
+const RUNE := "ruinwarden_body"
 ## What the steel pieces drew before the sets (#159): their meshes' colours in build order.
 const STEEL_DRAWN := {
 	"steel_helm": [GearLookScript.STEEL["base"], GearLookScript.STEEL["trim"], GearLookScript.STEEL["trim"]],
@@ -196,11 +197,11 @@ func test_steel_draws_exactly_what_it_drew_before() -> void:
 	assert_eq(GearLookScript.STEEL, {
 		"base": Color(0.42, 0.50, 0.62), "dark": Color(0.378, 0.45, 0.558),
 		"trim": Color(0.336, 0.40, 0.496), "accent": Color(0.478, 0.55, 0.658),
-		"glow": Color(0.55, 0.85, 1.0), "glow_energy": 1.5,
-	}, "the steel palette is unchanged")
+		"glow": Color(0.55, 0.85, 1.0), "glow_energy": 0.0, "trim_glow": 0.0,
+	}, "the steel palette is unchanged but for its plain staff crystal (#250)")
 
 
-func test_no_set_piece_has_a_light_or_motes_and_only_the_rune_and_fuller_shine() -> void:
+func test_no_set_piece_has_a_light_motes_or_emission_and_the_rune_is_unlit() -> void:
 	for set_key in SETS:
 		for slot in SETS[set_key]:
 			var item: String = SETS[set_key][slot]
@@ -208,16 +209,14 @@ func test_no_set_piece_has_a_light_or_motes_and_only_the_rune_and_fuller_shine()
 				assert_eq(piece.find_children("*", "OmniLight3D", true, false).size(), 0, "%s has no light" % item)
 				assert_eq(piece.find_children("*", "CPUParticles3D", true, false).size(), 0, "%s has no motes" % item)
 				assert_eq(piece.find_children("*", "GPUParticles3D", true, false).size(), 0, "%s has no particles" % item)
-				if GLOWING.has(item):
-					assert_eq(_glowing(piece), 1, "%s has exactly one emissive part" % item)
-					for m in _materials(piece):
-						if m.emission_enabled:
-							assert_eq(m.emission, GearLookScript.RUINWARDEN["glow"], "%s shines in Ruinwarden's glow colour" % item)
-				else:
-					assert_eq(_glowing(piece), 0, "%s has no emission" % item)
+				assert_eq(_glowing(piece), 0, "%s has no emission" % item)
+				if item == RUNE:
+					assert_true(_colours(piece).has(GearLookScript.RUINWARDEN["glow"]), "%s draws its rune in Ruinwarden's glow colour" % item)
 				piece.free()
 	var rune: Dictionary = GearLookScript.LOOKS["ruinwarden_body"][GearLookScript.PART_BODY][GearLookScript.LAYERS].filter(func(l: Dictionary) -> bool: return l["shape"] == GearLookScript.SHAPE_CRYSTAL)[0]
 	assert_false(rune.get("light", false) or rune.get("motes", false), "the rune asks for no light and no motes")
+	assert_eq(float(GearLookScript.numbers(rune)["glow"]), 0.0, "the rune is unlit")
+	assert_eq(GearLookScript.RUINWARDEN["trim_glow"], 0.0, "Ruinwarden's trims stay plain")
 
 
 func test_the_all_gear_stash_holds_every_piece() -> void:
@@ -276,7 +275,7 @@ func test_the_samples_and_the_shot_tool_cover_every_piece() -> void:
 	assert_true(weapons >= WEAPON_SHAPES.size(), "the three melee set weapons are kit weapons")
 	assert_eq(weapons, kit_weapons, "every weapon whose look is a kit shape is built by weapon_piece")
 	assert_eq(all.get_child_count(), GearLookScript.KIT_SAMPLES.size() + armour + back + weapons, "one sample per kit shape, armour piece, quiver or cape, and kit weapon")
-	assert_true(all.find_children("*", "OmniLight3D", true, false).size() >= 1, "the samples still carry the kit light")
+	assert_eq(all.find_children("*", "Light3D", true, false).size(), 0, "the samples carry no light")
 	all.free()
 	var scenes: Array = (load("res://tools/gear_shots.gd") as Script).get_script_constant_map()["SCENES"]
 	for set_key in SETS:

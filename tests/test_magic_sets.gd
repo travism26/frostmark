@@ -3,8 +3,9 @@
 ## piece draws its own layered shape beside steel as it draws alone and swaps with steel both
 ## ways; the three staves are one mage staff builder with three head kinds, upright in the
 ## right hand, while the steel staff is still the model; a worn cloak hides the barbarian's cape
-## and hangs behind the body; no piece carries a light or motes and every glow is emission in
-## the set's glow colour on the parts the issue names; the all-gear stash holds every piece; the
+## and hangs behind the body; no piece carries a light or motes or any emission (a mid to high
+## set keeps plain materials, #250), the parts the issue names drawn in the set's glow colour,
+## unlit; the all-gear stash holds every piece; the
 ## builders know no set's numbers; the warm-up samples and the shot tool cover every piece, on
 ## every ring. How the sets read on screen is judged from tools/gear_shots.gd.
 extends "res://tests/run.gd".TestCase
@@ -42,9 +43,9 @@ const STAVES := {
 	"glacier_warden_staff": GearLookScript.HEAD_RING,
 }
 const CAPES := ["rimecaller_cape", "glacier_warden_cape"]
-## The pieces that glow, as the issue lists them: Shardweaver's staff shard; Rimecaller's brow
-## prism and floating staff shard; Glacier Warden's crest, glyph band and chest glyph, and
-## staff prisms. Every other piece has no emission at all.
+## The pieces with parts in the glow colour, as the issue lists them: Shardweaver's staff shard;
+## Rimecaller's brow prism and floating staff shard; Glacier Warden's crest, glyph band and
+## chest glyph, and staff prisms. None of them is lit (#250).
 const GLOWING := ["shardweaver_staff", "rimecaller_helm", "rimecaller_staff", "glacier_warden_helm", "glacier_warden_body", "glacier_warden_staff"]
 const PALETTES := {
 	ItemTable.SET_SHARDWEAVER: GearLookScript.SHARDWEAVER, ItemTable.SET_RIMECALLER: GearLookScript.RIMECALLER,
@@ -202,7 +203,8 @@ func test_the_three_staves_are_one_builder_with_three_heads_upright_in_the_right
 		heads[STAVES[item]] = true
 		assert_true(_materials(staff).size() >= 5, "%s has a shaft, a grip, a prism and its head's parts" % item)
 		assert_true(_tones(staff).size() >= 3, "%s draws at least three tones" % item)
-		assert_true(_glowing(staff).size() >= 1, "%s's prism shines" % item)
+		assert_true(_colours(staff).has(GearLookScript.palette(item)["glow"]), "%s's prism is drawn in its set's glow colour" % item)
+		assert_eq(_glowing(staff).size(), 0, "%s's prism is unlit (#250)" % item)
 		var top := INF
 		var bottom := -INF
 		for mesh in staff.find_children("*", "MeshInstance3D", true, false):
@@ -324,7 +326,7 @@ func test_a_worn_cloak_hides_the_barbarian_cape_and_hangs_behind_any_body() -> v
 	root.free()
 
 
-func test_no_piece_has_a_light_or_motes_and_every_glow_is_emission_in_the_set_colour() -> void:
+func test_no_piece_has_a_light_or_motes_or_emission_and_the_glow_parts_are_unlit() -> void:
 	for set_key in SETS:
 		for slot in SETS[set_key]:
 			var item: String = SETS[set_key][slot]
@@ -333,23 +335,19 @@ func test_no_piece_has_a_light_or_motes_and_every_glow_is_emission_in_the_set_co
 				assert_eq(piece.find_children("*", "OmniLight3D", true, false).size(), 0, "%s has no light" % item)
 				assert_eq(piece.find_children("*", "CPUParticles3D", true, false).size(), 0, "%s has no motes" % item)
 				assert_eq(piece.find_children("*", "GPUParticles3D", true, false).size(), 0, "%s has no particles" % item)
-				for m in _glowing(piece):
-					glowing += 1
-					assert_eq(m.emission, PALETTES[set_key]["glow"], "%s shines only in %s's glow colour" % [item, set_key])
+				assert_eq(_glowing(piece).size(), 0, "%s has no emission" % item)
+				glowing += _colours(piece).count(PALETTES[set_key]["glow"])
 				piece.free()
 			if GLOWING.has(item):
-				assert_true(glowing >= 1, "%s shines" % item)
-			else:
-				assert_eq(glowing, 0, "%s has no emission" % item)
+				assert_true(glowing >= 1, "%s draws its named parts in %s's glow colour, unlit" % [item, set_key])
+			assert_eq(PALETTES[set_key]["trim_glow"], 0.0, "%s's trims stay plain" % set_key)
 			for own in _owns(item):
 				assert_false(own.get("light", false), "%s's %s asks for no light" % [item, own["shape"]])
 				assert_false(own.get("motes", false), "%s's %s asks for no motes" % [item, own["shape"]])
 	for set_key in PALETTES:
 		assert_true(PALETTES[set_key]["glow"] != Color.BLACK, "%s has a glow colour" % set_key)
-	var glow := {}
 	for item in STAVES:
-		glow[item] = GearLookScript.piece(item, GearLookScript.PART_WEAPON)["glow"]
-	assert_true(glow["shardweaver_staff"] < glow["rimecaller_staff"] and glow["rimecaller_staff"] < glow["glacier_warden_staff"], "each rung's staff shines brighter than the one below")
+		assert_eq(GearLookScript.piece(item, GearLookScript.PART_WEAPON)["glow"], 0.0, "%s's prism is unlit" % item)
 
 
 func test_steel_draws_exactly_what_it_drew_before() -> void:
@@ -360,8 +358,8 @@ func test_steel_draws_exactly_what_it_drew_before() -> void:
 	assert_eq(GearLookScript.STEEL, {
 		"base": Color(0.42, 0.50, 0.62), "dark": Color(0.378, 0.45, 0.558),
 		"trim": Color(0.336, 0.40, 0.496), "accent": Color(0.478, 0.55, 0.658),
-		"glow": Color(0.55, 0.85, 1.0), "glow_energy": 1.5,
-	}, "the steel palette is unchanged")
+		"glow": Color(0.55, 0.85, 1.0), "glow_energy": 0.0, "trim_glow": 0.0,
+	}, "the steel palette is unchanged but for its plain staff crystal (#250)")
 	for item in ["wooden_staff", "bronze_staff", "iron_staff", "steel_staff"]:
 		assert_eq(GearLookScript.piece(item, GearLookScript.PART_WEAPON)["shape"], GearLookScript.SHAPE_STAFF, "%s is still the staff model" % item)
 		assert_true(CharacterGearScript.weapon_piece(item) == null, "%s is not a kit weapon" % item)
