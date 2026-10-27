@@ -29,8 +29,10 @@
 ## palette field a part takes is the look's tone number (`tone`, `edge_tone`...), or a Color
 ## of the look's own. A look's `glow` above 0 draws the builder's highlight in the palette's
 ## glow colour, shining that bright, through `Props.flat`, and a palette's `trim_glow` above 0
-## (a top set's) makes every part drawn in its trim shine in the trim colour (#250). Glow is
-## emission only: no piece carries a light or particles, so the web build stays smooth.
+## (a top set's) makes every part drawn in its trim shine in the trim colour (#250), as its
+## `accent_glow` (a unique piece's, in its band's colour) does every part drawn in its accent
+## (#251). Glow is emission only: no piece carries a light or particles, so the web build stays
+## smooth.
 ##
 ## A piece's `layers` are built the same way and added under its root, so a set helm is a
 ## helm with studs, cheek guards and a crest layered on from its one entry; no builder knows
@@ -136,7 +138,7 @@ func _redraw() -> void:
 			continue
 		match place:
 			GearLayout.HAND:
-				if ItemTable.ITEMS[item]["slot"] == ItemTable.SLOT_TOOL:
+				if ItemTable.slot(item) == ItemTable.SLOT_TOOL:
 					_build_held_tool(view, place, item)
 				else:
 					_build_weapon(view, place, item)
@@ -1541,12 +1543,13 @@ static func _prism(holder: Node3D, look: Dictionary, colours: Dictionary, length
 
 
 ## The material a look's `key` tone names: the palette field it names, or the Color it
-## carries. The palette's trim shines at its `trim_glow` (0 keeps it plain).
+## carries. The palette's trim shines at its `trim_glow` and its accent at its `accent_glow`
+## (0 keeps them plain).
 static func _tone(look: Dictionary, colours: Dictionary, key: String) -> StandardMaterial3D:
 	var tone: Variant = look[key]
 	if tone is Color:
 		return Props.flat(tone)
-	return Props.flat(colours[tone], colours["trim_glow"] if tone == "trim" else 0.0)
+	return Props.flat(colours[tone], colours.get(GearLook.TONE_GLOWS.get(tone, ""), 0.0))
 
 
 ## The tone a builder's highlight is drawn in: the palette's glow colour shining at the look's
