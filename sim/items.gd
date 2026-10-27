@@ -14,6 +14,9 @@
 ## piece); the more is worn, the slower warmth drains outside (see Sim.WARMTH_PACE). Food
 ## carries `heal`, the health it restores spread over `heal_ticks` ticks.
 ##
+## An item a rare roll gives carries its `rarity`: the rarity band (GLOSSARY.md) it belongs to,
+## wherever it came from. The iron pieces are uncommon; every other item has none.
+##
 ## A gear piece of a set carries `"set": "<set key>"` and no `tier`, so the smithing cap never
 ## refuses it. Its set's level (`SET_INFO`, #247) puts it on the ladder: a mid set sits beside
 ## bronze, mid-high beside iron, high beside steel, and a top set above steel (`set_rung`). A
@@ -51,6 +54,13 @@ const TIER_IRON := "iron"
 const TIER_STEEL := "steel"
 ## The gear tiers in order. A tier's rank is its index: wooden 0, bronze 1, iron 2, steel 3.
 const TIERS: Array[String] = [TIER_WOODEN, TIER_BRONZE, TIER_IRON, TIER_STEEL]
+
+## The rarity bands, commonest first. A band's rank is its index: uncommon 0 up to ultra rare 3.
+const RARITY_UNCOMMON := "uncommon"
+const RARITY_RARE := "rare"
+const RARITY_SUPER_RARE := "super_rare"
+const RARITY_ULTRA_RARE := "ultra_rare"
+const RARITIES: Array[String] = [RARITY_UNCOMMON, RARITY_RARE, RARITY_SUPER_RARE, RARITY_ULTRA_RARE]
 
 ## The set keys (#157). The magic line's Ruinwarden is `ruinwarden_mage`, so no item id collides.
 const SET_HEARTHGUARD := "hearthguard"
@@ -215,7 +225,7 @@ const ITEMS := {
 	},
 	"iron_axe": {
 		"label": "Iron axe", "stack": 1, "weight": 3, "value": 60, "slot": SLOT_TOOL,
-		"tool": TOOL_AXE, "tier": TIER_IRON,
+		"tool": TOOL_AXE, "tier": TIER_IRON, "rarity": RARITY_UNCOMMON,
 	},
 	"steel_axe": {
 		"label": "Steel axe", "stack": 1, "weight": 3, "value": 120, "slot": SLOT_TOOL,
@@ -231,7 +241,7 @@ const ITEMS := {
 	},
 	"iron_pickaxe": {
 		"label": "Iron pickaxe", "stack": 1, "weight": 3, "value": 60, "slot": SLOT_TOOL,
-		"tool": TOOL_PICKAXE, "tier": TIER_IRON,
+		"tool": TOOL_PICKAXE, "tier": TIER_IRON, "rarity": RARITY_UNCOMMON,
 	},
 	"steel_pickaxe": {
 		"label": "Steel pickaxe", "stack": 1, "weight": 3, "value": 120, "slot": SLOT_TOOL,
@@ -252,7 +262,7 @@ const ITEMS := {
 	},
 	"iron_sword": {
 		"label": "Iron sword", "stack": 1, "weight": 4, "value": 80, "slot": SLOT_WEAPON,
-		"style": "melee", "power": 9, "speed": 2, "reach": 1.5, "tier": TIER_IRON,
+		"style": "melee", "power": 9, "speed": 2, "reach": 1.5, "tier": TIER_IRON, "rarity": RARITY_UNCOMMON,
 	},
 	"steel_sword": {
 		"label": "Steel sword", "stack": 1, "weight": 4, "value": 160, "slot": SLOT_WEAPON,
@@ -268,7 +278,7 @@ const ITEMS := {
 	},
 	"iron_bow": {
 		"label": "Iron bow", "stack": 1, "weight": 2, "value": 84, "slot": SLOT_WEAPON,
-		"style": "ranged", "power": 8, "speed": 2, "reach": 8.0, "ammo": "arrows", "tier": TIER_IRON,
+		"style": "ranged", "power": 8, "speed": 2, "reach": 8.0, "ammo": "arrows", "tier": TIER_IRON, "rarity": RARITY_UNCOMMON,
 	},
 	"wooden_staff": {
 		"label": "Wooden staff", "stack": 1, "weight": 2, "value": 22, "slot": SLOT_WEAPON,
@@ -280,7 +290,7 @@ const ITEMS := {
 	},
 	"iron_staff": {
 		"label": "Iron staff", "stack": 1, "weight": 2, "value": 86, "slot": SLOT_WEAPON,
-		"style": "magic", "power": 8, "speed": 2, "reach": 6.0, "ammo": "frost_shards", "tier": TIER_IRON,
+		"style": "magic", "power": 8, "speed": 2, "reach": 6.0, "ammo": "frost_shards", "tier": TIER_IRON, "rarity": RARITY_UNCOMMON,
 	},
 	"steel_bow": {
 		"label": "Steel bow", "stack": 1, "weight": 2, "value": 168, "slot": SLOT_WEAPON,
@@ -318,15 +328,15 @@ const ITEMS := {
 	},
 	"iron_helm": {
 		"label": "Iron helm", "stack": 1, "weight": 1, "value": 20, "slot": SLOT_HELM,
-		"defence": 1, "tier": TIER_IRON,
+		"defence": 1, "tier": TIER_IRON, "rarity": RARITY_UNCOMMON,
 	},
 	"iron_body": {
 		"label": "Iron body", "stack": 1, "weight": 3, "value": 40, "slot": SLOT_BODY,
-		"defence": 1, "tier": TIER_IRON,
+		"defence": 1, "tier": TIER_IRON, "rarity": RARITY_UNCOMMON,
 	},
 	"iron_legs": {
 		"label": "Iron legs", "stack": 1, "weight": 2, "value": 30, "slot": SLOT_LEGS,
-		"defence": 1, "tier": TIER_IRON,
+		"defence": 1, "tier": TIER_IRON, "rarity": RARITY_UNCOMMON,
 	},
 	"steel_helm": {
 		"label": "Steel helm", "stack": 1, "weight": 2, "value": 40, "slot": SLOT_HELM,
@@ -832,6 +842,11 @@ static func set_label(set_key: String) -> String:
 ## A set's combat style ("melee", "ranged" or "magic"), or "" for anything not a set key.
 static func set_style(set_key: String) -> String:
 	return SET_INFO[set_key]["style"] if SET_INFO.has(set_key) else ""
+
+
+## The item's rarity band ("uncommon", "rare", "super_rare", "ultra_rare"), or "" for none.
+static func rarity(kind: String) -> String:
+	return ITEMS[kind].get("rarity", "") if ITEMS.has(kind) else ""
 
 
 ## A tier's rank: wooden 0, bronze 1, iron 2, steel 3, and -1 for "" or anything unknown.

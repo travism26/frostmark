@@ -1715,12 +1715,14 @@ func _kill_enemy(id: String) -> void:
 	e["next"] = {}
 	e["respawn_tick"] = int(state["tick"]) + int(def["respawn_ticks"])
 	_emit({"kind": SimVocab.EV_ENEMY_DIED, "enemy_id": id, "enemy_kind": e["kind"], "pos": _xz(at)})
-	var drops: Array = (def["loot"] as Array).duplicate(true)
-	var boss_loot: Array = def.get("boss_loot", [])
+	var table := CombatTable.loot_table(e["kind"])
+	var drops: Array = (table["loot"] as Array).duplicate(true)
+	var boss_loot: Array = table["boss_loot"]
 	if not boss_loot.is_empty():
 		drops.append({"item": boss_loot[_rand(boss_loot.size())], "count": 1})
-	if _roll(int(def["rare_percent"])):
-		drops.append({"item": CombatTable.RARE_LOOT[_rand(CombatTable.RARE_LOOT.size())], "count": 1})
+	var rare := _rare_roll(table["rare_roll"])
+	if rare != "":
+		drops.append({"item": rare, "count": 1})
 	for i in drops.size():
 		_drop_loot(drops[i]["item"], int(drops[i]["count"]), at + Vector2(0.45 * i, 0.0))
 	if _attack_target() == id:
@@ -1730,6 +1732,19 @@ func _kill_enemy(id: String) -> void:
 		var before := _open_ring_gates()
 		defeated.append(id)
 		_announce_ring_gates(before)
+
+
+## A kill's rare roll: one draw of the hundred that lands in at most one of `rare_roll`'s bands,
+## rarest first, then one draw from that band's pool. "" when it lands in none, or in a band
+## whose pool is empty.
+func _rare_roll(rare_roll: Dictionary) -> String:
+	var roll := _rand(100)
+	for id in CombatTable.roll_order(rare_roll):
+		roll -= int(rare_roll[id])
+		if roll < 0:
+			var pool: Array = CombatTable.rarity_band(id)["pool"]
+			return "" if pool.is_empty() else pool[_rand(pool.size())]
+	return ""
 
 
 ## Where enemy `id` lives: its placed home, or for an add its entry point.

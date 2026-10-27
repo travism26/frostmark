@@ -564,8 +564,9 @@ func test_a_set_item_has_no_tier_takes_the_steel_stats_and_is_not_dropped_and_on
 			dropped[loot["item"]] = true
 		for kind in enemy.get("boss_loot", []):
 			dropped[kind] = true
-	for kind in CombatTable.RARE_LOOT:
-		dropped[kind] = true
+	for band in CombatTable.RARITY_BANDS.values():
+		for kind in band["pool"]:
+			dropped[kind] = true
 	for kind in ItemTable.ITEMS:
 		if ItemTable.set_of(kind) == "":
 			continue
@@ -729,7 +730,7 @@ func test_iron_is_made_at_the_bloomery_and_still_drops() -> void:
 		var r := RecipeTable.get_recipe(id)
 		made[r["output"]["item"]] = r["upgrade"]
 	var found := {}
-	for kind in CombatTable.RARE_LOOT:
+	for kind in CombatTable.rarity_band("rings_one_two_uncommon")["pool"]:
 		found[kind] = true
 	for kind in CombatTable.ENEMIES["bandit_captain"]["boss_loot"]:
 		found[kind] = true
