@@ -254,7 +254,7 @@ func _refresh_pack() -> void:
 		if pack[i] != null:
 			var kind: String = pack[i]["item"]
 			var verb := _pack_verb(kind)
-			_pack_buttons[i].set_tip(func() -> Control: return UiTooltip.item(kind, verb))
+			_pack_buttons[i].set_tip(func() -> Control: return UiTooltip.item(kind, verb, "Right-click to drop.", _worn()))
 	var line := _weight_line(sim.carry_weight(), sim.carry_limit())
 	_weight_label.text = line["text"]
 	_weight_label.add_theme_color_override("font_color", WEIGHT_TONE_COLOURS[line["tone"]])
@@ -270,7 +270,7 @@ func _refresh_equipment() -> void:
 		_set_badge(b, item, IconTable.SLOT_KEYS[slot] if item == "" else "")
 		(row["name"] as Label).text = ItemTable.label(item) if item != "" else "Nothing"
 		if item != "":
-			b.set_tip(func() -> Control: return UiTooltip.item(item, "Click to unequip into the pack", ""))
+			b.set_tip(func() -> Control: return UiTooltip.item(item, "Click to unequip into the pack", "", _worn()))
 		else:
 			b.set_tip(Callable())
 	_refresh_style()
@@ -286,6 +286,12 @@ func _refresh_skills() -> void:
 		(row["bar"] as ProgressBar).max_value = maxi(1, int(p["span"]))
 		(row["bar"] as ProgressBar).value = int(p["into"])
 	_skill_total.text = "Total level %d" % total
+
+
+## What the player wears now (slot -> item), read when a tooltip is built so a set piece's
+## worn count is never stale.
+func _worn() -> Dictionary:
+	return sim.state["inventory"]["equipment"]
 
 
 ## The current style and its ammunition, shown under the pack and the equipment.
@@ -326,7 +332,7 @@ func _refresh_stash() -> void:
 			_set_slot(b, slots[i])
 			if slots[i] != null:
 				var kind: String = slots[i]["item"]
-				b.set_tip(func() -> Control: return UiTooltip.item(kind, "Click to withdraw", ""))
+				b.set_tip(func() -> Control: return UiTooltip.item(kind, "Click to withdraw", "", _worn()))
 	var haul_why := sim.check(SimVocab.DEPOSIT_HAUL, {})
 	_deposit_haul_button.disabled = haul_why != ""
 	_deposit_haul_button.tooltip_text = _why_text(haul_why) if haul_why != "" else "Put away everything but your gear, ammo and cooked food."

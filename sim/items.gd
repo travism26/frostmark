@@ -25,7 +25,9 @@
 ## and style (value and defence, and for a weapon its power, speed, reach and ammo). The mid to
 ## high sets are found only, so none of their pieces has a recipe; only a top-set piece has one
 ## (#184). A quiver or a cape has no tier counterpart, so until #243 a quiver or cape set item
-## takes weight 1, value 40, no defence and no warmth. Engine-free like sim/.
+## takes weight 1, value 40, no defence and no warmth. Wearing pieces of one set gives its set
+## bonus in steps (`SET_INFO`'s `steps`, read by `set_bonus`, #248), zero until #243.
+## Engine-free like sim/.
 class_name ItemTable
 extends RefCounted
 
@@ -108,30 +110,50 @@ const LEVEL_HIGH := "high"
 const LEVEL_TOP := "top"
 const SET_LEVELS: Array[String] = [LEVEL_MID, LEVEL_MID_HIGH, LEVEL_HIGH, LEVEL_TOP]
 
-## Every set's name, combat style and level, declared once: the ladder, the tooltips and the
-## drop pools read their facts here.
+## What a set bonus step can give (#248): `power` adds to every blow the wearer strikes with a
+## weapon of the set's style, and `defence` comes off every hit taken, like armour.
+const STEP_STATS: Array[String] = ["power", "defence"]
+
+## The placeholder set bonus steps (#248), zero until #243 sets each set's numbers: a step at 2
+## pieces and one at 4, and for a five- or six-piece set one more at the full count.
+const PLACEHOLDER_STEPS_4 := [
+	{"pieces": 2, "power": 0, "defence": 0}, {"pieces": 4, "power": 0, "defence": 0},
+]
+const PLACEHOLDER_STEPS_5 := [
+	{"pieces": 2, "power": 0, "defence": 0}, {"pieces": 4, "power": 0, "defence": 0},
+	{"pieces": 5, "power": 0, "defence": 0},
+]
+const PLACEHOLDER_STEPS_6 := [
+	{"pieces": 2, "power": 0, "defence": 0}, {"pieces": 4, "power": 0, "defence": 0},
+	{"pieces": 6, "power": 0, "defence": 0},
+]
+
+## Every set's name, combat style, level and bonus steps, declared once: the ladder, the
+## tooltips, the drop pools and the blows read their facts here. A step is {pieces, power,
+## defence}: worn with at least `pieces` of its set, it adds its stats on top of every step
+## below it (`set_bonus`).
 const SET_INFO := {
-	SET_HEARTHGUARD: {"label": "Hearthguard", "style": "melee", "level": LEVEL_MID},
-	SET_WOLFMARK: {"label": "Wolfmark", "style": "melee", "level": LEVEL_MID_HIGH},
-	SET_RUINWARDEN: {"label": "Ruinwarden", "style": "melee", "level": LEVEL_HIGH},
-	SET_EMBERHEART: {"label": "Emberheart", "style": "melee", "level": LEVEL_TOP},
-	SET_HOARFROST: {"label": "Hoarfrost", "style": "melee", "level": LEVEL_TOP},
-	SET_AURORAL: {"label": "Auroral", "style": "melee", "level": LEVEL_TOP},
-	SET_TROLLBONE: {"label": "Trollbone", "style": "melee", "level": LEVEL_TOP},
-	SET_TRAPPER: {"label": "Trapper's Leathers", "style": "ranged", "level": LEVEL_MID},
-	SET_WOLFSTALKER: {"label": "Wolfstalker", "style": "ranged", "level": LEVEL_MID_HIGH},
-	SET_STEELPOINT: {"label": "Steelpoint Ranger", "style": "ranged", "level": LEVEL_HIGH},
-	SET_EMBER_HAWK: {"label": "Ember Hawk", "style": "ranged", "level": LEVEL_TOP},
-	SET_AURORAL_WARDEN: {"label": "Auroral Warden", "style": "ranged", "level": LEVEL_TOP},
-	SET_RUIN_STALKER: {"label": "Ruin Stalker's Shroud", "style": "ranged", "level": LEVEL_TOP},
-	SET_GLACIER_SOVEREIGN: {"label": "Glacier Sovereign", "style": "ranged", "level": LEVEL_TOP},
-	SET_SHARDWEAVER: {"label": "Shardweaver", "style": "magic", "level": LEVEL_MID},
-	SET_RIMECALLER: {"label": "Rimecaller", "style": "magic", "level": LEVEL_MID_HIGH},
-	SET_GLACIER_WARDEN: {"label": "Glacier Warden", "style": "magic", "level": LEVEL_HIGH},
-	SET_HOARFROST_SOVEREIGN: {"label": "Hoarfrost Sovereign", "style": "magic", "level": LEVEL_TOP},
-	SET_HEARTHFIRE_MAGUS: {"label": "Hearthfire Magus", "style": "magic", "level": LEVEL_TOP},
-	SET_AURORA_SHAMAN: {"label": "Aurora Shaman", "style": "magic", "level": LEVEL_TOP},
-	SET_RUINWARDEN_MAGE: {"label": "Ruinwarden", "style": "magic", "level": LEVEL_TOP},
+	SET_HEARTHGUARD: {"label": "Hearthguard", "style": "melee", "level": LEVEL_MID, "steps": PLACEHOLDER_STEPS_4},
+	SET_WOLFMARK: {"label": "Wolfmark", "style": "melee", "level": LEVEL_MID_HIGH, "steps": PLACEHOLDER_STEPS_4},
+	SET_RUINWARDEN: {"label": "Ruinwarden", "style": "melee", "level": LEVEL_HIGH, "steps": PLACEHOLDER_STEPS_4},
+	SET_EMBERHEART: {"label": "Emberheart", "style": "melee", "level": LEVEL_TOP, "steps": PLACEHOLDER_STEPS_4},
+	SET_HOARFROST: {"label": "Hoarfrost", "style": "melee", "level": LEVEL_TOP, "steps": PLACEHOLDER_STEPS_4},
+	SET_AURORAL: {"label": "Auroral", "style": "melee", "level": LEVEL_TOP, "steps": PLACEHOLDER_STEPS_4},
+	SET_TROLLBONE: {"label": "Trollbone", "style": "melee", "level": LEVEL_TOP, "steps": PLACEHOLDER_STEPS_4},
+	SET_TRAPPER: {"label": "Trapper's Leathers", "style": "ranged", "level": LEVEL_MID, "steps": PLACEHOLDER_STEPS_4},
+	SET_WOLFSTALKER: {"label": "Wolfstalker", "style": "ranged", "level": LEVEL_MID_HIGH, "steps": PLACEHOLDER_STEPS_5},
+	SET_STEELPOINT: {"label": "Steelpoint Ranger", "style": "ranged", "level": LEVEL_HIGH, "steps": PLACEHOLDER_STEPS_5},
+	SET_EMBER_HAWK: {"label": "Ember Hawk", "style": "ranged", "level": LEVEL_TOP, "steps": PLACEHOLDER_STEPS_5},
+	SET_AURORAL_WARDEN: {"label": "Auroral Warden", "style": "ranged", "level": LEVEL_TOP, "steps": PLACEHOLDER_STEPS_6},
+	SET_RUIN_STALKER: {"label": "Ruin Stalker's Shroud", "style": "ranged", "level": LEVEL_TOP, "steps": PLACEHOLDER_STEPS_6},
+	SET_GLACIER_SOVEREIGN: {"label": "Glacier Sovereign", "style": "ranged", "level": LEVEL_TOP, "steps": PLACEHOLDER_STEPS_5},
+	SET_SHARDWEAVER: {"label": "Shardweaver", "style": "magic", "level": LEVEL_MID, "steps": PLACEHOLDER_STEPS_4},
+	SET_RIMECALLER: {"label": "Rimecaller", "style": "magic", "level": LEVEL_MID_HIGH, "steps": PLACEHOLDER_STEPS_5},
+	SET_GLACIER_WARDEN: {"label": "Glacier Warden", "style": "magic", "level": LEVEL_HIGH, "steps": PLACEHOLDER_STEPS_5},
+	SET_HOARFROST_SOVEREIGN: {"label": "Hoarfrost Sovereign", "style": "magic", "level": LEVEL_TOP, "steps": PLACEHOLDER_STEPS_5},
+	SET_HEARTHFIRE_MAGUS: {"label": "Hearthfire Magus", "style": "magic", "level": LEVEL_TOP, "steps": PLACEHOLDER_STEPS_5},
+	SET_AURORA_SHAMAN: {"label": "Aurora Shaman", "style": "magic", "level": LEVEL_TOP, "steps": PLACEHOLDER_STEPS_5},
+	SET_RUINWARDEN_MAGE: {"label": "Ruinwarden", "style": "magic", "level": LEVEL_TOP, "steps": PLACEHOLDER_STEPS_5},
 }
 
 const ITEMS := {
@@ -847,6 +869,64 @@ static func set_style(set_key: String) -> String:
 ## The item's rarity band ("uncommon", "rare", "super_rare", "ultra_rare"), or "" for none.
 static func rarity(kind: String) -> String:
 	return ITEMS[kind].get("rarity", "") if ITEMS.has(kind) else ""
+
+
+## Stand-in bonus steps by set key, on top of SET_INFO: a test of the steps gives a real set
+## non-zero values here rather than in the table. Empty in the game.
+static var _stand_in_steps := {}
+
+
+## Gives each set in `steps` (set key -> list of steps, shaped like SET_INFO's) stand-in bonus
+## steps in place of its own, for a test.
+static func add_stand_in_steps(steps: Dictionary) -> void:
+	_stand_in_steps.merge(steps, true)
+
+
+static func clear_stand_in_steps() -> void:
+	_stand_in_steps.clear()
+
+
+## A set's bonus steps, lowest first: [{pieces, power, defence}], or [] for anything not a set key.
+static func set_steps(set_key: String) -> Array:
+	if _stand_in_steps.has(set_key):
+		return _stand_in_steps[set_key]
+	return SET_INFO[set_key]["steps"] if SET_INFO.has(set_key) else []
+
+
+## How many pieces a set has: 4, 5 or 6, or 0 for anything not a set key.
+static func set_size(set_key: String) -> int:
+	var n := 0
+	for kind in ITEMS:
+		if ITEMS[kind].get("set", "") == set_key:
+			n += 1
+	return n
+
+
+## How many pieces of each set `equipment` (slot -> item) wears: set key -> count, with only
+## the sets worn. A tier piece, a fur piece or a unique piece counts toward none.
+static func worn_set_counts(equipment: Dictionary) -> Dictionary:
+	var counts := {}
+	for slot in EQUIPMENT_SLOTS:
+		var set_key := set_of(str(equipment.get(slot, "")))
+		if set_key != "":
+			counts[set_key] = int(counts.get(set_key, 0)) + 1
+	return counts
+
+
+## What every set `equipment` wears gives a wearer fighting in `style`: {power, defence}. Each
+## set is counted on its own, and every step at or below its count adds its stats; a step's
+## power counts only for a set of `style`.
+static func set_bonus(equipment: Dictionary, style: String) -> Dictionary:
+	var bonus := {"power": 0, "defence": 0}
+	var counts := worn_set_counts(equipment)
+	for set_key in counts:
+		for step in set_steps(set_key):
+			if int(counts[set_key]) < int(step["pieces"]):
+				continue
+			bonus["defence"] += int(step.get("defence", 0))
+			if set_style(set_key) == style:
+				bonus["power"] += int(step.get("power", 0))
+	return bonus
 
 
 ## A tier's rank: wooden 0, bronze 1, iron 2, steel 3, and -1 for "" or anything unknown.

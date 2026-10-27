@@ -1,7 +1,7 @@
 ## One tooltip for everything the player hovers: a tinted badge, a Cinzel title, body lines
 ## and a muted footnote on the frosted frame. `item()` builds it for a pack, stash or
-## equipment slot (a set piece's set and level, tier, weight and value, what it crafts into and
-## builds, what a click does) and `skill()` for a skill cell (level, xp to go, the next
+## equipment slot (a set piece's set and level, tier, weight and value, how many of its set are
+## worn and its bonus steps, what it crafts into and builds, what a click does) and `skill()` for a skill cell (level, xp to go, the next
 ## unlock). Hosts are `UiTooltip.Host` buttons: Godot asks a Control for its tooltip through
 ## `_make_custom_tooltip`, so a host keeps a Callable that builds the control fresh on each
 ## hover from the live state.
@@ -57,13 +57,15 @@ static func build(icon_key: String, title: String, lines: Array[String], note :=
 
 
 ## An item's tooltip: its tier, weight and value, what it does or crafts into, and `verb`
-## (what a click does here), with the drop reminder as the note.
-static func item(kind: String, verb := "", note := "Right-click to drop.") -> UiTooltip:
-	return build(kind, ItemTable.label(kind), item_lines(kind, verb), note)
+## (what a click does here), with the drop reminder as the note. `equipment` is what the
+## player wears (slot -> item), which a set piece counts its set's worn pieces in.
+static func item(kind: String, verb := "", note := "Right-click to drop.", equipment := {}) -> UiTooltip:
+	return build(kind, ItemTable.label(kind), item_lines(kind, verb, equipment), note)
 
 
-## The body lines of `kind`'s tooltip, with `verb` last when given. Pure: it reads the tables only.
-static func item_lines(kind: String, verb := "") -> Array[String]:
+## The body lines of `kind`'s tooltip, with `verb` last when given, for a player wearing
+## `equipment` (slot -> item). Pure: it reads the tables and `equipment` only.
+static func item_lines(kind: String, verb := "", equipment := {}) -> Array[String]:
 	var lines: Array[String] = []
 	var set_key := ItemTable.set_of(kind)
 	if set_key != "":
@@ -86,6 +88,8 @@ static func item_lines(kind: String, verb := "") -> Array[String]:
 	if ItemTable.slot(kind) == ItemTable.SLOT_WEAPON:
 		var w := CombatTable.weapon(kind)
 		lines.append("%s, power %d, reach %s m." % [str(w["style"]).capitalize(), w["power"], str(w["reach"])])
+	if set_key != "":
+		lines.append_array(set_bonus_lines(set_key, equipment))
 	var makes := crafts_into(kind)
 	if not makes.is_empty():
 		lines.append("Crafts into %s." % ", ".join(makes))
@@ -104,6 +108,30 @@ static func set_line(set_key: String) -> String:
 	var place := "beside %s" % ItemTable.TIERS[rung] if rung < ItemTable.TIERS.size() \
 		else "above %s" % ItemTable.TIERS[ItemTable.TIERS.size() - 1]
 	return "%s · %s (%s)" % [ItemTable.set_label(set_key), ItemTable.set_level(set_key), place]
+
+
+## "Hearthguard 2/4 worn", then one line per bonus step, lowest first: "2 pieces (reached):
+## +2 melee power, +1 defence." for a step the worn pieces reach, "4 pieces: ..." for one they
+## don't. Pure: it reads the item table and `equipment` (slot -> item) only.
+static func set_bonus_lines(set_key: String, equipment: Dictionary) -> Array[String]:
+	var worn := int(ItemTable.worn_set_counts(equipment).get(set_key, 0))
+	var lines: Array[String] = ["%s %d/%d worn" % [ItemTable.set_label(set_key), worn, ItemTable.set_size(set_key)]]
+	for step in ItemTable.set_steps(set_key):
+		var pieces := int(step["pieces"])
+		var head := "%d pieces (reached)" % pieces if worn >= pieces else "%d pieces" % pieces
+		lines.append("%s: %s." % [head, step_gives(step, ItemTable.set_style(set_key))])
+	return lines
+
+
+## What one bonus step gives a wearer of a `style` set: "+2 melee power, +1 defence", or "no
+## bonus yet" while every stat is 0 (the placeholders before #243).
+static func step_gives(step: Dictionary, style: String) -> String:
+	var parts: PackedStringArray = []
+	if int(step.get("power", 0)) != 0:
+		parts.append("%+d %s power" % [int(step["power"]), style])
+	if int(step.get("defence", 0)) != 0:
+		parts.append("%+d defence" % int(step["defence"]))
+	return ", ".join(parts) if not parts.is_empty() else "no bonus yet"
 
 
 ## A skill's tooltip: the level, the xp to the next, and the first thing a higher level unlocks.

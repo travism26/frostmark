@@ -1090,14 +1090,18 @@ func _rand(n: int) -> int:
 # --- Combat ---------------------------------------------------------------------------
 
 ## The player and every enemy as one combatant shape: {id, kind, pos, health, health_max,
-## weapon, style, reach, defence, next}. The style comes from the weapon. `next` is the action
-## declared for the coming tick as {action, at}, or {} when nothing is lined up; a feint shows
-## the attack it pretends to be. Every blow is resolved through this view, so the player and an
-## enemy are hit by the same arithmetic.
+## weapon, style, reach, power, defence, next}. The style comes from the weapon. The player's
+## `power` is the weapon's plus the set bonus (#248) for that style, before skill, and its
+## `defence` the armour's plus the set bonus; an enemy's blows carry their own damage, so its
+## power and defence are 0. `next` is the action declared for the coming tick as {action, at},
+## or {} when nothing is lined up; a feint shows the attack it pretends to be. Every blow is
+## resolved through this view, so the player and an enemy are hit by the same arithmetic.
 func combatant(id: String) -> Dictionary:
 	if id == SimVocab.PLAYER:
 		var weapon := player_weapon()
 		var stats := CombatTable.weapon(weapon)
+		var equipment: Dictionary = state["inventory"]["equipment"]
+		var bonus := ItemTable.set_bonus(equipment, stats["style"])
 		var tick := int(state["tick"])
 		var next := {}
 		if is_attacking() and int(state["player"]["ready_tick"]) <= tick + 1:
@@ -1105,7 +1109,8 @@ func combatant(id: String) -> Dictionary:
 		return {
 			"id": id, "kind": SimVocab.PLAYER, "pos": player_pos(), "health": int(state["health"]),
 			"health_max": HEALTH_MAX, "weapon": weapon, "style": stats["style"], "reach": stats["reach"],
-			"defence": ItemTable.worn_defence(state["inventory"]["equipment"]),
+			"power": int(stats["power"]) + int(bonus["power"]),
+			"defence": ItemTable.worn_defence(equipment) + int(bonus["defence"]),
 			"next": next,
 		}
 	var e: Dictionary = state["enemies"][id]
@@ -1119,7 +1124,7 @@ func combatant(id: String) -> Dictionary:
 	return {
 		"id": id, "kind": e["kind"], "pos": _pos(e), "health": int(e["health"]),
 		"health_max": int(def["health"]), "weapon": held, "style": enemy_stats["style"],
-		"reach": enemy_stats["reach"], "defence": 0, "next": shown,
+		"reach": enemy_stats["reach"], "power": 0, "defence": 0, "next": shown,
 	}
 
 
@@ -1206,7 +1211,7 @@ func _step_player_attack() -> void:
 	if toward != Vector2.ZERO:
 		player["facing"] = _xz(toward.normalized())
 	var skill: String = CombatTable.STYLE_SKILLS[me["style"]]
-	var base := int(stats["power"]) + (skill_level(skill) - 1) / CombatTable.LEVELS_PER_POWER
+	var base := int(me["power"]) + (skill_level(skill) - 1) / CombatTable.LEVELS_PER_POWER
 	var amount := _strike(SimVocab.PLAYER, target, base)
 	_grant_xp(skill, amount * CombatTable.XP_PER_DAMAGE)
 	var e: Dictionary = state["enemies"][target]
