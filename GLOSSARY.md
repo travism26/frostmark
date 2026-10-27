@@ -100,11 +100,33 @@ _Avoid_: Smithing tier, craft limit
 
 **Rare material**:
 A material only ring three's enemies drop: rime steel, frost sinew or aurora glass, one for each combat style, each feeding that style's top gear sets.
-_Avoid_: Rare drop, rare item (the rare drop is the iron piece any enemy may drop on top of its loot)
+_Avoid_: Rare drop, rare item (ring three's enemies drop it every kill; a rare drop comes from a rare roll)
 
 **Fur piece**:
 Armour sewn from wolf pelts that slows the drain on your warmth but gives no defence. It has no gear tier, so it competes with metal armour at every stage.
 _Avoid_: Fur armour, leather, lining
+
+### Loot
+
+**Pile**:
+An item lying in the snow, from an enemy's loot or from the player's own drop. Anyone can pick it up until the snow takes it, a few minutes after it fell.
+_Avoid_: Ground item, drop, loot (loot is what enemies drop)
+
+**Loot table**:
+What an enemy kind drops when it dies: its guaranteed loot, plus one rare roll.
+_Avoid_: Drop table, loot list
+
+**Rare roll**:
+The single chance a kill gives at something beyond its guaranteed loot. It lands in at most one rarity band, or none. Pure chance, with no protection against bad luck.
+_Avoid_: Bonus roll, proc, drop chance
+
+**Rarity band**:
+One rung of a rare roll: a set of odds and the pool of items it gives. A boss adds a band of pieces only it drops.
+_Avoid_: Tier (a tier is a gear tier), rarity level
+
+**Rare drop**:
+Whatever a rare roll gives. It counts toward what a death keeps by its worth alone, with no rule of its own.
+_Avoid_: Rare item, rare material (a rare material is ring three's guaranteed loot)
 
 ### Outpost
 

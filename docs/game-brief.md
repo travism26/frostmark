@@ -116,7 +116,7 @@ Decided in the boss fights grill ([#203](https://github.com/travism26/frostmark/
 - **Ring one's boss is a great frost bear.** It smashes its front and stomps a ring, fights in melee so magic has the edge on it, and calls in two wolves at half health. Ring two's boss is designed with its dungeon.
 - **The Frost tyrant becomes the deep dungeon's boss.** Its old hollow becomes the ring-three dungeon's mouth.
 - **A boss never leaves its room,** which has about 12 m of clear floor. If you walk out, it disengages, walks home and heals, its adds leave, its burning ground goes out, and the fight starts over.
-- **A boss drops a guaranteed pile of its ring's best materials, plus a chance at a piece only it drops.** Ring one's pile is iron ore and wolf pelts. The pieces and their odds are the rare loot grill's ([#139](https://github.com/travism26/frostmark/issues/139)). Top sets still come from the workbench.
+- **A boss drops a guaranteed pile of its ring's best materials, plus a chance at a piece only it drops.** Ring one's pile is iron ore and wolf pelts. The piece comes from the boss's own super rare band, at about 1 in 25 kills, and a boss also has an ultra rare chance at about 1 in 250 ([#139](https://github.com/travism26/frostmark/issues/139), spec [#236](https://github.com/travism26/frostmark/issues/236)). Top sets still come from the workbench.
 - **A boss respawns on a timer like any enemy:** about 600 ticks in ring one, rising by ring, with the tyrant at 900. The way out shuts when it does.
 - **Each dungeon has a test code that sets you outside its boss room with that ring's kit,** and each boss has a scripted fight test for balancing.
 
