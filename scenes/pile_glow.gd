@@ -2,19 +2,20 @@
 ## soft pool of light on the snow and a halo around the crate for a rare, super rare or ultra
 ## rare item, and for super rare and ultra rare a tall light column, seen from further off. It
 ## is a child of the pile's node, so it lasts as long as the pile is drawn and goes with it,
-## picked up or taken by the snow. Unshaded and additive, with no light, so the web renderer
-## copes. An uncommon or band-less pile has none.
+## picked up or taken by the snow. Unshaded, with no light, so the web renderer copes: the pool
+## and the column are tinted over what lies behind them, so they read on bright snow, and the
+## halo is added on top, so the crate seems lit. An uncommon or band-less pile has none.
 class_name PileGlow
 extends Node3D
 
-const POOL_RADIUS := 0.85
-const POOL_ALPHA := 0.7
-const HALO_SIZE := 1.1
+const POOL_RADIUS := 1.2
+const POOL_ALPHA := 0.85
+const HALO_SIZE := 1.2
 const HALO_HEIGHT := 0.2  # the crate's middle
-const HALO_ALPHA := 0.55
-const COLUMN_WIDTH := 0.55
+const HALO_ALPHA := 0.8
+const COLUMN_WIDTH := 0.8
 const COLUMN_HEIGHT := 9.0
-const COLUMN_ALPHA := 0.6
+const COLUMN_ALPHA := 0.95
 const LIFT := 0.03  # above the snow, clear of z-fighting
 
 ## The bands tall enough to send up a column.
@@ -35,17 +36,17 @@ static func of_band(band: String) -> PileGlow:
 	var glow := PileGlow.new()
 	glow.name = "pile_glow"
 	glow.colour = tint
-	var pool := _quad(_disc_tex(), Color(tint, POOL_ALPHA), BaseMaterial3D.BILLBOARD_DISABLED)
+	var pool := _quad(_disc_tex(), Color(tint, POOL_ALPHA), BaseMaterial3D.BILLBOARD_DISABLED, false)
 	(pool.mesh as QuadMesh).orientation = PlaneMesh.FACE_Y
 	pool.scale = Vector3(POOL_RADIUS * 2.0, 1.0, POOL_RADIUS * 2.0)
 	pool.position.y = LIFT
 	glow.add_child(pool)
-	var halo := _quad(_disc_tex(), Color(tint, HALO_ALPHA), BaseMaterial3D.BILLBOARD_ENABLED)
+	var halo := _quad(_disc_tex(), Color(tint, HALO_ALPHA), BaseMaterial3D.BILLBOARD_ENABLED, true)
 	halo.scale = Vector3(HALO_SIZE, HALO_SIZE, 1.0)
 	halo.position.y = HALO_HEIGHT
 	glow.add_child(halo)
 	if COLUMN_BANDS.has(band):
-		glow.column = _quad(_beam_tex(), Color(tint, COLUMN_ALPHA), BaseMaterial3D.BILLBOARD_FIXED_Y)
+		glow.column = _quad(_beam_tex(), Color(tint, COLUMN_ALPHA), BaseMaterial3D.BILLBOARD_FIXED_Y, false)
 		glow.column.name = "column"
 		glow.column.scale = Vector3(COLUMN_WIDTH, COLUMN_HEIGHT, 1.0)
 		glow.column.position.y = COLUMN_HEIGHT * 0.5
@@ -53,7 +54,7 @@ static func of_band(band: String) -> PileGlow:
 	return glow
 
 
-static func _quad(tex: Texture2D, tint: Color, billboard: BaseMaterial3D.BillboardMode) -> MeshInstance3D:
+static func _quad(tex: Texture2D, tint: Color, billboard: BaseMaterial3D.BillboardMode, additive: bool) -> MeshInstance3D:
 	var quad := QuadMesh.new()
 	quad.size = Vector2(1, 1)
 	var mesh := MeshInstance3D.new()
@@ -61,7 +62,7 @@ static func _quad(tex: Texture2D, tint: Color, billboard: BaseMaterial3D.Billboa
 	var mat := StandardMaterial3D.new()
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD if additive else BaseMaterial3D.BLEND_MODE_MIX
 	mat.albedo_texture = tex
 	mat.albedo_color = tint
 	mat.billboard_mode = billboard
@@ -81,7 +82,7 @@ static func _disc_tex() -> Texture2D:
 		for y in n:
 			for x in n:
 				var r := Vector2((x + 0.5) / n * 2.0 - 1.0, (y + 0.5) / n * 2.0 - 1.0).length()
-				var a := pow(clampf(1.0 - r, 0.0, 1.0), 1.6)
+				var a := pow(clampf(1.0 - r, 0.0, 1.0), 0.8)
 				img.set_pixel(x, y, Color(1, 1, 1, a))
 		_disc_texture = ImageTexture.create_from_image(img)
 	return _disc_texture
