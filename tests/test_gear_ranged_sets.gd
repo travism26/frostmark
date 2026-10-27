@@ -135,7 +135,7 @@ func test_the_fourteen_items_follow_the_set_item_and_quiver_rules() -> void:
 				assert_eq(IconTable.path(item), IconTable.path(IconTable.SLOT_QUIVER), "%s uses the quiver slot's glyph" % item)
 			else:
 				var steel: String = STEEL[slot]
-				for stat in ["weight", "value", "defence", "style", "power", "speed", "reach", "ammo"]:
+				for stat in ["value", "defence", "style", "power", "speed", "reach", "ammo"]:  # weight is its rung's (test_set_levels.gd)
 					assert_eq(ItemTable.ITEMS[item].get(stat), ItemTable.ITEMS[steel].get(stat), "%s's %s is %s's" % [item, stat, steel])
 				assert_eq(IconTable.path(item), IconTable.path(steel), "%s uses its slot's glyph" % item)
 			assert_true(ItemTable.label(item).begins_with(set_key.capitalize() + " "), "%s is labelled with its set: %s" % [item, ItemTable.label(item)])

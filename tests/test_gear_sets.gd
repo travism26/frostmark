@@ -114,7 +114,7 @@ func test_each_set_has_four_items_under_the_set_item_rule() -> void:
 			assert_eq(ItemTable.slot(item), slot, "%s goes in the %s slot" % [item, slot])
 			assert_eq(ItemTable.tier(item), "", "%s has no tier" % item)
 			var steel: String = STEEL[slot]
-			for stat in ["weight", "value", "defence", "style", "power", "speed", "reach", "ammo"]:
+			for stat in ["value", "defence", "style", "power", "speed", "reach", "ammo"]:  # weight is its rung's (test_set_levels.gd)
 				assert_eq(ItemTable.ITEMS[item].get(stat), ItemTable.ITEMS[steel].get(stat), "%s's %s is %s's" % [item, stat, steel])
 			assert_true(ItemTable.label(item).begins_with(set_key.capitalize() + " "), "%s is labelled with its set: %s" % [item, ItemTable.label(item)])
 			assert_true(GearLookScript.has(item), "%s has a look" % item)
