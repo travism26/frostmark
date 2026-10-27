@@ -348,14 +348,18 @@ func put_away(kinds: Array) -> void:
 				step()
 
 
-## Deposits every item the pack holds that has a rarity band, such as a dropped iron piece: a
-## person stows a find at home rather than carry it, and takes it back out once it is the best
-## they own (`ready_for_ring_two`). Left in the pack, a lucky run's finds would crowd out its loot.
+## Deposits every item the pack holds that has a rarity band, such as a dropped iron or set
+## piece, and drops one it already has another of: a person stows a find at home rather than
+## carry it, and takes it back out once it is the best they own (`ready_for_ring_two`). Left in
+## the pack, a lucky run's finds would crowd out its loot.
 func stow_finds() -> void:
 	var finds := []
 	for slot in sim.state["inventory"]["pack"]:
 		if slot != null and ItemTable.rarity(slot["item"]) != "" and not finds.has(slot["item"]):
 			finds.append(slot["item"])
+	for kind in finds:
+		while H.pack_count(sim, kind) > 0 and (H.stash_count(sim, kind) > 0 or (sim.state["inventory"]["equipment"] as Dictionary).values().has(kind)):
+			_drop_carried(kind)
 	put_away(finds)
 
 
