@@ -70,7 +70,7 @@ func test_they_stack_weigh_and_go_in_and_out_of_the_stash() -> void:
 
 func test_only_top_set_recipes_spend_them_and_only_the_listed_enemies_drop_them() -> void:
 	for kind in RARES:
-		assert_false(var_to_str(CombatTable.RARE_LOOT).contains('"%s"' % kind), "%s is not in the common rare roll" % kind)
+		assert_false(var_to_str(CombatTable.RARITY_BANDS).contains('"%s"' % kind), "%s is in no rarity band" % kind)
 		for id in RecipeTable.ids():
 			if RecipeTable.get_recipe(id)["inputs"].has(kind):
 				assert_eq(ItemTable.set_of(id) != "", true, "%s: only a set item's recipe spends %s" % [id, kind])

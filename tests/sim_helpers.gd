@@ -143,13 +143,13 @@ const STAND_IN_KINDS := {
 	"stand_in_feinter": {
 		"label": "Feinter", "health": 500, "weapon": "fangs", "speed": 2.0, "sight": 6.0,
 		"actions": ["feint_lunge", "lunge", CombatTable.ACTION_REST, "wind_up", "feint_lunge", CombatTable.ACTION_REST],
-		"loot": [], "rare_percent": 0, "respawn_ticks": 100,
+		"loot": [], "rare_roll": {}, "respawn_ticks": 100,
 	},
 	# Backs away inside 4 m like a ruin stalker, and feints its first dart.
 	"stand_in_kiting_feinter": {
 		"label": "Kiting feinter", "health": 500, "weapon": "stalker_bow", "speed": 1.5, "sight": 10.0,
 		"kite": 4.0, "actions": ["feint_dart", CombatTable.ACTION_REST, "dart", CombatTable.ACTION_REST],
-		"loot": [], "rare_percent": 0, "respawn_ticks": 100,
+		"loot": [], "rare_roll": {}, "respawn_ticks": 100,
 	},
 	# Fights like an ice troll, winding up a tick before its crush. Below half health it
 	# quickens and crushes with no wind-up; below 45 % it draws a bow and shoots instead.
@@ -163,7 +163,7 @@ const STAND_IN_KINDS := {
 				"stances": ["captain_bow", "captain_bow", "captain_bow", "captain_bow", "captain_bow"],
 			},
 		],
-		"loot": [], "rare_percent": 0, "respawn_ticks": 100,
+		"loot": [], "rare_roll": {}, "respawn_ticks": 100,
 	},
 	# Fights through sabre, bow and staff like the captain, winding up before its cleave, and
 	# answers a counter: a staff with its bow, a blade with its staff. It has no answer to a bow.
@@ -183,7 +183,7 @@ const STAND_IN_KINDS := {
 		],
 		"answers": {CombatTable.STYLE_MAGIC: 5, CombatTable.STYLE_MELEE: 10},
 		"answer_ticks": 8,
-		"loot": [], "rare_percent": 0, "respawn_ticks": 100,
+		"loot": [], "rare_roll": {}, "respawn_ticks": 100,
 	},
 	# Slashes with its sabre and answers nothing until below half health, where it draws sabre,
 	# bow and staff in turn and answers a staff with its bow and a blade with its staff.
@@ -205,44 +205,44 @@ const STAND_IN_KINDS := {
 				"answer_ticks": 8,
 			},
 		],
-		"loot": [], "rare_percent": 0, "respawn_ticks": 100,
+		"loot": [], "rare_roll": {}, "respawn_ticks": 100,
 	},
 	# Smashes the ground in front of it, rests, bites, rests.
 	"stand_in_smasher": {
 		"label": "Smasher", "health": 500, "weapon": "fangs", "speed": 2.0, "sight": 6.0,
 		"actions": ["ground_smash", CombatTable.ACTION_REST, "bite", CombatTable.ACTION_REST],
-		"loot": [], "rare_percent": 0, "respawn_ticks": 100,
+		"loot": [], "rare_roll": {}, "respawn_ticks": 100,
 	},
 	# Stomps a ring round itself, rests, bites, rests.
 	"stand_in_stomper": {
 		"label": "Stomper", "health": 500, "weapon": "fangs", "speed": 2.0, "sight": 6.0,
 		"actions": ["ground_stomp", CombatTable.ACTION_REST, "bite", CombatTable.ACTION_REST],
-		"loot": [], "rare_percent": 0, "respawn_ticks": 100,
+		"loot": [], "rare_roll": {}, "respawn_ticks": 100,
 	},
 	# Scorches a ring round itself, leaving fire, rests, bites, rests.
 	"stand_in_scorcher": {
 		"label": "Scorcher", "health": 500, "weapon": "fangs", "speed": 2.0, "sight": 6.0,
 		"actions": ["ground_scorch", CombatTable.ACTION_REST, "bite", CombatTable.ACTION_REST],
-		"loot": [], "rare_percent": 0, "respawn_ticks": 100,
+		"loot": [], "rare_roll": {}, "respawn_ticks": 100,
 	},
 	# Sears the ground in front of it, leaving fire, then rests.
 	"stand_in_searer": {
 		"label": "Searer", "health": 500, "weapon": "fangs", "speed": 2.0, "sight": 6.0,
 		"actions": ["ground_sear", CombatTable.ACTION_REST, CombatTable.ACTION_REST],
-		"loot": [], "rare_percent": 0, "respawn_ticks": 100,
+		"loot": [], "rare_roll": {}, "respawn_ticks": 100,
 	},
 	# Smashes and rests until below half health, where it quickens and bites instead.
 	"stand_in_area_phaser": {
 		"label": "Area phaser", "health": 100, "weapon": "fangs", "speed": 2.0, "sight": 6.0,
 		"actions": ["ground_smash", CombatTable.ACTION_REST, CombatTable.ACTION_REST],
 		"phases": [{"below": 50, "actions": ["quicken", "bite", CombatTable.ACTION_REST]}],
-		"loot": [], "rare_percent": 0, "respawn_ticks": 100,
+		"loot": [], "rare_roll": {}, "respawn_ticks": 100,
 	},
 	# Drops ice on the player's spot, rests, bites, rests.
 	"stand_in_dropper": {
 		"label": "Dropper", "health": 500, "weapon": "fangs", "speed": 2.0, "sight": 6.0,
 		"actions": ["ice_fall", CombatTable.ACTION_REST, "bite", CombatTable.ACTION_REST],
-		"loot": [], "rare_percent": 0, "respawn_ticks": 100,
+		"loot": [], "rare_roll": {}, "respawn_ticks": 100,
 	},
 	# Bites and rests until below half health, where it quickens and drops ice told one tick
 	# ahead, then smashes in front of it the same way.
@@ -250,7 +250,7 @@ const STAND_IN_KINDS := {
 		"label": "Quick phaser", "health": 100, "weapon": "fangs", "speed": 2.0, "sight": 6.0,
 		"actions": ["bite", CombatTable.ACTION_REST, CombatTable.ACTION_REST],
 		"phases": [{"below": 50, "actions": ["quicken", "quick_fall", CombatTable.ACTION_REST, "quick_smash", CombatTable.ACTION_REST]}],
-		"loot": [], "rare_percent": 0, "respawn_ticks": 100,
+		"loot": [], "rare_roll": {}, "respawn_ticks": 100,
 	},
 	# Bites and rests. Below half health it quickens and calls in two wolves, from 5 m either side
 	# of its home; below 30 % it quickens again and calls nobody.
@@ -264,7 +264,7 @@ const STAND_IN_KINDS := {
 			},
 			{"below": 30, "actions": ["quicken", "bite", CombatTable.ACTION_REST, CombatTable.ACTION_REST]},
 		],
-		"loot": [], "rare_percent": 0, "respawn_ticks": 100,
+		"loot": [], "rare_roll": {}, "respawn_ticks": 100,
 	},
 	# Bites and rests. Below half health it raises a ward that only magic gets through, and below
 	# 20 % it quickens and the ward is gone.
@@ -275,7 +275,7 @@ const STAND_IN_KINDS := {
 			{"below": 50, "actions": ["raise_ward", "bite", CombatTable.ACTION_REST], "ward": CombatTable.STYLE_MAGIC},
 			{"below": 20, "actions": ["quicken", "bite", CombatTable.ACTION_REST]},
 		],
-		"loot": [], "rare_percent": 0, "respawn_ticks": 100,
+		"loot": [], "rare_roll": {}, "respawn_ticks": 100,
 	},
 	# Smashes with its sabre, then draws its bow for a shot and back; answers a staff with its bow.
 	"stand_in_area_answerer": {
@@ -283,7 +283,7 @@ const STAND_IN_KINDS := {
 		"actions": ["ground_smash", CombatTable.ACTION_REST, "draw_bow", "loose", CombatTable.ACTION_REST, "draw_sabre"],
 		"stances": ["captain_sabre", "captain_sabre", "captain_bow", "captain_bow", "captain_bow", "captain_sabre"],
 		"answers": {CombatTable.STYLE_MAGIC: 2}, "answer_ticks": 8,
-		"loot": [], "rare_percent": 0, "respawn_ticks": 100,
+		"loot": [], "rare_roll": {}, "respawn_ticks": 100,
 	},
 }
 

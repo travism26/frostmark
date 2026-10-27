@@ -162,8 +162,8 @@ const ACTIONS := {
 ## Enemy kinds. `weapon` sets the style and reach. `speed` is metres per tick (the player walks
 ## 2). `sight` is the radius at which an idle enemy notices the player. `actions` is the cycle
 ## an enemy works through while the player is in its reach, one per tick. `loot` always drops;
-## `rare_percent` is the chance of one piece of RARE_LOOT on top. A dead enemy comes back at
-## home `respawn_ticks` later.
+## `rare_roll` names the rarity bands (RARITY_BANDS) it rolls against on top, each with its
+## chance in percent (see `loot_table`). A dead enemy comes back at home `respawn_ticks` later.
 ##
 ## A kind with `kite` keeps its distance: after acting on a tick with the player closer than
 ## `kite` metres, it backs off a step, so it has to be cornered against a wall to be caught.
@@ -200,19 +200,19 @@ const ENEMIES := {
 	"wolf": {
 		"label": "Wolf", "health": 15, "weapon": "fangs", "speed": 2.5, "sight": 6.0,
 		"actions": ["bite", ACTION_REST, "lunge", ACTION_REST],
-		"loot": [{"item": "wolf_pelt", "count": 1}], "rare_percent": 5, "respawn_ticks": 100,
+		"loot": [{"item": "wolf_pelt", "count": 1}], "rare_roll": {"rings_one_two_uncommon": 5}, "respawn_ticks": 100,
 	},
 	"bandit_archer": {
 		"label": "Bandit archer", "health": 20, "weapon": "wooden_bow", "speed": 1.5, "sight": 9.0,
 		"actions": ["shot", ACTION_REST, ACTION_REST, "aimed_shot", ACTION_REST],
-		"loot": [{"item": "arrows", "count": 8}], "rare_percent": 10, "respawn_ticks": 100,
+		"loot": [{"item": "arrows", "count": 8}], "rare_roll": {"rings_one_two_uncommon": 10}, "respawn_ticks": 100,
 	},
 	# A hedge witch who throws the cold itself: magic at a staff's reach, so a bow beats her
 	# and a blade walks into her edge.
 	"frost_witch": {
 		"label": "Frost witch", "health": 18, "weapon": "wooden_staff", "speed": 1.5, "sight": 8.0,
 		"actions": ["frost_bolt", ACTION_REST, ACTION_REST, "ice_lance", ACTION_REST],
-		"loot": [{"item": "frost_shards", "count": 10}], "rare_percent": 10, "respawn_ticks": 100,
+		"loot": [{"item": "frost_shards", "count": 10}], "rare_roll": {"rings_one_two_uncommon": 10}, "respawn_ticks": 100,
 	},
 	# Sabre for two blows, then he draws his bow for two shots, then raises his staff for two
 	# casts, then back: the second blow of each stance is the heavy one, each change of stance
@@ -232,7 +232,7 @@ const ENEMIES := {
 		],
 		"loot": [{"item": "arrows", "count": 20}],
 		"boss_loot": ["iron_sword", "iron_bow", "iron_staff", "iron_helm", "iron_body", "iron_legs"],
-		"rare_percent": 25, "respawn_ticks": 600, "boss": true,
+		"rare_roll": {"rings_one_two_uncommon": 25}, "respawn_ticks": 600, "boss": true,
 	},
 	# The ring-one dungeon's boss. Its claws swipe and maul like any telegraphed blow, so magic
 	# has the edge on it, and between them it smashes the ground in front of it and stomps a
@@ -254,20 +254,20 @@ const ENEMIES := {
 			"adds": [{"kind": "wolf", "entry": [-8.5, 0.0]}, {"kind": "wolf", "entry": [10.5, 0.0]}],
 		}],
 		"loot": [{"item": "iron_ore", "count": 6}, {"item": "wolf_pelt", "count": 4}],
-		"rare_percent": 0, "respawn_ticks": 600, "boss": true,
+		"rare_roll": {}, "respawn_ticks": 600, "boss": true,
 	},
 	# Ring two. A troll smashes, rests, then winds up a tick before its crush: the longest
 	# warning in the game, for the hardest blow. Slow, so it can be stepped away from.
 	"ice_troll": {
 		"label": "Ice troll", "health": 90, "weapon": "troll_club", "speed": 1.5, "sight": 6.0,
 		"actions": ["smash", ACTION_REST, "wind_up", "crush", ACTION_REST, ACTION_REST],
-		"loot": [{"item": "troll_hide", "count": 1}], "rare_percent": 15, "respawn_ticks": 400,
+		"loot": [{"item": "troll_hide", "count": 1}], "rare_roll": {"rings_one_two_uncommon": 15}, "respawn_ticks": 400,
 	},
 	# Two darts, a breath, then a barbed volley; it backs away from anyone who closes in.
 	"ruin_stalker": {
 		"label": "Ruin stalker", "health": 35, "weapon": "stalker_bow", "speed": 1.5, "sight": 10.0,
 		"kite": 4.0, "actions": ["dart", "dart", ACTION_REST, "barbed_volley", ACTION_REST, ACTION_REST],
-		"loot": [{"item": "arrows", "count": 12}, {"item": "coal", "count": 1}], "rare_percent": 10,
+		"loot": [{"item": "arrows", "count": 12}, {"item": "coal", "count": 1}], "rare_roll": {"rings_one_two_uncommon": 10},
 		"respawn_ticks": 300,
 	},
 	# Ring three. A hunter in white who keeps its distance and bluffs its heaviest shot: the
@@ -280,7 +280,7 @@ const ENEMIES := {
 			"quick_shot", ACTION_REST, "piercing_shot", ACTION_REST, ACTION_REST,
 			"quick_shot", "feint_pierce", "piercing_shot", ACTION_REST, ACTION_REST,
 		],
-		"loot": [{"item": "frost_sinew", "count": 1}], "rare_percent": 0, "respawn_ticks": 300,
+		"loot": [{"item": "frost_sinew", "count": 1}], "rare_roll": {}, "respawn_ticks": 300,
 	},
 	# Ring three. A ruin warrior frozen into its armour, and the ring's first lesson: it winds up
 	# like the troll, fakes its second cleave (the real one comes straight after), and below half
@@ -295,7 +295,7 @@ const ENEMIES := {
 		"phases": [{
 			"below": 50, "actions": ["knight_quickens", "hack", "rime_cleave", ACTION_REST, "feint_cleave", "rime_cleave", ACTION_REST],
 		}],
-		"loot": [{"item": "rime_steel", "count": 1}], "rare_percent": 0, "respawn_ticks": 400,
+		"loot": [{"item": "rime_steel", "count": 1}], "rare_roll": {}, "respawn_ticks": 400,
 	},
 	# Ring three. A caster who reads the player back: a bow turned on its staff is answered by
 	# a conjured blade and it closes in, a staff turned on the blade by its staff raised again.
@@ -311,7 +311,7 @@ const ENEMIES := {
 			"seer_blade", "seer_blade", "seer_blade", "seer_blade", "seer_blade", "aurora_staff",
 		],
 		"answers": {STYLE_RANGED: 5, STYLE_MAGIC: 10}, "answer_ticks": 8,
-		"loot": [{"item": "aurora_glass", "count": 1}], "rare_percent": 0, "respawn_ticks": 300,
+		"loot": [{"item": "aurora_glass", "count": 1}], "rare_roll": {}, "respawn_ticks": 300,
 	},
 	# Ring three's boss, and everything the ring has taught at once: the captain's three weapons,
 	# a wound-up cleave, feinted heavies, answers to a counter-swap, and below half health a
@@ -351,7 +351,7 @@ const ENEMIES := {
 			"answers": {STYLE_MAGIC: 6, STYLE_RANGED: 18, STYLE_MELEE: 11}, "answer_ticks": 6,
 		}],
 		"loot": [{"item": "rime_steel", "count": 1}, {"item": "frost_sinew", "count": 1}, {"item": "aurora_glass", "count": 1}],
-		"rare_percent": 0, "respawn_ticks": 900, "boss": true,
+		"rare_roll": {}, "respawn_ticks": 900, "boss": true,
 	},
 }
 ## Area blows. An attack whose action names a `shape` strikes a ground mark, not the player:
@@ -374,16 +374,28 @@ const MARK_TICKS := 2
 const QUICK_MARK_TICKS := 1
 const WALK_PER_TICK := 2.0
 
-## The rare drop in both rings: one piece of iron gear, ahead of smithing it at the Bloomery.
-const RARE_LOOT: Array[String] = [
-	"iron_sword", "iron_helm", "iron_body", "iron_legs", "iron_bow", "iron_axe", "iron_pickaxe", "iron_staff",
-]
+## Rarity bands (GLOSSARY.md): each one's `rarity`, a rung of ItemTable.RARITIES, and the `pool`
+## of items it gives, every one of that rarity. A kind's rare roll names the bands it rolls
+## against and the chance of each (see `loot_table`).
+##
+## Rings one and two share an uncommon band: one piece of iron gear, ahead of smithing it at the
+## Bloomery.
+const RARITY_BANDS := {
+	"rings_one_two_uncommon": {
+		"rarity": ItemTable.RARITY_UNCOMMON,
+		"pool": ["iron_sword", "iron_helm", "iron_body", "iron_legs", "iron_bow", "iron_axe", "iron_pickaxe", "iron_staff"],
+	},
+}
 
 
 ## Stand-in kinds and actions, on top of ENEMIES and ACTIONS: a test of a mechanic that no
 ## enemy uses yet defines its own kind here rather than in the tables. Empty in the game.
 static var _stand_in_kinds := {}
 static var _stand_in_actions := {}
+## Stand-in loot tables, keyed by enemy kind, and stand-in bands, on top of RARITY_BANDS: a test
+## of the rare roll uses these rather than the game's real odds. Empty in the game.
+static var _stand_in_loot_tables := {}
+static var _stand_in_bands := {}
 
 
 ## Adds stand-in `kinds` and `actions`, shaped like ENEMIES and ACTIONS entries, for a test.
@@ -392,9 +404,69 @@ static func add_stand_ins(kinds: Dictionary, actions: Dictionary) -> void:
 	_stand_in_actions.merge(actions, true)
 
 
+## Adds stand-in loot `tables`, keyed by enemy kind and shaped like `loot_table`'s answer, and
+## stand-in `bands`, shaped like RARITY_BANDS entries, for a test. A stand-in table replaces its
+## kind's own.
+static func add_stand_in_loot(tables: Dictionary, bands: Dictionary) -> void:
+	_stand_in_loot_tables.merge(tables, true)
+	_stand_in_bands.merge(bands, true)
+
+
 static func clear_stand_ins() -> void:
 	_stand_in_kinds.clear()
 	_stand_in_actions.clear()
+	_stand_in_loot_tables.clear()
+	_stand_in_bands.clear()
+
+
+## A kind's loot table (GLOSSARY.md): {loot, boss_loot, rare_roll}. `loot` always drops, one of
+## `boss_loot` (if any) always drops, and `rare_roll` is one roll per kill, in percent, that
+## checks its bands rarest first, each taking the next band's chance of the hundred, and lands
+## in at most one; that band then gives one item from its pool, or nothing if its pool is empty.
+static func loot_table(kind: String) -> Dictionary:
+	if _stand_in_loot_tables.has(kind):
+		return _stand_in_loot_tables[kind]
+	var def := enemy(kind)
+	return {"loot": def["loot"], "boss_loot": def.get("boss_loot", []), "rare_roll": def["rare_roll"]}
+
+
+static func rarity_band(id: String) -> Dictionary:
+	return _stand_in_bands[id] if _stand_in_bands.has(id) else RARITY_BANDS.get(id, {})
+
+
+## The bands a rare roll names, rarest first; bands of one rarity in the order of their ids.
+static func roll_order(rare_roll: Dictionary) -> Array:
+	var ids := rare_roll.keys()
+	ids.sort_custom(func(a: String, b: String) -> bool:
+		var rank_a := ItemTable.RARITIES.find(rarity_band(a).get("rarity", ""))
+		var rank_b := ItemTable.RARITIES.find(rarity_band(b).get("rarity", ""))
+		return rank_a > rank_b if rank_a != rank_b else a < b)
+	return ids
+
+
+## Why a loot table's rare roll cannot stand, or [] if it can: a band it names that does not
+## exist, a chance below zero, chances adding up past the hundred, or a pool item that is not an
+## item of its band's rarity.
+static func rare_roll_problems(table: Dictionary) -> Array[String]:
+	var out: Array[String] = []
+	var total := 0
+	var rare_roll: Dictionary = table.get("rare_roll", {})
+	for id in rare_roll:
+		var b := rarity_band(id)
+		if b.is_empty():
+			out.append("no band %s" % id)
+			continue
+		if int(rare_roll[id]) < 0:
+			out.append("%s has a chance below zero" % id)
+		total += int(rare_roll[id])
+		if not ItemTable.RARITIES.has(b["rarity"]):
+			out.append("%s has no rarity" % id)
+		for item in b["pool"]:
+			if ItemTable.rarity(item) != b["rarity"]:
+				out.append("%s in %s is not %s" % [item, id, b["rarity"]])
+	if total > 100:
+		out.append("the chances add up to %d, past 100" % total)
+	return out
 
 
 static func is_enemy_kind(kind: String) -> bool:
