@@ -14,11 +14,14 @@
 ## piece); the more is worn, the slower warmth drains outside (see Sim.WARMTH_PACE). Food
 ## carries `heal`, the health it restores spread over `heal_ticks` ticks.
 ##
-## A gear piece of a set carries `"set": "<set key>"` and no `tier`: like fur, a sideways piece
-## with no rank until #138 places the sets on the ladder. Until #138 settles its stats and
-## sources, a set item takes the stats of the steel item of its slot and style (weight, value
-## and defence, and for a weapon its power, speed, reach and ammo), and it has no drop; only a
-## top-set piece has a recipe (#184). A quiver or a cape has no steel counterpart, so until #138 a quiver or cape set item
+## A gear piece of a set carries `"set": "<set key>"` and no `tier`, so the smithing cap never
+## refuses it. Its set's level (`SET_INFO`, #247) puts it on the ladder: a mid set sits beside
+## bronze, mid-high beside iron, high beside steel, and a top set above steel (`set_rung`). A
+## set piece weighs what its rung's tier piece of the same slot and style weighs, steel's for a
+## top set. Until #243 settles the rest, it takes the other stats of the steel item of its slot
+## and style (value and defence, and for a weapon its power, speed, reach and ammo). The mid to
+## high sets are found only, so none of their pieces has a recipe; only a top-set piece has one
+## (#184). A quiver or a cape has no tier counterpart, so until #243 a quiver or cape set item
 ## takes weight 1, value 40, no defence and no warmth. Engine-free like sim/.
 class_name ItemTable
 extends RefCounted
@@ -86,6 +89,40 @@ const SETS: Array[String] = [
 	SET_SHARDWEAVER, SET_RIMECALLER, SET_GLACIER_WARDEN,
 	SET_HOARFROST_SOVEREIGN, SET_HEARTHFIRE_MAGUS, SET_AURORA_SHAMAN, SET_RUINWARDEN_MAGE,
 ]
+
+## The set levels (#247), low to high. A level's rung is its index plus one on the tier ranks:
+## mid 1 (beside bronze), mid-high 2 (beside iron), high 3 (beside steel), top 4 (above steel).
+const LEVEL_MID := "mid"
+const LEVEL_MID_HIGH := "mid-high"
+const LEVEL_HIGH := "high"
+const LEVEL_TOP := "top"
+const SET_LEVELS: Array[String] = [LEVEL_MID, LEVEL_MID_HIGH, LEVEL_HIGH, LEVEL_TOP]
+
+## Every set's name, combat style and level, declared once: the ladder, the tooltips and the
+## drop pools read their facts here.
+const SET_INFO := {
+	SET_HEARTHGUARD: {"label": "Hearthguard", "style": "melee", "level": LEVEL_MID},
+	SET_WOLFMARK: {"label": "Wolfmark", "style": "melee", "level": LEVEL_MID_HIGH},
+	SET_RUINWARDEN: {"label": "Ruinwarden", "style": "melee", "level": LEVEL_HIGH},
+	SET_EMBERHEART: {"label": "Emberheart", "style": "melee", "level": LEVEL_TOP},
+	SET_HOARFROST: {"label": "Hoarfrost", "style": "melee", "level": LEVEL_TOP},
+	SET_AURORAL: {"label": "Auroral", "style": "melee", "level": LEVEL_TOP},
+	SET_TROLLBONE: {"label": "Trollbone", "style": "melee", "level": LEVEL_TOP},
+	SET_TRAPPER: {"label": "Trapper's Leathers", "style": "ranged", "level": LEVEL_MID},
+	SET_WOLFSTALKER: {"label": "Wolfstalker", "style": "ranged", "level": LEVEL_MID_HIGH},
+	SET_STEELPOINT: {"label": "Steelpoint Ranger", "style": "ranged", "level": LEVEL_HIGH},
+	SET_EMBER_HAWK: {"label": "Ember Hawk", "style": "ranged", "level": LEVEL_TOP},
+	SET_AURORAL_WARDEN: {"label": "Auroral Warden", "style": "ranged", "level": LEVEL_TOP},
+	SET_RUIN_STALKER: {"label": "Ruin Stalker's Shroud", "style": "ranged", "level": LEVEL_TOP},
+	SET_GLACIER_SOVEREIGN: {"label": "Glacier Sovereign", "style": "ranged", "level": LEVEL_TOP},
+	SET_SHARDWEAVER: {"label": "Shardweaver", "style": "magic", "level": LEVEL_MID},
+	SET_RIMECALLER: {"label": "Rimecaller", "style": "magic", "level": LEVEL_MID_HIGH},
+	SET_GLACIER_WARDEN: {"label": "Glacier Warden", "style": "magic", "level": LEVEL_HIGH},
+	SET_HOARFROST_SOVEREIGN: {"label": "Hoarfrost Sovereign", "style": "magic", "level": LEVEL_TOP},
+	SET_HEARTHFIRE_MAGUS: {"label": "Hearthfire Magus", "style": "magic", "level": LEVEL_TOP},
+	SET_AURORA_SHAMAN: {"label": "Aurora Shaman", "style": "magic", "level": LEVEL_TOP},
+	SET_RUINWARDEN_MAGE: {"label": "Ruinwarden", "style": "magic", "level": LEVEL_TOP},
+}
 
 const ITEMS := {
 	# Materials
@@ -318,9 +355,10 @@ const ITEMS := {
 	},
 	# The melee sets (#162): Hearthguard (mid), Wolfmark (mid-high) and Ruinwarden (high), each
 	# a helm, a body, legs and a weapon under the set-item rule above. The weapon's kind (a
-	# broadsword, a bearded axe, a greatsword) is look only; its stats are the steel sword's.
+	# broadsword, a bearded axe, a greatsword) is look only; it weighs its rung's sword and
+	# takes the steel sword's other stats.
 	"hearthguard_helm": {
-		"label": "Hearthguard helm", "stack": 1, "weight": 2, "value": 40, "slot": SLOT_HELM,
+		"label": "Hearthguard helm", "stack": 1, "weight": 1, "value": 40, "slot": SLOT_HELM,
 		"defence": 1, "set": SET_HEARTHGUARD,
 	},
 	"hearthguard_body": {
@@ -328,15 +366,15 @@ const ITEMS := {
 		"defence": 2, "set": SET_HEARTHGUARD,
 	},
 	"hearthguard_legs": {
-		"label": "Hearthguard legs", "stack": 1, "weight": 2, "value": 60, "slot": SLOT_LEGS,
+		"label": "Hearthguard legs", "stack": 1, "weight": 1, "value": 60, "slot": SLOT_LEGS,
 		"defence": 1, "set": SET_HEARTHGUARD,
 	},
 	"hearthguard_broadsword": {
-		"label": "Hearthguard broadsword", "stack": 1, "weight": 4, "value": 160, "slot": SLOT_WEAPON,
+		"label": "Hearthguard broadsword", "stack": 1, "weight": 3, "value": 160, "slot": SLOT_WEAPON,
 		"style": "melee", "power": 11, "speed": 2, "reach": 1.5, "set": SET_HEARTHGUARD,
 	},
 	"wolfmark_helm": {
-		"label": "Wolfmark helm", "stack": 1, "weight": 2, "value": 40, "slot": SLOT_HELM,
+		"label": "Wolfmark helm", "stack": 1, "weight": 1, "value": 40, "slot": SLOT_HELM,
 		"defence": 1, "set": SET_WOLFMARK,
 	},
 	"wolfmark_body": {
@@ -439,7 +477,7 @@ const ITEMS := {
 	# bow's stats are the steel bow's), and a quiver for the two upper sets under the quiver
 	# rule (weight 1, value 40, no defence, no warmth). The first items in the quiver slot.
 	"trapper_helm": {
-		"label": "Trapper hood", "stack": 1, "weight": 2, "value": 40, "slot": SLOT_HELM,
+		"label": "Trapper hood", "stack": 1, "weight": 1, "value": 40, "slot": SLOT_HELM,
 		"defence": 1, "set": SET_TRAPPER,
 	},
 	"trapper_body": {
@@ -447,7 +485,7 @@ const ITEMS := {
 		"defence": 2, "set": SET_TRAPPER,
 	},
 	"trapper_legs": {
-		"label": "Trapper wraps", "stack": 1, "weight": 2, "value": 60, "slot": SLOT_LEGS,
+		"label": "Trapper wraps", "stack": 1, "weight": 1, "value": 60, "slot": SLOT_LEGS,
 		"defence": 1, "set": SET_TRAPPER,
 	},
 	"trapper_bow": {
@@ -455,7 +493,7 @@ const ITEMS := {
 		"style": "ranged", "power": 10, "speed": 2, "reach": 8.0, "ammo": "arrows", "set": SET_TRAPPER,
 	},
 	"wolfstalker_helm": {
-		"label": "Wolfstalker hood", "stack": 1, "weight": 2, "value": 40, "slot": SLOT_HELM,
+		"label": "Wolfstalker hood", "stack": 1, "weight": 1, "value": 40, "slot": SLOT_HELM,
 		"defence": 1, "set": SET_WOLFSTALKER,
 	},
 	"wolfstalker_body": {
@@ -499,7 +537,7 @@ const ITEMS := {
 	# head is look only; its stats are the steel staff's), and a cloak for the two upper sets
 	# under the cape rule (weight 1, value 40, no defence, no warmth): the first cape items.
 	"shardweaver_helm": {
-		"label": "Shardweaver cowl", "stack": 1, "weight": 2, "value": 40, "slot": SLOT_HELM,
+		"label": "Shardweaver cowl", "stack": 1, "weight": 1, "value": 40, "slot": SLOT_HELM,
 		"defence": 1, "set": SET_SHARDWEAVER,
 	},
 	"shardweaver_body": {
@@ -507,7 +545,7 @@ const ITEMS := {
 		"defence": 2, "set": SET_SHARDWEAVER,
 	},
 	"shardweaver_legs": {
-		"label": "Shardweaver leggings", "stack": 1, "weight": 2, "value": 60, "slot": SLOT_LEGS,
+		"label": "Shardweaver leggings", "stack": 1, "weight": 1, "value": 60, "slot": SLOT_LEGS,
 		"defence": 1, "set": SET_SHARDWEAVER,
 	},
 	"shardweaver_staff": {
@@ -515,7 +553,7 @@ const ITEMS := {
 		"style": "magic", "power": 10, "speed": 2, "reach": 6.0, "ammo": "frost_shards", "set": SET_SHARDWEAVER,
 	},
 	"rimecaller_helm": {
-		"label": "Rimecaller hood", "stack": 1, "weight": 2, "value": 40, "slot": SLOT_HELM,
+		"label": "Rimecaller hood", "stack": 1, "weight": 1, "value": 40, "slot": SLOT_HELM,
 		"defence": 1, "set": SET_RIMECALLER,
 	},
 	"rimecaller_body": {
@@ -772,6 +810,28 @@ static func tier(kind: String) -> String:
 ## The key of the set the item belongs to, or "" for an item in no set.
 static func set_of(kind: String) -> String:
 	return ITEMS[kind].get("set", "") if ITEMS.has(kind) else ""
+
+
+## A set's level ("mid", "mid-high", "high" or "top"), or "" for anything not a set key.
+static func set_level(set_key: String) -> String:
+	return SET_INFO[set_key]["level"] if SET_INFO.has(set_key) else ""
+
+
+## A set's rung on the tier ranks: mid 1 (beside bronze), mid-high 2 (beside iron), high 3
+## (beside steel) and top 4 (above steel, past every tier), or -1 for anything not a set key.
+static func set_rung(set_key: String) -> int:
+	var level := set_level(set_key)
+	return SET_LEVELS.find(level) + 1 if level != "" else -1
+
+
+## A set's name as the player reads it ("Trapper's Leathers"), or the key itself if unknown.
+static func set_label(set_key: String) -> String:
+	return SET_INFO[set_key]["label"] if SET_INFO.has(set_key) else set_key
+
+
+## A set's combat style ("melee", "ranged" or "magic"), or "" for anything not a set key.
+static func set_style(set_key: String) -> String:
+	return SET_INFO[set_key]["style"] if SET_INFO.has(set_key) else ""
 
 
 ## A tier's rank: wooden 0, bronze 1, iron 2, steel 3, and -1 for "" or anything unknown.

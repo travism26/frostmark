@@ -60,3 +60,38 @@ func test_a_fur_piece_says_it_makes_warmth_last_longer() -> void:
 		assert_true(UiTooltip.item_lines(kind).has("Makes warmth last longer while worn."), "%s: %s" % [kind, UiTooltip.item_lines(kind)])
 	for kind in ["bronze_helm", "wolf_pelt", "logs"]:
 		assert_false("\n".join(UiTooltip.item_lines(kind)).contains("warmth"), "%s keeps no cold out" % kind)
+
+
+func test_a_set_piece_shows_its_set_and_level_first() -> void:
+	var expected := {
+		"hearthguard_helm": "Hearthguard · mid (beside bronze)",
+		"trapper_bow": "Trapper's Leathers · mid (beside bronze)",
+		"wolfstalker_quiver": "Wolfstalker · mid-high (beside iron)",
+		"rimecaller_cape": "Rimecaller · mid-high (beside iron)",
+		"steelpoint_body": "Steelpoint Ranger · high (beside steel)",
+		"glacier_warden_staff": "Glacier Warden · high (beside steel)",
+		"emberheart_hammer": "Emberheart · top (above steel)",
+		"ruinwarden_mage_cape": "Ruinwarden · top (above steel)",
+	}
+	for kind in expected:
+		assert_eq(UiTooltip.item_lines(kind)[0], expected[kind], "%s: %s" % [kind, UiTooltip.item_lines(kind)])
+
+
+func test_every_set_piece_names_its_set_and_level_and_no_tier() -> void:
+	for kind in ItemTable.ITEMS:
+		var set_key := ItemTable.set_of(kind)
+		if set_key == "":
+			continue
+		var lines := UiTooltip.item_lines(kind)
+		assert_eq(lines[0], UiTooltip.set_line(set_key), "%s: %s" % [kind, lines])
+		assert_true(lines[0].begins_with(ItemTable.set_label(set_key) + " · " + ItemTable.set_level(set_key) + " ("), lines[0])
+		assert_false(lines[1].contains("tier"), "%s shows no tier: %s" % [kind, lines])
+
+
+func test_a_tier_piece_shows_no_set_line() -> void:
+	for kind in ["bronze_helm", "iron_sword", "steel_body", "wooden_axe", "fur_coat", "logs"]:
+		var lines := UiTooltip.item_lines(kind)
+		assert_false("\n".join(lines).contains("·"), "%s: %s" % [kind, lines])
+	assert_eq(UiTooltip.item_lines("bronze_helm")[0], "Bronze tier, 1 kg, worth 10 each")
+	assert_eq(UiTooltip.item_lines("steel_sword", "Click to equip"),
+		["Steel tier, 4 kg, worth 160 each", "Melee, power 11, reach 1.5 m.", "Click to equip."] as Array[String])

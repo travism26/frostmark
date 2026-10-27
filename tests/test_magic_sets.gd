@@ -169,7 +169,7 @@ func test_each_set_has_its_items_under_the_set_item_and_cape_rules() -> void:
 				assert_eq(IconTable.path(item), IconTable.path(IconTable.SLOT_CAPE), "%s uses the cape slot's glyph" % item)
 				continue
 			var steel: String = STEEL[slot]
-			for stat in ["weight", "value", "defence", "style", "power", "speed", "reach", "ammo"]:
+			for stat in ["value", "defence", "style", "power", "speed", "reach", "ammo"]:  # weight is its rung's (test_set_levels.gd)
 				assert_eq(ItemTable.ITEMS[item].get(stat), ItemTable.ITEMS[steel].get(stat), "%s's %s is %s's" % [item, stat, steel])
 			assert_eq(IconTable.path(item), IconTable.path(steel), "%s uses its slot's glyph" % item)
 	assert_eq(count, 14, "fourteen magic set items")

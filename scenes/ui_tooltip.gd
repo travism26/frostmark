@@ -1,9 +1,10 @@
 ## One tooltip for everything the player hovers: a tinted badge, a Cinzel title, body lines
 ## and a muted footnote on the frosted frame. `item()` builds it for a pack, stash or
-## equipment slot (tier, weight and value, what it crafts into and builds, what a click does) and
-## `skill()` for a skill cell (level, xp to go, the next unlock). Hosts are `UiTooltip.Host`
-## buttons: Godot asks a Control for its tooltip through `_make_custom_tooltip`, so a host
-## keeps a Callable that builds the control fresh on each hover from the live state.
+## equipment slot (a set piece's set and level, tier, weight and value, what it crafts into and
+## builds, what a click does) and `skill()` for a skill cell (level, xp to go, the next
+## unlock). Hosts are `UiTooltip.Host` buttons: Godot asks a Control for its tooltip through
+## `_make_custom_tooltip`, so a host keeps a Callable that builds the control fresh on each
+## hover from the live state.
 ##
 ## Glue only: it reads the tables and `sim` and changes nothing.
 class_name UiTooltip
@@ -64,6 +65,9 @@ static func item(kind: String, verb := "", note := "Right-click to drop.") -> Ui
 ## The body lines of `kind`'s tooltip, with `verb` last when given. Pure: it reads the tables only.
 static func item_lines(kind: String, verb := "") -> Array[String]:
 	var lines: Array[String] = []
+	var set_key := ItemTable.set_of(kind)
+	if set_key != "":
+		lines.append(set_line(set_key))
 	var tier := ItemTable.tier(kind)
 	var facts: PackedStringArray = []
 	if tier != "":
@@ -91,6 +95,15 @@ static func item_lines(kind: String, verb := "") -> Array[String]:
 	if verb != "":
 		lines.append(verb + ".")
 	return lines
+
+
+## "Hearthguard · mid (beside bronze)": a set's name, its level and the tier it sits beside,
+## or "above steel" for a top set. Pure: it reads the item table only.
+static func set_line(set_key: String) -> String:
+	var rung := ItemTable.set_rung(set_key)
+	var place := "beside %s" % ItemTable.TIERS[rung] if rung < ItemTable.TIERS.size() \
+		else "above %s" % ItemTable.TIERS[ItemTable.TIERS.size() - 1]
+	return "%s · %s (%s)" % [ItemTable.set_label(set_key), ItemTable.set_level(set_key), place]
 
 
 ## A skill's tooltip: the level, the xp to the next, and the first thing a higher level unlocks.
