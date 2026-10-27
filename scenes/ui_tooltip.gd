@@ -1,7 +1,8 @@
 ## One tooltip for everything the player hovers: a tinted badge, a Cinzel title, body lines
 ## and a muted footnote on the frosted frame. `item()` builds it for a pack, stash or
-## equipment slot (a set piece's set and level, tier, weight and value, how many of its set are
-## worn and its bonus steps, what it crafts into and builds, what a click does) and `skill()` for a skill cell (level, xp to go, the next
+## equipment slot (the name in its rarity band's colour, a set piece's set and level, tier,
+## weight and value, how many of its set are worn and its bonus steps, what it crafts into and
+## builds, what a click does) and `skill()` for a skill cell (level, xp to go, the next
 ## unlock). Hosts are `UiTooltip.Host` buttons: Godot asks a Control for its tooltip through
 ## `_make_custom_tooltip`, so a host keeps a Callable that builds the control fresh on each
 ## hover from the live state.
@@ -28,8 +29,9 @@ class Host:
 		return make.call()
 
 
-## The control itself: badge and title on one line, then the body lines, then the note.
-static func build(icon_key: String, title: String, lines: Array[String], note := "") -> UiTooltip:
+## The control itself: badge and title on one line, then the body lines, then the note. A
+## `title_colour` (a rarity band's) colours the title; null leaves it plain.
+static func build(icon_key: String, title: String, lines: Array[String], note := "", title_colour: Variant = null) -> UiTooltip:
 	var tip := UiTooltip.new()
 	tip.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	var column := VBoxContainer.new()
@@ -41,7 +43,7 @@ static func build(icon_key: String, title: String, lines: Array[String], note :=
 	column.add_child(head)
 	if icon_key != "" and IconTable.has(icon_key):
 		head.add_child(UiTheme.badge(icon_key, 26))
-	var heading := UiTheme.heading(title, 14)
+	var heading := UiTheme.heading(title, 14) if title_colour == null else UiTheme.heading(title, 14, title_colour)
 	heading.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(heading)
@@ -56,11 +58,12 @@ static func build(icon_key: String, title: String, lines: Array[String], note :=
 	return tip
 
 
-## An item's tooltip: its tier, weight and value, what it does or crafts into, and `verb`
-## (what a click does here), with the drop reminder as the note. `equipment` is what the
-## player wears (slot -> item), which a set piece counts its set's worn pieces in.
+## An item's tooltip: its name in its rarity band's colour (plain for uncommon and band-less
+## items), its tier, weight and value, what it does or crafts into, and `verb` (what a click
+## does here), with the drop reminder as the note. `equipment` is what the player wears
+## (slot -> item), which a set piece counts its set's worn pieces in.
 static func item(kind: String, verb := "", note := "Right-click to drop.", equipment := {}) -> UiTooltip:
-	return build(kind, ItemTable.label(kind), item_lines(kind, verb, equipment), note)
+	return build(kind, ItemTable.label(kind), item_lines(kind, verb, equipment), note, RarityLook.of_item(kind))
 
 
 ## The body lines of `kind`'s tooltip, with `verb` last when given, for a player wearing

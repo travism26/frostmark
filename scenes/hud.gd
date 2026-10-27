@@ -521,6 +521,7 @@ static func _why_text(reason: String) -> String:
 ## Fills an inventory cell: the item's badge, and a count in the corner for stacks.
 func _set_slot(b: UiTooltip.Host, slot: Variant) -> void:
 	var badge: Label = b.get_meta("count")
+	tint_slot(b, slot)
 	if slot == null:
 		_set_badge(b, "", "")
 		badge.visible = false
@@ -530,6 +531,23 @@ func _set_slot(b: UiTooltip.Host, slot: Variant) -> void:
 	_set_badge(b, slot["item"], "")
 	badge.text = "%d" % count
 	badge.visible = count > 1
+
+
+## Tints a pack or stash cell in the rarity band colour of the item in `slot` (null for an
+## empty cell), or puts back the plain cell look for uncommon, band-less items and empty cells.
+static func tint_slot(b: Button, slot: Variant) -> void:
+	var band := ItemTable.rarity(slot["item"]) if slot != null else ""
+	if RarityLook.colour(band) == null:
+		band = ""
+	if b.get_meta("tint_band", "") == band:
+		return
+	var styles := UiTheme.slot_styles(RarityLook.colour(band))
+	for state in ["normal", "hover", "pressed", "hover_pressed"]:
+		if styles.has(state):
+			b.add_theme_stylebox_override(state, styles[state])
+		else:
+			b.remove_theme_stylebox_override(state)
+	b.set_meta("tint_band", band)
 
 
 ## Puts `key`'s badge in a slot button, or `ghost`'s dimmed glyph for an empty slot.
