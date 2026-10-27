@@ -196,23 +196,34 @@ const ACTIONS := {
 ## enemy's, it declares the stance answering that style instead of its next action, at most
 ## once every `answer_ticks` ticks and never straight after a wind-up (see `answer_problems`).
 ## The Aurora seer and the Frost tyrant answer (ring three, #182 and #183).
+## The odds of the bands rarer than uncommon, in percent (docs/balance.md): an ordinary kind's
+## ring rare band about 1 in 150 a kill, and a ring-three kind's ultra rare about 1 in 1000; a
+## boss's own super rare band about 1 in 25, and its ultra rare about 1 in 250. Each kind's
+## uncommon odds are its own, in its entry.
+const RARE_ODDS := 0.67
+const RING_THREE_ULTRA_RARE_ODDS := 0.1
+const BOSS_SUPER_RARE_ODDS := 4.0
+const BOSS_ULTRA_RARE_ODDS := 0.4
+## Ring three's ordinary kinds share their whole rare roll: the ring's uncommon and rare bands
+## and the ultra rare.
+const RING_THREE_ROLL := {"ring_three_uncommon": 10, "ring_three_rare": RARE_ODDS, "ultra_rare": RING_THREE_ULTRA_RARE_ODDS}
 const ENEMIES := {
 	"wolf": {
 		"label": "Wolf", "health": 15, "weapon": "fangs", "speed": 2.5, "sight": 6.0,
 		"actions": ["bite", ACTION_REST, "lunge", ACTION_REST],
-		"loot": [{"item": "wolf_pelt", "count": 1}], "rare_roll": {"ring_one_uncommon": 5}, "respawn_ticks": 100,
+		"loot": [{"item": "wolf_pelt", "count": 1}], "rare_roll": {"ring_one_uncommon": 5, "ring_one_rare": RARE_ODDS}, "respawn_ticks": 100,
 	},
 	"bandit_archer": {
 		"label": "Bandit archer", "health": 20, "weapon": "wooden_bow", "speed": 1.5, "sight": 9.0,
 		"actions": ["shot", ACTION_REST, ACTION_REST, "aimed_shot", ACTION_REST],
-		"loot": [{"item": "arrows", "count": 8}], "rare_roll": {"ring_one_uncommon": 10}, "respawn_ticks": 100,
+		"loot": [{"item": "arrows", "count": 8}], "rare_roll": {"ring_one_uncommon": 10, "ring_one_rare": RARE_ODDS}, "respawn_ticks": 100,
 	},
 	# A hedge witch who throws the cold itself: magic at a staff's reach, so a bow beats her
 	# and a blade walks into her edge.
 	"frost_witch": {
 		"label": "Frost witch", "health": 18, "weapon": "wooden_staff", "speed": 1.5, "sight": 8.0,
 		"actions": ["frost_bolt", ACTION_REST, ACTION_REST, "ice_lance", ACTION_REST],
-		"loot": [{"item": "frost_shards", "count": 10}], "rare_roll": {"ring_one_uncommon": 10}, "respawn_ticks": 100,
+		"loot": [{"item": "frost_shards", "count": 10}], "rare_roll": {"ring_one_uncommon": 10, "ring_one_rare": RARE_ODDS}, "respawn_ticks": 100,
 	},
 	# Sabre for two blows, then he draws his bow for two shots, then raises his staff for two
 	# casts, then back: the second blow of each stance is the heavy one, each change of stance
@@ -232,7 +243,7 @@ const ENEMIES := {
 		],
 		"loot": [{"item": "arrows", "count": 20}],
 		"boss_loot": ["iron_sword", "iron_bow", "iron_staff", "iron_helm", "iron_body", "iron_legs"],
-		"rare_roll": {"ring_one_uncommon": 25}, "respawn_ticks": 600, "boss": true,
+		"rare_roll": {"ring_one_uncommon": 25, "ring_one_rare": RARE_ODDS}, "respawn_ticks": 600, "boss": true,
 	},
 	# The ring-one dungeon's boss. Its claws swipe and maul like any telegraphed blow, so magic
 	# has the edge on it, and between them it smashes the ground in front of it and stomps a
@@ -254,20 +265,22 @@ const ENEMIES := {
 			"adds": [{"kind": "wolf", "entry": [-8.5, 0.0]}, {"kind": "wolf", "entry": [10.5, 0.0]}],
 		}],
 		"loot": [{"item": "iron_ore", "count": 6}, {"item": "wolf_pelt", "count": 4}],
-		"rare_roll": {}, "respawn_ticks": 600, "boss": true,
+		"rare_roll": {"great_frost_bear_super_rare": BOSS_SUPER_RARE_ODDS, "ultra_rare": BOSS_ULTRA_RARE_ODDS},
+		"respawn_ticks": 600, "boss": true,
 	},
 	# Ring two. A troll smashes, rests, then winds up a tick before its crush: the longest
 	# warning in the game, for the hardest blow. Slow, so it can be stepped away from.
 	"ice_troll": {
 		"label": "Ice troll", "health": 90, "weapon": "troll_club", "speed": 1.5, "sight": 6.0,
 		"actions": ["smash", ACTION_REST, "wind_up", "crush", ACTION_REST, ACTION_REST],
-		"loot": [{"item": "troll_hide", "count": 1}], "rare_roll": {"ring_two_uncommon": 15}, "respawn_ticks": 400,
+		"loot": [{"item": "troll_hide", "count": 1}], "rare_roll": {"ring_two_uncommon": 15, "ring_two_rare": RARE_ODDS},
+		"respawn_ticks": 400,
 	},
 	# Two darts, a breath, then a barbed volley; it backs away from anyone who closes in.
 	"ruin_stalker": {
 		"label": "Ruin stalker", "health": 35, "weapon": "stalker_bow", "speed": 1.5, "sight": 10.0,
 		"kite": 4.0, "actions": ["dart", "dart", ACTION_REST, "barbed_volley", ACTION_REST, ACTION_REST],
-		"loot": [{"item": "arrows", "count": 12}, {"item": "coal", "count": 1}], "rare_roll": {"ring_two_uncommon": 10},
+		"loot": [{"item": "arrows", "count": 12}, {"item": "coal", "count": 1}], "rare_roll": {"ring_two_uncommon": 10, "ring_two_rare": RARE_ODDS},
 		"respawn_ticks": 300,
 	},
 	# Ring three. A hunter in white who keeps its distance and bluffs its heaviest shot: the
@@ -280,7 +293,7 @@ const ENEMIES := {
 			"quick_shot", ACTION_REST, "piercing_shot", ACTION_REST, ACTION_REST,
 			"quick_shot", "feint_pierce", "piercing_shot", ACTION_REST, ACTION_REST,
 		],
-		"loot": [{"item": "frost_sinew", "count": 1}], "rare_roll": {"ring_three_uncommon": 10}, "respawn_ticks": 300,
+		"loot": [{"item": "frost_sinew", "count": 1}], "rare_roll": RING_THREE_ROLL, "respawn_ticks": 300,
 	},
 	# Ring three. A ruin warrior frozen into its armour, and the ring's first lesson: it winds up
 	# like the troll, fakes its second cleave (the real one comes straight after), and below half
@@ -295,7 +308,7 @@ const ENEMIES := {
 		"phases": [{
 			"below": 50, "actions": ["knight_quickens", "hack", "rime_cleave", ACTION_REST, "feint_cleave", "rime_cleave", ACTION_REST],
 		}],
-		"loot": [{"item": "rime_steel", "count": 1}], "rare_roll": {"ring_three_uncommon": 10}, "respawn_ticks": 400,
+		"loot": [{"item": "rime_steel", "count": 1}], "rare_roll": RING_THREE_ROLL, "respawn_ticks": 400,
 	},
 	# Ring three. A caster who reads the player back: a bow turned on its staff is answered by
 	# a conjured blade and it closes in, a staff turned on the blade by its staff raised again.
@@ -311,7 +324,7 @@ const ENEMIES := {
 			"seer_blade", "seer_blade", "seer_blade", "seer_blade", "seer_blade", "aurora_staff",
 		],
 		"answers": {STYLE_RANGED: 5, STYLE_MAGIC: 10}, "answer_ticks": 8,
-		"loot": [{"item": "aurora_glass", "count": 1}], "rare_roll": {"ring_three_uncommon": 10}, "respawn_ticks": 300,
+		"loot": [{"item": "aurora_glass", "count": 1}], "rare_roll": RING_THREE_ROLL, "respawn_ticks": 300,
 	},
 	# Ring three's boss, and everything the ring has taught at once: the captain's three weapons,
 	# a wound-up cleave, feinted heavies, answers to a counter-swap, and below half health a
@@ -351,7 +364,8 @@ const ENEMIES := {
 			"answers": {STYLE_MAGIC: 6, STYLE_RANGED: 18, STYLE_MELEE: 11}, "answer_ticks": 6,
 		}],
 		"loot": [{"item": "rime_steel", "count": 1}, {"item": "frost_sinew", "count": 1}, {"item": "aurora_glass", "count": 1}],
-		"rare_roll": {}, "respawn_ticks": 900, "boss": true,
+		"rare_roll": {"frost_tyrant_super_rare": BOSS_SUPER_RARE_ODDS, "ultra_rare": BOSS_ULTRA_RARE_ODDS},
+		"respawn_ticks": 900, "boss": true,
 	},
 }
 ## Area blows. An attack whose action names a `shape` strikes a ground mark, not the player:
@@ -383,6 +397,9 @@ const WALK_PER_TICK := 2.0
 ## Each ring has an uncommon band holding its found sets: mid in ring one, mid-high in ring two,
 ## high in ring three. Rings one and two's also hold one piece of iron gear, ahead of smithing it
 ## at the Bloomery. Every piece in a band is drawn evenly, a placeholder until #243 sets the odds.
+## Each ring also has a rare band of its own, each boss a super rare band of its own pieces, and
+## every ring-three kind and boss rolls against the one ultra rare band. The pools rarer than
+## uncommon stay empty until the unique pieces fill them (#138).
 const IRON_PIECES: Array[String] = [
 	"iron_sword", "iron_helm", "iron_body", "iron_legs", "iron_bow", "iron_axe", "iron_pickaxe", "iron_staff",
 ]
@@ -390,6 +407,12 @@ const RARITY_BANDS := {
 	"ring_one_uncommon": {"rarity": ItemTable.RARITY_UNCOMMON, "pool": IRON_PIECES, "set_level": ItemTable.LEVEL_MID},
 	"ring_two_uncommon": {"rarity": ItemTable.RARITY_UNCOMMON, "pool": IRON_PIECES, "set_level": ItemTable.LEVEL_MID_HIGH},
 	"ring_three_uncommon": {"rarity": ItemTable.RARITY_UNCOMMON, "pool": [], "set_level": ItemTable.LEVEL_HIGH},
+	"ring_one_rare": {"rarity": ItemTable.RARITY_RARE, "pool": []},
+	"ring_two_rare": {"rarity": ItemTable.RARITY_RARE, "pool": []},
+	"ring_three_rare": {"rarity": ItemTable.RARITY_RARE, "pool": []},
+	"great_frost_bear_super_rare": {"rarity": ItemTable.RARITY_SUPER_RARE, "pool": []},
+	"frost_tyrant_super_rare": {"rarity": ItemTable.RARITY_SUPER_RARE, "pool": []},
+	"ultra_rare": {"rarity": ItemTable.RARITY_ULTRA_RARE, "pool": []},
 }
 
 
@@ -442,7 +465,8 @@ static func clear_stand_ins() -> void:
 
 
 ## A kind's loot table (GLOSSARY.md): {loot, boss_loot, rare_roll}. `loot` always drops, one of
-## `boss_loot` (if any) always drops, and `rare_roll` is one roll per kill, in percent, that
+## `boss_loot` (if any) always drops, and `rare_roll` is one roll per kill, in percent (to a
+## fraction of one; see Sim.ROLL_STEPS), that
 ## checks its bands rarest first, each taking the next band's chance of the hundred, and lands
 ## in at most one; that band then gives one item from its pool, or nothing if its pool is empty.
 static func loot_table(kind: String) -> Dictionary:
@@ -485,23 +509,23 @@ static func roll_order(rare_roll: Dictionary) -> Array:
 ## item of its band's rarity.
 static func rare_roll_problems(table: Dictionary) -> Array[String]:
 	var out: Array[String] = []
-	var total := 0
+	var total := 0.0
 	var rare_roll: Dictionary = table.get("rare_roll", {})
 	for id in rare_roll:
 		var b := rarity_band(id)
 		if b.is_empty():
 			out.append("no band %s" % id)
 			continue
-		if int(rare_roll[id]) < 0:
+		if float(rare_roll[id]) < 0.0:
 			out.append("%s has a chance below zero" % id)
-		total += int(rare_roll[id])
+		total += float(rare_roll[id])
 		if not ItemTable.RARITIES.has(b["rarity"]):
 			out.append("%s has no rarity" % id)
 		for item in b["pool"]:
 			if ItemTable.rarity(item) != b["rarity"]:
 				out.append("%s in %s is not %s" % [item, id, b["rarity"]])
-	if total > 100:
-		out.append("the chances add up to %d, past 100" % total)
+	if total > 100.0:
+		out.append("the chances add up to %s, past 100" % String.num(total))
 	return out
 
 

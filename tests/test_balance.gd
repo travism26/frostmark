@@ -141,11 +141,12 @@ func _play() -> void:
 	# Twelve stash slots are cramped by now, and the return banner offers the cellar.
 	bot.build("stash_cellar")
 	bot.build("armoury")
+	# The stash is full by now: each outgrown wooden piece goes as its bronze one goes on, to
+	# make room in the pack for the next and in the stash for the winch's iron.
 	for piece in ["bronze_helm", "bronze_body", "bronze_legs"]:
 		bot.smith(piece)
 		bot.equip(piece)
-	# The stash is full by now: the outgrown wooden gear goes, to make room for the winch's iron.
-	_drop_from_pack(["wooden_helm", "wooden_body", "wooden_legs"])
+		_drop_from_pack([piece.replace("bronze", "wooden")])
 	bot.discard(["wooden_pickaxe"])
 	bot.build("ring_two_gate")
 	assert_true((sim.state["upgrades"] as Array).has("ring_two_gate"), "the winch is built")

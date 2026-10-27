@@ -40,7 +40,9 @@ static func _pieces_of(level: String) -> Array:
 
 
 func test_each_rings_band_holds_the_pieces_of_its_level_and_rings_one_and_two_the_iron() -> void:
-	assert_eq(CombatTable.RARITY_BANDS.keys(), RINGS.keys(), "one uncommon band a ring")
+	var uncommon := CombatTable.RARITY_BANDS.keys().filter(func(id: String) -> bool:
+		return CombatTable.rarity_band(id)["rarity"] == ItemTable.RARITY_UNCOMMON)
+	assert_eq(uncommon, RINGS.keys(), "one uncommon band a ring")
 	for id in RINGS:
 		var ring: Dictionary = RINGS[id]
 		var band := CombatTable.rarity_band(id)
@@ -70,14 +72,17 @@ func test_every_kind_rolls_against_its_rings_band_and_ring_three_ordinary_kinds_
 		for kind in RINGS[id]["kinds"]:
 			rolled[kind] = true
 			var roll: Dictionary = CombatTable.loot_table(kind)["rare_roll"]
-			assert_eq(roll.keys(), [id], "%s rolls against %s alone" % [kind, id])
+			var uncommon := roll.keys().filter(func(band: String) -> bool:
+				return CombatTable.rarity_band(band)["rarity"] == ItemTable.RARITY_UNCOMMON)
+			assert_eq(uncommon, [id], "%s rolls against %s alone of the uncommon bands" % [kind, id])
 			assert_true(int(roll[id]) > 0, "%s has a chance at it" % kind)
 	for kind in ["snowveil_archer", "frostbound_knight", "aurora_seer"]:
 		assert_false(CombatTable.enemy(kind).get("boss", false), "%s is one of ring three's ordinary kinds" % kind)
 	for kind in CombatTable.ENEMIES:
 		assert_eq(CombatTable.rare_roll_problems(CombatTable.loot_table(kind)), [] as Array[String], kind)
 		if not rolled.has(kind):
-			assert_eq(CombatTable.loot_table(kind)["rare_roll"], {}, "%s rolls for nothing" % kind)
+			for band in CombatTable.loot_table(kind)["rare_roll"]:
+				assert_true(CombatTable.rarity_band(band)["rarity"] != ItemTable.RARITY_UNCOMMON, "%s rolls for no uncommon band, but %s" % [kind, band])
 
 
 func test_found_set_pieces_report_the_uncommon_band_and_top_set_pieces_none() -> void:

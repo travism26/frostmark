@@ -198,9 +198,11 @@ func test_ring_two_to_a_steel_kit_takes_an_evening() -> void:
 	bot.gather(COAL_EAST, "coal", 6)
 	bot.home()
 	bot.note("the keep, iron and coal")
-	# Kit stays in the pack through the gate, so the tools, spare armour and outgrown bronze no
-	# steel recipe uses go to the stash to make room for the smithing.
-	bot.put_away(["fishing_rod", "wooden_staff", "frost_shards", "bronze_body", "bronze_sword", "bronze_pickaxe"])
+	# Kit stays in the pack through the gate, so the tools and spare armour no steel recipe uses
+	# go to the stash to make room for the smithing, and the bronze sword and pickaxe the steel
+	# ones replace are dropped.
+	bot.put_away(["fishing_rod", "wooden_staff", "frost_shards", "bronze_body"])
+	bot.discard(["bronze_sword", "bronze_pickaxe"])
 	for i in 7:
 		bot.smith("steel_bar")
 	bot.smith("steel_pickaxe")

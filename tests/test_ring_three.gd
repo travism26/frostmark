@@ -412,7 +412,7 @@ func test_the_snowveil_archer_is_a_feinting_kiting_bowman_with_its_own_loot() ->
 	assert_eq([bow["style"], bow["reach"]], [CombatTable.STYLE_RANGED, 8.0], "a natural bow, 8 m")
 	assert_false(ItemTable.has("veil_bow"), "and not an item")
 	assert_eq(def["loot"], [{"item": "frost_sinew", "count": 1}])
-	assert_eq([def["rare_roll"], def["respawn_ticks"]], [{"ring_three_uncommon": 10}, 300], "a chance at ring three's uncommon band (#249)")
+	assert_eq([def["rare_roll"], def["respawn_ticks"]], [{"ring_three_uncommon": 10, "ring_three_rare": 0.67, "ultra_rare": 0.1}, 300], "ring three's uncommon band (#249), its rare band and the ultra rare (#242)")
 	assert_eq(def["actions"], ["quick_shot", "rest", "piercing_shot", "rest", "rest", "quick_shot", "feint_pierce", "piercing_shot", "rest", "rest"])
 	assert_eq([CombatTable.action_label("quick_shot"), CombatTable.action_damage("quick_shot")], ["Quick shot", 7])
 	assert_eq([CombatTable.action_label("piercing_shot"), CombatTable.action_damage("piercing_shot")], ["Piercing shot", 22])
@@ -616,7 +616,7 @@ func test_the_frostbound_knight_is_a_feinting_blade_with_its_own_loot_and_one_ph
 	assert_eq([blade["style"], blade["reach"]], [CombatTable.STYLE_MELEE, 1.5], "a natural blade, 1.5 m")
 	assert_false(ItemTable.has("rime_blade"), "and not an item")
 	assert_eq(def["loot"], [{"item": "rime_steel", "count": 1}])
-	assert_eq([def["rare_roll"], def["respawn_ticks"]], [{"ring_three_uncommon": 10}, 400], "a chance at ring three's uncommon band (#249)")
+	assert_eq([def["rare_roll"], def["respawn_ticks"]], [{"ring_three_uncommon": 10, "ring_three_rare": 0.67, "ultra_rare": 0.1}, 400], "ring three's uncommon band (#249), its rare band and the ultra rare (#242)")
 	assert_eq(def["actions"], [
 		"hack", "rest", "raise_blade", "rime_cleave", "rest",
 		"hack", "rest", "raise_blade", "feint_cleave", "rime_cleave", "rest",
@@ -1008,7 +1008,7 @@ func test_the_aurora_seer_is_a_caster_that_reads_the_player_back_with_its_own_lo
 	assert_eq([blade["style"], blade["reach"]], [CombatTable.STYLE_MELEE, 1.5], "and a natural blade, 1.5 m")
 	assert_false(ItemTable.has("aurora_staff") or ItemTable.has("seer_blade"), "neither an item")
 	assert_eq(def["loot"], [{"item": "aurora_glass", "count": 1}])
-	assert_eq([def["rare_roll"], def["respawn_ticks"]], [{"ring_three_uncommon": 10}, 300], "a chance at ring three's uncommon band (#249)")
+	assert_eq([def["rare_roll"], def["respawn_ticks"]], [{"ring_three_uncommon": 10, "ring_three_rare": 0.67, "ultra_rare": 0.1}, 300], "ring three's uncommon band (#249), its rare band and the ultra rare (#242)")
 	assert_eq(def["actions"], [
 		"aurora_bolt", "rest", "aurora_lance", "rest", "rest",
 		"conjure_blade", "ice_slash", "rest", "ice_rend", "rest", "raise_aurora",
@@ -1334,7 +1334,7 @@ func test_the_frost_tyrant_is_a_three_weapon_boss_with_a_second_phase_and_answer
 		assert_eq([weapon["style"], weapon["reach"]], [w[1], w[2]], "%s, a natural weapon" % w[0])
 		assert_false(ItemTable.has(w[0]), "%s is no item" % w[0])
 	assert_eq(def["loot"], [{"item": "rime_steel", "count": 1}, {"item": "frost_sinew", "count": 1}, {"item": "aurora_glass", "count": 1}])
-	assert_eq([def["rare_roll"], def["respawn_ticks"], def["boss"]], [{}, 900, true])
+	assert_eq([def["rare_roll"], def["respawn_ticks"], def["boss"]], [{"frost_tyrant_super_rare": 4.0, "ultra_rare": 0.4}, 900, true], "its own band and the ultra rare (#242)")
 	assert_false(def.has("boss_loot"), "no iron")
 	assert_eq(def["actions"], [
 		"tyrant_slash", "tyrant_stomp", "rest", "raise_greatblade", "tyrant_cleave", "rest",

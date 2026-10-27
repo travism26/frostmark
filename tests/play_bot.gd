@@ -143,6 +143,7 @@ func home(deposit := true) -> void:
 		t.assert_true(sim.in_outpost(), "home")
 		if deposit:
 			deposit_haul()
+			stow_finds()
 	if int(sim.state["warmth"]) < Sim.WARMTH_MAX or int(sim.state["health"]) < Sim.HEALTH_MAX - 20:
 		cmd(Vocab.INTERACT, {"object_id": "fire"})
 		run_idle(60)
@@ -247,10 +248,14 @@ func ready_for_ring_two(tools: Array) -> void:
 			withdraw(w, 1)
 	for slot in ItemTable.ARMOUR_SLOTS:
 		var armour := best_of_slot(slot)
-		if armour != "" and sim.state["inventory"]["equipment"][slot] != armour:
+		var outgrown: String = sim.state["inventory"]["equipment"][slot]
+		if armour != "" and outgrown != armour:
 			if H.pack_count(sim, armour) == 0:
 				withdraw(armour, 1)
 			equip(armour)
+			# The piece it outgrew is dropped, so it crowds neither the trip's loot nor the stash.
+			if outgrown != "":
+				_drop_carried(outgrown)
 	if H.stash_count(sim, "arrows") > 0:
 		withdraw("arrows")
 	to_ring_two()
@@ -343,6 +348,21 @@ func put_away(kinds: Array) -> void:
 				step()
 
 
+## Deposits every item the pack holds that has a rarity band, such as a dropped iron or set
+## piece, and drops one it already has another of: a person stows a find at home rather than
+## carry it, and takes it back out once it is the best they own (`ready_for_ring_two`). Left in
+## the pack, a lucky run's finds would crowd out its loot.
+func stow_finds() -> void:
+	var finds := []
+	for slot in sim.state["inventory"]["pack"]:
+		if slot != null and ItemTable.rarity(slot["item"]) != "" and not finds.has(slot["item"]):
+			finds.append(slot["item"])
+	for kind in finds:
+		while H.pack_count(sim, kind) > 0 and (H.stash_count(sim, kind) > 0 or (sim.state["inventory"]["equipment"] as Dictionary).values().has(kind)):
+			_drop_carried(kind)
+	put_away(finds)
+
+
 ## Takes everything of each kind in `kinds` out of the stash and drops it, to free the slots.
 func discard(kinds: Array) -> void:
 	for kind in kinds:
@@ -352,6 +372,16 @@ func discard(kinds: Array) -> void:
 			if pack[i] != null and pack[i]["item"] == kind:
 				t.assert_true(cmd(Vocab.DROP, {"index": i})["ok"], "drop %s" % kind)
 				step()
+
+
+## Drops one `kind` from the pack.
+func _drop_carried(kind: String) -> void:
+	var pack: Array = sim.state["inventory"]["pack"]
+	for i in pack.size():
+		if pack[i] != null and pack[i]["item"] == kind:
+			t.assert_true(cmd(Vocab.DROP, {"index": i})["ok"], "drop %s" % kind)
+			step()
+			return
 
 
 func smith(recipe: String) -> void:

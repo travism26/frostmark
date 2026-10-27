@@ -2,7 +2,8 @@
 ## rarest first, lands in at most one, and draws one item from its pool, or nothing from an empty
 ## one. The drop event names the item's rarity band. A drop-rate scale raises the odds of every
 ## band rarer than uncommon and lives outside the state, so no save code carries or restores it.
-## Shown through stand-in bands and items, since real kinds still roll only their uncommon band.
+## Shown through stand-in bands and items, since real kinds' bands rarer than uncommon have
+## empty pools until #138 fills them.
 extends "res://tests/run.gd".TestCase
 
 const H := preload("res://tests/sim_helpers.gd")
@@ -111,18 +112,21 @@ func test_the_drop_rate_scale_raises_the_rarer_bands_and_leaves_uncommon_alone()
 		assert_true(_near(scaled[band], 45), "%s near 45 of 300 at the scale: %s" % [band, scaled])
 
 
-func test_at_one_or_on_real_kinds_the_scale_changes_nothing() -> void:
+func test_at_one_the_scale_changes_nothing_and_on_real_kinds_it_gives_nothing_rarer() -> void:
 	_stand_in({"wolf": _table(LADDER)})
 	var unset := _drops_by_seed("wolf")
 	CombatTable.set_drop_rate_scale(1.0)
 	assert_eq(_drops_by_seed("wolf"), unset, "a scale of 1 is the game's odds")
 	CombatTable.clear_stand_ins()
-	for kind in ["ice_troll", "bandit_captain", "frostbound_knight"]:
-		var before := _drops_by_seed(kind)
-		CombatTable.set_drop_rate_scale(50.0)
-		var after := _drops_by_seed(kind)
-		CombatTable.clear_stand_ins()
-		assert_eq(after, before, "%s rolls only its uncommon band, which the scale leaves alone" % kind)
+	# Real kinds' bands rarer than uncommon have empty pools until #138, so even at a scale that
+	# lands most rolls in them, a kill gives its loot and at most a piece of iron.
+	CombatTable.set_drop_rate_scale(50.0)
+	for kind in ["ice_troll", "bandit_captain", "frostbound_knight", "great_frost_bear", "frost_tyrant"]:
+		for line in _drops_by_seed(kind):
+			for drop in line.substr(line.find(":") + 2).replace(" | ", ", ").split(", "):
+				var item := drop.get_slice(" x", 0)
+				assert_true(ItemTable.rarity(item) in ["", ItemTable.RARITY_UNCOMMON], "%s: %s" % [kind, line])
+	CombatTable.clear_stand_ins()
 
 
 func test_two_runs_with_the_same_seed_give_the_same_drops() -> void:

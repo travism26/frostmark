@@ -104,6 +104,9 @@ const TRAVEL_GATE_STEP := 2.5
 const DEATH_KEEPS := 7
 ## Ground loot lies this many ticks (five minutes) before the snow takes it.
 const LOOT_TICKS := 600
+## A kill's rare roll is one draw of the generator's whole range, this many steps, read as a
+## percent: fine enough for a band at about 1 in 1000 (CombatTable.RARE_ODDS and the rest).
+const ROLL_STEPS := 32768
 
 ## Enemy modes. Idle at home until it notices the player, engaged while fighting, returning
 ## home (deaf to the player) after the player reaches the outpost, dead until it respawns. An
@@ -1739,11 +1742,11 @@ func _kill_enemy(id: String) -> void:
 		_announce_ring_gates(before)
 
 
-## A kill's rare roll: one draw of the hundred that lands in at most one of `rare_roll`'s bands,
+## A kill's rare roll: one draw, a percent, that lands in at most one of `rare_roll`'s bands,
 ## rarest first, each at its chance under the drop-rate scale (CombatTable.band_chance), then one
 ## draw from that band's pool. "" when it lands in none, or in a band whose pool is empty.
 func _rare_roll(rare_roll: Dictionary) -> String:
-	var roll := float(_rand(100))
+	var roll := float(_rand(ROLL_STEPS)) * 100.0 / ROLL_STEPS
 	for id in CombatTable.roll_order(rare_roll):
 		roll -= CombatTable.band_chance(rare_roll, id)
 		if roll < 0.0:

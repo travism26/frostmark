@@ -21,7 +21,8 @@ It plays sensibly but not perfectly, the way someone new to the game would:
 - It follows the guide: cut pines, walk the logs home through the gate, craft at the workbench from the logs in the pack.
 - It turns home when the cold tip shows (warmth 90), not at the last moment.
 - It gathers whole stacks of ten rather than the exact cost.
-- It makes a wooden helm, body and legs before its first fight, then drops them once the bronze set is on, because by then the stash is full.
+- It makes a wooden helm, body and legs before its first fight, then drops each as its bronze piece goes on, because by then the stash is full.
+- It stows a find (a piece a rare roll gave) at home rather than carry it, and drops one it already has another of.
 - It cooks every fish it catches, eats below half health, and takes its food, bow, arrows, staff and shards out before each trip into ring one.
 - It clicks Deposit haul at the stash on each return and before each outing, so its kit stays in the pack from trip to trip.
 - It smiths straight from what the stash and the pack hold, without withdrawing the inputs first.
@@ -253,7 +254,7 @@ Why each number:
 - **Smash 26 and stomp 24.** The heaviest blows in ring one, and over the maul, so the bear's heaviest blow is above every ring-one kind's. The smash equals the ice troll's crush, the hardest blow outside ring three (`tests/test_ring_two.gd` holds that), and no more. Through iron armour they land for 23 and 21, so five of them take a full health bar and standing in them is what kills.
 - **Smash 4 m deep, stomp 3.5 m round.** A player beside the bear (1.2 m from its centre) steps off a smash by walking about 2 m round to its side, in one tick, and off a stomp by walking more than 2.3 m straight out, in two ticks, so each is a decision inside its two-tick warning, as the spec asks. Both are bigger than a one-tick mark may be; the bear has none.
 - **Two wolves at half health.** Ring one's own kind, 15 health each: they bite an iron-armoured player for 1, and die to one staff hit each, so they turn the fight (the reader breaks off the bear for two hits) without stalling it.
-- **6 iron ore and 4 wolf pelts.** Two iron rocks' worth of ore and four wolves' pelts, so a kill pays half the ring-two winch's 12 ore and most of its 5 pelts, and a little more than the dungeon's own two rocks. No rare drop: the pile is fixed, as the spec asks.
+- **6 iron ore and 4 wolf pelts.** Two iron rocks' worth of ore and four wolves' pelts, so a kill pays half the ring-two winch's 12 ore and most of its 5 pelts, and a little more than the dungeon's own two rocks. The pile is fixed, as the spec asks; on top, its rare roll is against its own super rare band and the ultra rare (#242, under "The rarity ladder"), both empty until #138.
 - **Respawn 600 ticks** (five minutes), the captain's, so it is up again on the next run through the dungeon.
 
 ## Ring three
@@ -390,3 +391,35 @@ So the measured run and `tests/test_pacing.gd` don't change: 12:58 of sim time a
 [#249](https://github.com/travism26/frostmark/issues/249) puts each ring's found set pieces into its uncommon band beside the iron pieces: 12 mid pieces in ring one's (20 in all), 14 mid-high pieces in ring two's (22 in all), and 14 high pieces in ring three's, which ring three's Snowveil archers, Frostbound knights and Aurora seers now roll against at 10 % each. Every kind keeps its chance of landing in its band, and every piece in a band is drawn evenly until #243 sets the odds, so a ring-one kill that lands gives an iron piece 8 times in 20 rather than every time, and a ring-two kill 8 times in 22. No reference character wears a set piece, and the timed route wears smithed tiers.
 
 The balance run (`tests/test_balance.gd`) doesn't change: 13:13 of sim time and a 28:20 estimate, the same as before. The play bot picks up what drops near it, and the planner's seeded run in `tests/test_pacing.gd` lands the captain's rare roll on a Hearthguard helm (1 kg) where it drew a second iron sword (4 kg). Its captain still falls at tick 1656 (13.8 minutes); its ring-two half, carrying 3 kg less, takes 1726 ticks, down from 1740, inside its window.
+
+### The rarity ladder
+
+[#242](https://github.com/travism26/frostmark/issues/242) gives every kind's rare roll the full ladder at the odds [#139](https://github.com/travism26/frostmark/issues/139) settled. Each band's chance is one number in the combat table, in percent:
+
+| Kinds | Uncommon | Rare | Super rare | Ultra rare |
+|-------|----------|------|------------|------------|
+| Ring one: wolves, archers, witches | its own (5 or 10 %), ring one's band | 0.67 % (about 1 in 150), ring one's band | none | none |
+| Bandit captain (a gate guardian) | 25 %, ring one's band, on top of its guaranteed iron piece | 0.67 %, ring one's band | none | none |
+| Ring two: trolls, stalkers | its own (15 or 10 %), ring two's band | 0.67 %, ring two's band | none | none |
+| Ring three: Snowveil archers, Frostbound knights, Aurora seers | 10 %, ring three's band | 0.67 %, ring three's band | none | 0.1 % (about 1 in 1000) |
+| Great frost bear | none | none | 4 % (about 1 in 25), its own band | 0.4 % (about 1 in 250) |
+| Frost tyrant | none | none | 4 %, its own band | 0.4 % |
+
+Each boss keeps its guaranteed pile. The rare, super rare and ultra rare pools are empty until [#138](https://github.com/travism26/frostmark/issues/138) fills them, so a roll that lands in one gives nothing, and the uncommon odds are unchanged. A chance below 1 % needs a finer roll than a whole percent, so the roll now reads one draw of the generator's whole range (32768 steps) as a percent where it took one draw of the hundred. The roll is still one draw, read differently, so the same seed lands on other kills and a seeded run's finds move.
+
+The routes were re-measured, not forced back. Both bots now stow what a rare roll gives at home rather than carry it, and shed what it replaces, because a seeded run whose finds came earlier or more often filled the pack and lost loot it needed. The first-timer drops each wooden piece as its bronze one goes on; the planner drops outgrown armour as it gears up for ring two, drops a find it already has another of, and drops the bronze sword and pickaxe its steel ones replace.
+
+| Phase | Sim time | World clicks | Panel clicks | Outings | Firsts | Allowance | Estimate |
+|-------|----------|--------------|--------------|---------|--------|-----------|----------|
+| first tools | 0:36 | 8 | 2 | 1 | 2 | 1:12 | 1:48 |
+| inner ring | 4:12 | 24 | 7 | 2 | 2 | 2:19 | 6:31 |
+| bronze and a wooden set | 0:53 | 8 | 20 | 1 | 8 | 3:36 | 4:29 |
+| first fights | 1:12 | 16 | 12 | 1 | 0 | 1:28 | 2:40 |
+| iron, armour and the winch | 7:07 | 57 | 33 | 5 | 6 | 6:43 | 13:50 |
+| to the captain | 0:15 | 2 | 1 | 1 | 0 | 0:27 | 0:42 |
+| captain fight | 0:28 | 2 | 7 | 0 | 0 | 0:25 | 0:53 |
+| **to the captain** | **14:14** | | | | | **15:45** | **29:59** |
+
+The estimate rises 1:39, from 28:20 to 29:59, and stays inside 26 to 34 minutes. All of it is in the iron phase: a wolf's roll now gives a Shardweaver body early in it, which the first-timer stows, and the phase takes one more outing (5 where it took 4), 6 more world clicks and 2 more panel clicks. With half the allowance it is 22:06, with half as much again 37:51. The run still dies no times and beats the captain. No number was retuned.
+
+In `tests/test_pacing.gd` the planner's captain falls at tick 1655 (13.8 minutes), one tick sooner than 1656. Its ring-two half takes 1631 ticks (13.6 minutes), down from 1726, inside its window of 1500 to 4050.
