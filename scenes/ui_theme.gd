@@ -427,6 +427,22 @@ static func badge_style(colour: Color, px: int) -> StyleBoxFlat:
 	return s
 
 
+## An inventory cell's styles tinted in `tint` (a rarity band's colour): the SlotButton look
+## washed in the colour, with a rim and, on hover, a glow of it. Keyed by button state, for
+## the cell's own overrides; {} when `tint` is null, so the cell keeps the plain look.
+static func slot_styles(tint: Variant) -> Dictionary:
+	if tint == null:
+		return {}
+	var c: Color = tint
+	var pressed := _flat(Color(0.16, 0.26, 0.38, 0.98).lerp(c, 0.35), c.lightened(0.2), 2, 8, Vector2(3, 3))
+	return {
+		"normal": _flat(SLATE_DEEP.lerp(c, 0.22), Color(c, 0.9), 2, 8, Vector2(3, 3)),
+		"hover": _glow(_flat(Color(0.09, 0.14, 0.21, 0.96).lerp(c, 0.30), c.lightened(0.2), 2, 8, Vector2(3, 3)), Color(c, 0.5), 4),
+		"pressed": pressed,
+		"hover_pressed": pressed,
+	}
+
+
 ## A list row's own backing, clear until the caller colours its `bg_color` and
 ## `border_color` (the Upgrades tab's can-build-now highlight and its flash). A fresh box per
 ## row, so recolouring one row leaves the rest alone.
