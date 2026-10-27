@@ -28,7 +28,7 @@ _Avoid_: Encumbered, overloaded
 
 **Kit**:
 What you carry to use rather than to put away: gear (anything you can equip), ammo, and cooked food.
-_Avoid_: Loadout, gear set
+_Avoid_: Loadout, gear set (a set is a named group of pieces)
 
 **Haul**:
 Everything in the pack that is not kit: materials, raw food, and anything else you gathered or looted.
@@ -101,6 +101,22 @@ _Avoid_: Smithing tier, craft limit
 **Rare material**:
 A material only ring three's enemies drop: rime steel, frost sinew or aurora glass, one for each combat style, each feeding that style's top gear sets.
 _Avoid_: Rare drop, rare item (ring three's enemies drop it every kill; a rare drop comes from a rare roll)
+
+**Set**:
+A named group of gear pieces of one combat style that share a look. Each style has a mid, a mid-high and a high set, and four top sets.
+_Avoid_: Gear set, outfit, armour set
+
+**Top set**:
+A set made at the workbench from ring three's rare materials, above steel.
+_Avoid_: Endgame set, best-in-slot
+
+**Set bonus**:
+What wearing several pieces of one set gives on top of the pieces themselves. It grows as more pieces are worn, and each step adds to the ones before it.
+_Avoid_: Set effect, full-set bonus
+
+**Unique piece**:
+A single named piece of gear that belongs to no set and carries one special effect. It is only ever found, from a rarity band.
+_Avoid_: Unique, legendary, artifact
 
 **Fur piece**:
 Armour sewn from wolf pelts that slows the drain on your warmth but gives no defence. It has no gear tier, so it competes with metal armour at every stage.
