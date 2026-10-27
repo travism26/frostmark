@@ -11,6 +11,13 @@ const COLOURS := {
 	ItemTable.RARITY_ULTRA_RARE: Color(1.0, 0.78, 0.26),
 }
 
+## Each coloured band's name in words, for the log line, so colour is never the only signal.
+const NAMES := {
+	ItemTable.RARITY_RARE: "Rare",
+	ItemTable.RARITY_SUPER_RARE: "Super rare",
+	ItemTable.RARITY_ULTRA_RARE: "Ultra rare",
+}
+
 
 ## A band's colour, or null for uncommon, "" or anything unknown.
 static func colour(band: String) -> Variant:

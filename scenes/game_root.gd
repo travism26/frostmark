@@ -750,6 +750,8 @@ func _apply_events(events: Array[Dictionary]) -> void:
 				_sync_way_outs()
 			SimVocab.EV_LOOT_DROPPED:
 				_add_loot(e["loot_id"])
+				if drop_text(e) != "":
+					_last_event = drop_text(e)
 			SimVocab.EV_PICKED_UP:
 				_last_event = "Picked up %d %s." % [e["count"], ItemTable.label(e["item"])]
 				_remove_loot(e["loot_id"])
@@ -1736,14 +1738,27 @@ func _hit_text(e: Dictionary) -> String:
 	return "%s hits you for %d.%s" % [_sentence(_enemy_name(e["attacker"])), e["amount"], edge]
 
 
+## The status line for a pile dropping: the band in words for a rare, super rare or ultra rare
+## item ("Super rare: …"), so colour is never the only signal; "" for anything commoner.
+static func drop_text(e: Dictionary) -> String:
+	var band: String = e.get("rarity", "")
+	if not RarityLook.NAMES.has(band):
+		return ""
+	return "%s: %s." % [RarityLook.NAMES[band], ItemTable.label(e["item"])]
+
+
 ## A loot pile: a small crate with its contents written over it and a click volume that
-## becomes `interact` (walk over and pick it up).
+## becomes `interact` (walk over and pick it up). A rare-or-better item's pile glows in its
+## band's colour (PileGlow) for as long as it is drawn.
 func _add_loot(id: String) -> void:
 	var pile: Dictionary = sim.state["loot"][id]
 	var root := Node3D.new()
 	root.position = Vector3(float(pile["pos"][0]), 0.0, float(pile["pos"][1]))
 	_loot_layer.add_child(root)
 	_add_part(root, _box_mesh(Vector3(0.35, 0.25, 0.35), COLOR_LOOT), Vector3(0, 0.125, 0))
+	var glow := PileGlow.of_band(ItemTable.rarity(pile["item"]))
+	if glow != null:
+		root.add_child(glow)
 	var click := _add_box_body(root, Vector3(0.8, 0.6, 0.8), Vector3(0, 0.3, 0))
 	click.set_meta("object_id", id)
 	var count := int(pile["count"])

@@ -31,6 +31,8 @@ const STING_DEATH := "sting_death"
 const STING_BANK := "sting_bank"
 const STING_LEVEL := "sting_level"
 const BUILT := "built"
+const CHIME_SUPER_RARE := "chime_super_rare"
+const CHIME_ULTRA_RARE := "chime_ultra_rare"
 const WIND := "wind"
 const FIRE := "fire"
 const MUSIC_OUTPOST := "music_outpost"
@@ -55,6 +57,8 @@ const SOUNDS := {
 	STING_BANK: ["sting_bank"],
 	STING_LEVEL: ["sting_level"],
 	BUILT: ["chop_2", "mine_2", "smith_2"],
+	CHIME_SUPER_RARE: ["chime_super_rare"],
+	CHIME_ULTRA_RARE: ["chime_ultra_rare"],
 	WIND: ["amb_wind"],
 	FIRE: ["amb_fire"],
 	MUSIC_OUTPOST: ["music_outpost"],
@@ -73,6 +77,7 @@ const GAIN := {
 	HIT_TAKEN: -2.0, BOW: -5.0, CUE_MELEE: -3.0,
 	CUE_RANGED: -3.0, FALL: -6.0, STING_DEATH: -4.0,
 	STING_BANK: -6.0, STING_LEVEL: -6.0, BUILT: -5.0,
+	CHIME_SUPER_RARE: -6.0, CHIME_ULTRA_RARE: -1.0,
 }
 ## Per region: the wind's level and pitch, and the snow's level (the same wind pitched up
 ## into the hiss of driven snow). Gentle behind the walls, a gale in ring one.
@@ -96,6 +101,11 @@ const BUILT_BY_MATERIAL := {YardLook.TIMBER: CHOP, YardLook.STONE: MINE, YardLoo
 
 ## The telegraph cue for each style, so the counter can be heard as well as read.
 const CUE_BY_STYLE := {CombatTable.STYLE_MELEE: CUE_MELEE, CombatTable.STYLE_RANGED: CUE_RANGED}
+## The chime a rare drop's pile makes as it lands, by its rarity band: super rare chimes, and
+## ultra rare chimes louder and longer. Rare and uncommon drops land quietly.
+const CHIME_BY_RARITY := {
+	ItemTable.RARITY_SUPER_RARE: CHIME_SUPER_RARE, ItemTable.RARITY_ULTRA_RARE: CHIME_ULTRA_RARE,
+}
 ## A feint sounds its style's telegraph cue again, cut off after this many seconds.
 const FEINT_SECONDS := 0.15
 
@@ -109,6 +119,7 @@ const CREDITS: Array[String] = [
 	"Fire Crackling by AntumDeluge (OpenGameArt), CC0: the outpost and field fires.",
 	"Through the Snow (Snow theme). Music by Cleyton Kauffman - https://soundcloud.com/cleytonkauffman, CC0: the outpost's music.",
 	"Crystal Cave (song18) by cynicmusic. Credit pixelsphere.org / The Cynic Project, CC0: the music outside the walls.",
+	"The super rare and ultra rare chimes were made for Frostmark, CC0.",
 ]
 
 
@@ -155,6 +166,9 @@ static func event_cues(e: Dictionary) -> Array[String]:
 			out.append(STING_BANK)
 		SimVocab.EV_LEVELLED:
 			out.append(STING_LEVEL)
+		SimVocab.EV_LOOT_DROPPED:
+			if CHIME_BY_RARITY.has(e.get("rarity", "")):
+				out.append(CHIME_BY_RARITY[e["rarity"]])
 	return out
 
 
