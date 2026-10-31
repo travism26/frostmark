@@ -167,7 +167,7 @@ static func event_cues(e: Dictionary) -> Array[String]:
 		SimVocab.EV_LEVELLED:
 			out.append(STING_LEVEL)
 		SimVocab.EV_LOOT_DROPPED:
-			if CHIME_BY_RARITY.has(e.get("rarity", "")):
+			if not e.get("by_player", false) and CHIME_BY_RARITY.has(e.get("rarity", "")):
 				out.append(CHIME_BY_RARITY[e["rarity"]])
 	return out
 
