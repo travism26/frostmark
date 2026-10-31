@@ -102,8 +102,10 @@ const TRAVEL_GATE_STEP := 2.5
 ## Death keeps this many of the most valuable things carried or worn (a stack is one thing):
 ## one for each equipment slot, so a full kit with nothing better carried comes home whole.
 const DEATH_KEEPS := 7
-## Ground loot lies this many ticks (five minutes) before the snow takes it.
+## Every pile, an enemy's loot or an item the player dropped, lies this many ticks (five minutes)
+## before the snow takes it. A pile shows a countdown, and fades in its last LOOT_FADE_TICKS.
 const LOOT_TICKS := 600
+const LOOT_FADE_TICKS := 120
 ## A kill's rare roll is one draw of the generator's whole range, this many steps, read as a
 ## percent: fine enough for a band at about 1 in 1000 (CombatTable.RARE_ODDS and the rest).
 const ROLL_STEPS := 32768
@@ -1764,15 +1766,27 @@ func _home(id: String) -> Vector2:
 
 # --- Loot -----------------------------------------------------------------------------
 
-func _drop_loot(item: String, count: int, at: Vector2) -> void:
+## How long a pile lies before the snow takes it: LOOT_TICKS, one tuning constant for every pile.
+## Test mode may set it shorter; it is never a player setting and no save carries it.
+var loot_ticks := LOOT_TICKS
+
+
+## Ticks until the snow takes pile `id`, or -1 when there is no such pile.
+func loot_ticks_left(id: String) -> int:
+	if not (state["loot"] as Dictionary).has(id):
+		return -1
+	return maxi(0, int(state["loot"][id]["expires_tick"]) - int(state["tick"]))
+
+
+func _drop_loot(item: String, count: int, at: Vector2, by_player := false) -> void:
 	state["loot_seq"] = int(state["loot_seq"]) + 1
 	var id := "loot_%d" % int(state["loot_seq"])
 	state["loot"][id] = {
-		"item": item, "count": count, "pos": _xz(at), "expires_tick": int(state["tick"]) + LOOT_TICKS,
+		"item": item, "count": count, "pos": _xz(at), "expires_tick": int(state["tick"]) + loot_ticks,
 	}
 	_emit({
 		"kind": SimVocab.EV_LOOT_DROPPED, "loot_id": id, "item": item, "count": count, "pos": _xz(at),
-		"rarity": ItemTable.rarity(item),
+		"rarity": ItemTable.rarity(item), "by_player": by_player,
 	})
 
 
@@ -2219,7 +2233,8 @@ func _deposit_haul(commit: bool) -> String:
 	return ""
 
 
-## Drops from a pack slot. Dropped items are left behind in the snow and are gone.
+## Drops from a pack slot. What is dropped lies in a pile where the player stands, the same pile
+## an enemy's loot leaves, until the snow takes it; walking onto it picks it up again.
 func _drop(args: Dictionary, commit: bool) -> String:
 	var pack: Array = state["inventory"]["pack"]
 	var i := _arg_index(args, pack)
@@ -2233,6 +2248,7 @@ func _drop(args: Dictionary, commit: bool) -> String:
 	if commit:
 		var taken := Inventory.take(pack, i, count)
 		_emit({"kind": SimVocab.EV_DROPPED, "item": taken["item"], "count": taken["count"]})
+		_drop_loot(taken["item"], int(taken["count"]), player_pos(), true)
 	return ""
 
 

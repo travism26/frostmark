@@ -860,6 +860,8 @@ func _animate(delta: float) -> void:
 	else:
 		_facing = sim.player_facing()
 	_place_character(pos, _facing, delta)
+	for id in _loot:
+		_show_pile_timer(id, Time.get_ticks_msec() / 1000.0)
 	_camera_rig.global_position = _build_beat.camera_point(_character.global_position)
 	_audio.follow(_character.global_position)
 	for id in _enemies:
@@ -1742,7 +1744,7 @@ func _hit_text(e: Dictionary) -> String:
 ## item ("Super rare: …"), so colour is never the only signal; "" for anything commoner.
 static func drop_text(e: Dictionary) -> String:
 	var band: String = e.get("rarity", "")
-	if not RarityLook.NAMES.has(band):
+	if e.get("by_player", false) or not RarityLook.NAMES.has(band):
 		return ""
 	return "%s: %s." % [RarityLook.NAMES[band], ItemTable.label(e["item"])]
 
@@ -1767,7 +1769,23 @@ func _add_loot(id: String) -> void:
 	label.visible = false
 	root.add_child(label)
 	click.set_meta("hover_label", label)
+	root.set_meta("label", label)
+	root.set_meta("name_text", label.text)
 	_loot[id] = root
+	_show_pile_timer(id, 0.0)
+
+
+## Keeps a pile's hover label reading its countdown and blinks the pile in its last minute.
+func _show_pile_timer(id: String, time: float) -> void:
+	var root: Node3D = _loot[id]
+	var left := sim.loot_ticks_left(id)
+	var label: Label3D = root.get_meta("label")
+	if label.visible:
+		label.text = "%s\n%s" % [root.get_meta("name_text"), PileTimer.countdown(left)]
+	var seen := PileTimer.lit(left, time)
+	for part in root.get_children():
+		if part is MeshInstance3D or part is PileGlow:
+			(part as Node3D).visible = seen
 
 
 func _remove_loot(id: String) -> void:
